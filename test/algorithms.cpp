@@ -1,4 +1,7 @@
 
-int main(int * argc, char ** argv) {
-	// TODO: Init Google Test
+#include "gtest/gtest.h"
+
+// dummy test
+TEST(Algorithms, Lockset) {
+	
 }
