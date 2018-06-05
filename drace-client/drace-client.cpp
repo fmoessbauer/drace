@@ -1,12 +1,8 @@
-﻿// drace-client.cpp: Definiert den Einstiegspunkt für die Anwendung.
-//
+﻿// DynamoRIO client for Race-Detection
 
 #include "drace-client.h"
 
-using namespace std;
-
 int main()
 {
-	cout << "Hello CMake." << endl;
 	return 0;
 }
