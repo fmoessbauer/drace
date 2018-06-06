@@ -4,6 +4,7 @@ project ("drace-client")
 
 set(DRACE_ENABLE_TESTING 0 CACHE STRING "Build Tests")
 
+find_package(DynamoRIO 7.0 REQUIRED)
 
 add_subdirectory ("drace-client")
 

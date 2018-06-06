@@ -9,3 +9,6 @@ add_executable(${TEST_TARGET} ${SOURCES})
 set_target_properties(${TEST_TARGET} PROPERTIES CXX_STANDARD 11)
 
 target_link_libraries(${TEST_TARGET} gtest)
+
+# Prepare Guinea pigs
+add_subdirectory("mini-apps")

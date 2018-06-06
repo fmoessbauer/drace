@@ -1,8 +1,29 @@
 ﻿// DynamoRIO client for Race-Detection
 
+#include <dr_api.h>
+
+#include <iostream>
+
 #include "libdrace-client.h"
 
-int main()
+static void event_exit(void);
+static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
+
+DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-	return 0;
+	// TODO: Add link to repository (issues)
+	dr_set_client_name("Race-Detection Client 'drace'", "TODO");
+
+	dr_register_exit_event(event_exit);
+	dr_register_bb_event(event_basic_block);
+}
+
+static void event_exit(void)
+{
+	std::cout << "BB exit" << std::endl;
+}
+
+static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
+{
+	return DR_EMIT_DEFAULT;
 }
