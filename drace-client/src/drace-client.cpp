@@ -1,6 +1,6 @@
 ﻿// DynamoRIO client for Race-Detection
 
-#include "drace-client.h"
+#include "libdrace-client.h"
 
 int main()
 {
