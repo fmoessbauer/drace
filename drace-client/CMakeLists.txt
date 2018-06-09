@@ -11,6 +11,7 @@ target_include_directories(
 # See https://github.com/DynamoRIO/dynamorio/blob/master/make/DynamoRIOConfig.cmake.in
 # for details
 configure_DynamoRIO_client("drace-client")
+use_DynamoRIO_extension("drace-client" drmgr)
 
 # TODO: Add Tests
 # TODO: Add Benchmarks

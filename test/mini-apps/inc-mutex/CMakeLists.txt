@@ -1,4 +1,4 @@
-SET(EXAMPLE "gp-concurrent-inc")
+SET(EXAMPLE "gp-inc-mutex")
 
 add_executable(${EXAMPLE} "main")
 target_link_libraries(${EXAMPLE} Threads::Threads)
