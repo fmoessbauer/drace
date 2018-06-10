@@ -3,12 +3,13 @@
 #include <dr_api.h>
 #include <drmgr.h>
 #include <drreg.h>
-#include <drutil.h>
+#include <drwrap.h>
 
 #include <atomic>
 #include <iostream>
 
 #include "libdrace-client.h"
+#include "function-wrapper.h"
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
@@ -18,12 +19,18 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	dr_set_client_name("Race-Detection Client 'drace'",
 		"https://code.siemens.com/felix.moessbauer.ext/drace/issues");
 
+	dr_enable_console_printing();
+
 	// Init DRMGR, Reserve registers
-//	if (!drmgr_init() || drreg_init(&ops) != DRREG_SUCCESS || !drutil_init())
-//		DR_ASSERT(false);
+	if (!drmgr_init() || !drwrap_init() || drreg_init(&ops) != DRREG_SUCCESS)
+		DR_ASSERT(false);
 
 	// Register Events
 	dr_register_exit_event(event_exit);
+	drmgr_register_thread_init_event(event_thread_init);
+	drmgr_register_thread_exit_event(event_thread_exit);
+	drmgr_register_module_load_event(module_load_event);
+
 //	if (!drmgr_register_thread_init_event(event_thread_init) ||
 //		!drmgr_register_thread_exit_event(event_thread_exit) ||
 //		!drmgr_register_bb_app2app_event(event_bb_app2app, NULL) ||
@@ -61,6 +68,9 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 	// call __gthrw_pthread_mutex_lock(pthread_mutex_t*)
 	// call __gthrw_pthread_mutex_unlock(pthread_mutex_t*)
 
+	// semget
+	// semop
+
 	//int i;
 
 	//if (!instr_is_app(instr))
@@ -71,8 +81,8 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 	///* insert code to add an entry for app instruction */
 	////instrument_instr(drcontext, bb, instr);
 
-	///* insert code to add an entry for each memory reference opnd */
-	//for (i = 0; i < instr_num_srcs(instr); i++) {
+	/* insert code to add an entry for each memory reference opnd */
+	//for (int i = 0; i < instr_num_srcs(instr); i++) {
 	//	if (opnd_is_memory_reference(instr_get_src(instr, i)))
 	//		//instrument_mem(drcontext, bb, instr, instr_get_src(instr, i), false);
 	//}
@@ -99,4 +109,12 @@ static void event_thread_exit(void *drcontext)
 	// If only one thead is running, disable detector
 	--num_threads_active;
 	std::cout << "Thread exited " << std::endl;
+}
+
+
+static void module_load_event(void *drcontext, const module_data_t *mod, bool loaded)
+{
+	// bind function wrappers
+	wrap_mutex_acquire(mod);
+	wrap_mutex_release(mod);
 }
