@@ -61,7 +61,7 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 	// TODO: inst events:
 	// read, write
 	// barrier (dmb)
-	// aqu,rel
+	// aqu,rel   <- handled using function wrapping
 	// fork,join <- handled by thread events
 
 	//instr_reads_memory, instr_writes_memory

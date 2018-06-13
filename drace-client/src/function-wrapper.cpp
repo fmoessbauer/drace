@@ -5,8 +5,8 @@
 
 #include <drwrap.h>
 
-static std::vector<std::string> acquire_symbols{ "_Mtx_lock" };
-static std::vector<std::string> release_symbols{ "_Mtx_unlock" };
+static std::vector<std::string> acquire_symbols{ "_Mtx_lock",   "__gthrw_pthread_mutex_lock"   };
+static std::vector<std::string> release_symbols{ "_Mtx_unlock", "__gthrw_pthread_mutex_unlock" };
 
 static void mutex_acquire_pre(void *wrapcxt, OUT void **user_data) {
 	dr_fprintf(STDERR, "<< pre mutex acquire\n");
