@@ -13,3 +13,7 @@ It does not require any perparations like instrumentation of the binary to check
 
 - GoogleTest
 - GoogleBenchmark
+
+### Known Issues
+
+- CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)

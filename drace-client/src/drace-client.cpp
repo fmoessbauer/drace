@@ -100,7 +100,7 @@ static void event_thread_init(void *drcontext)
 	// TODO: Start shadow thread for each app thread
 	// If only one thead is running, disable detector
 	++num_threads_active;
-	std::cout << "Thread started " << std::endl;
+	std::cout << "<< Thread started " << std::endl;
 }
 
 static void event_thread_exit(void *drcontext)
@@ -108,7 +108,7 @@ static void event_thread_exit(void *drcontext)
 	// TODO: Cleanup and quit shadow thread
 	// If only one thead is running, disable detector
 	--num_threads_active;
-	std::cout << "Thread exited " << std::endl;
+	std::cout << "<< Thread exited " << std::endl;
 }
 
 

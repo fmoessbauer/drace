@@ -30,7 +30,7 @@ void wrap_mutex_acquire(const module_data_t *mod) {
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, mutex_acquire_pre, mutex_acquire_post);
 			if (ok) {
-				std::string msg{ "<wrapped acq " };
+				std::string msg{ "< wrapped acq " };
 				msg += name + "\n";
 				dr_fprintf(STDERR, msg.c_str());
 			}
@@ -44,7 +44,7 @@ void wrap_mutex_release(const module_data_t *mod) {
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, mutex_release_pre, mutex_release_post);
 			if (ok) {
-				std::string msg{ "<wrapped rel " };
+				std::string msg{ "< wrapped rel " };
 				msg += name + "\n";
 				dr_fprintf(STDERR, msg.c_str());
 			}
