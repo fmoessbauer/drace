@@ -4,11 +4,13 @@
 #include <drmgr.h>
 #include <drreg.h>
 #include <drwrap.h>
+#include <drutil.h>
 
 #include <atomic>
 #include <iostream>
 
-#include "libdrace-client.h"
+#include "drace-client.h"
+#include "memory-instr.h"
 #include "function-wrapper.h"
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
@@ -25,42 +27,42 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	if (!drmgr_init() || !drwrap_init() || drreg_init(&ops) != DRREG_SUCCESS)
 		DR_ASSERT(false);
 
+	// performance tuning
+	drwrap_set_global_flags((drwrap_global_flags_t)(DRWRAP_NO_FRILLS | DRWRAP_FAST_CLEANCALLS));
+
 	// Register Events
 	dr_register_exit_event(event_exit);
 	drmgr_register_thread_init_event(event_thread_init);
 	drmgr_register_thread_exit_event(event_thread_exit);
 	drmgr_register_module_load_event(module_load_event);
 
-//	if (!drmgr_register_thread_init_event(event_thread_init) ||
-//		!drmgr_register_thread_exit_event(event_thread_exit) ||
-//		!drmgr_register_bb_app2app_event(event_bb_app2app, NULL) ||
-//		!drmgr_register_bb_instrumentation_event(NULL /*analysis_func*/,
-//			event_app_instruction,
-//			NULL))
-//		DR_ASSERT(false);
-
-	// TODO: Thread Local Storage
-	//tls_idx = drmgr_register_tls_field();
-	//DR_ASSERT(tls_idx != -1);
-	///* The TLS field provided by DR cannot be directly accessed from the code cache.
-	//* For better performance, we allocate raw TLS so that we can directly
-	//* access and update it with a single instruction.
-	//*/
-	//if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, MEMTRACE_TLS_COUNT, 0))
-	//	DR_ASSERT(false);
+	// Register thread local storage
+	if (!memory_inst::register_events()) {
+		std::cout << "Cannot register events" << std::endl;
+	}
+	memory_inst::allocate_tls();
 }
 
-static void event_exit(void)
+static void event_exit()
 {
-	// TODO: End epoch and print stats
-	std::cout << "BB exit, Num Threads: " << num_threads_active << std::endl;
+	if (!drmgr_register_thread_init_event(event_thread_init) ||
+		!drmgr_register_thread_exit_event(event_thread_exit) ||
+		!drmgr_register_module_load_event(module_load_event))
+		DR_ASSERT(false);
+
+	memory_inst::finalize();
+
+	drutil_exit();
+	drmgr_exit();
+
+	std::cout << "< DR Exit, Num Threads: " << num_threads_active << std::endl;
 }
 
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
 {
 	// TODO: inst events:
 	// read, write
-	// barrier (dmb)
+	// barrier (dmb) <- only for ARM
 	// aqu,rel   <- handled using function wrapping
 	// fork,join <- handled by thread events
 

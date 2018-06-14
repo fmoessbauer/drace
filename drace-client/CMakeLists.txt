@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-set(SOURCES "src/drace-client" "src/function-wrapper")
+set(SOURCES "src/drace-client" "src/function-wrapper" "src/memory-instr")
 
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories(
@@ -12,6 +12,7 @@ target_include_directories(
 # for details
 configure_DynamoRIO_client("drace-client")
 use_DynamoRIO_extension("drace-client" drmgr)
+use_DynamoRIO_extension("drace-client" drutil)
 use_DynamoRIO_extension("drace-client" drreg)
 use_DynamoRIO_extension("drace-client" drwrap)
 
