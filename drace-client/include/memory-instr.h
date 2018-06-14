@@ -10,7 +10,8 @@
 
 namespace memory_inst {
 
-	static std::atomic<int> num_calls;
+	static std::atomic<int> writes;
+	static std::atomic<int> reads;
 
 	bool register_events();
 
@@ -20,7 +21,8 @@ namespace memory_inst {
 
 	void finalize();
 
-	void at_access_mem(opnd_t opcode, opnd_t address);
+	void read_access_mem(opnd_t opcode, opnd_t address);
+	void write_access_mem(opnd_t opcode, opnd_t address);
 
 	// Events
 	void event_thread_init(void *drcontext);

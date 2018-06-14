@@ -39,8 +39,11 @@ void memory_inst::finalize() {
 		DR_ASSERT(false);
 }
 
-void memory_inst::at_access_mem(opnd_t opcode, opnd_t address) {
-	++num_calls;
+void memory_inst::read_access_mem(opnd_t opcode, opnd_t address) {
+	++reads;
+}
+void memory_inst::write_access_mem(opnd_t opcode, opnd_t address) {
+	++writes;
 }
 
 // Events
@@ -50,7 +53,7 @@ void memory_inst::event_thread_init(void *drcontext)
 
 void memory_inst::event_thread_exit(void *drcontext)
 {
-	dr_printf("< Num calls %i\n", num_calls.load());
+	dr_printf("< reads: %i, writes: %i\n", reads.load(), writes.load());
 }
 
 
@@ -79,7 +82,8 @@ dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, i
 	app_pc address = instr_get_app_pc(instr);
 	uint opcode = instr_get_opcode(instr);
 	instr_t *nxt = instr_get_next(instr);
-	dr_insert_clean_call(drcontext, bb, nxt, memory_inst::at_access_mem,
+	dr_insert_clean_call(drcontext, bb, nxt,
+		instr_writes_memory(instr) ? memory_inst::write_access_mem : memory_inst::read_access_mem,
 		false    /*don't need to save fp state*/,
 		2        /* 2 parameters */,
 		/* opcode is 1st parameter */
