@@ -36,10 +36,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	drmgr_register_thread_exit_event(event_thread_exit);
 	drmgr_register_module_load_event(module_load_event);
 
-	// Register thread local storage
-	if (!memory_inst::register_events()) {
-		std::cout << "Cannot register events" << std::endl;
-	}
+	// Setup Memory Tracing
+	DR_ASSERT(memory_inst::register_events());
 	memory_inst::allocate_tls();
 }
 
@@ -50,12 +48,13 @@ static void event_exit()
 		!drmgr_register_module_load_event(module_load_event))
 		DR_ASSERT(false);
 
+	// Cleanup Memory Tracing
 	memory_inst::finalize();
 
 	drutil_exit();
 	drmgr_exit();
 
-	std::cout << "< DR Exit, Num Threads: " << num_threads_active << std::endl;
+	dr_printf("< DR Exit\n");
 }
 
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
@@ -119,6 +118,6 @@ static void event_thread_exit(void *drcontext)
 static void module_load_event(void *drcontext, const module_data_t *mod, bool loaded)
 {
 	// bind function wrappers
-	wrap_mutex_acquire(mod);
-	wrap_mutex_release(mod);
+	funwrap::wrap_mutex_acquire(mod);
+	funwrap::wrap_mutex_release(mod);
 }

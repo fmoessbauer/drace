@@ -15,6 +15,7 @@ endif()
 find_package(Threads REQUIRED)
 find_package(DynamoRIO 7.0 REQUIRED)
 
+add_subdirectory("vendor/tsan")
 add_subdirectory ("drace-client")
 
 if(${DRACE_ENABLE_TESTING})

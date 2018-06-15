@@ -7,6 +7,9 @@ target_include_directories(
 	"drace-client" PRIVATE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/drace-client> "include")
 
+# link against modified tsan implementation
+target_link_libraries("drace-client" "tsan-custom")
+
 # Setup as dynamorio client (not-standalone)
 # See https://github.com/DynamoRIO/dynamorio/blob/master/make/DynamoRIOConfig.cmake.in
 # for details
