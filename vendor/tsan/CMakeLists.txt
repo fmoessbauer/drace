@@ -5,4 +5,4 @@ target_include_directories("tsan-custom" PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> "include")
 target_link_libraries("tsan-custom" PRIVATE ${TSAN_LIB})
 
-# TODO: Copy Libraries
+# DLL Copy in drace-client

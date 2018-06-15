@@ -18,7 +18,7 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			__tsan_acquire((void*)tid, (void*)mutex);
+			__tsan_acquire((void*)&tid, (void*)mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", tid, mutex);
 		}
@@ -31,6 +31,9 @@ namespace funwrap {
 		static void mutex_release_pre(void *wrapctx, OUT void **user_data) {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+
+			__tsan_release((void*)&tid, (void*)mutex);
+
 			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", tid, mutex);
 		}
 

@@ -9,6 +9,11 @@ target_include_directories(
 
 # link against modified tsan implementation
 target_link_libraries("drace-client" "tsan-custom")
+add_custom_command(TARGET "drace-client" POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
+        $<TARGET_FILE_DIR:drace-client>)
+
 
 # Setup as dynamorio client (not-standalone)
 # See https://github.com/DynamoRIO/dynamorio/blob/master/make/DynamoRIOConfig.cmake.in
