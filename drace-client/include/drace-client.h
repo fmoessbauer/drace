@@ -16,4 +16,3 @@ static void module_load_event(void *drcontext, const module_data_t *mod, bool lo
 
 // Detector Stuff
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter);
-
