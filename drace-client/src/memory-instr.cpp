@@ -44,27 +44,6 @@ static void memory_inst::process_buffer() {
 	memory_inst::analyze_access(drcontext);
 }
 
-//void memory_inst::read_access_mem(opnd_t opcode, opnd_t address) {
-//	void* drcontext = dr_get_current_drcontext();
-//	thread_id_t tid = dr_get_thread_id(drcontext);
-//
-//	++reads;
-//}
-//void memory_inst::write_access_mem(opnd_t opcode, opnd_t address) {
-//	void* drcontext = dr_get_current_drcontext();
-//	thread_id_t tid = dr_get_thread_id(drcontext);
-//	// TODO: Size
-//
-//	int* stack_trace[3];
-//	stack_trace[0] = (int*)0x11;
-//	stack_trace[1] = (int*)0x33;
-//	stack_trace[2] = (int*)0x55;
-//	__tsan_write_use_user_tid((unsigned long) tid, (void*)0x5678, 1, (void*)&stack_trace[0], 3, false, 4, false);
-//
-//	//__tsan_write_use_user_tid(5, (void*)0x5678, 1, (void*)&stack_trace[0], 3, false, 4, false);
-//	//__tsan_write_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
-//	++writes;
-//}
 static void memory_inst::analyze_access(void *drcontext) {
 	per_thread_t *data;
 	mem_ref_t *mem_ref, *buf_ptr;
@@ -75,17 +54,36 @@ static void memory_inst::analyze_access(void *drcontext) {
 	*   0x00007f59c2d002d3:  5, call
 	*   0x00007ffeacab0ec8:  8, w
 	*/
+
+	int* stack_trace[3];
+	stack_trace[0] = (int*)0x11;
+	stack_trace[1] = (int*)0x33;
+	stack_trace[2] = (int*)0x55;
+
 	for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-		/* We use PIFX to avoid leading zeroes and shrink the resulting file. */
-		//printf(": %2d, %s\n", (ptr_uint_t)mem_ref->addr, mem_ref->size,
-		//	(mem_ref->type > REF_TYPE_WRITE) ?
-		//	decode_opcode_name(mem_ref->type) /* opcode for instr */ :
-		//	(mem_ref->type == REF_TYPE_WRITE ? "w" : "r"));
-		if (mem_ref->type == REF_TYPE_READ) {
-			reads++;
+		//TODO: TSAN seems to only support 32 bit addresses!!!
+		uint32_t addr = (uint32_t)mem_ref->addr;
+		if (mem_ref->type > REF_TYPE_WRITE) {
+			data->lastop = mem_ref->type;
+			data->locked = mem_ref->locked;
 		}
-		else {
-			writes++;
+
+		if (data->locked == 0) {
+			// skip if last-op was compare-exchange
+			if (mem_ref->type == REF_TYPE_WRITE) {
+				__tsan_write_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 4, false);
+				//if (writes < 100) {
+					printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+				//}
+				writes++;
+			}
+			else if (mem_ref->type == REF_TYPE_READ) {
+				__tsan_read_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 5, false);
+				//if (reads < 10) {
+					printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+				//}
+				reads++;
+			}
 		}
 		data->num_refs++;
 	}
@@ -109,6 +107,8 @@ static void memory_inst::event_thread_init(void *drcontext)
 	DR_ASSERT(data->seg_base != NULL && data->buf_base != NULL);
 	/* put buf_base to TLS as starting buf_ptr */
 	BUF_PTR(data->seg_base) = data->buf_base;
+
+	data->tid = dr_get_thread_id(drcontext);
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
@@ -147,6 +147,19 @@ static void memory_inst::insert_load_buf_ptr(void *drcontext, instrlist_t *ilist
 		tls_offs + MEMTRACE_TLS_OFFS_BUF_PTR, reg_ptr);
 }
 
+static void memory_inst::insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where,
+	reg_id_t base, reg_id_t scratch, app_pc pc)
+{
+	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc,
+		opnd_create_reg(scratch),
+		ilist, where, NULL, NULL);
+	instrlist_meta_preinsert(ilist, where,
+		XINST_CREATE_store(drcontext,
+			OPND_CREATE_MEMPTR(base,
+				offsetof(mem_ref_t, addr)),
+			opnd_create_reg(scratch)));
+}
+
 static void memory_inst::insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, reg_id_t reg_ptr, reg_id_t reg_addr)
 {
@@ -159,6 +172,15 @@ static void memory_inst::insert_save_addr(void *drcontext, instrlist_t *ilist, i
 			OPND_CREATE_MEMPTR(reg_ptr,
 				offsetof(mem_ref_t, addr)),
 			opnd_create_reg(reg_addr)));
+}
+
+static void memory_inst::insert_tag_lock(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr, bool locked)
+{
+	instrlist_meta_preinsert(ilist, where,
+		XINST_CREATE_store_2bytes(drcontext,
+			OPND_CREATE_MEM16(reg_ptr,
+				offsetof(mem_ref_t, locked)),
+			OPND_CREATE_INT16((ushort) locked)));
 }
 
 /**
@@ -205,6 +227,38 @@ static void memory_inst::insert_save_size(void *drcontext, instrlist_t *ilist, i
 			opnd_create_reg(scratch)));
 }
 
+/* insert inline code to add an instruction entry into the buffer */
+static void memory_inst::instrument_instr(void *drcontext, instrlist_t *ilist, instr_t *where)
+{
+	/* We need two scratch registers */
+	reg_id_t reg_ptr, reg_tmp;
+
+	if (drreg_reserve_register(drcontext, ilist, where, NULL, &reg_ptr) !=
+		DRREG_SUCCESS ||
+		drreg_reserve_register(drcontext, ilist, where, NULL, &reg_tmp) !=
+		DRREG_SUCCESS) {
+		DR_ASSERT(false); /* cannot recover */
+		return;
+	}
+	// Check if instr has LOCK prefix
+	bool locked = instr_get_prefix_flag(where, PREFIX_LOCK);
+
+	insert_load_buf_ptr(drcontext, ilist, where, reg_ptr);
+
+	insert_tag_lock(drcontext, ilist, where, reg_ptr, locked);
+
+	insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
+		(ushort)instr_get_opcode(where));
+	insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
+		(ushort)instr_length(drcontext, where));
+	insert_save_pc(drcontext, ilist, where, reg_ptr, reg_tmp,
+		instr_get_app_pc(where));
+	insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
+	/* Restore scratch registers */
+	if (drreg_unreserve_register(drcontext, ilist, where, reg_ptr) != DRREG_SUCCESS ||
+		drreg_unreserve_register(drcontext, ilist, where, reg_tmp) != DRREG_SUCCESS)
+		DR_ASSERT(false);
+}
 
 /* insert inline code to add a memory reference info entry into the buffer */
 static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
@@ -244,6 +298,18 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 		return DR_EMIT_DEFAULT;
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
+
+	// Filter certain opcodes
+	ushort opcode = instr_get_opcode(instr);
+	if (opcode == OP_cmpxchg ||
+		opcode == OP_push ||
+		opcode == OP_pop)
+	{
+		return DR_EMIT_DEFAULT;
+	}
+
+	/* insert code to add an entry for app instruction */
+	instrument_instr(drcontext, bb, instr);
 	
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {

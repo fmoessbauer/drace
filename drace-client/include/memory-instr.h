@@ -35,6 +35,7 @@ namespace memory_inst {
 		ushort type; /* r(0), w(1) */
 		ushort size; /* mem ref size or instr length */
 		app_pc addr; /* mem ref addr or instr pc */
+		ushort locked;
 	} mem_ref_t;
 
 	constexpr int MAX_NUM_MEM_REFS = 4096;
@@ -42,9 +43,12 @@ namespace memory_inst {
 
 	/* thread private log file and counter */
 	typedef struct {
-		byte      *seg_base;
-		mem_ref_t *buf_base;
-		uint64     num_refs;
+		byte       *seg_base;
+		mem_ref_t  *buf_base;
+		ushort      lastop;
+		ushort      locked;
+		uint64      num_refs;
+		thread_id_t tid;
 	} per_thread_t;
 
 	static std::atomic<int> refs;
@@ -70,6 +74,11 @@ namespace memory_inst {
 
 	static void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
 
+	static void insert_tag_lock(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr, bool locked);
+
+	static void insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where,
+		reg_id_t base, reg_id_t scratch, app_pc pc);
+	
 	static void insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where,
 		opnd_t ref, reg_id_t reg_ptr, reg_id_t reg_addr);
 

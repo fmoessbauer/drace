@@ -68,45 +68,6 @@ static void event_exit()
 	dr_printf("< DR Exit\n");
 }
 
-static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
-{
-	// TODO: inst events:
-	// read, write
-	// barrier (dmb) <- only for ARM
-	// aqu,rel   <- handled using function wrapping
-	// fork,join <- handled by thread events
-
-	//instr_reads_memory, instr_writes_memory
-	// call __gthrw_pthread_mutex_lock(pthread_mutex_t*)
-	// call __gthrw_pthread_mutex_unlock(pthread_mutex_t*)
-
-	// semget
-	// semop
-
-	//int i;
-
-	//if (!instr_is_app(instr))
-	//	return DR_EMIT_DEFAULT;
-	//if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
-	//	return DR_EMIT_DEFAULT;
-
-	///* insert code to add an entry for app instruction */
-	////instrument_instr(drcontext, bb, instr);
-
-	/* insert code to add an entry for each memory reference opnd */
-	//for (int i = 0; i < instr_num_srcs(instr); i++) {
-	//	if (opnd_is_memory_reference(instr_get_src(instr, i)))
-	//		//instrument_mem(drcontext, bb, instr, instr_get_src(instr, i), false);
-	//}
-
-	//for (i = 0; i < instr_num_dsts(instr); i++) {
-	//	if (opnd_is_memory_reference(instr_get_dst(instr, i)))
-	//		//instrument_mem(drcontext, bb, instr, instr_get_dst(instr, i), true);
-	//}
-
-	return DR_EMIT_DEFAULT;
-}
-
 static void event_thread_init(void *drcontext)
 {
 	// TODO: Start shadow thread for each app thread
