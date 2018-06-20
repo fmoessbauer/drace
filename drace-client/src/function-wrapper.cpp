@@ -6,19 +6,32 @@
 #include <tsan-custom.h>
 #include <drwrap.h>
 
+#include <unordered_map>
+
 namespace funwrap {
 	namespace internal {
 
 		// TODO: get from config file
 		static std::vector<std::string> acquire_symbols{ "_Mtx_lock",   "__gthrw_pthread_mutex_lock" };
 		static std::vector<std::string> release_symbols{ "_Mtx_unlock", "__gthrw_pthread_mutex_unlock" };
+#ifdef WINDOWS
+		static std::vector<std::string> allocators{ "HeapAlloc" };
+		static std::vector<std::string> deallocs{ "HeapFree" };
+#else
 		static std::vector<std::string> allocators{ "malloc" };
+		static std::vector<std::string> deallocs{ "free" };
+#endif
+
+		size_t last_alloc_size = 0;
+
+		std::unordered_map<void *, size_t> allocations;
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			__tsan_acquire((void*)&tid, (void*)mutex);
+			// TODO: This often crashes
+			//__tsan_acquire_use_user_tid(tid, (void*)mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", tid, mutex);
 		}
@@ -32,7 +45,8 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			__tsan_release((void*)&tid, (void*)mutex);
+			// TODO: This often crashes
+			//__tsan_release_use_user_tid(tid, (void*)mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", tid, mutex);
 		}
@@ -41,6 +55,46 @@ namespace funwrap {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 			dr_fprintf(STDERR, "<< [%i] post mutex release\n", tid);
 		}
+
+		// TODO: On Linux size is arg 0
+		static void alloc_pre(void *wrapctx, void **user_data) {
+			last_alloc_size = (size_t) drwrap_get_arg(wrapctx, 2);
+			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+
+			dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", tid, last_alloc_size);
+		}
+
+		static void alloc_post(void *wrapctx, void *user_data) {
+			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+
+			void * retval = drwrap_get_retval(wrapctx);
+			uint32_t retoffs = (uint32_t) retval;
+			__tsan_malloc_use_user_tid(tid, 0, retoffs, last_alloc_size);
+			// TODO: add pointer and size to map for proper free
+			allocations.emplace(retval, last_alloc_size);
+
+			dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
+		}
+
+		// TODO: On Linux addr is arg 0
+		static void free_pre(void *wrapctx, void **user_data) {
+			void * addr = drwrap_get_arg(wrapctx, 2);
+			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+
+			if (allocations.count(addr) == 1) {
+				size_t size = allocations[addr];
+				allocations.erase(addr);
+				//__tsan_free(addr, size);
+				__tsan_reset_range((unsigned int) addr, size);
+				dr_fprintf(STDERR, "<< [%i] pre free %p, size %i\n", tid, addr, size);
+			}
+		}
+
+		static void free_post(void *wrapctx, void *user_data) {
+			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+			dr_fprintf(STDERR, "<< [%i] post free\n", tid);
+		}
+
 	} // namespace internal
 } // namespace funwrap
 
@@ -74,5 +128,37 @@ void funwrap::wrap_mutex_release(const module_data_t *mod) {
 }
 
 void funwrap::wrap_allocators(const module_data_t *mod) {
-	// TODO
+	for (const auto & name : internal::allocators) {
+		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
+		if (towrap != NULL) {
+			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
+			if (ok) {
+				std::string msg{ "< wrapped alloc " };
+				msg += name + "\n";
+				dr_fprintf(STDERR, msg.c_str());
+			}
+		}
+	}
+}
+
+void funwrap::wrap_deallocs(const module_data_t *mod) {
+	for (const auto & name : internal::deallocs) {
+		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
+		if (towrap != NULL) {
+			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
+			if (ok) {
+				std::string msg{ "< wrapped deallocs " };
+				msg += name + "\n";
+				dr_fprintf(STDERR, msg.c_str());
+			}
+		}
+	}
+}
+
+//TODO: Currently not working
+void funwrap::wrap_main(const module_data_t *mod) {
+	app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, "main");
+	if (towrap != NULL) {
+		dr_fprintf(STDERR, "< wrapped main\n");
+	}
 }

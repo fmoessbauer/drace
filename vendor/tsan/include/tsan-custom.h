@@ -38,14 +38,15 @@ extern "C" {
 	void __tsan_proc_destroy(void *proc);
 	void __tsan_proc_wire(void *proc, void *thr);
 	void __tsan_proc_unwire(void *proc, void *thr);
-	void __tsan_reset_range(void* p, void* sz);
+	void __tsan_reset_range(unsigned int p, unsigned int sz);
 	void __tsan_read(void *thr, void *addr, void *pc, void *stack_trace, int stack_trace_size);
 
 	void __tsan_write(void *thr, void *addr, void *pc, void *stack_trace, int stack_trace_size);
 	void __tsan_write_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
 	void __tsan_read_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
 	void __tsan_malloc_use_user_tid(unsigned long user_tid, unsigned long pc, unsigned long p, unsigned long sz);
-
+	void __tsan_acquire_use_user_tid(unsigned long user_tid, void* addr);
+	void __tsan_release_use_user_tid(unsigned long user_tid, void* addr);
 
 	void __tsan_func_enter(void *thr, void *pc);
 	void __tsan_func_exit(void *thr);

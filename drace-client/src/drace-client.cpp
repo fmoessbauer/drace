@@ -92,6 +92,9 @@ static void module_load_event(void *drcontext, const module_data_t *mod, bool lo
 	// bind function wrappers
 	funwrap::wrap_mutex_acquire(mod);
 	funwrap::wrap_mutex_release(mod);
+	funwrap::wrap_allocators(mod);
+	funwrap::wrap_deallocs(mod);
+	funwrap::wrap_main(mod);
 }
 
 // Detector Stuff

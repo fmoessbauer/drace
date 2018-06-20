@@ -62,7 +62,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 
 	for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
 		//TODO: TSAN seems to only support 32 bit addresses!!!
-		uint32_t addr = (uint32_t)mem_ref->addr;
+		unsigned long addr = (unsigned long)mem_ref->addr;
 		if (mem_ref->type > REF_TYPE_WRITE) {
 			data->lastop = mem_ref->type;
 			data->locked = mem_ref->locked;
@@ -73,14 +73,14 @@ static void memory_inst::analyze_access(void *drcontext) {
 			if (mem_ref->type == REF_TYPE_WRITE) {
 				__tsan_write_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 4, false);
 				//if (writes < 100) {
-					printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+					//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 				//}
 				writes++;
 			}
 			else if (mem_ref->type == REF_TYPE_READ) {
 				__tsan_read_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 5, false);
 				//if (reads < 10) {
-					printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+					//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 				//}
 				reads++;
 			}
@@ -296,17 +296,21 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
+	// Only track moves and ignore Locked instructions
+	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK)) {
+		return DR_EMIT_DEFAULT;
+	}
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
 
 	// Filter certain opcodes
-	ushort opcode = instr_get_opcode(instr);
-	if (opcode == OP_cmpxchg ||
-		opcode == OP_push ||
-		opcode == OP_pop)
-	{
-		return DR_EMIT_DEFAULT;
-	}
+	//ushort opcode = instr_get_opcode(instr);
+	//if (opcode == OP_cmpxchg ||
+	//	opcode == OP_push ||
+	//	opcode == OP_pop ||
+	//	opcode == OP_ret ||
+	//	opcode == OP_call ||
+	//	opcode == OP_stos)
 
 	/* insert code to add an entry for app instruction */
 	instrument_instr(drcontext, bb, instr);
