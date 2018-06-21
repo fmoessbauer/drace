@@ -8,6 +8,9 @@ set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+# DR performance tuning
+set(DynamoRIO_FAST_IR ON CACHE BOOL "DynamoRIO_FAST_IR")
+
 # CSharp can only be build using MSVC generators
 message("Generator: ${CMAKE_GENERATOR}")
 if(${CMAKE_GENERATOR} MATCHES "Visual Studio")

@@ -256,7 +256,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 		DRREG_SUCCESS ||
 		drreg_reserve_register(drcontext, ilist, where, NULL, &reg_tmp) !=
 		DRREG_SUCCESS) {
-		DR_ASSERT(false); /* cannot recover */
+		DR_ASSERT(false);
 		return;
 	}
 
@@ -266,7 +266,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 		write ? REF_TYPE_WRITE : REF_TYPE_READ);
 	memory_inst::insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
 		(ushort)drutil_opnd_mem_size_in_bytes(ref, where));
-
 	memory_inst::insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
 
 	/* Restore scratch registers */
@@ -284,9 +283,8 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 		return DR_EMIT_DEFAULT;
 	// Only track moves and ignore Locked instructions
 	// TODO: Check if sufficient
-	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK)) {
+	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK))
 		return DR_EMIT_DEFAULT;
-	}
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
 
@@ -305,17 +303,20 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {
-		if (opnd_is_memory_reference(instr_get_src(instr, i)))
-			instrument_mem(drcontext, bb, instr, instr_get_src(instr, i), false);
+		opnd_t src = instr_get_src(instr, i);
+		if (opnd_is_memory_reference(src))
+			instrument_mem(drcontext, bb, instr, src, false);
 	}
 
 	for (int i = 0; i < instr_num_dsts(instr); i++) {
-		if (opnd_is_memory_reference(instr_get_dst(instr, i)))
-			instrument_mem(drcontext, bb, instr, instr_get_dst(instr, i), true);
+		opnd_t dst = instr_get_dst(instr, i);
+		if (opnd_is_memory_reference(dst))
+			instrument_mem(drcontext, bb, instr, dst, true);
 	}
 
 	// TODO: Try to do less clean calls as extremely expensive
-	// analyze buffer
+	// TODO: Currently this approach is probabilistic as buffer size is never checked
+	// Segfaults on buffer overflow
 	dr_insert_clean_call(drcontext, bb, instr, (void *)process_buffer, false, 0);
 
 	return DR_EMIT_DEFAULT;
