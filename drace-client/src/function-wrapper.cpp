@@ -22,7 +22,9 @@ namespace funwrap {
 		static std::vector<std::string> deallocs{ "free" };
 #endif
 
-		size_t last_alloc_size = 0;
+		// TODO replace this with thread local storage
+		// Inspect why the already existing tls cannot be used (segfaults)
+		static std::unordered_map<thread_id_t, size_t> last_alloc_size;
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
@@ -33,6 +35,7 @@ namespace funwrap {
 			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", tid, mutex);
 		}
 
+		// Currently not bound as not necessary
 		static void mutex_acquire_post(void *wrapctx, OUT void *user_data) {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 			dr_fprintf(STDERR, "<< [%i] post mutex acquire\n", tid);
@@ -47,6 +50,7 @@ namespace funwrap {
 			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", tid, mutex);
 		}
 
+		// Currently not bound as not necessary
 		static void mutex_release_post(void *wrapctx, OUT void *user_data) {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 			dr_fprintf(STDERR, "<< [%i] post mutex release\n", tid);
@@ -54,19 +58,21 @@ namespace funwrap {
 
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data) {
-			last_alloc_size = (size_t) drwrap_get_arg(wrapctx, 2);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+			last_alloc_size[tid] = (size_t)drwrap_get_arg(wrapctx, 2);
 
-			dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", tid, last_alloc_size);
+			// spams logs
+			// dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", tid, last_alloc_size);
 		}
 
 		static void alloc_post(void *wrapctx, void *user_data) {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 			void * retval = drwrap_get_retval(wrapctx);
 
-			detector::alloc(tid, retval, last_alloc_size);
+			detector::alloc(tid, retval, last_alloc_size[tid]);
 
-			dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
+			// spams logs
+			//dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
 		}
 
 		// TODO: On Linux addr is arg 0
@@ -76,9 +82,11 @@ namespace funwrap {
 
 			detector::free(tid, addr);
 
-			dr_fprintf(STDERR, "<< [%i] pre free %p\n", tid, addr);
+			// spams logs
+			//dr_fprintf(STDERR, "<< [%i] pre free %p\n", tid, addr);
 		}
 
+		// Currently not bound as not necessary
 		static void free_post(void *wrapctx, void *user_data) {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 			dr_fprintf(STDERR, "<< [%i] post free\n", tid);
@@ -91,8 +99,7 @@ void funwrap::wrap_mutex_acquire(const module_data_t *mod) {
 	for (const auto & name : internal::acquire_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-
-			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, internal::mutex_acquire_post);
+			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, NULL);
 			if (ok) {
 				std::string msg{ "< wrapped acq " };
 				msg += name + "\n";
@@ -106,7 +113,7 @@ void funwrap::wrap_mutex_release(const module_data_t *mod) {
 	for (const auto & name : internal::release_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
+			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, NULL);
 			if (ok) {
 				std::string msg{ "< wrapped rel " };
 				msg += name + "\n";

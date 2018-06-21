@@ -8,6 +8,7 @@
 
 #include <detector_if.h>
 
+#include "drace-client.h"
 #include "memory-instr.h"
 
 bool memory_inst::register_events() {
@@ -19,7 +20,7 @@ bool memory_inst::register_events() {
 		);
 }
 
-void memory_inst::allocate_tls() {
+void memory_inst::register_tls() {
 	tls_idx = drmgr_register_tls_field();
 	DR_ASSERT(tls_idx != -1);
 	/* The TLS field provided by DR cannot be directly accessed from the code cache.
@@ -28,7 +29,7 @@ void memory_inst::allocate_tls() {
 	*/
 	if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, MEMTRACE_TLS_COUNT, 0))
 		DR_ASSERT(false);
-	dr_printf("Allocated TLS\n");
+	dr_printf("> Registered TLS\n");
 }
 
 void memory_inst::finalize() {
@@ -40,7 +41,7 @@ void memory_inst::finalize() {
 		DR_ASSERT(false);
 }
 
-static void memory_inst::process_buffer() {
+static inline void memory_inst::process_buffer() {
 	void *drcontext = dr_get_current_drcontext();
 	memory_inst::analyze_access(drcontext);
 }
@@ -51,32 +52,23 @@ static void memory_inst::analyze_access(void *drcontext) {
 
 	data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	buf_ptr = BUF_PTR(data->seg_base);
-	/* Example of dumpped file content:
-	*   0x00007f59c2d002d3:  5, call
-	*   0x00007ffeacab0ec8:  8, w
-	*/
 
 	for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-		if (mem_ref->type > REF_TYPE_WRITE) {
-			data->lastop = mem_ref->type;
-			data->locked = mem_ref->locked;
-		}
+		// Not necessary as only R/W is instrumented
+		//if (mem_ref->type > REF_TYPE_WRITE) {
+		//	data->lastop = mem_ref->type;
+		//	data->locked = mem_ref->locked;
+		//}
 
 		if (data->locked == 0) {
 			// skip if last-op was compare-exchange
 			if (mem_ref->type == REF_TYPE_WRITE) {
 				detector::write(data->tid, mem_ref->addr, mem_ref->size);
-				//if (writes < 100) {
-					//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
-				//}
-				writes++;
+				//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 			}
 			else if (mem_ref->type == REF_TYPE_READ) {
 				detector::read(data->tid, mem_ref->addr, mem_ref->size);
-				//if (reads < 10) {
-					//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
-				//}
-				reads++;
+				//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 			}
 		}
 		data->num_refs++;
@@ -92,8 +84,8 @@ static void memory_inst::event_thread_init(void *drcontext)
 	drmgr_set_tls_field(drcontext, tls_idx, data);
 
 	/* Keep seg_base in a per-thread data structure so we can get the TLS
-	* slot and find where the pointer points to in the buffer.
-	*/
+	 * slot and find where the pointer points to in the buffer.
+	 */
 	data->seg_base = (byte*) dr_get_dr_segment_base(tls_seg);
 	data->buf_base = (mem_ref_t*) dr_raw_mem_alloc(MEM_BUF_SIZE,
 		DR_MEMPROT_READ | DR_MEMPROT_WRITE,
@@ -115,7 +107,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	dr_raw_mem_free(data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	dr_printf("< reads: %i, writes: %i\n", reads.load(), writes.load());
+	dr_printf("< memory refs: %i\n", memory_inst::refs.load());
 }
 
 
@@ -291,6 +283,7 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
 	// Only track moves and ignore Locked instructions
+	// TODO: Check if sufficient
 	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK)) {
 		return DR_EMIT_DEFAULT;
 	}
@@ -307,7 +300,8 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	//	opcode == OP_stos)
 
 	/* insert code to add an entry for app instruction */
-	instrument_instr(drcontext, bb, instr);
+	// TODO: Check if instruction instrumentation is necessary (probably not)
+	//instrument_instr(drcontext, bb, instr);
 	
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {
@@ -320,6 +314,7 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 			instrument_mem(drcontext, bb, instr, instr_get_dst(instr, i), true);
 	}
 
+	// TODO: Try to do less clean calls as extremely expensive
 	// analyze buffer
 	dr_insert_clean_call(drcontext, bb, instr, (void *)process_buffer, false, 0);
 

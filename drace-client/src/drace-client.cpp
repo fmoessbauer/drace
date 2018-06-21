@@ -41,7 +41,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	// Setup Memory Tracing
 	DR_ASSERT(memory_inst::register_events());
-	memory_inst::allocate_tls();
+	memory_inst::register_tls();
 
 	// Initialize Detector
 	detector::init();
@@ -61,27 +61,30 @@ static void event_exit()
 	drmgr_exit();
 
 	// Finalize Detector
-	// kills program, hence skip
-	//__tsan_fini();
+	detector::finalize();
 
 	dr_printf("< DR Exit\n");
 }
 
 static void event_thread_init(void *drcontext)
 {
-	// TODO: Start shadow thread for each app thread
-	// If only one thead is running, disable detector
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	++num_threads_active;
+
+	// TODO: Try to get parent threadid
+	detector::fork(0, tid);
+
 	dr_printf("<< [%i] Thread started\n", tid);
 }
 
 static void event_thread_exit(void *drcontext)
 {
-	// TODO: Cleanup and quit shadow thread
-	// If only one thead is running, disable detector
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	--num_threads_active;
+
+	// TODO: Try to get parent threadid
+	detector::join(0, tid);
+
 	dr_printf("<< [%i] Thread exited\n", tid);
 }
 
@@ -95,5 +98,3 @@ static void module_load_event(void *drcontext, const module_data_t *mod, bool lo
 	funwrap::wrap_deallocs(mod);
 	funwrap::wrap_main(mod);
 }
-
-// Detector Stuff

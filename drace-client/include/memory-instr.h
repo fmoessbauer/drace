@@ -47,17 +47,16 @@ namespace memory_inst {
 		mem_ref_t  *buf_base;
 		ushort      lastop;
 		ushort      locked;
+		uint64      last_alloc_size;
 		uint64      num_refs;
 		thread_id_t tid;
 	} per_thread_t;
 
 	static std::atomic<int> refs;
-	static std::atomic<int> writes;
-	static std::atomic<int> reads;
 
 	bool register_events();
 
-	void allocate_tls();
+	void register_tls();
 
 	void finalize();
 

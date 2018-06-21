@@ -1,10 +1,13 @@
 #include "../detector_if.h"
 
 #include <unordered_map>
+#include <vector>
+
 #include <iostream>
 #include "tsan-if.h"
 
 static std::unordered_map<void *, size_t> allocations;
+std::vector<int*> stack_trace;
 
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 	std::cout << "DATA Race " << callback_parameter << ::std::endl;
@@ -31,44 +34,41 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 }
 
 bool detector::init() {
+	stack_trace.push_back((int*)0x11);
+	stack_trace.push_back((int*)0x33);
+	stack_trace.push_back((int*)0x55);
+
 	__tsan_init_simple(reportRaceCallBack, (void*)0xABCD);
 	return true;
 }
 
 void detector::finalize() {
-	__tsan_fini();
+	// TODO: Currently kills detector
+	//__tsan_fini();
 }
 
 void detector::acquire(tid_t thread_id, void* mutex) {
-	__tsan_acquire_use_user_tid(thread_id, (void*)mutex);
+	// TODO: Currently kills detector
+	//__tsan_acquire_use_user_tid(thread_id, (void*)mutex);
 }
 
 void detector::release(tid_t thread_id, void* mutex) {
-	__tsan_release_use_user_tid(thread_id, (void*)mutex);
+	// TODO: Currently kills detector
+	//__tsan_release_use_user_tid(thread_id, (void*)mutex);
 }
 
 void detector::read(tid_t thread_id, void* addr, unsigned long size) {
-	int* stack_trace[3];
-	stack_trace[0] = (int*)0x11;
-	stack_trace[1] = (int*)0x33;
-	stack_trace[2] = (int*)0x55;
-
 	//TODO: TSAN seems to only support 32 bit addresses!!!
 	unsigned long addr_32 = (unsigned long)addr;
 
-	__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)&stack_trace[0], 3, false, 5, false);
+	__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
 }
 
 void detector::write(tid_t thread_id, void* addr, unsigned long size) {
-	int* stack_trace[3];
-	stack_trace[0] = (int*)0x11;
-	stack_trace[1] = (int*)0x33;
-	stack_trace[2] = (int*)0x55;
-
 	//TODO: TSAN seems to only support 32 bit addresses!!!
 	unsigned long addr_32 = (unsigned long)addr;
 
-	__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)&stack_trace[0], 3, false, 4, false);
+	__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
 }
 
 void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
@@ -78,6 +78,7 @@ void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
 }
 
 void detector::free(tid_t thread_id, void* addr) {
+	// ocasionally free is called more often than alloc, hence guard
 	if (allocations.count(addr) == 1) {
 		size_t size = allocations[addr];
 		allocations.erase(addr);

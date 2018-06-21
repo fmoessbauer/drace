@@ -3,7 +3,6 @@
 #include "memory-instr.h"
 #include <dr_api.h>
 
-// memory instrumentator
 static std::atomic<int> num_threads_active;
 
 static void event_exit(void);
