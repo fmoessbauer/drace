@@ -7,8 +7,13 @@ target_include_directories(
 	"drace-client" PRIVATE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/drace-client> "include")
 
+target_include_directories(
+	"drace-client" PRIVATE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/drace-client> "detectors")
+
 # link against modified tsan implementation
-target_link_libraries("drace-client" "tsan-custom")
+target_link_libraries("drace-client" "drace-tsan" "tsan-custom")
+
 add_custom_command(TARGET "drace-client" POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"

@@ -5,7 +5,8 @@
 #include <drreg.h>
 #include <drutil.h>
 #include <dr_tools.h>
-#include <tsan-custom.h>
+
+#include <detector_if.h>
 
 #include "memory-instr.h"
 
@@ -55,14 +56,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	*   0x00007ffeacab0ec8:  8, w
 	*/
 
-	int* stack_trace[3];
-	stack_trace[0] = (int*)0x11;
-	stack_trace[1] = (int*)0x33;
-	stack_trace[2] = (int*)0x55;
-
 	for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-		//TODO: TSAN seems to only support 32 bit addresses!!!
-		unsigned long addr = (unsigned long)mem_ref->addr;
 		if (mem_ref->type > REF_TYPE_WRITE) {
 			data->lastop = mem_ref->type;
 			data->locked = mem_ref->locked;
@@ -71,14 +65,14 @@ static void memory_inst::analyze_access(void *drcontext) {
 		if (data->locked == 0) {
 			// skip if last-op was compare-exchange
 			if (mem_ref->type == REF_TYPE_WRITE) {
-				__tsan_write_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 4, false);
+				detector::write(data->tid, mem_ref->addr, mem_ref->size);
 				//if (writes < 100) {
 					//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 				//}
 				writes++;
 			}
 			else if (mem_ref->type == REF_TYPE_READ) {
-				__tsan_read_use_user_tid((unsigned long)data->tid, (void*)addr, kSizeLog1, (void*)&stack_trace[0], 3, false, 5, false);
+				detector::read(data->tid, mem_ref->addr, mem_ref->size);
 				//if (reads < 10) {
 					//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 				//}

@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include <tsan-custom.h>
+#include <detector_if.h>
 #include <drwrap.h>
 
 #include <unordered_map>
@@ -24,14 +24,11 @@ namespace funwrap {
 
 		size_t last_alloc_size = 0;
 
-		std::unordered_map<void *, size_t> allocations;
-
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			// TODO: This often crashes
-			//__tsan_acquire_use_user_tid(tid, (void*)mutex);
+			detector::acquire(tid, mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", tid, mutex);
 		}
@@ -45,8 +42,7 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			// TODO: This often crashes
-			//__tsan_release_use_user_tid(tid, (void*)mutex);
+			detector::release(tid, mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", tid, mutex);
 		}
@@ -66,12 +62,9 @@ namespace funwrap {
 
 		static void alloc_post(void *wrapctx, void *user_data) {
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
-
 			void * retval = drwrap_get_retval(wrapctx);
-			uint32_t retoffs = (uint32_t) retval;
-			__tsan_malloc_use_user_tid(tid, 0, retoffs, last_alloc_size);
-			// TODO: add pointer and size to map for proper free
-			allocations.emplace(retval, last_alloc_size);
+
+			detector::alloc(tid, retval, last_alloc_size);
 
 			dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
 		}
@@ -81,13 +74,9 @@ namespace funwrap {
 			void * addr = drwrap_get_arg(wrapctx, 2);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			if (allocations.count(addr) == 1) {
-				size_t size = allocations[addr];
-				allocations.erase(addr);
-				//__tsan_free(addr, size);
-				__tsan_reset_range((unsigned int) addr, size);
-				dr_fprintf(STDERR, "<< [%i] pre free %p, size %i\n", tid, addr, size);
-			}
+			detector::free(tid, addr);
+
+			dr_fprintf(STDERR, "<< [%i] pre free %p\n", tid, addr);
 		}
 
 		static void free_post(void *wrapctx, void *user_data) {
