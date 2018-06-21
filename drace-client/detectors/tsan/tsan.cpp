@@ -1,13 +1,20 @@
 #include "../detector_if.h"
 
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 #include <iostream>
 #include "tsan-if.h"
 
-static std::unordered_map<void *, size_t> allocations;
-std::vector<int*> stack_trace;
+
+/**
+ * To avoid false-positives track races only if they are on the heap
+ * invert order to get range using lower_bound
+ */
+// TODO: Make accesses thread safe using memory_order acquire release
+// Or use epoches
+static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
+static std::vector<int*> stack_trace;
 
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 	std::cout << "DATA Race " << callback_parameter << ::std::endl;
@@ -31,6 +38,13 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 			std::cout << ((void**)race_info_ac->stack_trace)[i] << std::endl;
 		}
 	}
+}
+
+inline bool on_heap(uint64_t addr) {
+	auto it = allocations.lower_bound(addr);
+	uint64_t beg = it->first;
+	size_t   sz = it->second;
+	return (addr < (beg + sz));
 }
 
 bool detector::init() {
@@ -58,30 +72,34 @@ void detector::release(tid_t thread_id, void* mutex) {
 }
 
 void detector::read(tid_t thread_id, void* addr, unsigned long size) {
-	//TODO: TSAN seems to only support 32 bit addresses!!!
-	unsigned long addr_32 = (unsigned long)addr;
+	if (on_heap((uint64_t)addr)) {
+		//TODO: TSAN seems to only support 32 bit addresses!!!
+		unsigned long addr_32 = (unsigned long)addr;
 
-	__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
+		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
+	}
 }
 
 void detector::write(tid_t thread_id, void* addr, unsigned long size) {
-	//TODO: TSAN seems to only support 32 bit addresses!!!
-	unsigned long addr_32 = (unsigned long)addr;
+	if (on_heap((uint64_t)addr)) {
+		//TODO: TSAN seems to only support 32 bit addresses!!!
+		unsigned long addr_32 = (unsigned long)addr;
 
-	__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
+		__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
+	}
 }
 
 void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
 	uint32_t retoffs = (uint32_t)addr;
 	__tsan_malloc_use_user_tid(thread_id, 0, retoffs, size);
-	allocations.emplace(addr, size);
+	allocations.emplace((uint64_t)addr, size);
 }
 
 void detector::free(tid_t thread_id, void* addr) {
 	// ocasionally free is called more often than alloc, hence guard
-	if (allocations.count(addr) == 1) {
-		size_t size = allocations[addr];
-		allocations.erase(addr);
+	if (allocations.count((uint64_t)addr) == 1) {
+		size_t size = allocations[(uint64_t)addr];
+		allocations.erase((uint64_t)addr);
 		//__tsan_free(addr, size);
 		__tsan_reset_range((unsigned int)addr, size);
 	}
