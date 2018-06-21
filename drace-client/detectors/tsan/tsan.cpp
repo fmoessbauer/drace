@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <iostream>
-#include <tsan-custom.h>
+#include "tsan-if.h"
 
 static std::unordered_map<void *, size_t> allocations;
 

@@ -5,6 +5,8 @@ project ("drace-client" LANGUAGES "C" "CXX")
 set(DRACE_ENABLE_TESTING OFF CACHE STRING "Build Tests")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE STRING "Build C# Examples")
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # CSharp can only be build using MSVC generators
 message("Generator: ${CMAKE_GENERATOR}")
 if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
@@ -15,9 +17,8 @@ endif()
 find_package(Threads REQUIRED)
 find_package(DynamoRIO 7.0 REQUIRED)
 
-add_subdirectory("vendor/tsan")
 add_subdirectory("drace-client/detectors/tsan")
-add_subdirectory ("drace-client")
+add_subdirectory("drace-client")
 
 if(${DRACE_ENABLE_TESTING})
 	message("Build Testsuite")
