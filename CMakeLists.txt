@@ -2,8 +2,9 @@
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
-set(DRACE_ENABLE_TESTING OFF CACHE STRING "Build Tests")
-set(BUILD_CSHARP_EXAMPLES OFF CACHE STRING "Build C# Examples")
+set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
+set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
+set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 

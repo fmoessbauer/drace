@@ -16,11 +16,6 @@ add_custom_command(TARGET "drace-client" POST_BUILD
         "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
         $<TARGET_FILE_DIR:drace-client>)
 
-add_custom_command(TARGET "drace-client" POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "detectors/tsan/drace-tsan.dll"
-        $<TARGET_FILE_DIR:drace-client>)
-
 
 # Setup as dynamorio client (not-standalone)
 # See https://github.com/DynamoRIO/dynamorio/blob/master/make/DynamoRIOConfig.cmake.in
@@ -31,8 +26,24 @@ use_DynamoRIO_extension("drace-client" drutil)
 use_DynamoRIO_extension("drace-client" drreg)
 use_DynamoRIO_extension("drace-client" drwrap)
 
-# link against modified tsan implementation
-target_link_libraries("drace-client" "drace-tsan")
+# Bind detectors
+message("Use detector: ${DRACE_DETECTOR}")
+
+if("${DRACE_DETECTOR}" STREQUAL "tsan")
+	target_link_libraries("drace-client" "drace-tsan")
+	add_custom_command(TARGET "drace-client" POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"detectors/tsan/drace-tsan.dll"
+        $<TARGET_FILE_DIR:drace-client>)
+endif()
+
+if("${DRACE_DETECTOR}" STREQUAL "ft2l")
+	target_link_libraries("drace-client" "drace-ft2l")
+	add_custom_command(TARGET "drace-client" POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"detectors/tsan/drace-ft2l.dll"
+        $<TARGET_FILE_DIR:drace-client>)
+endif()
 
 # TODO: Add Tests
 # TODO: Add Benchmarks
