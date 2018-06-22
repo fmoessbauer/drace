@@ -11,23 +11,13 @@
 /* Max number of mem_ref a buffer can have. It should be big enough
 * to hold all entries between clean calls.
 */
-#define TLS_SLOT(tls_base, enum_val) (void **)((byte *)(tls_base)+memory_inst::tls_offs+(enum_val))
-#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, memory_inst::MEMTRACE_TLS_OFFS_BUF_PTR)
+#define TLS_SLOT(tls_base) (void **)((byte *)(tls_base)+tls_offs)
+#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base)
 
 namespace memory_inst {
 
-	/* Allocated TLS slot offsets */
-	// TODO Check if necessary
 	enum {
-		MEMTRACE_TLS_OFFS_BUF_PTR,
-		MEMTRACE_TLS_COUNT, /* total number of TLS slots allocated */
-	};
-	static reg_id_t tls_seg;
-	static uint     tls_offs;
-	static int      tls_idx;
-
-	enum {
-		REF_TYPE_READ = 0,
+		REF_TYPE_READ  = 0,
 		REF_TYPE_WRITE = 1,
 	};
 

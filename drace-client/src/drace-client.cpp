@@ -15,6 +15,13 @@
 
 #include <detector_if.h>
 
+/*
+* Thread local storage metadata has to be globally accessable
+*/
+reg_id_t tls_seg;
+uint     tls_offs;
+int      tls_idx;
+
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */

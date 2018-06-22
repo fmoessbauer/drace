@@ -27,7 +27,7 @@ void memory_inst::register_tls() {
 	* For better performance, we allocate raw TLS so that we can directly
 	* access and update it with a single instruction.
 	*/
-	if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, MEMTRACE_TLS_COUNT, 0))
+	if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, 1, 0))
 		DR_ASSERT(false);
 	dr_printf("< Registered TLS\n");
 }
@@ -53,24 +53,24 @@ static void memory_inst::analyze_access(void *drcontext) {
 	data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	buf_ptr = BUF_PTR(data->seg_base);
 
-	for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
+	for (mem_ref = data->buf_base; mem_ref < buf_ptr; mem_ref++) {
 		// Not necessary as only R/W is instrumented
 		//if (mem_ref->type > REF_TYPE_WRITE) {
 		//	data->lastop = mem_ref->type;
 		//	data->locked = mem_ref->locked;
 		//}
 
-		if (data->locked == 0) {
-			// skip if last-op was compare-exchange
-			if (mem_ref->type == REF_TYPE_WRITE) {
-				detector::write(data->tid, mem_ref->addr, mem_ref->size);
-				//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
-			}
-			else if (mem_ref->type == REF_TYPE_READ) {
-				detector::read(data->tid, mem_ref->addr, mem_ref->size);
-				//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
-			}
+		//if (data->locked == 0) {
+		// skip if last-op was compare-exchange
+		if (mem_ref->type == REF_TYPE_WRITE) {
+			detector::write(data->tid, mem_ref->addr, mem_ref->size);
+			//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 		}
+		else if (mem_ref->type == REF_TYPE_READ) {
+			detector::read(data->tid, mem_ref->addr, mem_ref->size);
+			//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+		}
+		//}
 		data->num_refs++;
 	}
 	BUF_PTR(data->seg_base) = data->buf_base;
@@ -130,7 +130,7 @@ static void memory_inst::insert_load_buf_ptr(void *drcontext, instrlist_t *ilist
 	reg_id_t reg_ptr)
 {
 	dr_insert_read_raw_tls(drcontext, ilist, where, tls_seg,
-		tls_offs + MEMTRACE_TLS_OFFS_BUF_PTR, reg_ptr);
+		tls_offs, reg_ptr);
 }
 
 static void memory_inst::insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where,
@@ -180,7 +180,7 @@ static void memory_inst::insert_update_buf_ptr(void *drcontext, instrlist_t *ili
 			opnd_create_reg(reg_ptr),
 			OPND_CREATE_INT16(adjust)));
 	dr_insert_write_raw_tls(drcontext, ilist, where, tls_seg,
-		tls_offs + MEMTRACE_TLS_OFFS_BUF_PTR, reg_ptr);
+		tls_offs, reg_ptr);
 }
 
 static void memory_inst::insert_save_type(void *drcontext, instrlist_t *ilist, instr_t *where,
@@ -260,13 +260,17 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 		return;
 	}
 
+	// TODO: Check if necessary
+	// Probably only necessary if instrument_instr is not called
+	insert_load_buf_ptr(drcontext, ilist, where, reg_ptr);
+
 	/* save_addr should be called first as reg_ptr or reg_tmp maybe used in ref */
-	memory_inst::insert_save_addr(drcontext, ilist, where, ref, reg_ptr, reg_tmp);
-	memory_inst::insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
+	insert_save_addr(drcontext, ilist, where, ref, reg_ptr, reg_tmp);
+	insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
 		write ? REF_TYPE_WRITE : REF_TYPE_READ);
-	memory_inst::insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
+	insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
 		(ushort)drutil_opnd_mem_size_in_bytes(ref, where));
-	memory_inst::insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
+	insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
 
 	/* Restore scratch registers */
 	if (drreg_unreserve_register(drcontext, ilist, where, reg_ptr) != DRREG_SUCCESS ||

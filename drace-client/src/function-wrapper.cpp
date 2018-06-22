@@ -1,4 +1,6 @@
+#include "drace-client.h"
 #include "function-wrapper.h"
+#include "memory-instr.h"
 
 #include <vector>
 #include <string>
@@ -21,10 +23,6 @@ namespace funwrap {
 		static std::vector<std::string> allocators{ "malloc" };
 		static std::vector<std::string> deallocs{ "free" };
 #endif
-
-		// TODO replace this with thread local storage
-		// Inspect why the already existing tls cannot be used (segfaults)
-		static std::unordered_map<thread_id_t, size_t> last_alloc_size;
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
@@ -58,18 +56,24 @@ namespace funwrap {
 
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data) {
-			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
-			last_alloc_size[tid] = (size_t)drwrap_get_arg(wrapctx, 2);
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+
+			// Save alloc size to TLS
+			memory_inst::per_thread_t * data = (memory_inst::per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
 
 			// spams logs
 			// dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", tid, last_alloc_size);
 		}
 
 		static void alloc_post(void *wrapctx, void *user_data) {
-			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			void * retval = drwrap_get_retval(wrapctx);
 
-			detector::alloc(tid, retval, last_alloc_size[tid]);
+			// Read alloc size from TLS
+			memory_inst::per_thread_t * data = (memory_inst::per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+			detector::alloc(data->tid, retval, data->last_alloc_size);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
