@@ -260,10 +260,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 		return;
 	}
 
-	// TODO: Check if necessary
-	// Probably only necessary if instrument_instr is not called
-	insert_load_buf_ptr(drcontext, ilist, where, reg_ptr);
-
 	/* save_addr should be called first as reg_ptr or reg_tmp maybe used in ref */
 	insert_save_addr(drcontext, ilist, where, ref, reg_ptr, reg_tmp);
 	insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
