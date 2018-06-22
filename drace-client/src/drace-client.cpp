@@ -17,7 +17,6 @@
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-	num_threads_active = 0;
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
 

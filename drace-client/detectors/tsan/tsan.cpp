@@ -2,6 +2,8 @@
 
 #include <map>
 #include <vector>
+#include <atomic>
+#include <mutex>
 
 #include <iostream>
 #include "tsan-if.h"
@@ -13,6 +15,9 @@
  */
 // TODO: Make accesses thread safe using memory_order acquire release
 // Or use epoches
+static std::atomic<bool>		alloc_readable{ true };
+static std::atomic<uint64_t>	misses{ 0 };
+static std::mutex				alloc_modify_mx;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
 static std::vector<int*> stack_trace;
 
@@ -41,10 +46,18 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 }
 
 inline bool on_heap(uint64_t addr) {
-	auto it = allocations.lower_bound(addr);
-	uint64_t beg = it->first;
-	size_t   sz = it->second;
-	return (addr < (beg + sz));
+	if (alloc_readable.load(std::memory_order_consume)) {
+		auto it = allocations.lower_bound(addr);
+		uint64_t beg = it->first;
+		size_t   sz = it->second;
+		return (addr < (beg + sz));
+	}
+	else {
+		// for performance reasons ignore this location
+		// TODO: Check impact
+		++misses;
+		return false;
+	}
 }
 
 bool detector::init() {
@@ -59,6 +72,7 @@ bool detector::init() {
 void detector::finalize() {
 	// TODO: Currently kills detector
 	//__tsan_fini();
+	std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
 }
 
 void detector::acquire(tid_t thread_id, void* mutex) {
@@ -90,12 +104,20 @@ void detector::write(tid_t thread_id, void* addr, unsigned long size) {
 }
 
 void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
+	//std::lock_guard<std::mutex> lg(alloc_modify_mx);
+	alloc_readable.store(false, std::memory_order_release);
+
 	uint32_t retoffs = (uint32_t)addr;
 	__tsan_malloc_use_user_tid(thread_id, 0, retoffs, size);
 	allocations.emplace((uint64_t)addr, size);
+
+	alloc_readable.store(true, std::memory_order_release);
 }
 
 void detector::free(tid_t thread_id, void* addr) {
+	//std::lock_guard<std::mutex> lg(alloc_modify_mx);
+	alloc_readable.store(false, std::memory_order_release);
+
 	// ocasionally free is called more often than alloc, hence guard
 	if (allocations.count((uint64_t)addr) == 1) {
 		size_t size = allocations[(uint64_t)addr];
@@ -103,6 +125,8 @@ void detector::free(tid_t thread_id, void* addr) {
 		//__tsan_free(addr, size);
 		__tsan_reset_range((unsigned int)addr, size);
 	}
+
+	alloc_readable.store(true, std::memory_order_release);
 }
 
 void detector::fork(tid_t parent, tid_t child) {

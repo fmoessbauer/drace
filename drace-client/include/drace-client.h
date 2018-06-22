@@ -3,7 +3,7 @@
 #include "memory-instr.h"
 #include <dr_api.h>
 
-static std::atomic<int> num_threads_active;
+static std::atomic<int> num_threads_active{0};
 
 static void event_exit(void);
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);

@@ -29,7 +29,7 @@ void memory_inst::register_tls() {
 	*/
 	if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, MEMTRACE_TLS_COUNT, 0))
 		DR_ASSERT(false);
-	dr_printf("> Registered TLS\n");
+	dr_printf("< Registered TLS\n");
 }
 
 void memory_inst::finalize() {
