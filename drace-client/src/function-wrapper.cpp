@@ -28,7 +28,7 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			memory_inst::clean_call();
+			memory_inst::process_buffer();
 
 			detector::acquire(tid, mutex);
 
@@ -45,7 +45,7 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			memory_inst::clean_call();
+			memory_inst::process_buffer();
 
 			detector::release(tid, mutex);
 
@@ -62,10 +62,10 @@ namespace funwrap {
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 
-			memory_inst::clean_call();
+			memory_inst::process_buffer();
 
 			// Save alloc size to TLS
-			memory_inst::per_thread_t * data = (memory_inst::per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
 
 			// spams logs
@@ -77,7 +77,7 @@ namespace funwrap {
 			void * retval = drwrap_get_retval(wrapctx);
 
 			// Read alloc size from TLS
-			memory_inst::per_thread_t * data = (memory_inst::per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 			detector::alloc(data->tid, retval, data->last_alloc_size);
 
@@ -90,7 +90,7 @@ namespace funwrap {
 			void * addr = drwrap_get_arg(wrapctx, 2);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
-			memory_inst::clean_call();
+			memory_inst::process_buffer();
 
 			detector::free(tid, addr);
 

@@ -7,7 +7,7 @@
 #include <drutil.h>
 
 #include <atomic>
-#include <iostream>
+#include <string>
 
 #include "drace-client.h"
 #include "memory-instr.h"
@@ -23,7 +23,7 @@ uint     tls_offs;
 int      tls_idx;
 
 /* Runtime parameters */
-int      sampling_rate = 1;
+params_t params;
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
@@ -35,7 +35,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	dr_enable_console_printing();
 
-	// TODO: Read console parameters
+	// Parse runtime arguments and print generated configuration
+	parse_args(argc, argv);
+	print_config();
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() || !drwrap_init() || drreg_init(&ops) != DRREG_SUCCESS)
@@ -52,7 +54,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	// Setup Memory Tracing
 	DR_ASSERT(memory_inst::register_events());
-	memory_inst::register_tls();
+	memory_inst::init();
 
 	// Initialize Detector
 	detector::init();
@@ -108,4 +110,25 @@ static void module_load_event(void *drcontext, const module_data_t *mod, bool lo
 	funwrap::wrap_allocators(mod);
 	funwrap::wrap_deallocs(mod);
 	funwrap::wrap_main(mod);
+}
+
+static void parse_args(int argc, const char ** argv) {
+	params.sampling_rate = 1;
+
+	int processed = 1;
+	while (processed < argc) {
+		if (strncmp(argv[processed],"-s",5)==0) {
+			params.sampling_rate = std::stoi(argv[processed + 1]);
+			processed+=2;
+		}
+		else {
+			dr_fprintf(STDERR, "< Unknown Argument: %s\n", argv[processed]);
+			++processed;
+		}
+	}
+}
+
+static void print_config() {
+	dr_printf("< Runtime Configuration:\n"
+		      "< Sampling Rate: %i\n", params.sampling_rate);
 }

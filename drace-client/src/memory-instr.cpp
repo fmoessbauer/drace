@@ -12,7 +12,7 @@
 #include "memory-instr.h"
 
 /* Number of instrumented calls, used for sampling */
-std::atomic<int> instrum_count{ 0 };
+static std::atomic<int> instrum_count{ 0 };
 
 bool memory_inst::register_events() {
 	return (
@@ -23,7 +23,7 @@ bool memory_inst::register_events() {
 		);
 }
 
-void memory_inst::register_tls() {
+void memory_inst::init() {
 	page_size = dr_page_size();
 
 	tls_idx = drmgr_register_tls_field();
@@ -53,8 +53,6 @@ static void memory_inst::analyze_access(void *drcontext) {
 	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 	for (int i = 0; i < num_refs; ++i) {
-		//if (data->locked == 0) {
-		// skip if last-op was compare-exchange
 		if (mem_ref->write) {
 			detector::write(data->tid, mem_ref->addr, mem_ref->size);
 			//printf("[%i] WRITE %p, DIFF %i:\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t)(buf_ptr - mem_ref));
@@ -63,8 +61,6 @@ static void memory_inst::analyze_access(void *drcontext) {
 			detector::read(data->tid, mem_ref->addr, mem_ref->size);
 			//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 		}
-		//}
-		data->num_refs++;
 	}
 	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
@@ -87,12 +83,12 @@ static void memory_inst::event_thread_init(void *drcontext)
 
 static void memory_inst::event_thread_exit(void *drcontext)
 {
+	// process remaining accesses
 	memory_inst::analyze_access(drcontext);
 
 	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	
-	// atomic access
-	refs += data->num_refs;
+	refs += data->num_refs; // atomic access
 
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -113,8 +109,56 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 	return DR_EMIT_DEFAULT;
 }
 
+static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
+	instr_t *instr, bool for_trace,
+	bool translating, void *user_data) {
+
+	if (!instr_is_app(instr))
+		return DR_EMIT_DEFAULT;
+	// Only track moves and ignore Locked instructions
+	// TODO: Check if sufficient
+	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK))
+		return DR_EMIT_DEFAULT;
+	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
+		return DR_EMIT_DEFAULT;
+
+	// Sampling: Only instrument some instructions
+	++instrum_count;
+	if (instrum_count % params.sampling_rate != 0) {
+		return DR_EMIT_DEFAULT;
+	}
+
+	// Filter certain opcodes
+	//ushort opcode = instr_get_opcode(instr);
+	//if (opcode == OP_cmpxchg ||
+	//	opcode == OP_push ||
+	//	opcode == OP_pop ||
+	//	opcode == OP_ret ||
+	//	opcode == OP_call ||
+	//	opcode == OP_stos)
+
+	/* insert code to add an entry for app instruction */
+	// TODO: Check if instruction instrumentation is necessary (probably not)
+	//instrument_instr(drcontext, bb, instr);
+
+	/* insert code to add an entry for each memory reference opnd */
+	for (int i = 0; i < instr_num_srcs(instr); i++) {
+		opnd_t src = instr_get_src(instr, i);
+		if (opnd_is_memory_reference(src))
+			instrument_mem(drcontext, bb, instr, src, false);
+	}
+
+	for (int i = 0; i < instr_num_dsts(instr); i++) {
+		opnd_t dst = instr_get_dst(instr, i);
+		if (opnd_is_memory_reference(dst))
+			instrument_mem(drcontext, bb, instr, dst, true);
+	}
+
+	return DR_EMIT_DEFAULT;
+}
+
 /* clean_call dumps the memory reference info to the log file */
-void memory_inst::clean_call(void)
+void memory_inst::process_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
 	memory_inst::analyze_access(drcontext);
@@ -138,7 +182,7 @@ static void memory_inst::code_cache_init(void)
 	where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
 	instrlist_meta_append(ilist, where);
 	/* clean call */
-	dr_insert_clean_call(drcontext, ilist, where, (void *)clean_call, false, 0);
+	dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, false, 0);
 	/* Encodes the instructions into memory and then cleans up. */
 	end = instrlist_encode(drcontext, ilist, code_cache, false);
 	DR_ASSERT((size_t)(end - code_cache) < page_size);
@@ -299,53 +343,4 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
 		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS)
 		DR_ASSERT(false);
-}
-
-
-static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
-	instr_t *instr, bool for_trace,
-	bool translating, void *user_data) {
-
-	if (!instr_is_app(instr))
-		return DR_EMIT_DEFAULT;
-	// Only track moves and ignore Locked instructions
-	// TODO: Check if sufficient
-	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK))
-		return DR_EMIT_DEFAULT;
-	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
-		return DR_EMIT_DEFAULT;
-
-	// Sampling: Only instrument some instructions
-	++instrum_count;
-	if (instrum_count % sampling_rate != 0) {
-		return DR_EMIT_DEFAULT;
-	}
-
-	// Filter certain opcodes
-	//ushort opcode = instr_get_opcode(instr);
-	//if (opcode == OP_cmpxchg ||
-	//	opcode == OP_push ||
-	//	opcode == OP_pop ||
-	//	opcode == OP_ret ||
-	//	opcode == OP_call ||
-	//	opcode == OP_stos)
-
-	/* insert code to add an entry for app instruction */
-	// TODO: Check if instruction instrumentation is necessary (probably not)
-	//instrument_instr(drcontext, bb, instr);
-
-	/* insert code to add an entry for each memory reference opnd */
-	for (int i = 0; i < instr_num_srcs(instr); i++) {
-		opnd_t src = instr_get_src(instr, i);
-		if (opnd_is_memory_reference(src))
-			instrument_mem(drcontext, bb, instr, src, false);
-	}
-
-	for (int i = 0; i < instr_num_dsts(instr); i++) {
-		opnd_t dst = instr_get_dst(instr, i);
-		if (opnd_is_memory_reference(dst))
-			instrument_mem(drcontext, bb, instr, dst, true);
-	}
-
-	return DR_EMIT_DEFAULT;
 }
