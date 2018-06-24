@@ -15,3 +15,6 @@ static void module_load_event(void *drcontext, const module_data_t *mod, bool lo
 extern reg_id_t tls_seg;
 extern uint     tls_offs;
 extern int      tls_idx;
+
+/* Sampling rate in 1/x */
+extern int sampling_rate;

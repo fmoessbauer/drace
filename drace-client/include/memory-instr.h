@@ -8,9 +8,6 @@
 
 #include <atomic>
 
-/* Max number of mem_ref a buffer can have. It should be big enough
-* to hold all entries between clean calls.
-*/
 #define TLS_SLOT(tls_base) (void **)((byte *)(tls_base)+tls_offs)
 #define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base)
 
@@ -22,10 +19,10 @@ namespace memory_inst {
 	};
 
 	typedef struct _mem_ref_t {
-		ushort type; /* r(0), w(1) */
-		ushort size; /* mem ref size or instr length */
-		app_pc addr; /* mem ref addr or instr pc */
-		ushort locked;
+		bool  write;
+		void *addr;
+		size_t size;
+		app_pc pc;
 	} mem_ref_t;
 
 	constexpr int MAX_NUM_MEM_REFS = 4096;
@@ -33,14 +30,18 @@ namespace memory_inst {
 
 	/* thread private log file and counter */
 	typedef struct {
-		byte       *seg_base;
-		mem_ref_t  *buf_base;
-		ushort      lastop;
-		ushort      locked;
+		byte       *buf_ptr;
+		byte       *buf_base;
+		ptr_int_t   buf_end;
+		void       *cache;
 		uint64      last_alloc_size;
 		uint64      num_refs;
 		thread_id_t tid;
+		ushort      test;
 	} per_thread_t;
+
+	static size_t page_size;
+	static app_pc code_cache;
 
 	static std::atomic<int> refs;
 
@@ -52,7 +53,11 @@ namespace memory_inst {
 
 	static void analyze_access(void* drcontext);
 
-	static void process_buffer();
+	void clean_call(void);
+
+	static void code_cache_init(void);
+
+	static void code_cache_exit(void);
 
 	// Events
 	static void event_thread_init(void *drcontext);
@@ -63,7 +68,7 @@ namespace memory_inst {
 
 	static void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
 
-	static void insert_tag_lock(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr, bool locked);
+	//static void insert_tag_lock(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr, bool locked);
 
 	static void insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where,
 		reg_id_t base, reg_id_t scratch, app_pc pc);

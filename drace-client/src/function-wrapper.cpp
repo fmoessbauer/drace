@@ -28,6 +28,8 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
+			memory_inst::clean_call();
+
 			detector::acquire(tid, mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", tid, mutex);
@@ -43,6 +45,8 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
 
+			memory_inst::clean_call();
+
 			detector::release(tid, mutex);
 
 			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", tid, mutex);
@@ -57,6 +61,8 @@ namespace funwrap {
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+
+			memory_inst::clean_call();
 
 			// Save alloc size to TLS
 			memory_inst::per_thread_t * data = (memory_inst::per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -83,6 +89,8 @@ namespace funwrap {
 		static void free_pre(void *wrapctx, void **user_data) {
 			void * addr = drwrap_get_arg(wrapctx, 2);
 			thread_id_t tid = dr_get_thread_id(drwrap_get_drcontext(wrapctx));
+
+			memory_inst::clean_call();
 
 			detector::free(tid, addr);
 

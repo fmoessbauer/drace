@@ -11,28 +11,31 @@
 #include "drace-client.h"
 #include "memory-instr.h"
 
+/* Number of instrumented calls, used for sampling */
+std::atomic<int> instrum_count{ 0 };
+
 bool memory_inst::register_events() {
 	return (
 		drmgr_register_thread_init_event(memory_inst::event_thread_init) &&
 		drmgr_register_thread_exit_event(memory_inst::event_thread_exit) &&
-		drmgr_register_bb_app2app_event(event_bb_app2app, NULL)          &&
+		drmgr_register_bb_app2app_event(event_bb_app2app, NULL) &&
 		drmgr_register_bb_instrumentation_event(NULL, event_app_instruction, NULL)
 		);
 }
 
 void memory_inst::register_tls() {
+	page_size = dr_page_size();
+
 	tls_idx = drmgr_register_tls_field();
 	DR_ASSERT(tls_idx != -1);
-	/* The TLS field provided by DR cannot be directly accessed from the code cache.
-	* For better performance, we allocate raw TLS so that we can directly
-	* access and update it with a single instruction.
-	*/
-	if (!dr_raw_tls_calloc(&tls_seg, &tls_offs, 1, 0))
-		DR_ASSERT(false);
-	dr_printf("< Registered TLS\n");
+
+	code_cache_init();
+	dr_printf("< Initialized\n");
 }
 
 void memory_inst::finalize() {
+	code_cache_exit();
+
 	if (!drmgr_unregister_thread_init_event(memory_inst::event_thread_init) ||
 		!drmgr_unregister_thread_exit_event(memory_inst::event_thread_exit) ||
 		!drmgr_unregister_bb_app2app_event(memory_inst::event_bb_app2app) ||
@@ -41,70 +44,57 @@ void memory_inst::finalize() {
 		DR_ASSERT(false);
 }
 
-static inline void memory_inst::process_buffer() {
-	void *drcontext = dr_get_current_drcontext();
-	memory_inst::analyze_access(drcontext);
-}
-
 static void memory_inst::analyze_access(void *drcontext) {
 	per_thread_t *data;
-	mem_ref_t *mem_ref, *buf_ptr;
+	mem_ref_t *mem_ref;
 
-	data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
-	buf_ptr = BUF_PTR(data->seg_base);
+	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	mem_ref = (mem_ref_t *)data->buf_base;
+	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	for (mem_ref = data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-		// Not necessary as only R/W is instrumented
-		//if (mem_ref->type > REF_TYPE_WRITE) {
-		//	data->lastop = mem_ref->type;
-		//	data->locked = mem_ref->locked;
-		//}
-
+	for (int i = 0; i < num_refs; ++i) {
 		//if (data->locked == 0) {
 		// skip if last-op was compare-exchange
-		if (mem_ref->type == REF_TYPE_WRITE) {
+		if (mem_ref->write) {
 			detector::write(data->tid, mem_ref->addr, mem_ref->size);
-			//printf("[%i] WRITE %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+			//printf("[%i] WRITE %p, DIFF %i:\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t)(buf_ptr - mem_ref));
 		}
-		else if (mem_ref->type == REF_TYPE_READ) {
+		else {
 			detector::read(data->tid, mem_ref->addr, mem_ref->size);
 			//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
 		}
 		//}
 		data->num_refs++;
 	}
-	BUF_PTR(data->seg_base) = data->buf_base;
+	memset(data->buf_base, 0, MEM_BUF_SIZE);
+	data->num_refs += num_refs;
+	data->buf_ptr = data->buf_base;
 }
 
 // Events
 static void memory_inst::event_thread_init(void *drcontext)
 {
-	per_thread_t *data = (per_thread_t*) dr_thread_alloc(drcontext, sizeof(per_thread_t));
-	DR_ASSERT(data != NULL);
+	/* allocate thread private data */
+	per_thread_t* data = (per_thread_t *) dr_thread_alloc(drcontext, sizeof(per_thread_t));
 	drmgr_set_tls_field(drcontext, tls_idx, data);
 
-	/* Keep seg_base in a per-thread data structure so we can get the TLS
-	 * slot and find where the pointer points to in the buffer.
-	 */
-	data->seg_base = (byte*) dr_get_dr_segment_base(tls_seg);
-	data->buf_base = (mem_ref_t*) dr_raw_mem_alloc(MEM_BUF_SIZE,
-		DR_MEMPROT_READ | DR_MEMPROT_WRITE,
-		NULL);
-	DR_ASSERT(data->seg_base != NULL && data->buf_base != NULL);
-	/* put buf_base to TLS as starting buf_ptr */
-	BUF_PTR(data->seg_base) = data->buf_base;
-
-	data->tid = dr_get_thread_id(drcontext);
+	data->buf_base = (byte*) dr_thread_alloc(drcontext, MEM_BUF_SIZE);
+	data->buf_ptr = data->buf_base;
+	/* set buf_end to be negative of address of buffer end for the lea later */
+	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
+	data->num_refs = 0;
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
 {
 	memory_inst::analyze_access(drcontext);
 
-	per_thread_t * data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
-	memory_inst::refs += data->num_refs;
+	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+	
+	// atomic access
+	refs += data->num_refs;
 
-	dr_raw_mem_free(data->buf_base, MEM_BUF_SIZE);
+	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
 	dr_printf("< memory refs: %i\n", memory_inst::refs.load());
@@ -123,154 +113,191 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 	return DR_EMIT_DEFAULT;
 }
 
-/**
- * load current buffer ptr into register
- */
-static void memory_inst::insert_load_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where,
-	reg_id_t reg_ptr)
+/* clean_call dumps the memory reference info to the log file */
+void memory_inst::clean_call(void)
 {
-	dr_insert_read_raw_tls(drcontext, ilist, where, tls_seg,
-		tls_offs, reg_ptr);
+	void *drcontext = dr_get_current_drcontext();
+	memory_inst::analyze_access(drcontext);
 }
 
-static void memory_inst::insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where,
-	reg_id_t base, reg_id_t scratch, app_pc pc)
+static void memory_inst::code_cache_init(void)
 {
-	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc,
-		opnd_create_reg(scratch),
-		ilist, where, NULL, NULL);
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_store(drcontext,
-			OPND_CREATE_MEMPTR(base,
-				offsetof(mem_ref_t, addr)),
-			opnd_create_reg(scratch)));
+	void         *drcontext;
+	instrlist_t  *ilist;
+	instr_t      *where;
+	byte         *end;
+
+	drcontext = dr_get_current_drcontext();
+	code_cache = (app_pc) dr_nonheap_alloc(page_size,
+		DR_MEMPROT_READ |
+		DR_MEMPROT_WRITE |
+		DR_MEMPROT_EXEC);
+	ilist = instrlist_create(drcontext);
+	/* The lean procecure simply performs a clean call, and then jump back */
+	/* jump back to the DR's code cache */
+	where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
+	instrlist_meta_append(ilist, where);
+	/* clean call */
+	dr_insert_clean_call(drcontext, ilist, where, (void *)clean_call, false, 0);
+	/* Encodes the instructions into memory and then cleans up. */
+	end = instrlist_encode(drcontext, ilist, code_cache, false);
+	DR_ASSERT((size_t)(end - code_cache) < page_size);
+	instrlist_clear_and_destroy(drcontext, ilist);
+	/* set the memory as just +rx now */
+	dr_memory_protect(code_cache, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
 }
 
-static void memory_inst::insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where,
-	opnd_t ref, reg_id_t reg_ptr, reg_id_t reg_addr)
+
+static void memory_inst::code_cache_exit(void)
 {
-	/* we use reg_ptr as scratch to get addr */
-	bool ok = drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg_addr, reg_ptr);
-	DR_ASSERT(ok);
-	insert_load_buf_ptr(drcontext, ilist, where, reg_ptr);
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_store(drcontext,
-			OPND_CREATE_MEMPTR(reg_ptr,
-				offsetof(mem_ref_t, addr)),
-			opnd_create_reg(reg_addr)));
-}
-
-static void memory_inst::insert_tag_lock(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr, bool locked)
-{
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_store_2bytes(drcontext,
-			OPND_CREATE_MEM16(reg_ptr,
-				offsetof(mem_ref_t, locked)),
-			OPND_CREATE_INT16((ushort) locked)));
-}
-
-/**
- * increment buffer pointer (TODO: Check if necessary)
- */
-static void memory_inst::insert_update_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where,
-	reg_id_t reg_ptr, int adjust)
-{
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_add(drcontext,
-			opnd_create_reg(reg_ptr),
-			OPND_CREATE_INT16(adjust)));
-	dr_insert_write_raw_tls(drcontext, ilist, where, tls_seg,
-		tls_offs, reg_ptr);
-}
-
-static void memory_inst::insert_save_type(void *drcontext, instrlist_t *ilist, instr_t *where,
-	reg_id_t base, reg_id_t scratch, ushort type)
-{
-	scratch = reg_resize_to_opsz(scratch, OPSZ_2);
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_load_int(drcontext,
-			opnd_create_reg(scratch),
-			OPND_CREATE_INT16(type)));
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_store_2bytes(drcontext,
-			OPND_CREATE_MEM16(base,
-				offsetof(mem_ref_t, type)),
-			opnd_create_reg(scratch)));
-}
-
-static void memory_inst::insert_save_size(void *drcontext, instrlist_t *ilist, instr_t *where,
-	reg_id_t base, reg_id_t scratch, ushort size)
-{
-	scratch = reg_resize_to_opsz(scratch, OPSZ_2);
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_load_int(drcontext,
-			opnd_create_reg(scratch),
-			OPND_CREATE_INT16(size)));
-	instrlist_meta_preinsert(ilist, where,
-		XINST_CREATE_store_2bytes(drcontext,
-			OPND_CREATE_MEM16(base,
-				offsetof(mem_ref_t, size)),
-			opnd_create_reg(scratch)));
-}
-
-/* insert inline code to add an instruction entry into the buffer */
-static void memory_inst::instrument_instr(void *drcontext, instrlist_t *ilist, instr_t *where)
-{
-	/* We need two scratch registers */
-	reg_id_t reg_ptr, reg_tmp;
-
-	if (drreg_reserve_register(drcontext, ilist, where, NULL, &reg_ptr) !=
-		DRREG_SUCCESS ||
-		drreg_reserve_register(drcontext, ilist, where, NULL, &reg_tmp) !=
-		DRREG_SUCCESS) {
-		DR_ASSERT(false); /* cannot recover */
-		return;
-	}
-	// Check if instr has LOCK prefix
-	bool locked = instr_get_prefix_flag(where, PREFIX_LOCK);
-
-	insert_load_buf_ptr(drcontext, ilist, where, reg_ptr);
-
-	insert_tag_lock(drcontext, ilist, where, reg_ptr, locked);
-
-	insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
-		(ushort)instr_get_opcode(where));
-	insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
-		(ushort)instr_length(drcontext, where));
-	insert_save_pc(drcontext, ilist, where, reg_ptr, reg_tmp,
-		instr_get_app_pc(where));
-	insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
-	/* Restore scratch registers */
-	if (drreg_unreserve_register(drcontext, ilist, where, reg_ptr) != DRREG_SUCCESS ||
-		drreg_unreserve_register(drcontext, ilist, where, reg_tmp) != DRREG_SUCCESS)
-		DR_ASSERT(false);
+	dr_nonheap_free(code_cache, page_size);
 }
 
 /* insert inline code to add a memory reference info entry into the buffer */
 static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
-	/* We need two scratch registers */
-	reg_id_t reg_ptr, reg_tmp;
-	if (drreg_reserve_register(drcontext, ilist, where, NULL, &reg_ptr) !=
+	/*
+	* instrument_mem is called whenever a memory reference is identified.
+	* It inserts code before the memory reference to to fill the memory buffer
+	* and jump to our own code cache to call the clean_call when the buffer is full.
+	*/
+	instr_t *instr, *call, *restore;
+	opnd_t   opnd1, opnd2;
+	reg_id_t reg1, reg2;
+	drvector_t allowed;
+	per_thread_t *data;
+	app_pc pc;
+
+	data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+
+	/* Steal two scratch registers.
+	* reg2 must be ECX or RCX for jecxz.
+	*/
+	drreg_init_and_fill_vector(&allowed, false);
+	drreg_set_vector_entry(&allowed, DR_REG_XCX, true);
+	if (drreg_reserve_register(drcontext, ilist, where, &allowed, &reg2) !=
 		DRREG_SUCCESS ||
-		drreg_reserve_register(drcontext, ilist, where, NULL, &reg_tmp) !=
-		DRREG_SUCCESS) {
-		DR_ASSERT(false);
+		drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS) {
+		DR_ASSERT(false); /* cannot recover */
+		drvector_delete(&allowed);
 		return;
 	}
+	drvector_delete(&allowed);
 
-	/* save_addr should be called first as reg_ptr or reg_tmp maybe used in ref */
-	insert_save_addr(drcontext, ilist, where, ref, reg_ptr, reg_tmp);
-	insert_save_type(drcontext, ilist, where, reg_ptr, reg_tmp,
-		write ? REF_TYPE_WRITE : REF_TYPE_READ);
-	insert_save_size(drcontext, ilist, where, reg_ptr, reg_tmp,
-		(ushort)drutil_opnd_mem_size_in_bytes(ref, where));
-	insert_update_buf_ptr(drcontext, ilist, where, reg_ptr, sizeof(mem_ref_t));
+	/* use drutil to get mem address */
+	drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
+
+	/* The following assembly performs the following instructions
+	* buf_ptr->write = write;
+	* buf_ptr->addr  = addr;
+	* buf_ptr->size  = size;
+	* buf_ptr->pc    = pc;
+	* buf_ptr++;
+	* if (buf_ptr >= buf_end_ptr)
+	*    clean_call();
+	*/
+	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
+	/* Load data->buf_ptr into reg2 */
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, buf_ptr));
+	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Move write/read to write field */
+	opnd1 = OPND_CREATE_MEM32(reg2, offsetof(mem_ref_t, write));
+	opnd2 = OPND_CREATE_INT32(write);
+	instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Store address in memory ref */
+	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, addr));
+	opnd2 = opnd_create_reg(reg1);
+	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Store size in memory ref */
+	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, size));
+	/* drutil_opnd_mem_size_in_bytes handles OP_enter */
+	opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where));
+	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	// Only interesting when debugging
+	///* Store pc in memory ref */
+	//pc = instr_get_app_pc(where);
+	///* For 64-bit, we can't use a 64-bit immediate so we split pc into two halves.
+	//* We could alternatively load it into reg1 and then store reg1.
+	//* We use a convenience routine that does the two-step store for us.
+	//*/
+	//opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, pc));
+	//instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc, opnd1,
+	//	ilist, where, NULL, NULL);
+
+	/* Increment reg value by pointer size using lea instr */
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0,
+		sizeof(mem_ref_t),
+		OPSZ_lea);
+	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Update the data->buf_ptr */
+	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg1);
+	opnd1 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_ptr));
+	opnd2 = opnd_create_reg(reg2);
+	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* we use lea + jecxz trick for better performance
+	* lea and jecxz won't disturb the eflags, so we won't insert
+	* code to save and restore application's eflags.
+	*/
+	/* lea [reg2 - buf_end] => reg2 */
+	opnd1 = opnd_create_reg(reg1);
+	opnd2 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_end));
+	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = opnd_create_base_disp(reg1, reg2, 1, 0, OPSZ_lea);
+	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* jecxz call */
+	call = INSTR_CREATE_label(drcontext);
+	opnd1 = opnd_create_instr(call);
+	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* jump restore to skip clean call */
+	restore = INSTR_CREATE_label(drcontext);
+	opnd1 = opnd_create_instr(restore);
+	instr = INSTR_CREATE_jmp(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* clean call */
+	/* We jump to lean procedure which performs full context switch and
+	* clean call invocation. This is to reduce the code cache size.
+	*/
+	instrlist_meta_preinsert(ilist, where, call);
+	/* mov restore DR_REG_XCX */
+	opnd1 = opnd_create_reg(reg2);
+	/* this is the return address for jumping back from lean procedure */
+	opnd2 = opnd_create_instr(restore);
+	/* We could use instrlist_insert_mov_instr_addr(), but with a register
+	* destination we know we can use a 64-bit immediate.
+	*/
+	instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+	/* jmp code_cache */
+	opnd1 = opnd_create_pc(code_cache);
+	instr = INSTR_CREATE_jmp(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Restore scratch registers */
-	if (drreg_unreserve_register(drcontext, ilist, where, reg_ptr) != DRREG_SUCCESS ||
-		drreg_unreserve_register(drcontext, ilist, where, reg_tmp) != DRREG_SUCCESS)
+	instrlist_meta_preinsert(ilist, where, restore);
+	if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
+		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS)
 		DR_ASSERT(false);
 }
 
@@ -288,6 +315,12 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
 
+	// Sampling: Only instrument some instructions
+	++instrum_count;
+	if (instrum_count % sampling_rate != 0) {
+		return DR_EMIT_DEFAULT;
+	}
+
 	// Filter certain opcodes
 	//ushort opcode = instr_get_opcode(instr);
 	//if (opcode == OP_cmpxchg ||
@@ -300,7 +333,7 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	/* insert code to add an entry for app instruction */
 	// TODO: Check if instruction instrumentation is necessary (probably not)
 	//instrument_instr(drcontext, bb, instr);
-	
+
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {
 		opnd_t src = instr_get_src(instr, i);
@@ -313,11 +346,6 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 		if (opnd_is_memory_reference(dst))
 			instrument_mem(drcontext, bb, instr, dst, true);
 	}
-
-	// TODO: Try to do less clean calls as extremely expensive
-	// TODO: Currently this approach is probabilistic as buffer size is never checked
-	// Segfaults on buffer overflow
-	dr_insert_clean_call(drcontext, bb, instr, (void *)process_buffer, false, 0);
 
 	return DR_EMIT_DEFAULT;
 }

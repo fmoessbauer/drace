@@ -22,6 +22,9 @@ reg_id_t tls_seg;
 uint     tls_offs;
 int      tls_idx;
 
+/* Runtime parameters */
+int      sampling_rate = 1;
+
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
@@ -31,6 +34,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 		"https://code.siemens.com/felix.moessbauer.ext/drace/issues");
 
 	dr_enable_console_printing();
+
+	// TODO: Read console parameters
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() || !drwrap_init() || drreg_init(&ops) != DRREG_SUCCESS)
