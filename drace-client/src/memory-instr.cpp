@@ -55,12 +55,13 @@ static void memory_inst::analyze_access(void *drcontext) {
 	for (int i = 0; i < num_refs; ++i) {
 		if (mem_ref->write) {
 			detector::write(data->tid, mem_ref->addr, mem_ref->size);
-			//printf("[%i] WRITE %p, DIFF %i:\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t)(buf_ptr - mem_ref));
+			//printf("[%i] WRITE %p\n", data->tid, (ptr_uint_t)mem_ref->addr);
 		}
 		else {
 			detector::read(data->tid, mem_ref->addr, mem_ref->size);
-			//printf("[%i] READ  %p, LAST: %s\n", data->tid, (ptr_uint_t)mem_ref->addr, decode_opcode_name(data->lastop));
+			//printf("[%i] READ  %p\n", data->tid, (ptr_uint_t)mem_ref->addr);
 		}
+		++mem_ref;
 	}
 	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
@@ -79,6 +80,7 @@ static void memory_inst::event_thread_init(void *drcontext)
 	/* set buf_end to be negative of address of buffer end for the lea later */
 	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->num_refs = 0;
+	data->tid = dr_get_thread_id(drcontext);
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)

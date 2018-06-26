@@ -6,7 +6,7 @@
 namespace detector {
 	typedef unsigned int tid_t;
 
-	bool init();
+	bool init(int argc, const char **argv);
 	void finalize();
 
 	void acquire(tid_t thread_id, void* mutex);

@@ -82,7 +82,7 @@ namespace funwrap {
 			detector::alloc(data->tid, retval, data->last_alloc_size);
 
 			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] post alloc %p\n", tid, retval);
+			//dr_fprintf(STDERR, "<< [%i] post alloc %p\n", data->tid, retval);
 		}
 
 		// TODO: On Linux addr is arg 0

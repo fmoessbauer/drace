@@ -19,6 +19,7 @@ static void print_config();
 /* Runtime parameters */
 struct params_t {
 	unsigned int sampling_rate;
+	bool         heap_only;
 };
 extern params_t params;
 

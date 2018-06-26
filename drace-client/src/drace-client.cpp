@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <string>
+#include <mutex>
 
 #include "drace-client.h"
 #include "memory-instr.h"
@@ -57,7 +58,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	memory_inst::init();
 
 	// Initialize Detector
-	detector::init();
+	detector::init(argc, argv);
 }
 
 static void event_exit()
@@ -117,12 +118,12 @@ static void parse_args(int argc, const char ** argv) {
 
 	int processed = 1;
 	while (processed < argc) {
-		if (strncmp(argv[processed],"-s",5)==0) {
+		if (strncmp(argv[processed],"-s",16)==0) {
 			params.sampling_rate = std::stoi(argv[processed + 1]);
 			processed+=2;
 		}
 		else {
-			dr_fprintf(STDERR, "< Unknown Argument: %s\n", argv[processed]);
+			// unknown argument skip as probably for detector
 			++processed;
 		}
 	}
