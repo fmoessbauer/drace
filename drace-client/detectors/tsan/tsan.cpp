@@ -7,6 +7,27 @@
 #include <iostream>
 #include "tsan-if.h"
 
+/*
+* Simple mutex implemented as a spinlock
+* implements interface of std::mutex
+*/
+class spinlock {
+	std::atomic_flag _flag = ATOMIC_FLAG_INIT;
+public:
+	void lock()
+	{
+		while (_flag.test_and_set(std::memory_order_acquire)) {}
+	}
+
+	bool try_lock() {
+		return !(_flag.test_and_set(std::memory_order_acquire));
+	}
+
+	void unlock()
+	{
+		_flag.clear(std::memory_order_release);
+	}
+};
 
 /**
  * To avoid false-positives track races only if they are on the heap
@@ -17,20 +38,13 @@
 static std::atomic<bool>		alloc_readable{ true };
 static std::atomic<uint64_t>	misses{ 0 };
 /* Cannot use std::mutex here, hence use spinlock */
-static std::atomic_flag         spinlock = ATOMIC_FLAG_INIT;
+static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
 static std::vector<int*> stack_trace;
 
 struct tsan_params_t {
 	bool heap_only{ false };
 } params;
-
-void spinlock_acquire(std::atomic_flag & flag) {
-	//while (flag.test_and_set(std::memory_order_acquire)) { }
-}
-void spinlock_release(std::atomic_flag & flag) {
-	//flag.clear(std::memory_order_release);
-}
 
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 	std::cout << "DATA Race " << callback_parameter << ::std::endl;
@@ -119,7 +133,9 @@ void detector::read(tid_t thread_id, void* addr, unsigned long size) {
 	if (!params.heap_only || on_heap((uint64_t)addr)) {
 		//TODO: TSAN seems to only support 32 bit addresses!!!
 		uint64_t addr_32 = (uint64_t)(addr) & 0x00000000FFFFFFFF;
+		mxspin.lock();
 		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
+		mxspin.unlock();
 	}
 }
 
@@ -133,7 +149,7 @@ void detector::write(tid_t thread_id, void* addr, unsigned long size) {
 
 void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
 	uint32_t retoffs = (uint32_t)addr;
-	spinlock_acquire(spinlock);
+	mxspin.lock();
 
 	alloc_readable.store(false, std::memory_order_release);
 
@@ -141,11 +157,11 @@ void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
 	allocations.emplace((uint64_t)addr, size);
 
 	alloc_readable.store(true, std::memory_order_release);
-	spinlock_release(spinlock);
+	mxspin.unlock();
 }
 
 void detector::free(tid_t thread_id, void* addr) {
-	spinlock_acquire(spinlock);
+	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
 
 	// ocasionally free is called more often than alloc, hence guard
@@ -157,7 +173,7 @@ void detector::free(tid_t thread_id, void* addr) {
 	}
 
 	alloc_readable.store(true, std::memory_order_release);
-	spinlock_release(spinlock);
+	mxspin.unlock();
 }
 
 void detector::fork(tid_t parent, tid_t child) {
