@@ -133,9 +133,7 @@ void detector::read(tid_t thread_id, void* addr, unsigned long size) {
 	if (!params.heap_only || on_heap((uint64_t)addr)) {
 		//TODO: TSAN seems to only support 32 bit addresses!!!
 		uint64_t addr_32 = (uint64_t)(addr) & 0x00000000FFFFFFFF;
-		mxspin.lock();
 		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
-		mxspin.unlock();
 	}
 }
 
