@@ -67,8 +67,29 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 		for (int i = 0; i != race_info_ac->stack_trace_size; ++i) {
 			std::cout << ((void**)race_info_ac->stack_trace)[i] << std::endl;
 		}
+		// DEBUG: Show HEAP Block if any
+		mxspin.lock();
+		auto it = allocations.lower_bound((uint64_t) (race_info_ac->accessed_memory));
+		if (it != allocations.end()) {
+			uint64_t beg = it->first;
+			size_t   sz = it->second;
+			printf("Block begin at %p, size %d\n", beg, sz);
+		}
+		else {
+			printf("Block not on heap\n");
+		}
+		mxspin.unlock();
 	}
 }
+
+/*
+ * split address at 32-bit boundary (zero above)
+ * TODO: TSAN seems to only support 32 bit addresses!!!
+ */
+inline uint64_t lower_half(uint64_t addr) {
+	return ((uint64_t)(addr) & 0x00000000FFFFFFFF);
+}
+
 static void parse_args(int argc, const char ** argv) {
 	int processed = 1;
 	while (processed < argc) {
@@ -120,54 +141,57 @@ void detector::finalize() {
 }
 
 void detector::acquire(tid_t thread_id, void* mutex) {
-	// TODO: Currently kills detector
-	//__tsan_acquire_use_user_tid(thread_id, (void*)mutex);
+	uint64_t addr_32 = lower_half((uint64_t) mutex);
+	__tsan_acquire_use_user_tid(thread_id, (void*)addr_32);
 }
 
 void detector::release(tid_t thread_id, void* mutex) {
-	// TODO: Currently kills detector
-	//__tsan_release_use_user_tid(thread_id, (void*)mutex);
+	uint64_t addr_32 = lower_half((uint64_t)mutex);
+	__tsan_release_use_user_tid(thread_id, (void*)addr_32);
 }
 
 void detector::read(tid_t thread_id, void* addr, unsigned long size) {
-	if (!params.heap_only || on_heap((uint64_t)addr)) {
-		//TODO: TSAN seems to only support 32 bit addresses!!!
-		uint64_t addr_32 = (uint64_t)(addr) & 0x00000000FFFFFFFF;
+	uint64_t addr_32 = lower_half((uint64_t)addr);
+
+	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
+		//printf("ADDR tsan: %p\n", addr_32);
+		//printf("ADDR  raw: %p\n", addr);
 		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
 	}
 }
 
 void detector::write(tid_t thread_id, void* addr, unsigned long size) {
-	if (!params.heap_only || on_heap((uint64_t)addr)) {
-		//TODO: TSAN seems to only support 32 bit addresses!!!
-		uint64_t addr_32 = (uint64_t)(addr) & 0x00000000FFFFFFFF;
+	uint64_t addr_32 = lower_half((uint64_t)addr);
+
+	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
 		__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
 	}
 }
 
 void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
-	uint32_t retoffs = (uint32_t)addr;
-	mxspin.lock();
+	uint64_t addr_32 = lower_half((uint64_t)addr);
 
+	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
 
-	__tsan_malloc_use_user_tid(thread_id, 0, retoffs, size);
-	allocations.emplace((uint64_t)addr, size);
+	__tsan_malloc_use_user_tid(thread_id, 0, addr_32, size);
+	allocations.emplace((uint64_t)addr_32, size);
 
 	alloc_readable.store(true, std::memory_order_release);
 	mxspin.unlock();
 }
 
 void detector::free(tid_t thread_id, void* addr) {
+	uint64_t addr_32 = lower_half((uint64_t)addr);
 	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
 
 	// ocasionally free is called more often than alloc, hence guard
-	if (allocations.count((uint64_t)addr) == 1) {
-		size_t size = allocations[(uint64_t)addr];
-		allocations.erase((uint64_t)addr);
+	if (allocations.count(addr_32) == 1) {
+		size_t size = allocations[addr_32];
+		allocations.erase(addr_32);
 		//__tsan_free(addr, size);
-		__tsan_reset_range((unsigned int)addr, size);
+		__tsan_reset_range((unsigned int)addr_32, size);
 	}
 
 	alloc_readable.store(true, std::memory_order_release);
