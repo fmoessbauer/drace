@@ -12,8 +12,8 @@ namespace detector {
 	void acquire(tid_t thread_id, void* mutex);
 	void release(tid_t thread_id, void* mutex);
 
-	void read(tid_t thread_id, void* addr, unsigned long size);
-	void write(tid_t thread_id, void* addr, unsigned long size);
+	void read(tid_t thread_id, void* pc, void* addr, unsigned long size);
+	void write(tid_t thread_id, void* pc, void* addr, unsigned long size);
 
 	void alloc(tid_t thread_id, void* addr, unsigned long size);
 	void free(tid_t thread_id, void* addr);

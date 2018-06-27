@@ -3,7 +3,8 @@
 #include "memory-instr.h"
 #include <dr_api.h>
 
-static std::atomic<int> num_threads_active{0};
+static std::atomic<int> num_threads_active{ 0 };
+extern std::atomic<uint> runtime_tid;
 
 // Events
 static void event_exit(void);
@@ -32,7 +33,7 @@ typedef struct {
 	uint64      last_alloc_size;
 	uint64      num_refs;
 	thread_id_t tid;
-	ushort      test;
+	bool        disabled;
 } per_thread_t;
 
 extern reg_id_t tls_seg;

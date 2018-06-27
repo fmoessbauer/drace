@@ -38,6 +38,8 @@ namespace memory_inst {
 
 	void process_buffer(void);
 
+	void clear_buffer(void);
+
 	static void analyze_access(void* drcontext);
 
 	static void code_cache_init(void);
@@ -58,6 +60,7 @@ namespace memory_inst {
 	*/
 	static dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
 
+	static dr_emit_flags_t event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data);
 	/* Instrument application instructions */
 	static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 		instr_t *instr, bool for_trace,

@@ -19,7 +19,7 @@ bool memory_inst::register_events() {
 		drmgr_register_thread_init_event(memory_inst::event_thread_init) &&
 		drmgr_register_thread_exit_event(memory_inst::event_thread_exit) &&
 		drmgr_register_bb_app2app_event(event_bb_app2app, NULL) &&
-		drmgr_register_bb_instrumentation_event(NULL, event_app_instruction, NULL)
+		drmgr_register_bb_instrumentation_event(event_app_analysis, event_app_instruction, NULL)
 		);
 }
 
@@ -52,17 +52,19 @@ static void memory_inst::analyze_access(void *drcontext) {
 	mem_ref = (mem_ref_t *)data->buf_base;
 	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	for (int i = 0; i < num_refs; ++i) {
-		if (mem_ref->write) {
-			detector::write(data->tid, mem_ref->addr, mem_ref->size);
-			//printf("[%i] WRITE %p\n", data->tid, (ptr_uint_t)mem_ref->addr);
+	//if (data->tid != runtime_tid) {
+		for (int i = 0; i < num_refs; ++i) {
+			if (mem_ref->write) {
+				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
+				//printf("[%i] WRITE %p, PC: %p\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t) mem_ref->pc);
+			}
+			else {
+				detector::read(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
+				//printf("[%i] READ  %p, PC: %p\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t)mem_ref->pc);
+			}
+			++mem_ref;
 		}
-		else {
-			detector::read(data->tid, mem_ref->addr, mem_ref->size);
-			//printf("[%i] READ  %p\n", data->tid, (ptr_uint_t)mem_ref->addr);
-		}
-		++mem_ref;
-	}
+	//}
 	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
@@ -95,7 +97,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	dr_printf("< memory refs: %i\n", memory_inst::refs.load());
+	dr_printf("< [%i] memory refs: %i\n", data->tid, memory_inst::refs.load());
 }
 
 
@@ -111,15 +113,26 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 	return DR_EMIT_DEFAULT;
 }
 
+static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
+	bool for_trace, bool translating, OUT void **user_data) {
+	int analysis_result = 1;
+	*(uint *) user_data = analysis_result;
+	return DR_EMIT_DEFAULT;
+}
+
 static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
+	int instrument_instr = (uint)(ptr_uint_t)user_data;
+	if (instrument_instr == 0) {
+		return DR_EMIT_DEFAULT;
+	}
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
 	// Only track moves and ignore Locked instructions
 	// TODO: Check if sufficient
-	if (!instr_is_mov(instr) || instr_get_prefix_flag(instr, PREFIX_LOCK))
+	if (instr_get_prefix_flag(instr, PREFIX_LOCK))
 		return DR_EMIT_DEFAULT;
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
@@ -164,6 +177,23 @@ void memory_inst::process_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
 	memory_inst::analyze_access(drcontext);
+}
+
+void memory_inst::clear_buffer(void)
+{
+	void *drcontext = dr_get_current_drcontext();
+	per_thread_t *data;
+	mem_ref_t *mem_ref;
+
+	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	mem_ref = (mem_ref_t *)data->buf_base;
+	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
+
+	//dr_printf(">> Clear Buffer, drop %i\n", num_refs);
+
+	memset(data->buf_base, 0, MEM_BUF_SIZE);
+	data->num_refs += num_refs;
+	data->buf_ptr = data->buf_base;
 }
 
 static void memory_inst::code_cache_init(void)
@@ -271,14 +301,14 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 
 	// Only interesting when debugging
 	///* Store pc in memory ref */
-	//pc = instr_get_app_pc(where);
+	pc = instr_get_app_pc(where);
 	///* For 64-bit, we can't use a 64-bit immediate so we split pc into two halves.
 	//* We could alternatively load it into reg1 and then store reg1.
 	//* We use a convenience routine that does the two-step store for us.
 	//*/
-	//opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, pc));
-	//instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc, opnd1,
-	//	ilist, where, NULL, NULL);
+	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, pc));
+	instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc, opnd1,
+		ilist, where, NULL, NULL);
 
 	/* Increment reg value by pointer size using lea instr */
 	opnd1 = opnd_create_reg(reg2);
