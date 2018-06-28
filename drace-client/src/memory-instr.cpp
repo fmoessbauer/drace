@@ -115,8 +115,30 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 
 static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
-	int analysis_result = 1;
-	*(uint *) user_data = analysis_result;
+	int instrument_bb = 1;
+
+	app_pc bb_addr = dr_fragment_app_pc(tag);
+
+	// Create dummy shadow module
+	module_tracker::module_info_t bb_mod(bb_addr, nullptr);
+	
+	auto bb_mod_it = modules.lower_bound(bb_mod);
+	if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
+		// bb in known module
+		const char * mod_name = dr_module_preferred_name(bb_mod_it->info);
+		//dr_printf("< Inspect MOD %s\n", mod_name);
+		if (strcmp(mod_name, "ucrtbase.dll") == 0) {
+			instrument_bb = 0;
+			dr_printf("< Skip MOD %s\n", mod_name);
+		}
+	}
+	else {
+		// Module not known
+		//dr_printf("< Unknown MOD\n");
+		instrument_bb = 0;
+	}
+
+	*(uint *)user_data = instrument_bb;
 	return DR_EMIT_DEFAULT;
 }
 

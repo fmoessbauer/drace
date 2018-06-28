@@ -12,6 +12,7 @@
 #include "drace-client.h"
 #include "memory-instr.h"
 #include "function-wrapper.h"
+#include "module-tracker.h"
 
 #include <detector_if.h>
 
@@ -52,7 +53,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	dr_register_exit_event(event_exit);
 	drmgr_register_thread_init_event(event_thread_init);
 	drmgr_register_thread_exit_event(event_thread_exit);
-	drmgr_register_module_load_event(module_load_event);
+
+	// Setup Module Tracking
+	DR_ASSERT(module_tracker::register_events());
+	module_tracker::init();
 
 	// Setup Memory Tracing
 	DR_ASSERT(memory_inst::register_events());
@@ -65,9 +69,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 static void event_exit()
 {
 	if (!drmgr_register_thread_init_event(event_thread_init) ||
-		!drmgr_register_thread_exit_event(event_thread_exit) ||
-		!drmgr_register_module_load_event(module_load_event))
+		!drmgr_register_thread_exit_event(event_thread_exit))
 		DR_ASSERT(false);
+
+	// Cleanup Module Tracker
+	module_tracker::finalize();
 
 	// Cleanup Memory Tracing
 	memory_inst::finalize();
@@ -89,25 +95,6 @@ static void event_thread_init(void *drcontext)
 		runtime_tid = tid;
 		dr_printf("<< [%i] Runtime Thread tagged\n", tid);
 	}
-	else {
-		dr_mcontext_t mc;
-		app_pc start_addr;
-		const char * cur_mod;
-		mc.size = sizeof(mc);
-		mc.flags = (dr_mcontext_flags_t)(DR_MC_INTEGER | DR_MC_CONTROL);
-		dr_get_mcontext(drcontext, &mc);
-		start_addr = (app_pc)IF_X64_ELSE(mc.rcx, mc.eax);
-		module_data_t* md = dr_lookup_module(start_addr);
-		cur_mod = dr_module_preferred_name(md);
-		dr_printf("< [%i] Current module: %s\n", tid, cur_mod);
-
-		// TODO: Filter modules
-		if (strncmp(cur_mod, "dynamorio", 9) == 0) {
-			dr_printf("< [%i] Mod is Dynamorio: %s\n", tid, cur_mod);
-		}
-
-		dr_free_module_data(md);
-	}
 	++num_threads_active;
 
 	// TODO: Try to get parent threadid
@@ -125,19 +112,6 @@ static void event_thread_exit(void *drcontext)
 	detector::join(0, tid);
 
 	dr_printf("<< [%i] Thread exited\n", tid);
-}
-
-
-static void module_load_event(void *drcontext, const module_data_t *mod, bool loaded)
-{
-	thread_id_t tid = dr_get_thread_id(drcontext);
-	dr_printf("<< [%i] Loaded module: %s\n", tid, dr_module_preferred_name(mod));
-	// bind function wrappers
-	funwrap::wrap_mutex_acquire(mod);
-	funwrap::wrap_mutex_release(mod);
-	funwrap::wrap_allocators(mod);
-	funwrap::wrap_deallocs(mod);
-	funwrap::wrap_main(mod);
 }
 
 static void parse_args(int argc, const char ** argv) {

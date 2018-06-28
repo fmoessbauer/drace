@@ -25,7 +25,7 @@ namespace funwrap {
 		static std::vector<std::string> allocators{ "malloc" };
 		static std::vector<std::string> deallocs{ "free" };
 #endif
-		static std::vector<std::string> main{ "_Thrd_join", "_Thrd_start", "main", "wmain", "WinMain", "wWinMain" };
+		static std::vector<std::string> main{ "main", "wmain", "WinMain", "wWinMain" };
 
 		static void thread_join_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
@@ -219,12 +219,12 @@ void funwrap::wrap_main(const module_data_t *mod) {
 	for (const auto & name : internal::main) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::thread_join_pre, internal::thread_join_post);
-			if (ok) {
-				std::string msg{ "< wrapped main " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
+			//bool ok = drwrap_wrap(towrap, NULL, NULL);
+			//if (ok) {
+			//	std::string msg{ "< wrapped main " };
+			//	msg += name + "\n";
+			//	dr_fprintf(STDERR, msg.c_str());
+			//}
 		}
 	}
 }

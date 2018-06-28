@@ -126,9 +126,7 @@ bool detector::init(int argc, const char **argv) {
 	parse_args(argc, argv);
 	print_config();
 
-	stack_trace.push_back((int*)0x11);
-	stack_trace.push_back((int*)0x33);
-	stack_trace.push_back((int*)0x55);
+	stack_trace.resize(1);
 
 	__tsan_init_simple(reportRaceCallBack, (void*)0xABCD);
 	return true;
