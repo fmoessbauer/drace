@@ -4,6 +4,8 @@
 #include "module-tracker.h"
 #include <dr_api.h>
 #include <set>
+#include <stack>
+#include <string>
 
 // Events
 static void event_exit(void);
@@ -23,16 +25,20 @@ struct params_t {
 };
 extern params_t params;
 
+using event_stack_t = std::stack<std::string>;
 /* Per Thread data (thread-private)*/
 typedef struct {
-	byte       *buf_ptr;
-	byte       *buf_base;
-	ptr_int_t   buf_end;
-	void       *cache;
-	uint64      last_alloc_size;
-	uint64      num_refs;
-	thread_id_t tid;
-	bool        disabled;
+	byte         *buf_ptr;
+	byte         *buf_base;
+	ptr_int_t     buf_end;
+	void         *cache;
+	uint64        last_alloc_size;
+	uint64        num_refs;
+	thread_id_t   tid;
+	uint64        grace_period;
+	bool          disabled;
+	// Stack used to track state of detector
+	event_stack_t event_stack;
 } per_thread_t;
 
 /* Global data structures */

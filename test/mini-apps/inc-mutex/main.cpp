@@ -14,10 +14,14 @@ void inc(int * v) {
 
 int main() {
 	int var = 0;
-	//auto ta = std::thread(&inc, &var);
+
+	auto ta = std::thread(&inc, &var);
+	auto tb = std::thread(&inc, &var);
+
 	inc(&var);
 
-	//ta.join();
+	ta.join();
+	tb.join();
 
 	return var;
 }

@@ -9,6 +9,7 @@
 #include <dr_api.h>
 #include <drwrap.h>
 #include <drutil.h>
+#include <drsyms.h>
 
 #include <unordered_map>
 
@@ -25,28 +26,11 @@ namespace funwrap {
 		static std::vector<std::string> allocators{ "malloc" };
 		static std::vector<std::string> deallocs{ "free" };
 #endif
-		static std::vector<std::string> excluded_funcs{ "_Thrd_join", "_Thrd_start" };
-		static std::vector<std::string> main{ "main", "wmain", "WinMain", "wWinMain" };
-
-		static void thread_join_pre(void *wrapctx, OUT void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
-			memory_inst::process_buffer();
-			data->disabled = true;
-
-			dr_fprintf(STDERR, "<< [%i] join threads pre\n", data->tid);
-		}
-
-		static void thread_join_post(void *wrapctx, OUT void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
-			memory_inst::clear_buffer();
-			data->disabled = false;
-
-			dr_fprintf(STDERR, "<< [%i] join threads post\n", data->tid);
-		}
+		static std::vector<std::string> excluded_funcs{
+			//"std::_LaunchPad<*>::_Go", // this excludes everything inside the spawned thread
+			//"__scrt_*",                // Exclude C Runtime
+			"__security_init_cookie"     // Canary for stack protection
+		};
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
@@ -56,6 +40,7 @@ namespace funwrap {
 			// TODO: Flush all other buffers
 			memory_inst::process_buffer();
 			data->disabled = true;
+			data->event_stack.emplace("mutex-acq");
 
 
 			detector::acquire(data->tid, mutex);
@@ -68,8 +53,11 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			memory_inst::clear_buffer();
-			data->disabled = false;
+			data->event_stack.pop();
+			if (data->event_stack.size() == 0) {
+				memory_inst::clear_buffer();
+				data->disabled = false;
+			}
 
 			dr_fprintf(STDERR, "<< [%i] post mutex acquire\n", data->tid);
 		}
@@ -79,13 +67,15 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			void * mutex = drwrap_get_arg(wrapctx, 0);
 
+			detector::release(data->tid, mutex);
+
+			dr_fprintf(STDERR, "<< [%i] pre mutex release %p, stack: %i\n", data->tid, mutex, data->event_stack.size());
+
 			// TODO: Flush all other buffers
 			memory_inst::process_buffer();
 			data->disabled = true;
+			data->event_stack.emplace("mutex-rel");
 
-			detector::release(data->tid, mutex);
-
-			dr_fprintf(STDERR, "<< [%i] pre mutex release %p\n", data->tid, mutex);
 		}
 
 		// Currently not bound as not necessary
@@ -93,10 +83,13 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			memory_inst::clear_buffer();
-			data->disabled = false;
+			data->event_stack.pop();
+			if (data->event_stack.size() == 0) {
+				memory_inst::clear_buffer();
+				data->disabled = false;
+			}
 
-			dr_fprintf(STDERR, "<< [%i] post mutex release\n", data->tid);
+			dr_fprintf(STDERR, "<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
 		}
 
 		// TODO: On Linux size is arg 0
@@ -109,7 +102,9 @@ namespace funwrap {
 			// Save alloc size to TLS, disable detector
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
+
 			data->disabled = true;
+			data->event_stack.emplace("alloc");
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", data->tid, data->last_alloc_size);
@@ -122,9 +117,11 @@ namespace funwrap {
 			// Read alloc size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			// TODO: Disable Tracing during this period
-			memory_inst::clear_buffer();
-			data->disabled = false;
+			data->event_stack.pop();
+			if (data->event_stack.size() == 0) {
+				memory_inst::clear_buffer();
+				data->disabled = false;
+			}
 
 			detector::alloc(data->tid, retval, data->last_alloc_size);
 
@@ -139,7 +136,9 @@ namespace funwrap {
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
 			memory_inst::process_buffer();
+
 			data->disabled = true;
+			data->event_stack.emplace("alloc");
 
 			detector::free(data->tid, addr);
 
@@ -150,26 +149,38 @@ namespace funwrap {
 		static void free_post(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
-			memory_inst::clear_buffer();
-			data->disabled = false;
+			
+			data->event_stack.pop();
+			if (data->event_stack.size() == 0) {
+				memory_inst::clear_buffer();
+				data->disabled = false;
+			}
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
 		}
 
 		static void begin_excl(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			app_pc fpc = drwrap_get_func(wrapctx);
 
+			dr_printf("<< [%i] Begin EXCLUDED REGION: %s, stack: %i\n",
+				data->tid, *(char**)user_data, data->event_stack.size());
 			memory_inst::process_buffer();
 			data->disabled = true;
+			data->event_stack.emplace(*(char**)user_data);
 		}
 
 		static void end_excl(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			memory_inst::process_buffer();
-			data->disabled = false;
+			data->event_stack.pop();
+			if (data->event_stack.size() == 0) {
+				memory_inst::clear_buffer();
+				data->disabled = false;
+			}
+			dr_printf("<< [%i] End   EXCLUDED REGION: %s, stack: %i\n",
+				data->tid, (char*)user_data, data->event_stack.size());
 		}
 
 	} // namespace internal
@@ -231,31 +242,37 @@ void funwrap::wrap_deallocs(const module_data_t *mod) {
 	}
 }
 
+bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
+		module_data_t * mod = (module_data_t*) data;
+	bool ok = drwrap_wrap_ex(
+		mod->start + modoffs,
+		funwrap::internal::begin_excl,
+		funwrap::internal::end_excl,
+		(void*) name,
+		DRWRAP_CALLCONV_FASTCALL);
+	if (ok) {
+		dr_fprintf(STDERR, "< wrapped excluded function %s\n", name);
+	}
+	return true;
+}
 void funwrap::wrap_excludes(const module_data_t *mod) {
 	for (const auto & name : internal::excluded_funcs) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::begin_excl, internal::end_excl);
-			if (ok) {
-				std::string msg{ "< wrapped excluded function " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
-		}
-	}
-}
-
-//TODO: Currently not working
-void funwrap::wrap_main(const module_data_t *mod) {
-	for (const auto & name : internal::main) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			//bool ok = drwrap_wrap(towrap, NULL, NULL);
-			//if (ok) {
-			//	std::string msg{ "< wrapped main " };
-			//	msg += name + "\n";
-			//	dr_fprintf(STDERR, msg.c_str());
-			//}
-		}
+		size_t offset;
+		app_pc towrap;
+		//drsym_error_t err = drsym_lookup_symbol(mod->full_path, name.c_str(), &offset, DRSYM_DEMANGLE);
+		drsym_error_t err = drsym_search_symbols(
+			mod->full_path,
+			name.c_str(),
+			false,
+			(drsym_enumerate_cb)exclude_wrap_callback,
+			(void*)mod);
+		//if (err == DRSYM_SUCCESS) {
+		//	dr_printf("FOUND FUNCTION %s\n", name.c_str());
+		//	towrap = mod->start + offset;
+		//	bool ok = drwrap_wrap(towrap, internal::begin_excl, internal::end_excl);
+		//	if (ok) {
+		//		dr_fprintf(STDERR, "< wrapped excluded function %s\n", name.c_str());
+		//	}
+		//}
 	}
 }

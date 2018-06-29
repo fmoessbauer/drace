@@ -11,6 +11,7 @@ using mod_t = module_tracker::module_info_t;
 std::set<mod_t, std::greater<mod_t>> modules;
 // TODO: Get from Config
 std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
+std::vector<std::string> excluded_path_prefix{ "c:\\windows" };
 
 void print_modules() {
 	for (const auto & current : modules) {
@@ -18,6 +19,15 @@ void print_modules() {
 		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
 			0, mod_name, current.base, current.end,
 			current.instrument ? "YES" : "NO");
+	}
+}
+
+bool common_prefix(const std::string& a, const std::string& b) {
+	if (a.size() > b.size()) {
+		return a.substr(0, b.size()) == b;
+	}
+	else {
+		return b.substr(0, a.size()) == a;
 	}
 }
 
@@ -48,6 +58,11 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 void module_tracker::init() {
 	mod_lock = dr_mutex_create();
 	std::sort(excluded_mods.begin(), excluded_mods.end());
+
+	// convert pathes to lowercase for case-insensitive matching
+	for (auto & prefix : excluded_path_prefix) {
+		std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::tolower);
+	}
 }
 
 void module_tracker::finalize() {
@@ -68,8 +83,11 @@ bool module_tracker::register_events() {
 }
 
 static void module_tracker::event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
+	bool instrument = true;
+
 	thread_id_t tid = dr_get_thread_id(drcontext);
-	const char * mod_name = dr_module_preferred_name(mod);
+	std::string mod_name(dr_module_preferred_name(mod));
+
 	// create shadow struct of current module
 	// for easier comparison
 	module_info_t current(mod->start, mod->end);
@@ -81,28 +99,45 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		if (!modit->loaded && (modit->info == mod)) {
 			// requires mutable, does not modify key
 			modit->loaded = true;
+			instrument = modit->instrument;
 		}
 	}
 	else {
 		// Module not already registered
 		current.set_info(mod);
-		current.instrument = !std::binary_search(excluded_mods.begin(), excluded_mods.end(), std::string(mod_name));
 
-		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
-			tid, mod_name, current.base, current.end,
-			current.instrument ? "YES" : "NO");
+		std::string mod_path(mod->full_path);
+		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
+
+		for (auto prefix : excluded_path_prefix) {
+			if (common_prefix(prefix, mod_path)) {
+				instrument = false;
+				break;
+			}
+		}
+		if (instrument) {
+			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
+				instrument = false;
+			}
+		}
+
+		current.instrument = instrument;
+		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+			tid, mod_name.c_str(), current.base, current.end,
+			current.instrument ? "YES" : "NO",
+			current.info->full_path);
 
 		modules.insert(std::move(current));
 	}
-	dr_mutex_unlock(mod_lock);
-
 	// wrap functions
 	funwrap::wrap_mutex_acquire(mod);
 	funwrap::wrap_mutex_release(mod);
 	funwrap::wrap_allocators(mod);
 	funwrap::wrap_deallocs(mod);
-	funwrap::wrap_excludes(mod);
-	//funwrap::wrap_main(mod);
+	if (instrument) {
+		funwrap::wrap_excludes(mod);
+	}
+	dr_mutex_unlock(mod_lock);
 }
 
 static void module_tracker::event_module_unload(void *drcontext, const module_data_t *mod) {

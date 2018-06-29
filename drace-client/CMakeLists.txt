@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-set(SOURCES "src/drace-client" "src/function-wrapper" "src/memory-instr" "src/module-tracker" "src/stack-demangler")
+set(SOURCES "src/drace-client" "src/function-wrapper" "src/memory-instr" "src/module-tracker" "src/stack-demangler" "src/symbols")
 
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories(
@@ -20,6 +20,7 @@ use_DynamoRIO_extension("drace-client" drmgr)
 use_DynamoRIO_extension("drace-client" drutil)
 use_DynamoRIO_extension("drace-client" drreg)
 use_DynamoRIO_extension("drace-client" drwrap)
+use_DynamoRIO_extension("drace-client" drsyms)
 
 # Bind detectors
 message("Use detector: ${DRACE_DETECTOR}")

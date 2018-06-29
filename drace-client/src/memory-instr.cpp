@@ -52,7 +52,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	mem_ref = (mem_ref_t *)data->buf_base;
 	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	//if (data->tid != runtime_tid) {
+	if (!data->disabled && data->grace_period < data->num_refs) {
 		for (int i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
@@ -64,7 +64,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 			}
 			++mem_ref;
 		}
-	//}
+	}
 	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
@@ -83,6 +83,8 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->num_refs = 0;
 	data->tid = dr_get_thread_id(drcontext);
+	// avoid races during thread startup
+	data->grace_period = data->num_refs + 1'000;
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)

@@ -14,6 +14,7 @@
 #include "function-wrapper.h"
 #include "module-tracker.h"
 #include "stack-demangler.h"
+#include "symbols.h"
 
 #include <detector_if.h>
 
@@ -63,6 +64,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	DR_ASSERT(memory_inst::register_events());
 	memory_inst::init();
 
+	// Setup Symbol Access Lib
+	symbols::init();
+
 	// Initialize Detector
 	detector::init(argc, argv, stack_demangler::demangle);
 }
@@ -78,6 +82,8 @@ static void event_exit()
 
 	// Cleanup Memory Tracing
 	memory_inst::finalize();
+
+	symbols::finalize();
 
 	drutil_exit();
 	drmgr_exit();

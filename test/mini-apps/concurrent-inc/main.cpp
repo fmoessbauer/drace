@@ -2,18 +2,20 @@
 #include <iostream>
 #include <mutex>
 
-#define NUM_INCREMENTS 1'000
+#define NUM_INCREMENTS 1'000'000
 #define USE_HEAP
 
-std::mutex mx;
+//std::mutex mx;
 
-void inc(int * v) {
+inline void inc(int * v) {
 	for (int i = 0; i < NUM_INCREMENTS; ++i) {
 		++(*v);
 	}
 }
-void dec() {
-	
+void dec(int * v) {
+	for (int i = 0; i < NUM_INCREMENTS; ++i) {
+		--(*v);
+	}
 }
 
 int main() {
@@ -26,13 +28,13 @@ int main() {
 #endif
 
 	auto ta = std::thread(&inc, mem);
-	auto tb = std::thread(&inc, mem);
+	auto tb = std::thread(&dec, mem);
 
 	ta.join();
 	tb.join();
 	
 	//mx.lock();
-	std::cout << "EXPECTED: " << 2 * NUM_INCREMENTS << ", "
+	std::cout << "EXPECTED: " << 0 << ", "
 		<< "ACTUAL: " << *mem << ", "
 		<< "LOCATION: " << std::hex << (uint64_t) (mem) << std::endl;
 	//mx.unlock();
