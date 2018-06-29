@@ -122,7 +122,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		}
 
 		current.instrument = instrument;
-		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+		dr_printf("< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
 			tid, mod_name.c_str(), current.base, current.end,
 			current.instrument ? "YES" : "NO",
 			current.info->full_path);
@@ -130,10 +130,14 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		modules.insert(std::move(current));
 	}
 	// wrap functions
-	funwrap::wrap_mutex_acquire(mod);
-	funwrap::wrap_mutex_release(mod);
-	funwrap::wrap_allocators(mod);
-	funwrap::wrap_deallocs(mod);
+	if (common_prefix(mod_name, "MSVCP")) {
+		funwrap::wrap_mutex_acquire(mod);
+		funwrap::wrap_mutex_release(mod);
+	}
+	if (common_prefix(mod_name, "KERNEL")) {
+		funwrap::wrap_allocators(mod);
+		funwrap::wrap_deallocs(mod);
+	}
 	if (instrument) {
 		funwrap::wrap_excludes(mod);
 	}
