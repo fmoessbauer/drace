@@ -9,6 +9,21 @@ It does not require any perparations like instrumentation of the binary to check
 - DynamoRIO 7.0.x
 - C++11 / C99 Compiler
 
+## Using the Drace Race Detector
+
+**Run the detector as follows*
+
+```bash
+drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app parameter>
+```
+
+Currently the following parameters are implemented
+
+```
+-s <sampling-rate>: from the considered instructions, 1/n are actually instrumented
+--heap-only       : only detect races on heap-memory (exclude static memory)
+```
+
 ### Debug Builds
 
 - GoogleTest
