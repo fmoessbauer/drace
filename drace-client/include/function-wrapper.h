@@ -9,5 +9,6 @@ namespace funwrap {
 	void wrap_allocators(const module_data_t *mod);
 	void wrap_deallocs(const module_data_t *mod);
 
+	void wrap_excludes(const module_data_t *mod);
 	void wrap_main(const module_data_t *mod);
 }

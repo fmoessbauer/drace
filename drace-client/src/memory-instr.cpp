@@ -56,11 +56,11 @@ static void memory_inst::analyze_access(void *drcontext) {
 		for (int i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
-				//printf("[%i] WRITE %p, PC: %p\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t) mem_ref->pc);
+				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			else {
 				detector::read(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
-				//printf("[%i] READ  %p, PC: %p\n", data->tid, (ptr_uint_t)mem_ref->addr, (ptr_uint_t)mem_ref->pc);
+				//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			++mem_ref;
 		}
@@ -115,8 +115,7 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 
 static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
-	int instrument_bb = 1;
-
+	bool instrument_bb = true;
 	app_pc bb_addr = dr_fragment_app_pc(tag);
 
 	// Create dummy shadow module
@@ -124,29 +123,24 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 	
 	auto bb_mod_it = modules.lower_bound(bb_mod);
 	if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
+		instrument_bb = bb_mod_it->instrument;
 		// bb in known module
-		const char * mod_name = dr_module_preferred_name(bb_mod_it->info);
-		//dr_printf("< Inspect MOD %s\n", mod_name);
-		if (strcmp(mod_name, "ucrtbase.dll") == 0) {
-			instrument_bb = 0;
-			dr_printf("< Skip MOD %s\n", mod_name);
-		}
 	}
 	else {
 		// Module not known
-		//dr_printf("< Unknown MOD\n");
-		instrument_bb = 0;
+		//dr_printf("< Unknown MOD at %p\n", bb_addr);
+		instrument_bb = false;
 	}
 
-	*(uint *)user_data = instrument_bb;
+	*(bool *)user_data = instrument_bb;
 	return DR_EMIT_DEFAULT;
 }
 
 static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
-	int instrument_instr = (uint)(ptr_uint_t)user_data;
-	if (instrument_instr == 0) {
+	bool instrument_instr = (bool)(ptr_uint_t)user_data;
+	if (!instrument_instr) {
 		return DR_EMIT_DEFAULT;
 	}
 
@@ -162,6 +156,25 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	// Sampling: Only instrument some instructions
 	++instrum_count;
 	if (instrum_count % params.sampling_rate != 0) {
+		return DR_EMIT_DEFAULT;
+	}
+
+	// Check if actually in instrumented module:
+	// Ideally this should not be necessary as analysis function catches all
+	app_pc bb_addr = dr_fragment_app_pc(tag);
+	// Create dummy shadow module
+	module_tracker::module_info_t bb_mod(bb_addr, nullptr);
+
+	auto bb_mod_it = modules.lower_bound(bb_mod);
+	if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
+		if (!bb_mod_it->instrument) {
+			//dr_printf("NO INSTR at %s\n",dr_module_preferred_name(bb_mod_it->info));
+			return DR_EMIT_DEFAULT;
+		}
+		// bb in known module
+	}
+	else {
+		// Do not instrument unknown modules
 		return DR_EMIT_DEFAULT;
 	}
 

@@ -6,7 +6,10 @@
 namespace detector {
 	typedef unsigned int tid_t;
 
-	bool init(int argc, const char **argv);
+	/* Takes command line arguments and a callback to demangle the stack at this address.
+	* Type of callback is (void*) -> void
+	*/
+	bool init(int argc, const char **argv, void(*stack_demangler)(void*));
 	void finalize();
 
 	void acquire(tid_t thread_id, void* mutex);

@@ -46,8 +46,8 @@ struct tsan_params_t {
 	bool heap_only{ false };
 } params;
 
-void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
-	std::cout << "DATA Race " << callback_parameter << ::std::endl;
+void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
+	std::cout << "DATA Race " << ::std::endl;
 
 
 	for (int i = 0; i != 2; ++i) {
@@ -79,6 +79,12 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* callback_parameter) {
 			printf("Block not on heap\n");
 		}
 		mxspin.unlock();
+
+		// demagle stack
+		if (stack_demangler != nullptr) {
+			// Type of stack_demangler: (void*) -> void
+			((void(*)(void*))stack_demangler)(race_info_ac->stack_trace);
+		}
 	}
 }
 
@@ -122,13 +128,13 @@ static inline bool on_heap(uint64_t addr) {
 	}
 }
 
-bool detector::init(int argc, const char **argv) {
+bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) {
 	parse_args(argc, argv);
 	print_config();
 
 	stack_trace.resize(1);
 
-	__tsan_init_simple(reportRaceCallBack, (void*)0xABCD);
+	__tsan_init_simple(reportRaceCallBack, (void*)stack_demangler);
 	return true;
 }
 
@@ -154,7 +160,7 @@ void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) {
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
 		//printf("ADDR tsan: %p\n", addr_32);
 		//printf("ADDR  raw: %p\n", addr);
-		stack_trace[0] = (int*)lower_half((uint64_t)pc);
+		stack_trace[0] = stack_trace[0] = (int*)pc;
 		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
 	}
 }
@@ -163,7 +169,7 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) 
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		stack_trace[0] = (int*)lower_half((uint64_t)pc);
+		stack_trace[0] = (int*)pc;
 		__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
 	}
 }

@@ -25,6 +25,7 @@ namespace funwrap {
 		static std::vector<std::string> allocators{ "malloc" };
 		static std::vector<std::string> deallocs{ "free" };
 #endif
+		static std::vector<std::string> excluded_funcs{ "_Thrd_join", "_Thrd_start" };
 		static std::vector<std::string> main{ "main", "wmain", "WinMain", "wWinMain" };
 
 		static void thread_join_pre(void *wrapctx, OUT void **user_data) {
@@ -138,7 +139,7 @@ namespace funwrap {
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
 			memory_inst::process_buffer();
-			data->disabled = false;
+			data->disabled = true;
 
 			detector::free(data->tid, addr);
 
@@ -155,6 +156,22 @@ namespace funwrap {
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
 		}
 
+		static void begin_excl(void *wrapctx, void **user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+			memory_inst::process_buffer();
+			data->disabled = true;
+		}
+
+		static void end_excl(void *wrapctx, void *user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+			memory_inst::process_buffer();
+			data->disabled = false;
+		}
+
 	} // namespace internal
 } // namespace funwrap
 
@@ -162,7 +179,7 @@ void funwrap::wrap_mutex_acquire(const module_data_t *mod) {
 	for (const auto & name : internal::acquire_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, NULL);
+			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, internal::mutex_acquire_post);
 			if (ok) {
 				std::string msg{ "< wrapped acq " };
 				msg += name + "\n";
@@ -176,7 +193,7 @@ void funwrap::wrap_mutex_release(const module_data_t *mod) {
 	for (const auto & name : internal::release_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, NULL);
+			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
 			if (ok) {
 				std::string msg{ "< wrapped rel " };
 				msg += name + "\n";
@@ -207,6 +224,20 @@ void funwrap::wrap_deallocs(const module_data_t *mod) {
 			bool ok = drwrap_wrap(towrap, internal::free_pre, internal::free_post);
 			if (ok) {
 				std::string msg{ "< wrapped deallocs " };
+				msg += name + "\n";
+				dr_fprintf(STDERR, msg.c_str());
+			}
+		}
+	}
+}
+
+void funwrap::wrap_excludes(const module_data_t *mod) {
+	for (const auto & name : internal::excluded_funcs) {
+		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
+		if (towrap != NULL) {
+			bool ok = drwrap_wrap(towrap, internal::begin_excl, internal::end_excl);
+			if (ok) {
+				std::string msg{ "< wrapped excluded function " };
 				msg += name + "\n";
 				dr_fprintf(STDERR, msg.c_str());
 			}

@@ -45,4 +45,5 @@ static std::atomic<int> num_threads_active{ 0 };
 extern std::atomic<uint> runtime_tid;
 
 // Module
-extern std::set<module_tracker::module_info_t> modules;
+using mod_t = module_tracker::module_info_t;
+extern std::set<mod_t, std::greater<mod_t>> modules;

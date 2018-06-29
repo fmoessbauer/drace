@@ -8,12 +8,14 @@ namespace module_tracker {
 		app_pc base;
 		app_pc end;
 		mutable bool   loaded; // This is necessary to modify value in-place in set
+		mutable bool   instrument;
 		module_data_t *info = nullptr;
 
 		module_info_t(app_pc mbase, app_pc mend, bool mloaded = true) :
 			base(mbase),
 			end(mend),
-			loaded(mloaded) { }
+			loaded(mloaded),
+			instrument(false){ }
 
 		~module_info_t() {
 			if (info != nullptr) {
@@ -26,7 +28,8 @@ namespace module_tracker {
 		module_info_t(const module_info_t & other) :
 			base(other.base),
 			end(other.end),
-			loaded(other.loaded)
+			loaded(other.loaded),
+			instrument(other.instrument)
 		{
 			info = dr_copy_module_data(other.info);
 		}
@@ -36,6 +39,7 @@ namespace module_tracker {
 			base(other.base),
 			end(other.end),
 			loaded(other.loaded),
+			instrument(other.instrument),
 			info(other.info)
 		{
 			other.info = nullptr;

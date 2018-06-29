@@ -13,6 +13,7 @@
 #include "memory-instr.h"
 #include "function-wrapper.h"
 #include "module-tracker.h"
+#include "stack-demangler.h"
 
 #include <detector_if.h>
 
@@ -63,7 +64,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	memory_inst::init();
 
 	// Initialize Detector
-	detector::init(argc, argv);
+	detector::init(argc, argv, stack_demangler::demangle);
 }
 
 static void event_exit()

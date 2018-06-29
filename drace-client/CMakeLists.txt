@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-set(SOURCES "src/drace-client" "src/function-wrapper" "src/memory-instr" "src/module-tracker")
+set(SOURCES "src/drace-client" "src/function-wrapper" "src/memory-instr" "src/module-tracker" "src/stack-demangler")
 
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories(

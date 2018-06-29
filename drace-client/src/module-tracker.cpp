@@ -3,8 +3,23 @@
 #include <drmgr.h>
 
 #include <set>
+#include <vector>
+#include <string>
+#include <algorithm>
 
-std::set<module_tracker::module_info_t> modules;
+using mod_t = module_tracker::module_info_t;
+std::set<mod_t, std::greater<mod_t>> modules;
+// TODO: Get from Config
+std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
+
+void print_modules() {
+	for (const auto & current : modules) {
+		const char * mod_name = dr_module_preferred_name(current.info);
+		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
+			0, mod_name, current.base, current.end,
+			current.instrument ? "YES" : "NO");
+	}
+}
 
 /* Global operator to compare module_data_t regarding logic equivalence */
 static bool operator==(const module_data_t & d1, const module_data_t & d2)
@@ -32,9 +47,11 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 
 void module_tracker::init() {
 	mod_lock = dr_mutex_create();
+	std::sort(excluded_mods.begin(), excluded_mods.end());
 }
 
 void module_tracker::finalize() {
+	//print_modules();
 
 	if (!drmgr_unregister_module_load_event(event_module_load) ||
 		!drmgr_unregister_module_unload_event(event_module_unload)) {
@@ -52,7 +69,7 @@ bool module_tracker::register_events() {
 
 static void module_tracker::event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	thread_id_t tid = dr_get_thread_id(drcontext);
-	dr_printf("<< [%i] Loaded module: %s\n", tid, dr_module_preferred_name(mod));
+	const char * mod_name = dr_module_preferred_name(mod);
 	// create shadow struct of current module
 	// for easier comparison
 	module_info_t current(mod->start, mod->end);
@@ -69,6 +86,12 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	else {
 		// Module not already registered
 		current.set_info(mod);
+		current.instrument = !std::binary_search(excluded_mods.begin(), excluded_mods.end(), std::string(mod_name));
+
+		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
+			tid, mod_name, current.base, current.end,
+			current.instrument ? "YES" : "NO");
+
 		modules.insert(std::move(current));
 	}
 	dr_mutex_unlock(mod_lock);
@@ -78,6 +101,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	funwrap::wrap_mutex_release(mod);
 	funwrap::wrap_allocators(mod);
 	funwrap::wrap_deallocs(mod);
+	funwrap::wrap_excludes(mod);
 	//funwrap::wrap_main(mod);
 }
 
