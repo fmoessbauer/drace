@@ -302,6 +302,8 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
 
 	/* The following assembly performs the following instructions
+	* if (disabled)
+	*   jmp .restore;
 	* buf_ptr->write = write;
 	* buf_ptr->addr  = addr;
 	* buf_ptr->size  = size;
@@ -309,8 +311,26 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* buf_ptr++;
 	* if (buf_ptr >= buf_end_ptr)
 	*    clean_call();
+	* .restore
 	*/
+
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
+	// TODO: Check EFLAGS
+	/* Test if data->disabled == 1 */
+	opnd1 = opnd_create_reg(reg1);
+	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
+	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	instr = INSTR_CREATE_test(drcontext, opnd1, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Jump if tracing is disabled */
+	restore = INSTR_CREATE_label(drcontext);
+	opnd1 = opnd_create_instr(restore);
+	instr   = INSTR_CREATE_jcc(drcontext, OP_jnz, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
 	/* Load data->buf_ptr into reg2 */
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, buf_ptr));
@@ -383,7 +403,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* jump restore to skip clean call */
-	restore = INSTR_CREATE_label(drcontext);
 	opnd1 = opnd_create_instr(restore);
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);

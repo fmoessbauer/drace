@@ -7,9 +7,11 @@
 static std::mutex mx;
 
 void inc(int * v) {
-	mx.lock();
-	*v += 1;
-	mx.unlock();
+	for (int i = 0; i < 100; ++i) {
+		mx.lock();
+		*v += 1;
+		mx.unlock();
+	}
 }
 
 int main() {

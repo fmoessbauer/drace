@@ -28,7 +28,8 @@ namespace funwrap {
 #endif
 		static std::vector<std::string> excluded_funcs{
 			//"std::_LaunchPad<*>::_Go", // this excludes everything inside the spawned thread
-			//"__scrt_*",                // Exclude C Runtime
+			"Cnd_do_broadcast*"          // Thread exit
+			"free"                       // Assume deallocation is race-free
 			"__security_init_cookie"     // Canary for stack protection
 		};
 
