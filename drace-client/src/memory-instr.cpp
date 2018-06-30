@@ -315,20 +315,42 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	*/
 
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
-	// TODO: Check EFLAGS
-	/* Test if data->disabled == 1 */
+	
+	///* Jump if tracing is disabled */
+	restore = INSTR_CREATE_label(drcontext);
+	/* we use lea + jecxz trick for better performance
+	* lea and jecxz won't disturb the eflags, so we won't insert
+	* code to save and restore application's eflags.
+	*/
+	/* lea [reg1 - disabled] => reg1 */
 	opnd1 = opnd_create_reg(reg1);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	instr = INSTR_CREATE_test(drcontext, opnd1, opnd1);
+	// PUSH TLS Addr on Stack
+	opnd1 = opnd_create_reg(reg2);
+	instr = INSTR_CREATE_push(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	/* Jump if tracing is disabled */
+	// load '-2' into reg2
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = OPND_CREATE_INTPTR(-2);
+	instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+	
+	opnd2 = opnd_create_base_disp(reg2, reg1, 1, 0, OPSZ_lea);
+	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+	
 	restore = INSTR_CREATE_label(drcontext);
 	opnd1 = opnd_create_instr(restore);
-	instr   = INSTR_CREATE_jcc(drcontext, OP_jnz, opnd1);
+	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+	
+	// POP TLS Addr from Stack
+	opnd1 = opnd_create_reg(reg2);
+	instr = INSTR_CREATE_pop(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Load data->buf_ptr into reg2 */
@@ -356,7 +378,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	// Only interesting when debugging
 	///* Store pc in memory ref */
 	pc = instr_get_app_pc(where);
 	///* For 64-bit, we can't use a 64-bit immediate so we split pc into two halves.

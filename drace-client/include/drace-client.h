@@ -36,7 +36,8 @@ typedef struct {
 	uint64        num_refs;
 	thread_id_t   tid;
 	uint64        grace_period;
-	bool          disabled;
+	// for lea trick use 64bit
+	uint64        disabled;
 	// Stack used to track state of detector
 	event_stack_t event_stack;
 } per_thread_t;
