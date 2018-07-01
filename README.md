@@ -11,7 +11,7 @@ It does not require any perparations like instrumentation of the binary to check
 
 ## Using the Drace Race Detector
 
-**Run the detector as follows*
+**Run the detector as follows**
 
 ```bash
 drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app parameter>
@@ -19,8 +19,16 @@ drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app param
 
 Currently the following parameters are implemented
 
+*Instrumentation Parameters:*
+
 ```
 -s <sampling-rate>: from the considered instructions, 1/n are actually instrumented
+--freq-only       : only instrument high-traffic code fragments
+```
+
+*Detector Parameters:*
+
+```
 --heap-only       : only detect races on heap-memory (exclude static memory)
 ```
 

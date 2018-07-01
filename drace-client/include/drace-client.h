@@ -22,6 +22,7 @@ static void print_config();
 struct params_t {
 	unsigned int sampling_rate;
 	bool         heap_only;
+	bool         frequent_only;
 };
 extern params_t params;
 

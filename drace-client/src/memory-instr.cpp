@@ -118,20 +118,26 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
 	bool instrument_bb = true;
-	app_pc bb_addr = dr_fragment_app_pc(tag);
-
-	// Create dummy shadow module
-	module_tracker::module_info_t bb_mod(bb_addr, nullptr);
-	
-	auto bb_mod_it = modules.lower_bound(bb_mod);
-	if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
-		instrument_bb = bb_mod_it->instrument;
-		// bb in known module
+	if (params.frequent_only && !for_trace) {
+		// only instrument traces, much faster startup
+		instrument_bb = false;
 	}
 	else {
-		// Module not known
-		//dr_printf("< Unknown MOD at %p\n", bb_addr);
-		instrument_bb = false;
+		app_pc bb_addr = dr_fragment_app_pc(tag);
+
+		// Create dummy shadow module
+		module_tracker::module_info_t bb_mod(bb_addr, nullptr);
+
+		auto bb_mod_it = modules.lower_bound(bb_mod);
+		if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
+			instrument_bb = bb_mod_it->instrument;
+			// bb in known module
+		}
+		else {
+			// Module not known
+			//dr_printf("< Unknown MOD at %p\n", bb_addr);
+			instrument_bb = false;
+		}
 	}
 
 	*(bool *)user_data = instrument_bb;
@@ -314,10 +320,20 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* .restore
 	*/
 
+	/* Precondition:
+	   reg1: memory address of access
+	   reg2: wiped / unknown state
+	*/
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
 	
 	/* Jump if tracing is disabled */
 	restore = INSTR_CREATE_label(drcontext);
+
+	/* save reg1 containing memory address */
+	opnd1 = opnd_create_reg(reg1);
+	instr = INSTR_CREATE_push(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
 	/* we use lea + jecxz trick for better performance
 	* lea and jecxz won't disturb the eflags, so we won't insert
 	* code to save and restore application's eflags.
@@ -338,6 +354,11 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	restore = INSTR_CREATE_label(drcontext);
 	opnd1 = opnd_create_instr(restore);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Restore reg1 with memory addr */
+	opnd1 = opnd_create_reg(reg1);
+	instr = INSTR_CREATE_pop(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Load data->buf_ptr into reg2 */

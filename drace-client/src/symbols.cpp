@@ -43,8 +43,8 @@ std::string symbols::get_bb_symbol(app_pc pc) {
 	if (m_it != modules.end() && pc < m_it->end) {
 		// Reverse search from pc until symbol can be decoded
 		int offset = pc - m_it->base;
-		for (int i=offset; i >= 0; --i) {
-			drsym_error_t err = drsym_lookup_address(m_it->info->full_path, i, syminfo, DRSYM_DEMANGLE);
+		for (; offset >= 0; --offset) {
+			drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, syminfo, DRSYM_DEMANGLE);
 			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
 				return std::string(syminfo->name);
 			}

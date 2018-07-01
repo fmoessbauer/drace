@@ -123,21 +123,26 @@ static void event_thread_exit(void *drcontext)
 
 static void parse_args(int argc, const char ** argv) {
 	params.sampling_rate = 1;
+	params.frequent_only = false;
 
 	int processed = 1;
 	while (processed < argc) {
 		if (strncmp(argv[processed],"-s",16)==0) {
 			params.sampling_rate = std::stoi(argv[processed + 1]);
-			processed+=2;
-		}
-		else {
-			// unknown argument skip as probably for detector
 			++processed;
 		}
+		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {
+			params.frequent_only = true;
+		}
+		// unknown argument skip as probably for detector
+		++processed;
 	}
 }
 
 static void print_config() {
 	dr_printf("< Runtime Configuration:\n"
-		      "< Sampling Rate: %i\n", params.sampling_rate);
+		      "< Sampling Rate: %i\n"
+			  "< Frequent Only: %s\n",
+		params.sampling_rate,
+		params.frequent_only ? "ON" : "OFF");
 }
