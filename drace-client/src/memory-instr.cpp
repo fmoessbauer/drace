@@ -316,7 +316,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
 	
-	///* Jump if tracing is disabled */
+	/* Jump if tracing is disabled */
 	restore = INSTR_CREATE_label(drcontext);
 	/* we use lea + jecxz trick for better performance
 	* lea and jecxz won't disturb the eflags, so we won't insert
@@ -327,30 +327,17 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-
-	// PUSH TLS Addr on Stack
-	opnd1 = opnd_create_reg(reg2);
-	instr = INSTR_CREATE_push(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	// load '-2' into reg2
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_INTPTR(-2);
-	instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
 	
-	opnd2 = opnd_create_base_disp(reg2, reg1, 1, 0, OPSZ_lea);
+	/* %reg1 + NULL*0 + (-1)
+	 => lea evaluates to 0 if disabled == 1 */
+	opnd2 = opnd_create_base_disp(reg1, NULL, 1, -1, OPSZ_lea);
 	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-	
+
+	/* Jump if (E|R)CX is 0 */
 	restore = INSTR_CREATE_label(drcontext);
 	opnd1 = opnd_create_instr(restore);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
-	
-	// POP TLS Addr from Stack
-	opnd1 = opnd_create_reg(reg2);
-	instr = INSTR_CREATE_pop(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Load data->buf_ptr into reg2 */
