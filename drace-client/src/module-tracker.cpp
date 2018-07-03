@@ -130,7 +130,9 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		modules.insert(std::move(current));
 	}
 	// wrap functions
-	if (common_prefix(mod_name, "MSVCP")) {
+	if (common_prefix(mod_name, "MSVCP") ||
+		common_prefix(mod_name, "KERNEL"))
+	{
 		funwrap::wrap_mutex_acquire(mod);
 		funwrap::wrap_mutex_release(mod);
 	}

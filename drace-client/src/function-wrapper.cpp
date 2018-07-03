@@ -17,8 +17,14 @@ namespace funwrap {
 	namespace internal {
 
 		// TODO: get from config file
-		static std::vector<std::string> acquire_symbols{ "_Mtx_lock",   "__gthrw_pthread_mutex_lock" };
-		static std::vector<std::string> release_symbols{ "_Mtx_unlock", "__gthrw_pthread_mutex_unlock" };
+		static std::vector<std::string> acquire_symbols{
+			"_Mtx_lock",   "__gthrw_pthread_mutex_lock",
+			"EnterCriticalSection", "GlobalLock"
+		};
+		static std::vector<std::string> release_symbols{
+			"_Mtx_unlock", "__gthrw_pthread_mutex_unlock",
+			"LeaveCriticalSection", "GlobalUnlock"
+		};
 #ifdef WINDOWS
 		static std::vector<std::string> allocators{ "HeapAlloc" };
 		static std::vector<std::string> deallocs{ "HeapFree" };
@@ -28,9 +34,9 @@ namespace funwrap {
 #endif
 		static std::vector<std::string> excluded_funcs{
 			//"std::_LaunchPad<*>::_Go", // this excludes everything inside the spawned thread
-			"Cnd_do_broadcast*"          // Thread exit
-			"free"                       // Assume deallocation is race-free
-			"__security_init_cookie"     // Canary for stack protection
+			"Cnd_do_broadcast*",          // Thread exit
+			"free",                       // Assume deallocation is race-free
+			"__security_init_cookie",     // Canary for stack protection
 		};
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
@@ -46,7 +52,7 @@ namespace funwrap {
 
 			detector::acquire(data->tid, mutex);
 
-			dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", data->tid, mutex);
+			//dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", data->tid, mutex);
 		}
 
 		// Currently not bound as not necessary
@@ -60,7 +66,7 @@ namespace funwrap {
 				data->disabled = false;
 			}
 
-			dr_fprintf(STDERR, "<< [%i] post mutex acquire\n", data->tid);
+			//dr_fprintf(STDERR, "<< [%i] post mutex acquire\n", data->tid);
 		}
 
 		static void mutex_release_pre(void *wrapctx, OUT void **user_data) {
@@ -70,7 +76,7 @@ namespace funwrap {
 
 			detector::release(data->tid, mutex);
 
-			dr_fprintf(STDERR, "<< [%i] pre mutex release %p, stack: %i\n", data->tid, mutex, data->event_stack.size());
+			//dr_fprintf(STDERR, "<< [%i] pre mutex release %p, stack: %i\n", data->tid, mutex, data->event_stack.size());
 
 			// TODO: Flush all other buffers
 			memory_inst::process_buffer();
@@ -90,7 +96,7 @@ namespace funwrap {
 				data->disabled = false;
 			}
 
-			dr_fprintf(STDERR, "<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
+			//dr_fprintf(STDERR, "<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
 		}
 
 		// TODO: On Linux size is arg 0

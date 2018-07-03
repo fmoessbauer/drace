@@ -14,16 +14,17 @@
 class spinlock {
 	std::atomic_flag _flag = ATOMIC_FLAG_INIT;
 public:
-	void lock()
+	inline void lock() noexcept
 	{
 		while (_flag.test_and_set(std::memory_order_acquire)) {}
 	}
 
-	bool try_lock() {
+	inline bool try_lock() noexcept
+	{
 		return !(_flag.test_and_set(std::memory_order_acquire));
 	}
 
-	void unlock()
+	inline void unlock() noexcept
 	{
 		_flag.clear(std::memory_order_release);
 	}
@@ -37,6 +38,7 @@ public:
 // Or use epoches
 static std::atomic<bool>		alloc_readable{ true };
 static std::atomic<uint64_t>	misses{ 0 };
+static std::atomic<uint64_t>	races{ 0 };
 /* Cannot use std::mutex here, hence use spinlock */
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
@@ -47,20 +49,19 @@ struct tsan_params_t {
 } params;
 
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
-	std::cout << "DATA Race " << ::std::endl;
-
-
+	// TODO: Currently we assume that there is at most one callback at a time
+	std::cout << "----- DATA Race -----" << std::endl;
 	for (int i = 0; i != 2; ++i) {
 		__tsan_race_info_access* race_info_ac = NULL;
 
 		if (i == 0) {
 			race_info_ac = raceInfo->access1;
-			std::cout << " Access 1 tid: " << race_info_ac->user_id << " ";
-
+			std::cout << "Access 1 tid: " << race_info_ac->user_id << " ";
+			++races;
 		}
 		else {
 			race_info_ac = raceInfo->access2;
-			std::cout << " Access 2 tid: " << race_info_ac->user_id << " ";
+			std::cout << "Access 2 tid: " << race_info_ac->user_id << " ";
 		}
 		std::cout << (race_info_ac->write == 1 ? "write" : "read") << " to/from " << race_info_ac->accessed_memory << " with size " << race_info_ac->size << ". Stack(Size " << race_info_ac->stack_trace_size << ")" << "Type: " << race_info_ac->type << " :" << ::std::endl;
 
@@ -68,7 +69,8 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
 			std::cout << ((void**)race_info_ac->stack_trace)[i] << std::endl;
 		}
 		// DEBUG: Show HEAP Block if any
-		mxspin.lock();
+		// Spinlock sometimes dead-locks here
+		//mxspin.lock();
 		auto it = allocations.lower_bound((uint64_t) (race_info_ac->accessed_memory));
 		if (it != allocations.end()) {
 			uint64_t beg = it->first;
@@ -78,7 +80,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
 		else {
 			printf("Block not on heap\n");
 		}
-		mxspin.unlock();
+		//mxspin.unlock();
 
 		// demagle stack
 		if (stack_demangler != nullptr) {
@@ -86,6 +88,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
 			((void(*)(void*))stack_demangler)(race_info_ac->stack_trace);
 		}
 	}
+	std::cout << "----- --------- -----" << std::endl;
 }
 
 /*
@@ -141,6 +144,8 @@ bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) 
 void detector::finalize() {
 	// TODO: Currently kills detector
 	//__tsan_fini();
+	std::cout << "> ----- SUMMARY -----" << std::endl;
+	std::cout << "> Found " << races.load() << " possible data-races" << std::endl;
 	std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
 }
 
