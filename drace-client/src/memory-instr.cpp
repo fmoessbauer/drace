@@ -36,10 +36,10 @@ void memory_inst::init() {
 void memory_inst::finalize() {
 	code_cache_exit();
 
-	if (!drmgr_unregister_thread_init_event(memory_inst::event_thread_init) ||
-		!drmgr_unregister_thread_exit_event(memory_inst::event_thread_exit) ||
-		!drmgr_unregister_bb_app2app_event(memory_inst::event_bb_app2app) ||
-		!drmgr_unregister_bb_insertion_event(memory_inst::event_app_instruction) ||
+	if (!drmgr_unregister_thread_init_event(event_thread_init) ||
+		!drmgr_unregister_thread_exit_event(event_thread_exit) ||
+		!drmgr_unregister_bb_app2app_event(event_bb_app2app) ||
+		!drmgr_unregister_bb_instrumentation_event(event_app_analysis) ||
 		drreg_exit() != DRREG_SUCCESS)
 		DR_ASSERT(false);
 }
@@ -85,6 +85,9 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->tid = dr_get_thread_id(drcontext);
 	// avoid races during thread startup
 	data->grace_period = data->num_refs + 1'000;
+
+	// TODO: Possible speed up by checking if thread is started by non-instrumented
+	// Lib
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
@@ -148,20 +151,20 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
 	bool instrument_instr = (bool)(ptr_uint_t)user_data;
-	if (!instrument_instr) {
+	if (!instrument_instr)
 		return DR_EMIT_DEFAULT;
-	}
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
-	// Only track moves and ignore Locked instructions
-	// TODO: Check if sufficient
+
+	// Ignore Locked instructions
 	if (instr_get_prefix_flag(instr, PREFIX_LOCK))
 		return DR_EMIT_DEFAULT;
 	if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 		return DR_EMIT_DEFAULT;
 
 	// Sampling: Only instrument some instructions
+	// TODO: Improve this by using per-type counters
 	++instrum_count;
 	if (instrum_count % params.sampling_rate != 0) {
 		return DR_EMIT_DEFAULT;
