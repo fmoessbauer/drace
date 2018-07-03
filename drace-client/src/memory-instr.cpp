@@ -108,7 +108,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	dr_printf("< [%i] memory refs: %i\n", data->tid, memory_inst::refs.load());
+	dr_printf("< [%.5i] memory refs: %i\n", data->tid, memory_inst::refs.load());
 }
 
 

@@ -170,7 +170,7 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			app_pc fpc = drwrap_get_func(wrapctx);
 
-			dr_printf("<< [%i] Begin EXCLUDED REGION: %s, stack: %i\n",
+			dr_printf("<< [%.5i] Begin EXCLUDED REGION: %s, stack: %i\n",
 				data->tid, *(char**)user_data, data->event_stack.size());
 			memory_inst::process_buffer();
 			data->disabled = true;
@@ -186,7 +186,7 @@ namespace funwrap {
 				memory_inst::clear_buffer();
 				data->disabled = false;
 			}
-			dr_printf("<< [%i] End   EXCLUDED REGION: %s, stack: %i\n",
+			dr_printf("<< [%.5i] End   EXCLUDED REGION: %s, stack: %i\n",
 				data->tid, (char*)user_data, data->event_stack.size());
 		}
 

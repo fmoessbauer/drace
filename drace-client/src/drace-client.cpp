@@ -100,14 +100,14 @@ static void event_thread_init(void *drcontext)
 	// assume that the first event comes from the runtime thread
 	if (0 == num_threads_active) {
 		runtime_tid = tid;
-		dr_printf("<< [%i] Runtime Thread tagged\n", tid);
+		dr_printf("<< [%.5i] Runtime Thread tagged\n", tid);
 	}
 	++num_threads_active;
 
 	// TODO: Try to get parent threadid
 	detector::fork(0, tid);
 
-	dr_printf("<< [%i] Thread started\n", tid);
+	dr_printf("<< [%.5i] Thread started\n", tid);
 }
 
 static void event_thread_exit(void *drcontext)
@@ -118,7 +118,7 @@ static void event_thread_exit(void *drcontext)
 	// TODO: Try to get parent threadid
 	detector::join(0, tid);
 
-	dr_printf("<< [%i] Thread exited\n", tid);
+	dr_printf("<< [%.5i] Thread exited\n", tid);
 }
 
 static void parse_args(int argc, const char ** argv) {

@@ -16,7 +16,7 @@ std::vector<std::string> excluded_path_prefix{ "c:\\windows" };
 void print_modules() {
 	for (const auto & current : modules) {
 		const char * mod_name = dr_module_preferred_name(current.info);
-		dr_printf("<< [%i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
+		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
 			0, mod_name, current.base, current.end,
 			current.instrument ? "YES" : "NO");
 	}
@@ -130,6 +130,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		modules.insert(std::move(current));
 	}
 	// wrap functions
+	// TODO: get prefixes from config file
 	if (common_prefix(mod_name, "MSVCP") ||
 		common_prefix(mod_name, "KERNEL"))
 	{
