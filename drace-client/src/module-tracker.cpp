@@ -133,12 +133,10 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	if (common_prefix(mod_name, "MSVCP") ||
 		common_prefix(mod_name, "KERNEL"))
 	{
-		funwrap::wrap_mutex_acquire(mod);
-		funwrap::wrap_mutex_release(mod);
+		funwrap::wrap_mutexes(mod);
 	}
 	if (common_prefix(mod_name, "KERNEL")) {
-		funwrap::wrap_allocators(mod);
-		funwrap::wrap_deallocs(mod);
+		funwrap::wrap_allocations(mod);
 	}
 	if (instrument) {
 		funwrap::wrap_excludes(mod);

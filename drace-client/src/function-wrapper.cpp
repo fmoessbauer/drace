@@ -193,58 +193,40 @@ namespace funwrap {
 	} // namespace internal
 } // namespace funwrap
 
-void funwrap::wrap_mutex_acquire(const module_data_t *mod) {
+void funwrap::wrap_mutexes(const module_data_t *mod) {
 	for (const auto & name : internal::acquire_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, internal::mutex_acquire_post);
-			if (ok) {
-				std::string msg{ "< wrapped acq " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
+			if (ok)
+				dr_fprintf(STDERR, "< wrapped acq %s\n", name.c_str());
 		}
 	}
-}
-
-void funwrap::wrap_mutex_release(const module_data_t *mod) {
 	for (const auto & name : internal::release_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
-			if (ok) {
-				std::string msg{ "< wrapped rel " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
+			if (ok)
+				dr_fprintf(STDERR, "< wrapped rel %s\n", name.c_str());
 		}
 	}
 }
 
-void funwrap::wrap_allocators(const module_data_t *mod) {
+void funwrap::wrap_allocations(const module_data_t *mod) {
 	for (const auto & name : internal::allocators) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
-			if (ok) {
-				std::string msg{ "< wrapped alloc " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
+			if (ok)
+				dr_fprintf(STDERR, "< wrapped alloc %s\n", name.c_str());
 		}
 	}
-}
-
-void funwrap::wrap_deallocs(const module_data_t *mod) {
 	for (const auto & name : internal::deallocs) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::free_pre, internal::free_post);
-			if (ok) {
-				std::string msg{ "< wrapped deallocs " };
-				msg += name + "\n";
-				dr_fprintf(STDERR, msg.c_str());
-			}
+			if (ok)
+				dr_fprintf(STDERR, "< wrapped deallocs %s\n", name.c_str());
 		}
 	}
 }
@@ -262,6 +244,7 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 	}
 	return true;
 }
+
 void funwrap::wrap_excludes(const module_data_t *mod) {
 	for (const auto & name : internal::excluded_funcs) {
 		size_t offset;
@@ -273,13 +256,5 @@ void funwrap::wrap_excludes(const module_data_t *mod) {
 			false,
 			(drsym_enumerate_cb)exclude_wrap_callback,
 			(void*)mod);
-		//if (err == DRSYM_SUCCESS) {
-		//	dr_printf("FOUND FUNCTION %s\n", name.c_str());
-		//	towrap = mod->start + offset;
-		//	bool ok = drwrap_wrap(towrap, internal::begin_excl, internal::end_excl);
-		//	if (ok) {
-		//		dr_fprintf(STDERR, "< wrapped excluded function %s\n", name.c_str());
-		//	}
-		//}
 	}
 }
