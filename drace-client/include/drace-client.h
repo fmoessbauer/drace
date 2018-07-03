@@ -23,6 +23,7 @@ struct params_t {
 	unsigned int sampling_rate;
 	bool         heap_only;
 	bool         frequent_only;
+	bool         exclude_master;
 };
 extern params_t params;
 

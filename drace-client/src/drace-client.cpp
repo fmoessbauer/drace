@@ -122,8 +122,9 @@ static void event_thread_exit(void *drcontext)
 }
 
 static void parse_args(int argc, const char ** argv) {
-	params.sampling_rate = 1;
-	params.frequent_only = false;
+	params.sampling_rate  = 1;
+	params.frequent_only  = false;
+	params.exclude_master = false;
 
 	int processed = 1;
 	while (processed < argc) {
@@ -134,15 +135,21 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {
 			params.frequent_only = true;
 		}
+		else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
+			params.exclude_master = true;
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
 }
 
 static void print_config() {
-	dr_printf("< Runtime Configuration:\n"
-		      "< Sampling Rate: %i\n"
-			  "< Frequent Only: %s\n",
+	dr_printf(
+		"< Runtime Configuration:\n"
+		"< Sampling Rate: %i\n"
+		"< Frequent Only: %s\n"
+		"< Exclude Master: %s\n",
 		params.sampling_rate,
-		params.frequent_only ? "ON" : "OFF");
+		params.frequent_only ? "ON" : "OFF",
+		params.exclude_master ? "ON" : "OFF");
 }

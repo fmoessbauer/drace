@@ -9,7 +9,6 @@
 void stack_demangler::demangle(void *stack) {
 	// get top element of stack
 	app_pc top = *(app_pc *)stack;
-	dr_printf("Demangle Stack at %p\n", top);
 
 	// Create dummy shadow module
 	module_tracker::module_info_t pc_mod(top, nullptr);

@@ -24,6 +24,7 @@ Currently the following parameters are implemented
 ```
 -s <sampling-rate>: from the considered instructions, 1/n are actually instrumented
 --freq-only       : only instrument high-traffic code fragments
+--excl-master     : exclude the runtime thread, useful if loader races
 ```
 
 *Detector Parameters:*

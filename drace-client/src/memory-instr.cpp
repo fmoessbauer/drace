@@ -86,6 +86,12 @@ static void memory_inst::event_thread_init(void *drcontext)
 	// avoid races during thread startup
 	data->grace_period = data->num_refs + 1'000;
 
+	// this is the master thread
+	if (params.exclude_master && data->tid == runtime_tid) {
+		data->disabled = true;
+		data->event_stack.push("th-master");
+	}
+
 	// TODO: Possible speed up by checking if thread is started by non-instrumented
 	// Lib
 }
