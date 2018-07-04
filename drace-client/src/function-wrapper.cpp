@@ -33,11 +33,32 @@ namespace funwrap {
 		static std::vector<std::string> deallocs{ "free" };
 #endif
 		static std::vector<std::string> excluded_funcs{
-			//"std::_LaunchPad<*>::_Go", // this excludes everything inside the spawned thread
+			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
+			"Mtx_lock",
+			"Thrd_yield",
 			"Cnd_do_broadcast*",          // Thread exit
-			"free",                       // Assume deallocation is race-free
+			"free",
 			"__security_init_cookie",     // Canary for stack protection
 		};
+
+		static void beg_excl_region(per_thread_t * data, std::string key) {
+			memory_inst::process_buffer();
+			data->disabled = true;
+			data->event_stack.push(key);
+		}
+
+		static void end_excl_region(per_thread_t * data) {
+			const auto size = data->event_stack.size();
+			// avoid sporadic false positives
+			if (size > 0) {
+				data->event_stack.pop();
+				if (size == 1) {
+					memory_inst::clear_buffer();
+					data->disabled = false;
+				}
+			}
+		}
+
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
@@ -45,14 +66,10 @@ namespace funwrap {
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 
 			// TODO: Flush all other buffers
-			memory_inst::process_buffer();
-			data->disabled = true;
-			data->event_stack.emplace("mutex-acq");
-
-
+			beg_excl_region(data, "mutex-acq");
 			detector::acquire(data->tid, mutex);
 
-			//dr_fprintf(STDERR, "<< [%i] pre mutex acquire %p\n", data->tid, mutex);
+			//dr_printf("<< [%i] pre mutex acquire %p\n", data->tid, mutex);
 		}
 
 		// Currently not bound as not necessary
@@ -60,13 +77,9 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			data->event_stack.pop();
-			if (data->event_stack.size() == 0) {
-				memory_inst::clear_buffer();
-				data->disabled = false;
-			}
+			end_excl_region(data);
 
-			//dr_fprintf(STDERR, "<< [%i] post mutex acquire\n", data->tid);
+			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_stack.size());
 		}
 
 		static void mutex_release_pre(void *wrapctx, OUT void **user_data) {
@@ -74,15 +87,10 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			void * mutex = drwrap_get_arg(wrapctx, 0);
 
+			beg_excl_region(data, "mutex-rel");
 			detector::release(data->tid, mutex);
 
 			//dr_fprintf(STDERR, "<< [%i] pre mutex release %p, stack: %i\n", data->tid, mutex, data->event_stack.size());
-
-			// TODO: Flush all other buffers
-			memory_inst::process_buffer();
-			data->disabled = true;
-			data->event_stack.emplace("mutex-rel");
-
 		}
 
 		// Currently not bound as not necessary
@@ -90,28 +98,21 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			data->event_stack.pop();
-			if (data->event_stack.size() == 0) {
-				memory_inst::clear_buffer();
-				data->disabled = false;
-			}
+			end_excl_region(data);
+			//data->grace_period = data->num_refs + 2;
 
-			//dr_fprintf(STDERR, "<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
+			//printf("<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
 		}
 
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 
-			// TODO: Flush all other buffers
-			memory_inst::process_buffer();
-
 			// Save alloc size to TLS, disable detector
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
 
-			data->disabled = true;
-			data->event_stack.emplace("alloc");
+			beg_excl_region(data, "alloc");
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", data->tid, data->last_alloc_size);
@@ -124,12 +125,7 @@ namespace funwrap {
 			// Read alloc size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			data->event_stack.pop();
-			if (data->event_stack.size() == 0) {
-				memory_inst::clear_buffer();
-				data->disabled = false;
-			}
-
+			end_excl_region(data);
 			detector::alloc(data->tid, retval, data->last_alloc_size);
 
 			// spams logs
@@ -142,11 +138,7 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
-			memory_inst::process_buffer();
-
-			data->disabled = true;
-			data->event_stack.emplace("alloc");
-
+			beg_excl_region(data, "free");
 			detector::free(data->tid, addr);
 
 			// spams logs
@@ -157,11 +149,7 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			
-			data->event_stack.pop();
-			if (data->event_stack.size() == 0) {
-				memory_inst::clear_buffer();
-				data->disabled = false;
-			}
+			end_excl_region(data);
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
 		}
 
@@ -170,22 +158,18 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			app_pc fpc = drwrap_get_func(wrapctx);
 
+			beg_excl_region(data, *(char**)user_data);
+
 			dr_printf("<< [%.5i] Begin EXCLUDED REGION: %s, stack: %i\n",
 				data->tid, *(char**)user_data, data->event_stack.size());
-			memory_inst::process_buffer();
-			data->disabled = true;
-			data->event_stack.emplace(*(char**)user_data);
 		}
 
 		static void end_excl(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			data->event_stack.pop();
-			if (data->event_stack.size() == 0) {
-				memory_inst::clear_buffer();
-				data->disabled = false;
-			}
+			end_excl_region(data);
+
 			dr_printf("<< [%.5i] End   EXCLUDED REGION: %s, stack: %i\n",
 				data->tid, (char*)user_data, data->event_stack.size());
 		}

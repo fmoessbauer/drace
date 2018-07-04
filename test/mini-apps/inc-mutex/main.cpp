@@ -20,8 +20,6 @@ int main() {
 	auto ta = std::thread(&inc, &var);
 	auto tb = std::thread(&inc, &var);
 
-	inc(&var);
-
 	ta.join();
 	tb.join();
 

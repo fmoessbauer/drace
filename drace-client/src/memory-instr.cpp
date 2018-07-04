@@ -85,7 +85,7 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->tid      = dr_get_thread_id(drcontext);
 
 	// avoid races during thread startup
-	data->grace_period = data->num_refs + 1'000;
+	data->grace_period = data->num_refs + GRACE_PERIOD_TH_START;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {

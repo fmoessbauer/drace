@@ -113,17 +113,11 @@ static void print_config() {
 }
 
 static inline bool on_heap(uint64_t addr) {
-	if (alloc_readable.load(std::memory_order_consume)) {
+	while(!alloc_readable.load(std::memory_order_consume)) {
 		auto it = allocations.lower_bound(addr);
 		uint64_t beg = it->first;
 		size_t   sz = it->second;
 		return (addr < (beg + sz));
-	}
-	else {
-		// for performance reasons ignore this location
-		// TODO: Check impact
-		++misses;
-		return false;
 	}
 }
 
@@ -147,19 +141,21 @@ void detector::finalize() {
 
 void detector::acquire(tid_t thread_id, void* mutex) {
 	uint64_t addr_32 = lower_half((uint64_t) mutex);
-	__tsan_acquire_use_user_tid(thread_id, (void*)addr_32);
+	//printf("[%.5i] Acquire Mutex at: %p\n", thread_id, addr_32);
+	__tsan_acquire_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
 void detector::release(tid_t thread_id, void* mutex) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
-	__tsan_release_use_user_tid(thread_id, (void*)addr_32);
+	//printf("[%.5i] Release Mutex at: %p\n", thread_id, addr_32);
+	__tsan_release_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
 void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		//printf("ADDR tsan: %p\n", addr_32);
+		//printf("[%.5i] READ addr tsan: %p\n", thread_id, addr_32);
 		//printf("ADDR  raw: %p\n", addr);
 		stack_trace[0] = stack_trace[0] = (int*)pc;
 		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
@@ -170,6 +166,7 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) 
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
+		//printf("[%.5i] WRITE addr tsan: %p\n", thread_id, addr_32);
 		stack_trace[0] = (int*)pc;
 		__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
 	}

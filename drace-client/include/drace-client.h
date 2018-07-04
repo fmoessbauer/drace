@@ -7,6 +7,9 @@
 #include <stack>
 #include <string>
 
+// Defines
+#define GRACE_PERIOD_TH_START 300
+
 // Events
 static void event_exit(void);
 static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
