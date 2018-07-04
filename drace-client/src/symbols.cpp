@@ -3,6 +3,7 @@
 #include "module-tracker.h"
 
 #include <string>
+#include <sstream>
 
 void symbols::init() {
 	drsym_init(0);
@@ -51,6 +52,35 @@ std::string symbols::get_bb_symbol(app_pc pc) {
 		}
 	}
 	return std::string("unknown");
+}
+
+std::string symbols::get_symbol_info(app_pc pc) {
+	module_tracker::module_info_t current(pc, nullptr);
+	std::stringstream result;
+	auto m_it = modules.lower_bound(current);
+
+	result << "PC " << std::hex << (void*)pc << "\n";
+
+	if (m_it != modules.end() && pc < m_it->end) {
+		const char * name = dr_module_preferred_name(m_it->info);
+
+		// Reverse search from pc until symbol can be decoded
+		int offset = pc - m_it->base;
+		for (; offset >= 0; --offset) {
+			drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, syminfo, DRSYM_DEMANGLE);
+			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
+				result << "\tModule " << name << " - " << syminfo->name << "\n"
+					   << "\tfrom " << (void*)m_it->base
+					   << " to "    << (void*)m_it->end;
+				if (err != DRSYM_ERROR_LINE_NOT_AVAILABLE) {
+					result << "\n\tFile " << syminfo->file << ":" << std::dec
+						<< syminfo->line << " + " << syminfo->line_offs;
+				}
+				break;
+			}
+		}
+	}
+	return result.str();
 }
 
 void symbols::print_bb_symbols(void) {
