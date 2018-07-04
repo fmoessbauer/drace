@@ -49,15 +49,12 @@ void memory_inst::finalize() {
 }
 
 static void memory_inst::analyze_access(void *drcontext) {
-	per_thread_t *data;
-	mem_ref_t *mem_ref;
+	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
+	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-	mem_ref = (mem_ref_t *)data->buf_base;
-	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
-
-	if (!data->disabled && data->grace_period < data->num_refs) {
-		for (int i = 0; i < num_refs; ++i) {
+	if (!data->disabled && (data->grace_period < data->num_refs)) {
+		for (uint64_t i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
 				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
@@ -69,7 +66,6 @@ static void memory_inst::analyze_access(void *drcontext) {
 			++mem_ref;
 		}
 	}
-	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
 }
@@ -82,22 +78,20 @@ static void memory_inst::event_thread_init(void *drcontext)
 	drmgr_set_tls_field(drcontext, tls_idx, data);
 
 	data->buf_base = (byte*) dr_thread_alloc(drcontext, MEM_BUF_SIZE);
-	data->buf_ptr = data->buf_base;
+	data->buf_ptr  = data->buf_base;
 	/* set buf_end to be negative of address of buffer end for the lea later */
-	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
+	data->buf_end  = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->num_refs = 0;
-	data->tid = dr_get_thread_id(drcontext);
+	data->tid      = dr_get_thread_id(drcontext);
+
 	// avoid races during thread startup
 	data->grace_period = data->num_refs + 1'000;
 
 	// this is the master thread
-	if (params.exclude_master && data->tid == runtime_tid) {
+	if (params.exclude_master && (data->tid == runtime_tid)) {
 		data->disabled = true;
 		data->event_stack.push("th-master");
 	}
-
-	// TODO: Possible speed up by checking if thread is started by non-instrumented
-	// Lib
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
@@ -112,7 +106,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	dr_printf("< [%.5i] memory refs: %i\n", data->tid, memory_inst::refs.load());
+	dr_printf("< [%.5i] local memory refs: %i\n", data->tid, data->num_refs);
 }
 
 
@@ -238,18 +232,12 @@ void memory_inst::process_buffer(void)
 void memory_inst::clear_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
-	per_thread_t *data;
-	mem_ref_t *mem_ref;
+	per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	mem_ref_t *mem_ref = (mem_ref_t *)data->buf_base;
+	uint64_t num_refs  = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-	mem_ref = (mem_ref_t *)data->buf_base;
-	int num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
-
-	//dr_printf(">> Clear Buffer, drop %i\n", num_refs);
-
-	memset(data->buf_base, 0, MEM_BUF_SIZE);
 	data->num_refs += num_refs;
-	data->buf_ptr = data->buf_base;
+	data->buf_ptr   = data->buf_base;
 }
 
 static void memory_inst::code_cache_init(void)
