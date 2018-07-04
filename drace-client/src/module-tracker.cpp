@@ -1,5 +1,7 @@
 #include "module-tracker.h"
 #include "function-wrapper.h"
+#include "util.h"
+
 #include <drmgr.h>
 
 #include <set>
@@ -16,18 +18,10 @@ std::vector<std::string> excluded_path_prefix{ "c:\\windows" };
 void print_modules() {
 	for (const auto & current : modules) {
 		const char * mod_name = dr_module_preferred_name(current.info);
-		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s\n",
+		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
 			0, mod_name, current.base, current.end,
-			current.instrument ? "YES" : "NO");
-	}
-}
-
-bool common_prefix(const std::string& a, const std::string& b) {
-	if (a.size() > b.size()) {
-		return a.substr(0, b.size()) == b;
-	}
-	else {
-		return b.substr(0, a.size()) == a;
+			current.instrument ? "YES" : "NO",
+			current.info->full_path);
 	}
 }
 
@@ -110,7 +104,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
 
 		for (auto prefix : excluded_path_prefix) {
-			if (common_prefix(prefix, mod_path)) {
+			if (util::common_prefix(prefix, mod_path)) {
 				instrument = false;
 				break;
 			}
@@ -131,12 +125,12 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	}
 	// wrap functions
 	// TODO: get prefixes from config file
-	if (common_prefix(mod_name, "MSVCP") ||
-		common_prefix(mod_name, "KERNEL"))
+	if (util::common_prefix(mod_name, "MSVCP") ||
+		util::common_prefix(mod_name, "KERNEL"))
 	{
 		funwrap::wrap_mutexes(mod);
 	}
-	if (common_prefix(mod_name, "KERNEL")) {
+	if (util::common_prefix(mod_name, "KERNEL")) {
 		funwrap::wrap_allocations(mod);
 	}
 	if (instrument) {
