@@ -5,16 +5,20 @@
 #include <string>
 #include <sstream>
 
+using module_tracker::module_info_t;
+
+/* Initialize symbol lookup helpers */
 void symbols::init() {
 	drsym_init(0);
 	syminfo = create_drsym_info();
 }
 
+/* Cleanup symbol lookup helpers */
 void symbols::finalize() {
 	free_drsmy_info(syminfo);
 	drsym_exit();
 }
-
+/* Create global symbol lookup data structures */
 static drsym_info_t* symbols::create_drsym_info() {
 	drsym_info_t* info;
 	info = (drsym_info_t*)malloc(sizeof(drsym_info_t));
@@ -27,6 +31,7 @@ static drsym_info_t* symbols::create_drsym_info() {
 	return info;
 }
 
+/* Cleanup global symbol lookup data structures */
 static void symbols::free_drsmy_info(drsym_info_t * info) {
 	if (info->file != NULL)
 		free(info->file);
@@ -35,10 +40,16 @@ static void symbols::free_drsmy_info(drsym_info_t * info) {
 	free(info);
 }
 
-// TODO: Optimize for cases where module is already known
+/* Get last known symbol near the given location
+*  Internally a reverse-search is performed starting at the given pc.
+*  When the first symbol lookup was successful, the search is stopped.
+*  
+* \WARNING If no debug information is available the returned symbol might
+           be misleading, as the search stops at the first imported or exported
+		   function.
+*/
 std::string symbols::get_bb_symbol(app_pc pc) {
-	// TODO: get module
-	module_tracker::module_info_t current(pc, nullptr);
+	module_info_t current(pc, nullptr);
 	auto m_it = modules.lower_bound(current);
 
 	if (m_it != modules.end() && pc < m_it->end) {
@@ -54,8 +65,16 @@ std::string symbols::get_bb_symbol(app_pc pc) {
 	return std::string("unknown");
 }
 
+/* Get last known symbol including as much information as possible.
+*  Internally a reverse-search is performed starting at the given pc.
+*  When the first symbol lookup was successful, the search is stopped.
+*
+* \WARNING If no debug information is available the returned symbol might
+be misleading, as the search stops at the first imported or exported
+function.
+*/
 std::string symbols::get_symbol_info(app_pc pc) {
-	module_tracker::module_info_t current(pc, nullptr);
+	module_info_t current(pc, nullptr);
 	std::stringstream result;
 	auto m_it = modules.lower_bound(current);
 
@@ -83,6 +102,7 @@ std::string symbols::get_symbol_info(app_pc pc) {
 	return result.str();
 }
 
+/* Print the related symbol information for each basic block */
 void symbols::print_bb_symbols(void) {
 	int i, j;
 	drsym_error_t err;

@@ -24,6 +24,10 @@ bool memory_inst::register_events() {
 }
 
 void memory_inst::init() {
+	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
+	drreg_options_t ops = { sizeof(ops), 3, false };
+
+	DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
 	page_size = dr_page_size();
 
 	tls_idx = drmgr_register_tls_field();

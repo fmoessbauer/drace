@@ -32,9 +32,6 @@ params_t params;
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
-	drreg_options_t ops = { sizeof(ops), 3, false };
-
 	dr_set_client_name("Race-Detection Client 'drace'",
 		"https://code.siemens.com/felix.moessbauer.ext/drace/issues");
 
@@ -45,24 +42,25 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	print_config();
 
 	// Init DRMGR, Reserve registers
-	if (!drmgr_init() || !drwrap_init() || drreg_init(&ops) != DRREG_SUCCESS)
+	if (!drmgr_init() ||
+		!drutil_init())
 		DR_ASSERT(false);
-
-	// performance tuning
-	drwrap_set_global_flags((drwrap_global_flags_t)(DRWRAP_NO_FRILLS | DRWRAP_FAST_CLEANCALLS));
 
 	// Register Events
 	dr_register_exit_event(event_exit);
 	drmgr_register_thread_init_event(event_thread_init);
 	drmgr_register_thread_exit_event(event_thread_exit);
 
+	// Setup Function Wrapper
+	DR_ASSERT(funwrap::init());
+
 	// Setup Module Tracking
-	DR_ASSERT(module_tracker::register_events());
 	module_tracker::init();
+	DR_ASSERT(module_tracker::register_events());
 
 	// Setup Memory Tracing
-	DR_ASSERT(memory_inst::register_events());
 	memory_inst::init();
+	DR_ASSERT(memory_inst::register_events());
 
 	// Setup Symbol Access Lib
 	symbols::init();
@@ -77,14 +75,13 @@ static void event_exit()
 		!drmgr_register_thread_exit_event(event_thread_exit))
 		DR_ASSERT(false);
 
-	// Cleanup Module Tracker
+	// Cleanup all drace modules
 	module_tracker::finalize();
-
-	// Cleanup Memory Tracing
 	memory_inst::finalize();
-
 	symbols::finalize();
+	funwrap::finalize();
 
+	// Cleanup DR extensions
 	drutil_exit();
 	drmgr_exit();
 
@@ -122,10 +119,6 @@ static void event_thread_exit(void *drcontext)
 }
 
 static void parse_args(int argc, const char ** argv) {
-	params.sampling_rate  = 1;
-	params.frequent_only  = false;
-	params.exclude_master = false;
-
 	int processed = 1;
 	while (processed < argc) {
 		if (strncmp(argv[processed],"-s",16)==0) {

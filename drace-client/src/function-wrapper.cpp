@@ -193,6 +193,18 @@ namespace funwrap {
 	} // namespace internal
 } // namespace funwrap
 
+bool funwrap::init() {
+	bool state = drwrap_init();
+
+	// performance tuning
+	drwrap_set_global_flags((drwrap_global_flags_t)(DRWRAP_NO_FRILLS | DRWRAP_FAST_CLEANCALLS));
+	return state;
+}
+
+void funwrap::finalize() {
+	drwrap_exit();
+}
+
 void funwrap::wrap_mutexes(const module_data_t *mod) {
 	for (const auto & name : internal::acquire_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());

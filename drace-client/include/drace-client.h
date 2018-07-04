@@ -20,10 +20,10 @@ static void print_config();
 
 /* Runtime parameters */
 struct params_t {
-	unsigned int sampling_rate;
-	bool         heap_only;
-	bool         frequent_only;
-	bool         exclude_master;
+	unsigned int sampling_rate{ 1 };
+	bool         heap_only{ false };
+	bool         frequent_only{ false };
+	bool         exclude_master{ false };
 };
 extern params_t params;
 
