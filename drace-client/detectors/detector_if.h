@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 /**
  * Interface for a drace compatible race detector
  */
@@ -23,4 +25,7 @@ namespace detector {
 
 	void fork(tid_t parent, tid_t child);
 	void join(tid_t parent, tid_t child);
+
+	std::string name();
+	std::string version();
 }

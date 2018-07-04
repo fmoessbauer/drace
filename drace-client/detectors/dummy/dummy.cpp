@@ -1,5 +1,5 @@
 #include "../detector_if.h"
-#include <iostream>
+#include <string>
 
 bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) {
 	return true;
@@ -22,3 +22,11 @@ void detector::free(tid_t thread_id, void* addr) { }
 void detector::fork(tid_t parent, tid_t child) { }
 
 void detector::join(tid_t parent, tid_t child) { }
+
+std::string name() {
+	return std::string("Dummy");
+}
+
+std::string version() {
+	return std::string("1.0.0");
+}

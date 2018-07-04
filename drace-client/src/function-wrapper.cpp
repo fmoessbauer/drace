@@ -36,6 +36,8 @@ namespace funwrap {
 			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
 			"Mtx_lock",
 			"Thrd_yield",
+			"Thrd_join",
+			"std::thread::*",
 			"Cnd_do_broadcast*",          // Thread exit
 			"free",
 			"__security_init_cookie",     // Canary for stack protection

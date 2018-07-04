@@ -132,11 +132,18 @@ bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) 
 }
 
 void detector::finalize() {
-	// TODO: Currently kills detector
-	//__tsan_fini();
+	__tsan_fini();
 	std::cout << "> ----- SUMMARY -----" << std::endl;
 	std::cout << "> Found " << races.load() << " possible data-races" << std::endl;
 	std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
+}
+
+std::string detector::name() {
+	return std::string("TSAN");
+}
+
+std::string detector::version() {
+	return std::string("0.1.0");
 }
 
 void detector::acquire(tid_t thread_id, void* mutex) {

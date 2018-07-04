@@ -8,7 +8,7 @@
 #include <string>
 
 // Defines
-#define GRACE_PERIOD_TH_START 300
+#define GRACE_PERIOD_TH_START 500
 
 // Events
 static void event_exit(void);
