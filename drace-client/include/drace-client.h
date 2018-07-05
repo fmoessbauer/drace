@@ -48,10 +48,9 @@ typedef struct {
 	uint64        num_refs;
 	thread_id_t   tid;
 	uint64        grace_period;
-	// for lea trick use 64bit
 	uint64        enabled;
-
-	uint64        flush_pending;
+	// inverse of flush pending, jmpecxz
+	uint64        no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
 } per_thread_t;

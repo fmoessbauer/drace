@@ -26,7 +26,10 @@ namespace memory_inst {
 	constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	static size_t page_size;
-	static app_pc code_cache;
+
+	/* Code Caches */
+	static app_pc cc_flush;
+	static app_pc cc_check_flush_pending;
 
 	static std::atomic<int> refs;
 

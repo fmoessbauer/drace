@@ -54,7 +54,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	if (data->flush_pending && num_refs != 0) {
+	if (!data->no_flush && num_refs != 0) {
 		printf("Flush was pending: Refs: %i\n", num_refs);
 	}
 	if (!data->enabled && num_refs != 0) {
@@ -75,7 +75,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	}
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
-	data->flush_pending = false;
+	data->no_flush = true;
 }
 
 // Events
@@ -94,7 +94,7 @@ static void memory_inst::event_thread_init(void *drcontext)
 
 	// avoid races during thread startup
 	data->grace_period  = data->num_refs + GRACE_PERIOD_TH_START;
-	data->flush_pending = false;
+	data->no_flush      = true;
 	data->event_cnt     = 0;
 	data->enabled       = true;
 
@@ -247,18 +247,17 @@ void memory_inst::clear_buffer(void)
 
 	data->num_refs     += num_refs;
 	data->buf_ptr       = data->buf_base;
-	data->flush_pending = false;
+	data->no_flush      = true;
 }
 
-static void memory_inst::code_cache_init(void)
-{
+static void cc_flush_init(void) {
 	void         *drcontext;
 	instrlist_t  *ilist;
 	instr_t      *where;
 	byte         *end;
 
 	drcontext = dr_get_current_drcontext();
-	code_cache = (app_pc) dr_nonheap_alloc(page_size,
+	memory_inst::cc_flush = (app_pc)dr_nonheap_alloc(memory_inst::page_size,
 		DR_MEMPROT_READ |
 		DR_MEMPROT_WRITE |
 		DR_MEMPROT_EXEC);
@@ -268,27 +267,37 @@ static void memory_inst::code_cache_init(void)
 	where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
 	instrlist_meta_append(ilist, where);
 	/* clean call */
-	dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, false, 0);
+	dr_insert_clean_call(drcontext, ilist, where, (void *)memory_inst::process_buffer, false, 0);
 	/* Encodes the instructions into memory and then cleans up. */
-	end = instrlist_encode(drcontext, ilist, code_cache, false);
-	DR_ASSERT((size_t)(end - code_cache) < page_size);
+	end = instrlist_encode(drcontext, ilist, memory_inst::cc_flush, false);
+	DR_ASSERT((size_t)(end - memory_inst::cc_flush) < memory_inst::page_size);
 	instrlist_clear_and_destroy(drcontext, ilist);
 	/* set the memory as just +rx now */
-	dr_memory_protect(code_cache, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
+	dr_memory_protect(memory_inst::cc_flush, memory_inst::page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
+}
+
+static void cc_check_flush_pending_init(void) { }
+
+static void memory_inst::code_cache_init(void)
+{
+	cc_flush_init();
+	cc_check_flush_pending_init();
 }
 
 
 static void memory_inst::code_cache_exit(void)
 {
-	dr_nonheap_free(code_cache, page_size);
+	dr_nonheap_free(cc_flush, page_size);
+	dr_nonheap_free(cc_check_flush_pending, page_size);
 }
 
 /*
 *
 */
 void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2,
-	instr_t *call_flush, instr_t *after_flush)
+	instr_t *call_flush)
 {
+	// Not possible due to BB limitations
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 
@@ -299,22 +308,12 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, flush_pending));
+	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, no_flush));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-	
-	// TODO: Check why this does not work
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = opnd_create_base_disp(reg2, reg2, 0, -1, OPSZ_lea);
-	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	
 	opnd1 = opnd_create_instr(call_flush);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	//instrlist_meta_preinsert(ilist, where, instr);
-
-	opnd1 = opnd_create_instr(after_flush);
-	instr = INSTR_CREATE_jmp(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 }
 
@@ -399,8 +398,11 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
+	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
+	instrlist_meta_preinsert(ilist, where, instr);
+
 	/* Jump if flush is pending, finally return to .after_flush */
-	//insert_jmp_on_flush(drcontext, ilist, where, reg2, call_flush, after_flush);
+	insert_jmp_on_flush(drcontext, ilist, where, reg2, call_flush);
 
 	/* ==== .after_flush ==== */
 	instrlist_meta_preinsert(ilist, where, after_flush);
@@ -519,8 +521,8 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* clean call invocation. This is to reduce the code cache size.
 	*/
 	instrlist_meta_preinsert(ilist, where, call);
-	/* jmp code_cache */
-	opnd1 = opnd_create_pc(code_cache);
+	/* jmp cc_flush */
+	opnd1 = opnd_create_pc(cc_flush);
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
 
 	instrlist_meta_preinsert(ilist, where, instr);

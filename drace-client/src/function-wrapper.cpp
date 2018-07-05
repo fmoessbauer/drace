@@ -69,7 +69,7 @@ namespace funwrap {
 		static void flush_other_threads(per_thread_t * data) {
 			for (auto td : TLS_buckets) {
 				if (td.first != data->tid)
-					data->flush_pending = true;
+					data->no_flush = false;
 			}
 		}
 
