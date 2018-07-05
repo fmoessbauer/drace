@@ -33,7 +33,12 @@ struct params_t {
 extern params_t params;
 
 using event_stack_t = std::stack<std::string>;
-/* Per Thread data (thread-private)*/
+/* Per Thread data (thread-private)
+ * \Warning This struct is not default-constructed
+ *          but just allocated as a memory block and casted
+ *          Initialisation is done in the thread-creation event
+ *          in memory_instr.
+ */
 typedef struct {
 	byte         *buf_ptr;
 	byte         *buf_base;
@@ -48,7 +53,7 @@ typedef struct {
 
 	std::atomic<uint64> flush_pending;
 	// Stack used to track state of detector
-	event_stack_t event_stack;
+	uint64        event_cnt;
 } per_thread_t;
 
 /* Global data structures */

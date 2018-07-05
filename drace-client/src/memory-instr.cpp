@@ -55,7 +55,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 	if (data->flush_pending && num_refs != 0) {
-		printf("Flush was pending: Refs: %i\n", num_refs);
+		//printf("Flush was pending: Refs: %i\n", num_refs);
 	}
 	if (data->disabled && num_refs != 0) {
 		printf("Detector is disabled: Refs: %i\n", num_refs);
@@ -93,13 +93,14 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->tid      = dr_get_thread_id(drcontext);
 
 	// avoid races during thread startup
-	data->grace_period = data->num_refs + GRACE_PERIOD_TH_START;
+	data->grace_period  = data->num_refs + GRACE_PERIOD_TH_START;
 	data->flush_pending = false;
+	data->event_cnt     = 0;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {
 		data->disabled = true;
-		data->event_stack.push("th-master");
+		data->event_cnt++;
 	}
 
 	// TODO: not threadsafe
@@ -319,6 +320,8 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* The following assembly performs the following instructions
 	* if (disabled)
 	*   jmp .restore;
+	* if (flush)
+	*   jmp .call
 	* buf_ptr->write = write;
 	* buf_ptr->addr  = addr;
 	* buf_ptr->size  = size;
@@ -461,6 +464,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* jmp code_cache */
 	opnd1 = opnd_create_pc(code_cache);
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
+
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Short circuit needs to restore stack */

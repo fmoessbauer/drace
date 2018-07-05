@@ -13,7 +13,7 @@ using mod_t = module_tracker::module_info_t;
 std::set<mod_t, std::greater<mod_t>> modules;
 // TODO: Get from Config
 std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
-std::vector<std::string> excluded_path_prefix{ "c:\\windows" };
+std::vector<std::string> excluded_path_prefix{ "c:\\windows\\system32" };
 
 void print_modules() {
 	for (const auto & current : modules) {
@@ -143,6 +143,10 @@ static void module_tracker::event_module_unload(void *drcontext, const module_da
 	module_info_t current(mod->start, mod->end);
 
 	dr_mutex_lock(mod_lock);
+
+	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+		0, dr_module_preferred_name(mod), current.base, current.end,
+		mod->full_path);
 
 	auto modit = modules.find(current);
 	if (modit != modules.end()) {

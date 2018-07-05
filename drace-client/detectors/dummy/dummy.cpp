@@ -23,10 +23,10 @@ void detector::fork(tid_t parent, tid_t child) { }
 
 void detector::join(tid_t parent, tid_t child) { }
 
-std::string name() {
+std::string detector::name() {
 	return std::string("Dummy");
 }
 
-std::string version() {
+std::string detector::version() {
 	return std::string("1.0.0");
 }
