@@ -49,7 +49,7 @@ typedef struct {
 	thread_id_t   tid;
 	uint64        grace_period;
 	// for lea trick use 64bit
-	uint64        disabled;
+	uint64        enabled;
 
 	uint64        flush_pending;
 	// Stack used to track state of detector

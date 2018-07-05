@@ -57,10 +57,10 @@ static void memory_inst::analyze_access(void *drcontext) {
 	if (data->flush_pending && num_refs != 0) {
 		printf("Flush was pending: Refs: %i\n", num_refs);
 	}
-	if (data->disabled && num_refs != 0) {
+	if (!data->enabled && num_refs != 0) {
 		printf("Detector is disabled: Refs: %i\n", num_refs);
 	}
-	if (!data->disabled) {
+	if (data->enabled) {
 		for (uint64_t i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
@@ -96,10 +96,11 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->grace_period  = data->num_refs + GRACE_PERIOD_TH_START;
 	data->flush_pending = false;
 	data->event_cnt     = 0;
+	data->enabled       = true;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {
-		data->disabled = true;
+		data->enabled = false;
 		data->event_cnt++;
 	}
 
@@ -304,20 +305,17 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 	
 	// TODO: Check why this does not work
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
+	opnd2 = opnd_create_base_disp(reg2, reg2, 0, -1, OPSZ_lea);
 	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-
-	opnd1 = opnd_create_instr(after_flush);
+	
+	opnd1 = opnd_create_instr(call_flush);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
+	//instrlist_meta_preinsert(ilist, where, instr);
 
 	opnd1 = opnd_create_instr(after_flush);
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
-
-	//instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
-	//instrlist_meta_preinsert(ilist, where, instr);
 }
 
 
@@ -389,22 +387,11 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* save reg2 TLS ptr */
 	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
-
-	/* we use lea + jecxz trick for better performance
-	* lea and jecxz won't disturb the eflags, so we won't insert
-	* code to save and restore application's eflags.
-	*/
-	/* lea [reg2 - disabled] => reg1 */
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
-	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
 	
-	/* %reg1 + NULL*0 + (-1)
-	 => lea evaluates to 0 if disabled == 1 */
+	/* load enalbed flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
-	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, enabled));
+	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	
 	/* Jump if (E|R)CX is 0 */
@@ -412,12 +399,8 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	/* Restore reg2 */
-	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
-	instrlist_meta_preinsert(ilist, where, instr);
-
 	/* Jump if flush is pending, finally return to .after_flush */
-	insert_jmp_on_flush(drcontext, ilist, where, reg2, call_flush, after_flush);
+	//insert_jmp_on_flush(drcontext, ilist, where, reg2, call_flush, after_flush);
 
 	/* ==== .after_flush ==== */
 	instrlist_meta_preinsert(ilist, where, after_flush);

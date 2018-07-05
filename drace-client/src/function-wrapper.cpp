@@ -54,14 +54,14 @@ namespace funwrap {
 
 		static void beg_excl_region(per_thread_t * data) {
 			memory_inst::process_buffer();
-			data->disabled = true;
+			data->enabled = false;
 			data->event_cnt++;
 		}
 
 		static void end_excl_region(per_thread_t * data) {
 			if (data->event_cnt == 1) {
 				memory_inst::clear_buffer();
-				data->disabled = false;
+				data->enabled = true;
 			}
 			data->event_cnt--;
 		}
