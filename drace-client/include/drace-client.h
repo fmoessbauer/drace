@@ -51,7 +51,7 @@ typedef struct {
 	// for lea trick use 64bit
 	uint64        disabled;
 
-	std::atomic<uint64> flush_pending;
+	uint64        flush_pending;
 	// Stack used to track state of detector
 	uint64        event_cnt;
 } per_thread_t;

@@ -282,6 +282,45 @@ static void memory_inst::code_cache_exit(void)
 	dr_nonheap_free(code_cache, page_size);
 }
 
+/*
+*
+*/
+void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2,
+	instr_t *call_flush, instr_t *after_flush)
+{
+	instr_t *instr;
+	opnd_t   opnd1, opnd2;
+
+	//if(flush)
+	// jmp .pop_clean_call
+	// 
+	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, flush_pending));
+	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
+	
+	// TODO: Check why this does not work
+	//opnd1 = opnd_create_reg(reg2);
+	//opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
+	//instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	//instrlist_meta_preinsert(ilist, where, instr);
+
+	//opnd1 = opnd_create_instr(call_flush);
+	//instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+	//instrlist_meta_preinsert(ilist, where, instr);
+
+	opnd1 = opnd_create_instr(after_flush);
+	instr = INSTR_CREATE_jmp(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	//instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
+	//instrlist_meta_preinsert(ilist, where, instr);
+}
+
+
 /* insert inline code to add a memory reference info entry into the buffer */
 static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
@@ -317,7 +356,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* Create ASM lables */
 	instr_t *restore      = INSTR_CREATE_label(drcontext);
 	instr_t *sh_circ      = INSTR_CREATE_label(drcontext);
-	instr_t *fill_buf     = INSTR_CREATE_label(drcontext);
 	instr_t *call         = INSTR_CREATE_label(drcontext);
 	instr_t *call_flush   = INSTR_CREATE_label(drcontext);
 	instr_t *call_noflush = INSTR_CREATE_label(drcontext);
@@ -356,7 +394,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* lea and jecxz won't disturb the eflags, so we won't insert
 	* code to save and restore application's eflags.
 	*/
-	/* lea [reg1 - disabled] => reg1 */
+	/* lea [reg2 - disabled] => reg1 */
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
@@ -374,10 +412,16 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
+	/* Restore reg2 */
+	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* Jump if flush is pending, finally return to .after_flush */
+	insert_jmp_on_flush(drcontext, ilist, where, reg2, call_flush, after_flush);
+
 	/* ==== .after_flush ==== */
 	instrlist_meta_preinsert(ilist, where, after_flush);
 
-	/* Restore reg1 with memory addr */
 	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -461,7 +505,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* mov restore DR_REG_XCX */
 	opnd1 = opnd_create_reg(reg2);
 	/* this is the return address for jumping back from lean procedure */
-	opnd2 = opnd_create_instr(sh_circ);
+	opnd2 = opnd_create_instr(after_flush);
 	/* We could use instrlist_insert_mov_instr_addr(), but with a register
 	* destination we know we can use a 64-bit immediate.
 	*/
@@ -501,7 +545,8 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* ==== .sh_circ ==== */
 	/* Short circuit needs to restore stack */
 	instrlist_meta_preinsert(ilist, where, sh_circ);
-	/* Restore reg1 with memory addr */
+
+	/* Restore Stack */
 	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -512,38 +557,4 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
 		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS)
 		DR_ASSERT(false);
-}
-
-/*
-*
-*/
-void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, instr_t *call, instr_t *after_flush) {
-	instr_t *instr;
-	opnd_t   opnd1, opnd2;
-	reg_id_t reg1, reg2;
-
-	//if(flush)
-	// jmp .pop_clean_call
-	// 
-
-	/* Check if flush is pending and jump to clean call */
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, flush_pending));
-	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	/* %reg1 + NULL*0 + (-1)
-	=> lea evaluates to 0 if disabled == 1 */
-	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 1, -1, OPSZ_lea);
-	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	/* Jump if (E|R)CX is 0 */
-	opnd1 = opnd_create_instr(call);
-	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	opnd1 = opnd_create_instr(after_flush);
-	instr = INSTR_CREATE_jmp(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
 }
