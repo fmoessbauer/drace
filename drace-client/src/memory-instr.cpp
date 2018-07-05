@@ -303,14 +303,14 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 	instrlist_meta_preinsert(ilist, where, instr);
 	
 	// TODO: Check why this does not work
-	//opnd1 = opnd_create_reg(reg2);
-	//opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
-	//instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
-	//instrlist_meta_preinsert(ilist, where, instr);
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
+	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+	instrlist_meta_preinsert(ilist, where, instr);
 
-	//opnd1 = opnd_create_instr(call_flush);
-	//instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	//instrlist_meta_preinsert(ilist, where, instr);
+	opnd1 = opnd_create_instr(after_flush);
+	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
 
 	opnd1 = opnd_create_instr(after_flush);
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
