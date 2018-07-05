@@ -67,14 +67,13 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
 		// DEBUG: Show HEAP Block if any
 		// Spinlock sometimes dead-locks here
 		//mxspin.lock();
-		auto it = allocations.lower_bound((uint64_t) (race_info_ac->accessed_memory));
-		if (it != allocations.end()) {
-			uint64_t beg = it->first;
-			size_t   sz = it->second;
-			printf("Block begin at %p, size %d\n", beg, sz);
+		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
+		auto it = allocations.lower_bound(addr);
+		if (it != allocations.end() && (addr < (it->first + it->second))) {
+			printf("Block begin at %p, size %d\n", it->first, it->second);
 		}
 		else {
-			printf("Block not on heap\n");
+			printf("Block not on heap (anymore)\n");
 		}
 		//mxspin.unlock();
 

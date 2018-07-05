@@ -10,6 +10,7 @@
 
 #include "drace-client.h"
 #include "memory-instr.h"
+#include "symbols.h"
 
 /* Number of instrumented calls, used for sampling */
 static std::atomic<int> instrum_count{ 0 };
@@ -53,7 +54,13 @@ static void memory_inst::analyze_access(void *drcontext) {
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	if (!data->disabled && (data->grace_period < data->num_refs)) {
+	if (data->flush_pending && num_refs != 0) {
+		printf("Flush was pending: Refs: %i\n", num_refs);
+	}
+	if (data->disabled && num_refs != 0) {
+		printf("Detector is disabled: Refs: %i\n", num_refs);
+	}
+	if (!data->disabled) {
 		for (uint64_t i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
@@ -68,6 +75,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	}
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
+	data->flush_pending = false;
 }
 
 // Events
@@ -86,12 +94,16 @@ static void memory_inst::event_thread_init(void *drcontext)
 
 	// avoid races during thread startup
 	data->grace_period = data->num_refs + GRACE_PERIOD_TH_START;
+	data->flush_pending = false;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {
 		data->disabled = true;
 		data->event_stack.push("th-master");
 	}
+
+	// TODO: not threadsafe
+	TLS_buckets.emplace(data->tid, data);
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
@@ -102,6 +114,9 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	
 	refs += data->num_refs; // atomic access
+
+	// TODO: not threadsafe
+	TLS_buckets.erase(data->tid);
 
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -177,6 +192,7 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	// Check if actually in instrumented module:
 	// Ideally this should not be necessary as analysis function catches all
 	app_pc bb_addr = dr_fragment_app_pc(tag);
+
 	// Create dummy shadow module
 	module_tracker::module_info_t bb_mod(bb_addr, nullptr);
 
@@ -192,15 +208,6 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 		// Do not instrument unknown modules
 		return DR_EMIT_DEFAULT;
 	}
-
-	// Filter certain opcodes
-	//ushort opcode = instr_get_opcode(instr);
-	//if (opcode == OP_cmpxchg ||
-	//	opcode == OP_push ||
-	//	opcode == OP_pop ||
-	//	opcode == OP_ret ||
-	//	opcode == OP_call ||
-	//	opcode == OP_stos)
 
 	/* insert code to add an entry for app instruction */
 	// TODO: Check if instruction instrumentation is necessary (probably not)
@@ -236,8 +243,9 @@ void memory_inst::clear_buffer(void)
 	mem_ref_t *mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs  = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	data->num_refs += num_refs;
-	data->buf_ptr   = data->buf_base;
+	data->num_refs     += num_refs;
+	data->buf_ptr       = data->buf_base;
+	data->flush_pending = false;
 }
 
 static void memory_inst::code_cache_init(void)
@@ -282,7 +290,7 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* It inserts code before the memory reference to to fill the memory buffer
 	* and jump to our own code cache to call the clean_call when the buffer is full.
 	*/
-	instr_t *instr, *call, *restore;
+	instr_t *instr, *call, *restore, *sh_circ;
 	opnd_t   opnd1, opnd2;
 	reg_id_t reg1, reg2;
 	drvector_t allowed;
@@ -329,10 +337,10 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	
 	/* Jump if tracing is disabled */
 	restore = INSTR_CREATE_label(drcontext);
+	sh_circ = INSTR_CREATE_label(drcontext);
 
-	/* save reg1 containing memory address */
-	opnd1 = opnd_create_reg(reg1);
-	instr = INSTR_CREATE_push(drcontext, opnd1);
+	/* save reg2 TLS ptr */
+	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* we use lea + jecxz trick for better performance
@@ -340,26 +348,25 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	* code to save and restore application's eflags.
 	*/
 	/* lea [reg1 - disabled] => reg1 */
-	opnd1 = opnd_create_reg(reg1);
+	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, disabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	
 	/* %reg1 + NULL*0 + (-1)
 	 => lea evaluates to 0 if disabled == 1 */
-	opnd2 = opnd_create_base_disp(reg1, NULL, 1, -1, OPSZ_lea);
+	opnd1 = opnd_create_reg(reg2);
+	opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
 	instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-
+	
 	/* Jump if (E|R)CX is 0 */
-	restore = INSTR_CREATE_label(drcontext);
-	opnd1 = opnd_create_instr(restore);
+	opnd1 = opnd_create_instr(sh_circ);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Restore reg1 with memory addr */
-	opnd1 = opnd_create_reg(reg1);
-	instr = INSTR_CREATE_pop(drcontext, opnd1);
+	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Load data->buf_ptr into reg2 */
@@ -456,9 +463,33 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr = INSTR_CREATE_jmp(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
 
+	/* Short circuit needs to restore stack */
+	instrlist_meta_preinsert(ilist, where, sh_circ);
+	/* Restore reg1 with memory addr */
+	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
+	instrlist_meta_preinsert(ilist, where, instr);
+
 	/* Restore scratch registers */
 	instrlist_meta_preinsert(ilist, where, restore);
+
 	if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
 		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS)
 		DR_ASSERT(false);
 }
+
+///* Check if flush is pending and jump to clean call */
+//opnd1 = opnd_create_reg(reg1);
+//opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, flush_pending));
+//instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+//instrlist_meta_preinsert(ilist, where, instr);
+//
+///* %reg1 + NULL*0 + (-1)
+//=> lea evaluates to 0 if disabled == 1 */
+//opnd2 = opnd_create_base_disp(reg1, NULL, 1, -1, OPSZ_lea);
+//instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+//instrlist_meta_preinsert(ilist, where, instr);
+//
+///* Jump if (E|R)CX is 0 */
+//opnd1 = opnd_create_instr(call);
+//instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+//instrlist_meta_preinsert(ilist, where, instr);

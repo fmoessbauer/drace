@@ -26,6 +26,7 @@ uint     tls_offs;
 int      tls_idx;
 
 std::atomic<uint> runtime_tid{ 0 };
+std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 
 /* Runtime parameters */
 params_t params;
@@ -40,6 +41,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Parse runtime arguments and print generated configuration
 	parse_args(argc, argv);
 	print_config();
+
+	TLS_buckets.reserve(128);
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() ||

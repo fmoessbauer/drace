@@ -34,6 +34,7 @@ namespace funwrap {
 #endif
 		static std::vector<std::string> excluded_funcs{
 			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
+			"free",
 			"Mtx_lock",
 			"Thrd_yield",
 			"Thrd_join",
@@ -41,6 +42,14 @@ namespace funwrap {
 			"Cnd_do_broadcast*",          // Thread exit
 			"free",
 			"__security_init_cookie",     // Canary for stack protection
+			"__isa_available_init",       // C runtime
+			"__scrt_initialize_*",        // |
+			"__scrt_acquire_startup*",    // C thread start lock
+			"__scrt_release_startup*",    // C thread start unlock
+			"__scrt_is_managed_app",
+			"pre_cpp_initialization",
+			"printf",                     // Ignore Races on stdio // TODO: Use Flag
+			"atexit"
 		};
 
 		static void beg_excl_region(per_thread_t * data, std::string key) {
@@ -61,13 +70,18 @@ namespace funwrap {
 			}
 		}
 
+		static void flush_other_threads(per_thread_t * data) {
+			for (auto td : TLS_buckets) {
+				if (td.first != data->tid)
+					data->flush_pending = true;
+			}
+		}
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			void *      mutex = drwrap_get_arg(wrapctx, 0);
 
-			// TODO: Flush all other buffers
 			beg_excl_region(data, "mutex-acq");
 			detector::acquire(data->tid, mutex);
 
@@ -80,7 +94,12 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 			end_excl_region(data);
+			flush_other_threads(data);
 
+			//for (auto td : TLS_buckets) {
+			//	if (td.first != data->tid)
+			//		td.second->buf_ptr = td.second->buf_base;
+			//}
 			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_stack.size());
 		}
 
@@ -101,6 +120,8 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 			end_excl_region(data);
+			flush_other_threads(data);
+
 			//data->grace_period = data->num_refs + 2;
 
 			//printf("<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
@@ -158,12 +179,11 @@ namespace funwrap {
 		static void begin_excl(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			app_pc fpc = drwrap_get_func(wrapctx);
 
 			beg_excl_region(data, *(char**)user_data);
 
-			dr_printf("<< [%.5i] Begin EXCLUDED REGION: %s, stack: %i\n",
-				data->tid, *(char**)user_data, data->event_stack.size());
+			dr_printf("<< [%.5i] Begin EXCLUDED REGION, stack: %i\n",
+				data->tid, data->event_stack.size());
 		}
 
 		static void end_excl(void *wrapctx, void *user_data) {
@@ -172,8 +192,8 @@ namespace funwrap {
 
 			end_excl_region(data);
 
-			dr_printf("<< [%.5i] End   EXCLUDED REGION: %s, stack: %i\n",
-				data->tid, (char*)user_data, data->event_stack.size());
+			dr_printf("<< [%.5i] End   EXCLUDED REGION: stack: %i\n",
+				data->tid, data->event_stack.size());
 		}
 
 	} // namespace internal
@@ -245,9 +265,6 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 
 void funwrap::wrap_excludes(const module_data_t *mod) {
 	for (const auto & name : internal::excluded_funcs) {
-		size_t offset;
-		app_pc towrap;
-		//drsym_error_t err = drsym_lookup_symbol(mod->full_path, name.c_str(), &offset, DRSYM_DEMANGLE);
 		drsym_error_t err = drsym_search_symbols(
 			mod->full_path,
 			name.c_str(),

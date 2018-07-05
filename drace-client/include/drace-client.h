@@ -4,11 +4,13 @@
 #include "module-tracker.h"
 #include <dr_api.h>
 #include <set>
+#include <map>
+#include <unordered_map>
 #include <stack>
 #include <string>
 
 // Defines
-#define GRACE_PERIOD_TH_START 500
+#define GRACE_PERIOD_TH_START 100
 
 // Events
 static void event_exit(void);
@@ -43,6 +45,8 @@ typedef struct {
 	uint64        grace_period;
 	// for lea trick use 64bit
 	uint64        disabled;
+
+	std::atomic<uint64> flush_pending;
 	// Stack used to track state of detector
 	event_stack_t event_stack;
 } per_thread_t;
@@ -59,3 +63,6 @@ extern std::atomic<uint> runtime_tid;
 // Module
 using mod_t = module_tracker::module_info_t;
 extern std::set<mod_t, std::greater<mod_t>> modules;
+
+// TLS
+extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;

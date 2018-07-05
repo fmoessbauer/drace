@@ -22,7 +22,7 @@ namespace memory_inst {
 	} mem_ref_t;
 
 	/* Maximum number of references between clean calls */
-	constexpr int MAX_NUM_MEM_REFS = 256;
+	constexpr int MAX_NUM_MEM_REFS = 4096;
 	constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	static size_t page_size;

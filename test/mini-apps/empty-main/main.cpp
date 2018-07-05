@@ -15,9 +15,9 @@ int main(int argc, char ** argv) {
 	fflush(stdout);
 
 	auto ta = std::thread(fun);
-	//auto tb = std::thread(fun2);
+	auto tb = std::thread(fun2);
 	ta.join();
-	//tb.join();
+	tb.join();
 
 	return 0;
 }
