@@ -63,7 +63,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	//if (!data->enabled && num_refs != 0) {
 	//	printf("Detector is disabled: Refs: %i\n", num_refs);
 	//}
-	dr_mutex_lock(th_mutex);
+	//dr_mutex_lock(th_mutex);
 	if (data->enabled) {
 		for (uint64_t i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
@@ -79,8 +79,11 @@ static void memory_inst::analyze_access(void *drcontext) {
 	}
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
-	data->no_flush = true;
-	dr_mutex_unlock(th_mutex);
+	if (!data->no_flush) {
+		data->no_flush = true;
+		dr_thread_yield();
+	}
+	//dr_mutex_unlock(th_mutex);
 }
 
 // Events

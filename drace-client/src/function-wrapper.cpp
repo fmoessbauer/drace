@@ -68,12 +68,28 @@ namespace funwrap {
 
 		static void flush_other_threads(per_thread_t * data) {
 			memory_inst::process_buffer();
+			// issue flushes
 			for (auto td : TLS_buckets) {
 					if (td.first != data->tid)
 					{
 						//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
 						td.second->no_flush = false;
 					}
+			}
+			// wait until all threads flushed
+			// this is a hacky barrier implementation
+			// and this might live-lock if only one core is avaliable
+			for (auto td : TLS_buckets) {
+				if (td.first != data->tid)
+				{
+					uint64_t waits = 0;
+					// TODO: validate this!!!
+					while (!data->no_flush.load(std::memory_order::memory_order_consume)) {
+						if (++waits > 10) {
+							dr_thread_yield();
+						}
+					}
+				}
 			}
 		}
 
@@ -89,11 +105,13 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			//dr_mutex_lock(th_mutex);
+			// To avoid deadlock flush-waiting spinlock,
+			// acquire / release must not occur concurrently
+			dr_mutex_lock(th_mutex);
 			flush_other_threads(data);
 			// flush all other threads before continuing
 			detector::acquire(data->tid, (void*)(data->last_mutex));
-			//dr_mutex_unlock(th_mutex);
+			dr_mutex_unlock(th_mutex);
 
 			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_cnt);
 			//fflush(stdout);
@@ -103,7 +121,14 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_mutex = (uint64_t)drwrap_get_arg(wrapctx, 0);
+
+			// To avoid deadlock flush-waiting spinlock,
+			// acquire / release must not occur concurrently
+			dr_mutex_lock(th_mutex);
 			flush_other_threads(data);
+			detector::release(data->tid, (void*)(data->last_mutex));
+			dr_mutex_unlock(th_mutex);
+
 			//printf("<< [%i] pre mutex release, stack: %i\n", data->tid, data->event_cnt);
 			//fflush(stdout);
 		}
@@ -112,9 +137,6 @@ namespace funwrap {
 		static void mutex_release_post(void *wrapctx, OUT void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
-			// flush all other threads before continuing
-			detector::release(data->tid, (void*)(data->last_mutex));
 
 			//data->grace_period = data->num_refs + 2;
 

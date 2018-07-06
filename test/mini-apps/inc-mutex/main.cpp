@@ -11,6 +11,7 @@ void inc(int * v) {
 		mx.lock();
 		int val = *v;
 		++val;
+		std::this_thread::yield();
 		*v = val;
 		mx.unlock();
 	}

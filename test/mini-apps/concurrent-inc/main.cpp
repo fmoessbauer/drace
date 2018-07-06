@@ -2,19 +2,25 @@
 #include <iostream>
 #include <mutex>
 
-#define NUM_INCREMENTS 1'000'0
+#define NUM_INCREMENTS 1'000
 #define USE_HEAP
 
 //std::mutex mx;
 
 inline void inc(int * v) {
 	for (int i = 0; i < NUM_INCREMENTS; ++i) {
-		++(*v);
+		int var = *v;
+		++var;
+		std::this_thread::yield();
+		*v = var;
 	}
 }
 void dec(int * v) {
 	for (int i = 0; i < NUM_INCREMENTS; ++i) {
-		--(*v);
+		int var = *v;
+		--var;
+		std::this_thread::yield();
+		*v = var;
 	}
 }
 
