@@ -29,6 +29,7 @@ struct params_t {
 	bool         heap_only{ false };
 	bool         frequent_only{ false };
 	bool         exclude_master{ false };
+	bool         delayed_sym_lookup{ false };
 };
 extern params_t params;
 

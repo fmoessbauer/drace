@@ -69,7 +69,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	symbols::init();
 
 	// Initialize Detector
-	detector::init(argc, argv, stack_demangler::demangle);
+	if (!params.delayed_sym_lookup) {
+		detector::init(argc, argv, stack_demangler::demangle);
+	}
+	else {
+		detector::init(argc, argv, nullptr);
+	}
 }
 
 static void event_exit()
@@ -134,6 +139,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
 			params.exclude_master = true;
 		}
+		else if (strncmp(argv[processed], "--delayed-syms", 16) == 0) {
+			params.delayed_sym_lookup = true;
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
@@ -144,8 +152,10 @@ static void print_config() {
 		"< Runtime Configuration:\n"
 		"< Sampling Rate: %i\n"
 		"< Frequent Only: %s\n"
-		"< Exclude Master: %s\n",
+		"< Exclude Master: %s\n"
+		"< Delayed Symbol Lookup: %s\n",
 		params.sampling_rate,
 		params.frequent_only ? "ON" : "OFF",
-		params.exclude_master ? "ON" : "OFF");
+		params.exclude_master ? "ON" : "OFF",
+		params.delayed_sym_lookup ? "ON" : "OFF");
 }
