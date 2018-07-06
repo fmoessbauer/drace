@@ -46,12 +46,13 @@ typedef struct {
 	ptr_int_t     buf_end;
 	void         *cache;
 	uint64        last_alloc_size;
+	uint64        last_mutex;
 	uint64        num_refs;
 	thread_id_t   tid;
 	uint64        grace_period;
 	uint64        enabled;
 	// inverse of flush pending, jmpecxz
-	uint64        no_flush;
+	std::atomic<uint64> no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
 } per_thread_t;
@@ -71,3 +72,6 @@ extern std::set<mod_t, std::greater<mod_t>> modules;
 
 // TLS
 extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+
+// Global mutex to synchronize threads
+extern void* th_mutex;

@@ -25,6 +25,8 @@ reg_id_t tls_seg;
 uint     tls_offs;
 int      tls_idx;
 
+void *th_mutex;
+
 std::atomic<uint> runtime_tid{ 0 };
 std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 
@@ -43,6 +45,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	print_config();
 
 	TLS_buckets.reserve(128);
+
+	th_mutex = dr_mutex_create();
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() ||
@@ -95,6 +99,8 @@ static void event_exit()
 
 	// Finalize Detector
 	detector::finalize();
+
+	dr_mutex_destroy(th_mutex);
 
 	dr_printf("< DR Exit\n");
 }

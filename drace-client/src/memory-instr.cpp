@@ -54,12 +54,16 @@ static void memory_inst::analyze_access(void *drcontext) {
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	if (!data->no_flush && num_refs != 0) {
-		printf("Flush was pending: Refs: %i\n", num_refs);
-	}
-	if (!data->enabled && num_refs != 0) {
-		printf("Detector is disabled: Refs: %i\n", num_refs);
-	}
+	//printf("[%.5i] Process Buffer: Refs: %i, enabled: %i, no_flush: %i\n",
+	//	data->tid, num_refs,
+	//	data->enabled, data->no_flush);
+	//if (!data->no_flush) {
+	//	printf("[%.5i] Flush was pending: Refs: %i\n", data->tid, num_refs);
+	//}
+	//if (!data->enabled && num_refs != 0) {
+	//	printf("Detector is disabled: Refs: %i\n", num_refs);
+	//}
+	dr_mutex_lock(th_mutex);
 	if (data->enabled) {
 		for (uint64_t i = 0; i < num_refs; ++i) {
 			if (mem_ref->write) {
@@ -76,6 +80,7 @@ static void memory_inst::analyze_access(void *drcontext) {
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
 	data->no_flush = true;
+	dr_mutex_unlock(th_mutex);
 }
 
 // Events
@@ -276,19 +281,15 @@ static void cc_flush_init(void) {
 	dr_memory_protect(memory_inst::cc_flush, memory_inst::page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
 }
 
-static void cc_check_flush_pending_init(void) { }
-
 static void memory_inst::code_cache_init(void)
 {
 	cc_flush_init();
-	cc_check_flush_pending_init();
 }
 
 
 static void memory_inst::code_cache_exit(void)
 {
 	dr_nonheap_free(cc_flush, page_size);
-	dr_nonheap_free(cc_check_flush_pending, page_size);
 }
 
 /*
@@ -306,6 +307,8 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 	// 
 	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
+
+	instrlist_meta_preinsert(ilist, where, INSTR_CREATE_mfence(drcontext));
 
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, no_flush));

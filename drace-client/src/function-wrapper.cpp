@@ -48,7 +48,7 @@ namespace funwrap {
 			"__scrt_release_startup*",    // C thread start unlock
 			"__scrt_is_managed_app",
 			"pre_cpp_initialization",
-			"printf",                     // Ignore Races on stdio // TODO: Use Flag
+			//"printf",                     // Ignore Races on stdio // TODO: Use Flag
 			"atexit"
 		};
 
@@ -67,43 +67,45 @@ namespace funwrap {
 		}
 
 		static void flush_other_threads(per_thread_t * data) {
+			memory_inst::process_buffer();
 			for (auto td : TLS_buckets) {
-				if (td.first != data->tid)
-					data->no_flush = false;
+					if (td.first != data->tid)
+					{
+						//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
+						td.second->no_flush = false;
+					}
 			}
 		}
 
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			void *      mutex = drwrap_get_arg(wrapctx, 0);
-			
-			beg_excl_region(data);
-			detector::acquire(data->tid, mutex);
+			data->last_mutex = (uint64_t) drwrap_get_arg(wrapctx, 0);
 
 			//dr_printf("<< [%i] pre mutex acquire %p\n", data->tid, mutex);
 		}
 
-		// Currently not bound as not necessary
 		static void mutex_acquire_post(void *wrapctx, OUT void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			
-			end_excl_region(data);
-			flush_other_threads(data);
 
-			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_stack.size());
+			//dr_mutex_lock(th_mutex);
+			flush_other_threads(data);
+			// flush all other threads before continuing
+			detector::acquire(data->tid, (void*)(data->last_mutex));
+			//dr_mutex_unlock(th_mutex);
+
+			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_cnt);
+			//fflush(stdout);
 		}
 
 		static void mutex_release_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			void * mutex = drwrap_get_arg(wrapctx, 0);
-
-			beg_excl_region(data);
-			detector::release(data->tid, mutex);
-
-			//dr_fprintf(STDERR, "<< [%i] pre mutex release %p, stack: %i\n", data->tid, mutex, data->event_stack.size());
+			data->last_mutex = (uint64_t)drwrap_get_arg(wrapctx, 0);
+			flush_other_threads(data);
+			//printf("<< [%i] pre mutex release, stack: %i\n", data->tid, data->event_cnt);
+			//fflush(stdout);
 		}
 
 		// Currently not bound as not necessary
@@ -111,12 +113,13 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			end_excl_region(data);
-			flush_other_threads(data);
+			// flush all other threads before continuing
+			detector::release(data->tid, (void*)(data->last_mutex));
 
 			//data->grace_period = data->num_refs + 2;
 
-			//printf("<< [%i] post mutex release, stack: %i\n", data->tid, data->event_stack.size());
+			//printf("<< [%i] post mutex release, stack: %i\n", data->tid, data->event_cnt);
+			//fflush(stdout);
 		}
 
 		// TODO: On Linux size is arg 0
@@ -215,9 +218,9 @@ void funwrap::wrap_mutexes(const module_data_t *mod) {
 	for (const auto & name : internal::release_symbols) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			//bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
-			//if (ok)
-			//	dr_fprintf(STDERR, "< wrapped rel %s\n", name.c_str());
+			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
+			if (ok)
+				dr_fprintf(STDERR, "< wrapped rel %s\n", name.c_str());
 		}
 	}
 }

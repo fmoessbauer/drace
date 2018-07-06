@@ -8,9 +8,6 @@
 
 #include <atomic>
 
-#define TLS_SLOT(tls_base) (void **)((byte *)(tls_base)+tls_offs)
-#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base)
-
 namespace memory_inst {
 
 	/* Single memory reference */
@@ -22,14 +19,13 @@ namespace memory_inst {
 	} mem_ref_t;
 
 	/* Maximum number of references between clean calls */
-	constexpr int MAX_NUM_MEM_REFS = 4096;
+	constexpr int MAX_NUM_MEM_REFS = 1024;
 	constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	static size_t page_size;
 
 	/* Code Caches */
 	static app_pc cc_flush;
-	static app_pc cc_check_flush_pending;
 
 	static std::atomic<int> refs;
 
