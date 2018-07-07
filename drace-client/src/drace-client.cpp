@@ -132,6 +132,35 @@ static void event_thread_exit(void *drcontext)
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }
 
+void flush_all_threads(per_thread_t * data) {
+	memory_inst::process_buffer();
+	// issue flushes
+	for (auto td : TLS_buckets) {
+		if (td.first != data->tid)
+		{
+			//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
+			td.second->no_flush = false;
+		}
+	}
+	// wait until all threads flushed
+	// this is a hacky barrier implementation
+	// and this might live-lock if only one core is avaliable
+	for (auto td : TLS_buckets) {
+		if (td.first != data->tid)
+		{
+			uint64_t waits = 0;
+			// TODO: validate this!!!
+			while (!data->no_flush.load(std::memory_order::memory_order_consume)) {
+				if (++waits > 10) {
+					// avoid busy-waiting and blocking CPU if other thread did not flush
+					// within given period
+					dr_thread_yield();
+				}
+			}
+		}
+	}
+}
+
 static void parse_args(int argc, const char ** argv) {
 	int processed = 1;
 	while (processed < argc) {

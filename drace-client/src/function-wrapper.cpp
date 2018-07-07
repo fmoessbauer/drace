@@ -40,7 +40,7 @@ namespace funwrap {
 			"Thrd_join",
 			"std::thread::*",
 			"Cnd_do_broadcast*",          // Thread exit
-			"free",
+			//"free",
 			"__security_init_cookie",     // Canary for stack protection
 			"__isa_available_init",       // C runtime
 			"__scrt_initialize_*",        // |
@@ -48,7 +48,7 @@ namespace funwrap {
 			"__scrt_release_startup*",    // C thread start unlock
 			"__scrt_is_managed_app",
 			"pre_cpp_initialization",
-			//"printf",                     // Ignore Races on stdio // TODO: Use Flag
+			"printf",                     // Ignore Races on stdio // TODO: Use Flag
 			"atexit"
 		};
 
@@ -66,33 +66,6 @@ namespace funwrap {
 			data->event_cnt--;
 		}
 
-		static void flush_other_threads(per_thread_t * data) {
-			memory_inst::process_buffer();
-			// issue flushes
-			for (auto td : TLS_buckets) {
-					if (td.first != data->tid)
-					{
-						//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
-						td.second->no_flush = false;
-					}
-			}
-			// wait until all threads flushed
-			// this is a hacky barrier implementation
-			// and this might live-lock if only one core is avaliable
-			for (auto td : TLS_buckets) {
-				if (td.first != data->tid)
-				{
-					uint64_t waits = 0;
-					// TODO: validate this!!!
-					while (!data->no_flush.load(std::memory_order::memory_order_consume)) {
-						if (++waits > 10) {
-							dr_thread_yield();
-						}
-					}
-				}
-			}
-		}
-
 		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -108,7 +81,7 @@ namespace funwrap {
 			// To avoid deadlock flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			dr_mutex_lock(th_mutex);
-			flush_other_threads(data);
+			flush_all_threads(data);
 			// flush all other threads before continuing
 			detector::acquire(data->tid, (void*)(data->last_mutex));
 			dr_mutex_unlock(th_mutex);
@@ -125,7 +98,7 @@ namespace funwrap {
 			// To avoid deadlock flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			dr_mutex_lock(th_mutex);
-			flush_other_threads(data);
+			flush_all_threads(data);
 			detector::release(data->tid, (void*)(data->last_mutex));
 			dr_mutex_unlock(th_mutex);
 
@@ -152,7 +125,7 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
 
-			beg_excl_region(data);
+			//beg_excl_region(data);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", data->tid, data->last_alloc_size);
@@ -165,8 +138,11 @@ namespace funwrap {
 			// Read alloc size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			end_excl_region(data);
+			// TODO: Validate if this has to be synchronized
+			//dr_mutex_lock(th_mutex);
+			//flush_all_threads(data);
 			detector::alloc(data->tid, retval, data->last_alloc_size);
+			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] post alloc: size %i, addr %p\n", data->tid, data->last_alloc_size, retval);
@@ -178,8 +154,11 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
-			beg_excl_region(data);
+			// TODO: Validate if this has to be synchronized
+			//dr_mutex_lock(th_mutex);
+			//flush_all_threads(data);
 			detector::free(data->tid, addr);
+			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] pre free %p\n", data->tid, addr);
@@ -189,7 +168,7 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			
-			end_excl_region(data);
+			//end_excl_region(data);
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
 		}
 

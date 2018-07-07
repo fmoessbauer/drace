@@ -10,7 +10,7 @@
 #include <string>
 
 // Defines
-#define GRACE_PERIOD_TH_START 100
+#define GRACE_PERIOD_TH_START 20 // Begin detection after this number of instructions
 
 // Events
 static void event_exit(void);
@@ -76,3 +76,6 @@ extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 
 // Global mutex to synchronize threads
 extern void* th_mutex;
+
+/* DRace Client Functions */
+void flush_all_threads(per_thread_t * data);

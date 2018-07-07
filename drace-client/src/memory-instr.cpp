@@ -65,7 +65,11 @@ static void memory_inst::analyze_access(void *drcontext) {
 	//}
 	//dr_mutex_lock(th_mutex);
 	if (data->enabled) {
-		for (uint64_t i = 0; i < num_refs; ++i) {
+		int i = 0;
+		if (data->grace_period > data->num_refs) {
+			i = data->grace_period - data->num_refs;
+		}
+		for (; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
 				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
@@ -113,8 +117,10 @@ static void memory_inst::event_thread_init(void *drcontext)
 		data->event_cnt++;
 	}
 
-	// TODO: not threadsafe
+	dr_mutex_lock(th_mutex);
 	TLS_buckets.emplace(data->tid, data);
+	flush_all_threads(data);
+	dr_mutex_unlock(th_mutex);
 }
 
 static void memory_inst::event_thread_exit(void *drcontext)
@@ -126,8 +132,10 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	
 	refs += data->num_refs; // atomic access
 
-	// TODO: not threadsafe
+	dr_mutex_lock(th_mutex);
+	flush_all_threads(data);
 	TLS_buckets.erase(data->tid);
+	dr_mutex_unlock(th_mutex);
 
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -413,6 +421,11 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 
 	/* ==== .after_flush ==== */
 	instrlist_meta_preinsert(ilist, where, after_flush);
+
+	//opnd1 = opnd_create_reg(reg2);
+	//opnd2 = opnd_create_far_base_disp(DR_SEG_SS, DR_REG_XSP, DR_REG_NULL, 0, 0, OPSZ_VARSTACK);
+	//instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	//instrlist_meta_preinsert(ilist, where, instr);
 
 	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
