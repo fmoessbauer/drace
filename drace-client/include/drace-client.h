@@ -30,6 +30,7 @@ struct params_t {
 	bool         frequent_only{ false };
 	bool         exclude_master{ false };
 	bool         delayed_sym_lookup{ false };
+	bool         yield_on_evt{ false };
 };
 extern params_t params;
 

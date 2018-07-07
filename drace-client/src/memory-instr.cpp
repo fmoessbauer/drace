@@ -81,7 +81,8 @@ static void memory_inst::analyze_access(void *drcontext) {
 	data->buf_ptr = data->buf_base;
 	if (!data->no_flush) {
 		data->no_flush = true;
-		dr_thread_yield();
+		if(params.yield_on_evt)
+			dr_thread_yield();
 	}
 	//dr_mutex_unlock(th_mutex);
 }

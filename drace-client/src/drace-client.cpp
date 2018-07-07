@@ -145,6 +145,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
 			params.exclude_master = true;
 		}
+		else if (strncmp(argv[processed], "--yield-on-evt", 16) == 0) {
+			params.yield_on_evt = true;
+		}
 		else if (strncmp(argv[processed], "--delayed-syms", 16) == 0) {
 			params.delayed_sym_lookup = true;
 		}
@@ -156,12 +159,14 @@ static void parse_args(int argc, const char ** argv) {
 static void print_config() {
 	dr_printf(
 		"< Runtime Configuration:\n"
-		"< Sampling Rate: %i\n"
-		"< Frequent Only: %s\n"
-		"< Exclude Master: %s\n"
-		"< Delayed Symbol Lookup: %s\n",
+		"< Sampling Rate:\t%i\n"
+		"< Frequent Only:\t%s\n"
+		"< Yield on Event:\t%s\n"
+		"< Exclude Master:\t%s\n"
+		"< Delayed Sym Lookup:\t%s\n",
 		params.sampling_rate,
-		params.frequent_only ? "ON" : "OFF",
+		params.frequent_only  ? "ON" : "OFF",
+		params.yield_on_evt   ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF");
 }
