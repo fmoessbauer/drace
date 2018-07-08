@@ -10,7 +10,7 @@
 #include <string>
 
 // Defines
-#define GRACE_PERIOD_TH_START 20 // Begin detection after this number of instructions
+#define GRACE_PERIOD_TH_START 0 // Begin detection after this number of instructions
 
 // Events
 static void event_exit(void);

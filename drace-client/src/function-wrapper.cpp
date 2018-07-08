@@ -18,11 +18,16 @@ namespace funwrap {
 
 		// TODO: get from config file
 		static std::vector<std::string> acquire_symbols{
-			"_Mtx_lock",   "__gthrw_pthread_mutex_lock",
+			"_Mtx_lock",				// Regular Mutexes
+			"AcquireSRWLockExclusive",  // Slim Reader/Writer Locks Exclusive Mode
+			// TODO: Shared Mode
+			"__gthrw_pthread_mutex_lock",
 			"EnterCriticalSection", "GlobalLock"
 		};
 		static std::vector<std::string> release_symbols{
-			"_Mtx_unlock", "__gthrw_pthread_mutex_unlock",
+			"_Mtx_unlock",
+			"ReleaseSRWLockExclusive",
+			"__gthrw_pthread_mutex_unlock",
 			"LeaveCriticalSection", "GlobalUnlock"
 		};
 #ifdef WINDOWS
@@ -35,7 +40,6 @@ namespace funwrap {
 		static std::vector<std::string> excluded_funcs{
 			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
 			"free",
-			"Mtx_lock",
 			"Thrd_yield",
 			"Thrd_join",
 			"std::thread::*",

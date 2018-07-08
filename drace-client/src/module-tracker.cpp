@@ -123,6 +123,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 
 		modules.insert(std::move(current));
 	}
+	dr_mutex_unlock(mod_lock);
 	// wrap functions
 	// TODO: get prefixes from config file
 	if (util::common_prefix(mod_name, "MSVCP") ||
@@ -136,7 +137,6 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	if (instrument) {
 		funwrap::wrap_excludes(mod);
 	}
-	dr_mutex_unlock(mod_lock);
 }
 
 static void module_tracker::event_module_unload(void *drcontext, const module_data_t *mod) {
