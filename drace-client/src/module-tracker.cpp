@@ -136,6 +136,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	}
 	if (instrument) {
 		funwrap::wrap_excludes(mod);
+		funwrap::wrap_thread_start(mod);
 	}
 }
 
@@ -145,7 +146,7 @@ static void module_tracker::event_module_unload(void *drcontext, const module_da
 	dr_mutex_lock(mod_lock);
 
 	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
-		0, dr_module_preferred_name(mod), current.base, current.end,
+		0, dr_module_preferred_name(mod), current.base, current.end, current.instrument ? "YES" : "NO",
 		mod->full_path);
 
 	auto modit = modules.find(current);

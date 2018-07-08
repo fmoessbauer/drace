@@ -55,4 +55,6 @@ extern "C" {
 	void __tsan_acquire(void *thr, void *addr);
 	void __tsan_release(void *thr, void *addr);
 	void __tsan_release_merge(void *thr, void *addr);
+
+	void __tsan_end_use_user_tid(unsigned long thr);
 }

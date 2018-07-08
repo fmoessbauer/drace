@@ -28,6 +28,12 @@ void memory_inst::init() {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
 
+	/* Ensure that atomic and native type have equal size as otherwise
+	   instrumentation reads invalid value */
+	static_assert(
+		sizeof(decltype(per_thread_t::no_flush)) == sizeof(uint64_t)
+		, "atomic uint64 size differs from uint64 size");
+
 	DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
 	page_size = dr_page_size();
 
@@ -105,11 +111,20 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->num_refs = 0;
 	data->tid      = dr_get_thread_id(drcontext);
 
+	// If threads are started concurrently, assume first thread is correct one
+	bool true_val = true;
+	if (th_start_pending.compare_exchange_weak(true_val, false)) {
+		last_th_start = data->tid;
+		data->enabled = false;
+	}
+	else {
+		data->enabled = true;
+	}
+
 	// avoid races during thread startup
 	data->grace_period  = data->num_refs + GRACE_PERIOD_TH_START;
 	data->no_flush      = true;
 	data->event_cnt     = 0;
-	data->enabled       = true;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {

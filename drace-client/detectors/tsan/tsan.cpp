@@ -213,5 +213,6 @@ void detector::fork(tid_t parent, tid_t child) {
 }
 
 void detector::join(tid_t parent, tid_t child) {
-	// TODO
+	// TODO: Currently not working
+	__tsan_end_use_user_tid((unsigned long)child);
 }

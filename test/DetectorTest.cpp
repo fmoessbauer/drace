@@ -23,3 +23,14 @@ TEST_F(DetectorTest, Mutex) {
 
 	EXPECT_EQ(num_races, 0);
 }
+
+TEST_F(DetectorTest, ThreadExit) {
+	detector::write(30, (void*)0x0031, (void*)0x0030, 8);
+	detector::fork(1, 31);
+	detector::write(31, (void*)0x0032, (void*)0x0030, 8);
+	detector::join(1, 31);
+
+	detector::read(30, (void*)0x0032, (void*)0x0030, 8);
+
+	EXPECT_EQ(num_races, 0);
+}

@@ -26,9 +26,12 @@ uint     tls_offs;
 int      tls_idx;
 
 void *th_mutex;
+void *th_start_mutex;
 
 std::atomic<uint> runtime_tid{ 0 };
 std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+std::atomic<uint64> last_th_start{ 0 };
+std::atomic<bool> th_start_pending{ false };
 
 /* Runtime parameters */
 params_t params;
@@ -46,7 +49,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	TLS_buckets.reserve(128);
 
-	th_mutex = dr_mutex_create();
+	th_mutex       = dr_mutex_create();
+	th_start_mutex = dr_mutex_create();
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() ||
@@ -101,6 +105,7 @@ static void event_exit()
 	detector::finalize();
 
 	dr_mutex_destroy(th_mutex);
+	dr_mutex_destroy(th_start_mutex);
 
 	dr_printf("< DR Exit\n");
 }
@@ -116,7 +121,7 @@ static void event_thread_init(void *drcontext)
 	++num_threads_active;
 
 	// TODO: Try to get parent threadid
-	detector::fork(0, tid);
+	detector::fork(runtime_tid.load(), tid);
 
 	dr_printf("<< [%.5i] Thread started\n", tid);
 }
@@ -127,7 +132,7 @@ static void event_thread_exit(void *drcontext)
 	--num_threads_active;
 
 	// TODO: Try to get parent threadid
-	detector::join(0, tid);
+	detector::join(runtime_tid.load(), tid);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }

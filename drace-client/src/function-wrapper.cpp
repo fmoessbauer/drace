@@ -37,14 +37,21 @@ namespace funwrap {
 		static std::vector<std::string> allocators{ "malloc" };
 		static std::vector<std::string> deallocs{ "free" };
 #endif
+
+		// This function return is synchronized with the begin of a new tread
+		// \ref Multicore Software, p.230
+		// TODO: Lookup item in C++ std
+		static std::vector<std::string> thread_starters{ "std::thread::thread<*>" };
+
 		static std::vector<std::string> excluded_funcs{
 			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
 			"free",
 			"Thrd_yield",
+			"std::this_thread::yield",
 			"Thrd_join",
-			"std::thread::*",
+			//"std::thread::join",
+			//"std::thread::*",
 			"Cnd_do_broadcast*",          // Thread exit
-			//"free",
 			"__security_init_cookie",     // Canary for stack protection
 			"__isa_available_init",       // C runtime
 			"__scrt_initialize_*",        // |
@@ -176,6 +183,28 @@ namespace funwrap {
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
 		}
 
+		static void thread_creation(void *wrapctx, void **user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			
+			beg_excl_region(data);
+			// do not start threads concurrently as otherwise parent -> child relation
+			// cannot be calculated
+			dr_mutex_lock(th_start_mutex);
+			th_start_pending.store(true);
+			dr_printf("<< [%.5i] Setup New Thread\n", data->tid);
+		}
+		static void thread_handover(void *wrapctx, void *user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			
+			end_excl_region(data);
+			// Enable recently started thread
+			TLS_buckets[last_th_start]->enabled = true;
+			dr_mutex_unlock(th_start_mutex);
+			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
+		}
+
 		static void begin_excl(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -246,6 +275,31 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 			if (ok)
 				dr_fprintf(STDERR, "< wrapped deallocs %s\n", name.c_str());
 		}
+	}
+}
+
+bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
+	module_data_t * mod = (module_data_t*)data;
+	bool ok = drwrap_wrap_ex(
+		mod->start + modoffs,
+		funwrap::internal::thread_creation,
+		funwrap::internal::thread_handover,
+		(void*)name,
+		DRWRAP_CALLCONV_FASTCALL);
+	if (ok) {
+		dr_fprintf(STDERR, "< wrapped thread-start function %s\n", name);
+	}
+	return true;
+}
+
+void funwrap::wrap_thread_start(const module_data_t *mod) {
+	for (const auto & name : internal::thread_starters) {
+		drsym_error_t err = drsym_search_symbols(
+			mod->full_path,
+			name.c_str(),
+			false,
+			(drsym_enumerate_cb)starters_wrap_callback,
+			(void*)mod);
 	}
 }
 

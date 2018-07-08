@@ -10,7 +10,7 @@
 #include <string>
 
 // Defines
-#define GRACE_PERIOD_TH_START 0 // Begin detection after this number of instructions
+#define GRACE_PERIOD_TH_START 20 // Begin detection after this number of instructions
 
 // Events
 static void event_exit(void);
@@ -66,6 +66,8 @@ extern int      tls_idx;
 // TODO check if global is better
 static std::atomic<int> num_threads_active{ 0 };
 extern std::atomic<uint> runtime_tid;
+extern std::atomic<uint64> last_th_start;
+extern std::atomic<bool> th_start_pending;
 
 // Module
 using mod_t = module_tracker::module_info_t;
@@ -76,6 +78,8 @@ extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 
 // Global mutex to synchronize threads
 extern void* th_mutex;
+// do not start C++11 threads concurrently
+extern void* th_start_mutex;
 
 /* DRace Client Functions */
 void flush_all_threads(per_thread_t * data);
