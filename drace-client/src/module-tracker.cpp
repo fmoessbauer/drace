@@ -11,6 +11,7 @@
 
 using mod_t = module_tracker::module_info_t;
 std::set<mod_t, std::greater<mod_t>> modules;
+
 // TODO: Get from Config
 std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
 std::vector<std::string> excluded_path_prefix{ "c:\\windows\\system32", "c:\\windows\\microsoft.net", "c:\\windows\\winsxs" };

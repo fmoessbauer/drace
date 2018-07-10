@@ -15,6 +15,27 @@
 /* Number of instrumented calls, used for sampling */
 static std::atomic<int> instrum_count{ 0 };
 
+/* XCX registers */
+drvector_t allowed_xcx;
+
+/* keep last module here for faster lookup */
+static uint64  mc_beg = 0;
+static uint64  mc_end = 0;
+static bool  mc_instr = false;
+
+/* Lookup last module in cache, returns (found, instrument)*/
+std::pair<bool, bool> mc_cache_lookup(app_pc pc) {
+	if ((uint64) pc >= mc_beg && (uint64)pc < mc_end) {
+		return std::make_pair(true, mc_instr);
+	}
+	return std::make_pair(false, false);
+}
+void mc_cache_update(app_pc beg, app_pc end, bool instrument) {
+	mc_beg = (uint64) beg;
+	mc_end = (uint64) end;
+	mc_instr = instrument;
+}
+
 bool memory_inst::register_events() {
 	return (
 		drmgr_register_thread_init_event(memory_inst::event_thread_init) &&
@@ -40,12 +61,18 @@ void memory_inst::init() {
 	tls_idx = drmgr_register_tls_field();
 	DR_ASSERT(tls_idx != -1);
 
+	// Prepare vector with allowed registers for REG2
+	drreg_init_and_fill_vector(&allowed_xcx, false);
+	drreg_set_vector_entry(&allowed_xcx, DR_REG_XCX, true);
+
 	code_cache_init();
 	dr_printf("< Initialized\n");
 }
 
 void memory_inst::finalize() {
 	code_cache_exit();
+
+	drvector_delete(&allowed_xcx);
 
 	if (!drmgr_unregister_thread_init_event(event_thread_init) ||
 		!drmgr_unregister_thread_exit_event(event_thread_exit) ||
@@ -173,27 +200,35 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 
 static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
-	app_pc bb_addr;
 	bool instrument_bb = true;
 		if (params.frequent_only && !for_trace) {
 		// only instrument traces, much faster startup
 		instrument_bb = false;
 	}
 	else {
-		bb_addr = dr_fragment_app_pc(tag);
+		app_pc bb_addr = dr_fragment_app_pc(tag);
 
-		// Create dummy shadow module
-		module_tracker::module_info_t bb_mod(bb_addr, nullptr);
-
-		auto bb_mod_it = modules.lower_bound(bb_mod);
-		if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
-			instrument_bb = bb_mod_it->instrument;
-			// bb in known module
+		// Lookup module from cache, hit is very likely as adiacent bb's 
+		// are mostly in the same module
+		auto cached = mc_cache_lookup(bb_addr);
+		if (cached.first) {
+			instrument_bb = cached.second;
 		}
 		else {
-			// Module not known
-			//dr_printf("< Unknown MOD at %p\n", bb_addr);
-			instrument_bb = false;
+			// Create dummy shadow module
+			module_tracker::module_info_t bb_mod(bb_addr, nullptr);
+
+			auto bb_mod_it = modules.lower_bound(bb_mod);
+			if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
+				instrument_bb = bb_mod_it->instrument;
+				// bb in known module
+			}
+			else {
+				// Module not known
+				//dr_printf("< Unknown MOD at %p\n", bb_addr);
+				instrument_bb = false;
+			}
+			mc_cache_update(bb_mod_it->base, bb_mod_it->end, bb_mod_it->instrument);
 		}
 	}
 	*user_data = (void*)instrument_bb;
@@ -301,7 +336,6 @@ static void memory_inst::code_cache_exit(void)
 void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2,
 	instr_t *call_flush)
 {
-	// Not possible due to BB limitations
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 
@@ -336,7 +370,6 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 	reg_id_t reg1, reg2;
-	drvector_t allowed;
 	per_thread_t *data;
 	app_pc pc;
 
@@ -345,16 +378,12 @@ static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, ins
 	/* Steal two scratch registers.
 	* reg2 must be ECX or RCX for jecxz.
 	*/
-	drreg_init_and_fill_vector(&allowed, false);
-	drreg_set_vector_entry(&allowed, DR_REG_XCX, true);
-	if (drreg_reserve_register(drcontext, ilist, where, &allowed, &reg2) !=
+	if (drreg_reserve_register(drcontext, ilist, where, &allowed_xcx, &reg2) !=
 		DRREG_SUCCESS ||
 		drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS) {
 		DR_ASSERT(false); /* cannot recover */
-		drvector_delete(&allowed);
 		return;
 	}
-	drvector_delete(&allowed);
 
 	/* Create ASM lables */
 	instr_t *restore      = INSTR_CREATE_label(drcontext);
