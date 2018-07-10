@@ -268,7 +268,7 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 	for (const auto & name : internal::deallocs) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::free_pre, internal::free_post);
+			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
 			if (ok)
 				dr_fprintf(STDERR, "< wrapped deallocs %s\n", name.c_str());
 		}

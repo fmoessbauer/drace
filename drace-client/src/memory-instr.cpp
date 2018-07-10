@@ -173,13 +173,14 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 
 static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
+	app_pc bb_addr;
 	bool instrument_bb = true;
-	if (params.frequent_only && !for_trace) {
+		if (params.frequent_only && !for_trace) {
 		// only instrument traces, much faster startup
 		instrument_bb = false;
 	}
 	else {
-		app_pc bb_addr = dr_fragment_app_pc(tag);
+		bb_addr = dr_fragment_app_pc(tag);
 
 		// Create dummy shadow module
 		module_tracker::module_info_t bb_mod(bb_addr, nullptr);
@@ -195,15 +196,14 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 			instrument_bb = false;
 		}
 	}
-
-	*(bool *)user_data = instrument_bb;
+	*user_data = (void*)instrument_bb;
 	return DR_EMIT_DEFAULT;
 }
 
 static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
-	bool instrument_instr = (bool)(ptr_uint_t)user_data;
+	bool instrument_instr = (bool)user_data;
 	if (!instrument_instr)
 		return DR_EMIT_DEFAULT;
 
@@ -222,30 +222,6 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 	if (instrum_count % params.sampling_rate != 0) {
 		return DR_EMIT_DEFAULT;
 	}
-
-	// Check if actually in instrumented module:
-	// Ideally this should not be necessary as analysis function catches all
-	app_pc bb_addr = dr_fragment_app_pc(tag);
-
-	// Create dummy shadow module
-	module_tracker::module_info_t bb_mod(bb_addr, nullptr);
-
-	auto bb_mod_it = modules.lower_bound(bb_mod);
-	if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
-		if (!bb_mod_it->instrument) {
-			//dr_printf("NO INSTR at %s\n",dr_module_preferred_name(bb_mod_it->info));
-			return DR_EMIT_DEFAULT;
-		}
-		// bb in known module
-	}
-	else {
-		// Do not instrument unknown modules
-		return DR_EMIT_DEFAULT;
-	}
-
-	/* insert code to add an entry for app instruction */
-	// TODO: Check if instruction instrumentation is necessary (probably not)
-	//instrument_instr(drcontext, bb, instr);
 
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {
