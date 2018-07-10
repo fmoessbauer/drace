@@ -21,7 +21,6 @@ namespace funwrap {
 			"_Mtx_lock",				// Regular Mutexes
 			"AcquireSRWLockExclusive",  // Slim Reader/Writer Locks Exclusive Mode
 			"AcquireSRWLockShared",
-			// TODO: Shared Mode
 			"EnterCriticalSection", "GlobalLock"
 		};
 		static std::vector<std::string> release_symbols{

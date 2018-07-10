@@ -1,6 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.8)
-
-set(SOURCES
+﻿set(SOURCES
 	"src/drace-client"
 	"src/function-wrapper"
 	"src/memory-instr"
@@ -33,6 +31,3 @@ use_DynamoRIO_extension("drace-client" drsyms)
 message("Use detector: ${DRACE_DETECTOR}")
 add_subdirectory("detectors/${DRACE_DETECTOR}")
 target_link_libraries("drace-client" "drace-${DRACE_DETECTOR}")
-
-# TODO: Add Tests
-# TODO: Add Benchmarks

@@ -34,8 +34,6 @@ public:
  * To avoid false-positives track races only if they are on the heap
  * invert order to get range using lower_bound
  */
-// TODO: Make accesses thread safe using memory_order acquire release
-// Or use epoches
 static std::atomic<bool>		alloc_readable{ true };
 static std::atomic<uint64_t>	misses{ 0 };
 static std::atomic<uint64_t>	races{ 0 };
@@ -95,7 +93,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
  * TODO: TSAN seems to only support 32 bit addresses!!!
  */
 inline uint64_t lower_half(uint64_t addr) {
-	return ((uint64_t)(addr) & 0x00000000FFFFFFFF);
+	return (addr & 0x00000000FFFFFFFF);
 }
 
 static void parse_args(int argc, const char ** argv) {
