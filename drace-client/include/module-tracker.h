@@ -63,7 +63,8 @@ namespace module_tracker {
 		}
 	};
 
-	static void *mod_lock;
+	// RW mutex for access of modules container
+	extern void *mod_lock;
 
 	void init();
 	void finalize();

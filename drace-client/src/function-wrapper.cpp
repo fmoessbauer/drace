@@ -81,11 +81,12 @@ namespace funwrap {
 			//dr_printf("<< [%i] pre mutex acquire %p\n", data->tid, mutex);
 		}
 
+		// TODO: This might deadlock for recursive locks
 		static void mutex_acquire_post(void *wrapctx, OUT void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			// To avoid deadlock flush-waiting spinlock,
+			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			dr_mutex_lock(th_mutex);
 			flush_all_threads(data);
@@ -102,7 +103,7 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			data->last_mutex = (uint64_t)drwrap_get_arg(wrapctx, 0);
 
-			// To avoid deadlock flush-waiting spinlock,
+			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			dr_mutex_lock(th_mutex);
 			flush_all_threads(data);

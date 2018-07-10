@@ -12,6 +12,8 @@
 using mod_t = module_tracker::module_info_t;
 std::set<mod_t, std::greater<mod_t>> modules;
 
+void *module_tracker::mod_lock;
+
 // TODO: Get from Config
 std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
 std::vector<std::string> excluded_path_prefix{ "c:\\windows\\system32", "c:\\windows\\microsoft.net", "c:\\windows\\winsxs" };
@@ -51,7 +53,7 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 }
 
 void module_tracker::init() {
-	mod_lock = dr_mutex_create();
+	mod_lock = dr_rwlock_create();
 	std::sort(excluded_mods.begin(), excluded_mods.end());
 
 	// convert pathes to lowercase for case-insensitive matching
@@ -68,7 +70,7 @@ void module_tracker::finalize() {
 		DR_ASSERT(false);
 	}
 
-	dr_mutex_destroy(mod_lock);
+	dr_rwlock_destroy(mod_lock);
 }
 
 bool module_tracker::register_events() {
@@ -87,8 +89,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	// for easier comparison
 	module_info_t current(mod->start, mod->end);
 
-	dr_mutex_lock(mod_lock);
-
+	dr_rwlock_read_lock(mod_lock);
 	auto modit = modules.find(current);
 	if (modit != modules.end()) {
 		if (!modit->loaded && (modit->info == mod)) {
@@ -96,6 +97,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 			modit->loaded = true;
 			instrument = modit->instrument;
 		}
+		dr_rwlock_read_unlock(mod_lock);
 	}
 	else {
 		// Module not already registered
@@ -122,9 +124,13 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 			current.instrument ? "YES" : "NO",
 			current.info->full_path);
 
+		dr_rwlock_read_unlock(mod_lock);
+		// These locks cannot be upgraded, hence unlock and lock
+		// as nobody can change the container, dispatching is no issue
+		dr_rwlock_write_lock(mod_lock);
 		modules.insert(std::move(current));
+		dr_rwlock_write_unlock(mod_lock);
 	}
-	dr_mutex_unlock(mod_lock);
 	// wrap functions
 	// TODO: get prefixes from config file
 	if (util::common_prefix(mod_name, "MSVCP") ||
@@ -137,6 +143,8 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	}
 	if (instrument) {
 		funwrap::wrap_excludes(mod);
+		// This requires debug symbols, but avoids false positives during
+		// C++11 thread construction and startup
 		funwrap::wrap_thread_start(mod);
 	}
 }
@@ -144,7 +152,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 static void module_tracker::event_module_unload(void *drcontext, const module_data_t *mod) {
 	module_info_t current(mod->start, mod->end);
 
-	dr_mutex_lock(mod_lock);
+	dr_rwlock_read_lock(mod_lock);
 
 	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
 		0, dr_module_preferred_name(mod), current.base, current.end, current.instrument ? "YES" : "NO",
@@ -155,5 +163,5 @@ static void module_tracker::event_module_unload(void *drcontext, const module_da
 		modit->loaded = false;
 	}
 
-	dr_mutex_unlock(mod_lock);
+	dr_rwlock_read_unlock(mod_lock);
 }

@@ -215,6 +215,7 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 			instrument_bb = cached.second;
 		}
 		else {
+			dr_rwlock_read_lock(module_tracker::mod_lock);
 			// Create dummy shadow module
 			module_tracker::module_info_t bb_mod(bb_addr, nullptr);
 
@@ -229,6 +230,7 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 				instrument_bb = false;
 			}
 			mc_cache_update(bb_mod_it->base, bb_mod_it->end, bb_mod_it->instrument);
+			dr_rwlock_read_unlock(module_tracker::mod_lock);
 		}
 	}
 	*user_data = (void*)instrument_bb;
