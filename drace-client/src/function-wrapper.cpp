@@ -20,14 +20,14 @@ namespace funwrap {
 		static std::vector<std::string> acquire_symbols{
 			"_Mtx_lock",				// Regular Mutexes
 			"AcquireSRWLockExclusive",  // Slim Reader/Writer Locks Exclusive Mode
+			"AcquireSRWLockShared",
 			// TODO: Shared Mode
-			"__gthrw_pthread_mutex_lock",
 			"EnterCriticalSection", "GlobalLock"
 		};
 		static std::vector<std::string> release_symbols{
 			"_Mtx_unlock",
 			"ReleaseSRWLockExclusive",
-			"__gthrw_pthread_mutex_unlock",
+			"ReleaseSRWLockShared",
 			"LeaveCriticalSection", "GlobalUnlock"
 		};
 #ifdef WINDOWS
@@ -44,23 +44,19 @@ namespace funwrap {
 		static std::vector<std::string> thread_starters{ "std::thread::thread<*>" };
 
 		static std::vector<std::string> excluded_funcs{
-			//"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
-			"free",
-			"Thrd_yield",
-			"std::this_thread::yield",
-			"Thrd_join",
-			//"std::thread::join",
-			//"std::thread::*",
-			"Cnd_do_broadcast*",          // Thread exit
-			"__security_init_cookie",     // Canary for stack protection
-			"__isa_available_init",       // C runtime
-			"__scrt_initialize_*",        // |
-			"__scrt_acquire_startup*",    // C thread start lock
-			"__scrt_release_startup*",    // C thread start unlock
-			"__scrt_is_managed_app",
-			"pre_cpp_initialization",
-			"printf",                     // Ignore Races on stdio // TODO: Use Flag
-			"atexit"
+			////"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
+			////"std::thread::join",
+			////"std::thread::*",
+			//"Cnd_do_broadcast*",          // Thread exit
+			//"__security_init_cookie",     // Canary for stack protection
+			//"__isa_available_init",       // C runtime
+			//"__scrt_initialize_*",        // |
+			//"__scrt_acquire_startup*",    // C thread start lock
+			//"__scrt_release_startup*",    // C thread start unlock
+			//"__scrt_is_managed_app",
+			//"pre_cpp_initialization",
+			//"printf",                     // Ignore Races on stdio // TODO: Use Flag
+			//"atexit"
 		};
 
 		static void beg_excl_region(per_thread_t * data) {
@@ -144,7 +140,8 @@ namespace funwrap {
 
 		static void alloc_post(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			void * retval = drwrap_get_retval(wrapctx);
+			void * retval    = drwrap_get_retval(wrapctx);
+			void * pc = drwrap_get_func(wrapctx);
 
 			// Read alloc size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -152,7 +149,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::alloc(data->tid, retval, data->last_alloc_size);
+			detector::alloc(data->tid, pc, retval, data->last_alloc_size);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs

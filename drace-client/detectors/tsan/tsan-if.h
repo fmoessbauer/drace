@@ -45,8 +45,14 @@ extern "C" {
 	void __tsan_write_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
 	void __tsan_read_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
 	void __tsan_malloc_use_user_tid(unsigned long user_tid, unsigned long pc, unsigned long p, unsigned long sz);
+
 	void __tsan_acquire_use_user_tid(unsigned long user_tid, void* addr);
 	void __tsan_release_use_user_tid(unsigned long user_tid, void* addr);
+	void __tsan_mutex_after_lock_use_user_tid(unsigned long user_tid, void* addr);
+	void __tsan_mutex_before_unlock_use_user_tid(unsigned long user_tid, void* addr);
+
+	void __tsan_happens_before_use_user_tid(unsigned long user_tid, void* addr);
+	void __tsan_happens_after_use_user_tid(unsigned long user_tid, void* addr);
 
 	void __tsan_func_enter(void *thr, void *pc);
 	void __tsan_func_exit(void *thr);

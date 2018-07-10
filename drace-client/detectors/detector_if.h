@@ -20,7 +20,7 @@ namespace detector {
 	void read(tid_t thread_id, void* pc, void* addr, unsigned long size);
 	void write(tid_t thread_id, void* pc, void* addr, unsigned long size);
 
-	void alloc(tid_t thread_id, void* addr, unsigned long size);
+	void alloc(tid_t thread_id, void* pc, void* addr, unsigned long size);
 	void free(tid_t thread_id, void* addr);
 
 	void fork(tid_t parent, tid_t child);

@@ -7,7 +7,7 @@
 
 //std::mutex mx;
 
-inline void inc(int * v) {
+void inc(int * v) {
 	for (int i = 0; i < NUM_INCREMENTS; ++i) {
 		int var = *v;
 		++var;

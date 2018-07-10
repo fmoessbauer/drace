@@ -149,12 +149,16 @@ void detector::acquire(tid_t thread_id, void* mutex) {
 	uint64_t addr_32 = lower_half((uint64_t) mutex);
 	//printf("[%.5i] Acquire Mutex at: %p\n", thread_id, addr_32);
 	__tsan_acquire_use_user_tid((unsigned long)thread_id, (void*)addr_32);
+	// TODO: This sometimes fails with error: FATAL: ThreadSanitizer CHECK failed: gotsan.cc:4383 "((s->recursion)) == ((0))" (0xfffffffffffffff2, 0x0)
+	//__tsan_mutex_after_lock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
 void detector::release(tid_t thread_id, void* mutex) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 	//printf("[%.5i] Release Mutex at: %p\n", thread_id, addr_32);
 	__tsan_release_use_user_tid((unsigned long)thread_id, (void*)addr_32);
+	// TODO: This sometimes fails with error: FATAL: ThreadSanitizer CHECK failed: gotsan.cc:4383 "((s->recursion)) == ((0))" (0xfffffffffffffff2, 0x0)
+	//__tsan_mutex_before_unlock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
 void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) {
@@ -178,13 +182,13 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) 
 	}
 }
 
-void detector::alloc(tid_t thread_id, void* addr, unsigned long size) {
+void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
 
-	__tsan_malloc_use_user_tid(thread_id, 0, addr_32, size);
+	__tsan_malloc_use_user_tid(thread_id, (unsigned long)pc, addr_32, size);
 	allocations.emplace((uint64_t)addr_32, size);
 
 	alloc_readable.store(true, std::memory_order_release);
