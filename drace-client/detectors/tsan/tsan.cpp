@@ -49,6 +49,10 @@ struct tsan_params_t {
 } params;
 
 void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
+	// Fixes erronous thread exit handling by ignoring races where at least one tid is 0
+	if (!raceInfo->access1->user_id || !raceInfo->access2->user_id)
+		return;
+
 	// TODO: Currently we assume that there is at most one callback at a time
 	std::cout << "----- DATA Race -----" << std::endl;
 	for (int i = 0; i != 2; ++i) {
