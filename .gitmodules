@@ -4,6 +4,6 @@
 [submodule "vendor/google/benchmark"]
 	path = vendor/google/benchmark
 	url = https://github.com/google/benchmark.git
-[submodule "vendor/dynamorio/dynamorio"]
-	path = vendor/dynamorio/dynamorio
-	url = https://github.com/DynamoRIO/dynamorio.git
+[submodule "vendor/jtilly/inih"]
+	path = vendor/jtilly/inih
+	url = https://github.com/jtilly/inih

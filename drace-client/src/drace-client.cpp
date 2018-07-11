@@ -18,6 +18,7 @@
 
 #include <detector_if.h>
 
+#include <iostream>
 /*
 * Thread local storage metadata has to be globally accessable
 */
@@ -28,10 +29,15 @@ int      tls_idx;
 void *th_mutex;
 void *th_start_mutex;
 
+// Global Config Object
+drace::Config config;
+
 std::atomic<uint> runtime_tid{ 0 };
 std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 std::atomic<uint64> last_th_start{ 0 };
 std::atomic<bool> th_start_pending{ false };
+
+std::string config_file("drace.ini");
 
 /* Runtime parameters */
 params_t params;
@@ -46,6 +52,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Parse runtime arguments and print generated configuration
 	parse_args(argc, argv);
 	print_config();
+
+
+	config.loadfile(config_file);
 
 	TLS_buckets.reserve(128);
 
@@ -170,8 +179,10 @@ static void parse_args(int argc, const char ** argv) {
 	int processed = 1;
 	while (processed < argc) {
 		if (strncmp(argv[processed],"-s",16)==0) {
-			params.sampling_rate = std::stoi(argv[processed + 1]);
-			++processed;
+			params.sampling_rate = std::stoi(argv[++processed]);
+		}
+		else if (strncmp(argv[processed], "-c", 16) == 0) {
+			config_file = std::string(argv[++processed]);
 		}
 		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {
 			params.frequent_only = true;
@@ -197,10 +208,12 @@ static void print_config() {
 		"< Frequent Only:\t%s\n"
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
-		"< Delayed Sym Lookup:\t%s\n",
+		"< Delayed Sym Lookup:\t%s\n"
+		"< Config File:\t%s\n",
 		params.sampling_rate,
 		params.frequent_only  ? "ON" : "OFF",
 		params.yield_on_evt   ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
-		params.delayed_sym_lookup ? "ON" : "OFF");
+		params.delayed_sym_lookup ? "ON" : "OFF",
+		config_file.c_str());
 }

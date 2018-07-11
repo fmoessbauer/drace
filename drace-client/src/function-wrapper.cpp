@@ -1,6 +1,7 @@
 #include "drace-client.h"
 #include "function-wrapper.h"
 #include "memory-instr.h"
+#include "config.h"
 
 #include <vector>
 #include <string>
@@ -15,49 +16,6 @@
 
 namespace funwrap {
 	namespace internal {
-
-		// TODO: get from config file
-		static std::vector<std::string> acquire_symbols{
-			"_Mtx_lock",				// Regular Mutexes
-			"AcquireSRWLockExclusive",  // Slim Reader/Writer Locks Exclusive Mode
-			"AcquireSRWLockShared",
-			"EnterCriticalSection", "GlobalLock"
-		};
-		static std::vector<std::string> release_symbols{
-			"_Mtx_unlock",
-			"ReleaseSRWLockExclusive",
-			"ReleaseSRWLockShared",
-			"LeaveCriticalSection", "GlobalUnlock"
-		};
-#ifdef WINDOWS
-		static std::vector<std::string> allocators{ "HeapAlloc" };
-		static std::vector<std::string> deallocs{ "HeapFree" };
-#else
-		static std::vector<std::string> allocators{ "malloc" };
-		static std::vector<std::string> deallocs{ "free" };
-#endif
-
-		// This function return is synchronized with the begin of a new tread
-		// \ref Multicore Software, p.230
-		// TODO: Lookup item in C++ std
-		static std::vector<std::string> thread_starters{ "std::thread::thread<*>" };
-
-		static std::vector<std::string> excluded_funcs{
-			////"std::_LaunchPad<*>::_Go",  // this excludes everything inside the spawned thread
-			////"std::thread::join",
-			////"std::thread::*",
-			//"Cnd_do_broadcast*",          // Thread exit
-			//"__security_init_cookie",     // Canary for stack protection
-			//"__isa_available_init",       // C runtime
-			//"__scrt_initialize_*",        // |
-			//"__scrt_acquire_startup*",    // C thread start lock
-			//"__scrt_release_startup*",    // C thread start unlock
-			//"__scrt_is_managed_app",
-			//"pre_cpp_initialization",
-			//"printf",                     // Ignore Races on stdio // TODO: Use Flag
-			//"atexit"
-		};
-
 		static void beg_excl_region(per_thread_t * data) {
 			memory_inst::process_buffer();
 			data->enabled = false;
@@ -238,7 +196,7 @@ void funwrap::finalize() {
 }
 
 void funwrap::wrap_mutexes(const module_data_t *mod) {
-	for (const auto & name : internal::acquire_symbols) {
+	for (const auto & name : config.get_multi("functions", "acquire")) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, internal::mutex_acquire_post);
@@ -246,7 +204,7 @@ void funwrap::wrap_mutexes(const module_data_t *mod) {
 				dr_fprintf(STDERR, "< wrapped acq %s\n", name.c_str());
 		}
 	}
-	for (const auto & name : internal::release_symbols) {
+	for (const auto & name : config.get_multi("functions", "release")) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
@@ -257,7 +215,7 @@ void funwrap::wrap_mutexes(const module_data_t *mod) {
 }
 
 void funwrap::wrap_allocations(const module_data_t *mod) {
-	for (const auto & name : internal::allocators) {
+	for (const auto & name : config.get_multi("functions", "allocators")) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
@@ -265,7 +223,7 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 				dr_fprintf(STDERR, "< wrapped alloc %s\n", name.c_str());
 		}
 	}
-	for (const auto & name : internal::deallocs) {
+	for (const auto & name : config.get_multi("functions", "deallocators")) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
@@ -290,7 +248,7 @@ bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
 }
 
 void funwrap::wrap_thread_start(const module_data_t *mod) {
-	for (const auto & name : internal::thread_starters) {
+	for (const auto & name : config.get_multi("functions", "thread_starters")) {
 		drsym_error_t err = drsym_search_symbols(
 			mod->full_path,
 			name.c_str(),
@@ -315,7 +273,7 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 }
 
 void funwrap::wrap_excludes(const module_data_t *mod) {
-	for (const auto & name : internal::excluded_funcs) {
+	for (const auto & name : config.get_multi("functions", "exclude")) {
 		drsym_error_t err = drsym_search_symbols(
 			mod->full_path,
 			name.c_str(),
