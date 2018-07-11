@@ -138,6 +138,9 @@ static void memory_inst::event_thread_init(void *drcontext)
 	data->num_refs = 0;
 	data->tid      = dr_get_thread_id(drcontext);
 
+	// clear statistics
+	data->mutex_ops = 0;
+
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
 	if (th_start_pending.compare_exchange_weak(true_val, false)) {
@@ -182,7 +185,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	dr_printf("< [%.5i] local memory refs: %i\n", data->tid, data->num_refs);
+	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
 }
 
 

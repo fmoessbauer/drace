@@ -57,6 +57,8 @@ typedef struct {
 	std::atomic<uint64> no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
+	// statistics
+	uint64        mutex_ops;
 } per_thread_t;
 
 /* Global data structures */

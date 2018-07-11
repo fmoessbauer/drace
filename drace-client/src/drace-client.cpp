@@ -209,7 +209,7 @@ static void print_config() {
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
 		"< Delayed Sym Lookup:\t%s\n"
-		"< Config File:\t%s\n",
+		"< Config File:\t\t%s\n",
 		params.sampling_rate,
 		params.frequent_only  ? "ON" : "OFF",
 		params.yield_on_evt   ? "ON" : "OFF",

@@ -1,3 +1,4 @@
+#include "drace-client.h"
 #include "module-tracker.h"
 #include "function-wrapper.h"
 #include "util.h"
@@ -14,9 +15,8 @@ std::set<mod_t, std::greater<mod_t>> modules;
 
 void *module_tracker::mod_lock;
 
-// TODO: Get from Config
-std::vector<std::string> excluded_mods{"ucrtbase.dll", "tmmon64.dll", "ntdll.dll", "MSVCP140.dll", "TmUmEvt64.dll", "KERNELBASE.dll", "ADVAPI32.dll", "msvcrt.dll", "compbase.dll"};
-std::vector<std::string> excluded_path_prefix{ "c:\\windows\\system32", "c:\\windows\\microsoft.net", "c:\\windows\\winsxs" };
+std::vector<std::string> excluded_mods;
+std::vector<std::string> excluded_path_prefix;
 
 void print_modules() {
 	for (const auto & current : modules) {
@@ -54,6 +54,10 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 
 void module_tracker::init() {
 	mod_lock = dr_rwlock_create();
+
+	excluded_mods = config.get_multi("modules", "exclude_mods");
+	excluded_path_prefix = config.get_multi("modules", "exclude_path");
+
 	std::sort(excluded_mods.begin(), excluded_mods.end());
 
 	// convert pathes to lowercase for case-insensitive matching
