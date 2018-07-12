@@ -30,62 +30,6 @@ namespace funwrap {
 			data->event_cnt--;
 		}
 
-		static void mutex_acquire_pre(void *wrapctx, OUT void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			data->last_mutex = (uint64_t) drwrap_get_arg(wrapctx, 0);
-			data->mutex_ops++;
-			//dr_printf("<< [%i] pre mutex acquire %p\n", data->tid, data->last_mutex);
-		}
-
-		// TODO: This might deadlock for recursive locks
-		static void mutex_acquire_post(void *wrapctx, OUT void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			if (params.exclude_master && data->tid == runtime_tid)
-				return;
-
-			// To avoid deadlock in flush-waiting spinlock,
-			// acquire / release must not occur concurrently
-			dr_mutex_lock(th_mutex);
-			flush_all_threads(data);
-			// flush all other threads before continuing
-			detector::acquire(data->tid, (void*)(data->last_mutex), data->detector_data);
-			dr_mutex_unlock(th_mutex);
-
-			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_cnt);
-			//fflush(stdout);
-		}
-
-		static void mutex_release_pre(void *wrapctx, OUT void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			data->last_mutex = (uint64_t)drwrap_get_arg(wrapctx, 0);
-			if (params.exclude_master && data->tid == runtime_tid)
-				return;
-
-			// To avoid deadlock in flush-waiting spinlock,
-			// acquire / release must not occur concurrently
-			dr_mutex_lock(th_mutex);
-			flush_all_threads(data);
-			detector::release(data->tid, (void*)(data->last_mutex), data->detector_data);
-			dr_mutex_unlock(th_mutex);
-
-			//printf("<< [%i] pre mutex release, stack: %i\n", data->tid, data->event_cnt);
-			//fflush(stdout);
-		}
-
-		// Currently not bound as not necessary
-		static void mutex_release_post(void *wrapctx, OUT void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
-			//data->grace_period = data->num_refs + 2;
-
-			//printf("<< [%i] post mutex release, stack: %i\n", data->tid, data->event_cnt);
-			//fflush(stdout);
-		}
-
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
@@ -206,25 +150,6 @@ bool funwrap::init() {
 
 void funwrap::finalize() {
 	drwrap_exit();
-}
-
-void funwrap::wrap_mutexes(const module_data_t *mod) {
-	for (const auto & name : config.get_multi("functions", "acquire")) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::mutex_acquire_pre, internal::mutex_acquire_post);
-			if (ok)
-				dr_fprintf(STDERR, "< wrapped acq %s\n", name.c_str());
-		}
-	}
-	for (const auto & name : config.get_multi("functions", "release")) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::mutex_release_pre, internal::mutex_release_post);
-			if (ok)
-				dr_fprintf(STDERR, "< wrapped rel %s\n", name.c_str());
-		}
-	}
 }
 
 void funwrap::wrap_allocations(const module_data_t *mod) {

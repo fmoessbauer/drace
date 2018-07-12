@@ -36,6 +36,7 @@ struct params_t {
 extern params_t params;
 
 using event_stack_t = std::stack<std::string>;
+using mutex_cntr_t = std::map<uint64_t, int>;
 /* Per Thread data (thread-private)
  * \Warning This struct is not default-constructed
  *          but just allocated as a memory block and casted
@@ -57,6 +58,8 @@ typedef struct {
 	std::atomic<uint64> no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
+	uint64        mutex_rec;
+	mutex_cntr_t *mutex_book;
 
 	void         *detector_data;
 	// statistics

@@ -138,7 +138,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	// wrap functions
 	// TODO: get prefixes from config file
 	if (util::common_prefix(mod_name, "MSVCP") ||
-		util::common_prefix(mod_name, "KERNEL"))
+		util::common_prefix(mod_name, "KERNELBASE"))
 	{
 		funwrap::wrap_mutexes(mod);
 	}

@@ -60,9 +60,25 @@ extern "C" {
 	void __tsan_func_exit(void *thr);
 	void __tsan_malloc(void *thr, void *pc, void *p, unsigned long sz);
 	void __tsan_free(void *p, unsigned long sz);
+
 	void __tsan_acquire(void *thr, void *addr);
 	void __tsan_release(void *thr, void *addr);
+
+	void __tsan_mutex_after_lock(void *thr, void *addr, void* write);
+	void __tsan_mutex_before_unlock(void *thr, void *addr, void* write);
+
 	void __tsan_release_merge(void *thr, void *addr);
 
 	void __tsan_end_use_user_tid(unsigned long thr);
+
+	// C wrapper around native tsan interface
+	void __tsan_ThreadFinish(void *thr);
+	void __tsan_ThreadDetach(void *thr, uint64_t pc, int tid);
+	void __tsan_ThreadJoin(void* thr, uint64_t pc, int tid);
+
+	void __tsan_MutexLock(void *thr, void *pc, void *addr, int rec, bool try_lock);
+	int  __tsan_MutexUnlock(void *thr, void *pc, void *addr, bool all);
+	void __tsan_MutexReadLock(void *thr, void *pc, void *addr, bool trylock);
+	void __tsan_MutexReadUnlock(void *thr, void *pc, void *addr);
+
 }

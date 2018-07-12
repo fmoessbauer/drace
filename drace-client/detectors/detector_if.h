@@ -15,14 +15,19 @@ namespace detector {
 	bool init(int argc, const char **argv, void(*stack_demangler)(void*));
 	void finalize();
 
-	// Legacy interface
-	void acquire(tid_t thread_id, void* mutex, tls_t tls = nullptr);
-	void release(tid_t thread_id, void* mutex, tls_t tls = nullptr);
+	void acquire(
+		tid_t thread_id,
+		void* mutex,
+		int recursive = 0,
+		bool write = true,
+		bool try_lock = false,
+		tls_t tls = nullptr);
 
-	void acquire_pre(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
-	void acquire_post(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
-	void release_pre(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
-	void release_post(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
+	void release(
+		tid_t thread_id,
+		void* mutex,
+		bool write = true,
+		tls_t tls = nullptr);
 
 	void read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
 	void write(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
@@ -32,6 +37,8 @@ namespace detector {
 
 	void fork(tid_t parent, tid_t child, tls_t tls = nullptr);
 	void join(tid_t parent, tid_t child, tls_t tls = nullptr);
+	void detach(tid_t thread_id, tls_t tls);
+	void finish(tid_t thread_id, tls_t tls);
 
 	std::string name();
 	std::string version();

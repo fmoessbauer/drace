@@ -140,6 +140,8 @@ static void memory_inst::event_thread_init(void *drcontext)
 
 	// clear statistics
 	data->mutex_ops = 0;
+	data->mutex_rec = 0;
+	data->mutex_book = new mutex_cntr_t;
 	data->detector_data = nullptr;
 
 	// If threads are started concurrently, assume first thread is correct one
@@ -182,6 +184,8 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	flush_all_threads(data);
 	TLS_buckets.erase(data->tid);
 	dr_mutex_unlock(th_mutex);
+
+	delete (data->mutex_book);
 
 	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));

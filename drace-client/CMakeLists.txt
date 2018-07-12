@@ -1,6 +1,7 @@
 ﻿set(SOURCES
 	"src/drace-client"
 	"src/function-wrapper"
+	"src/mutex"
 	"src/memory-instr"
 	"src/module-tracker"
 	"src/stack-demangler"

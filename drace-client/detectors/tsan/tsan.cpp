@@ -147,20 +147,32 @@ std::string detector::version() {
 	return std::string("0.1.0");
 }
 
-void detector::acquire(tid_t thread_id, void* mutex, tls_t tls) {
+void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool trylock, tls_t thr) {
 	uint64_t addr_32 = lower_half((uint64_t) mutex);
-	//printf("[%.5i] Acquire Mutex at: %p\n", thread_id, addr_32);
-	__tsan_acquire_use_user_tid((unsigned long)thread_id, (void*)addr_32);
-	// TODO: This sometimes fails with error: FATAL: ThreadSanitizer CHECK failed: gotsan.cc:4383 "((s->recursion)) == ((0))" (0xfffffffffffffff2, 0x0)
-	//__tsan_mutex_after_lock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
+	
+	if (thr == nullptr)
+		thr = __tsan_create_thread(thread_id);
+
+	if (write) {
+		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, trylock);
+	}
+	else {
+		__tsan_MutexReadLock(thr, 0, (void*)addr_32, trylock);
+	}
 }
 
-void detector::release(tid_t thread_id, void* mutex, tls_t tls) {
+void detector::release(tid_t thread_id, void* mutex, bool write, tls_t thr) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
-	//printf("[%.5i] Release Mutex at: %p\n", thread_id, addr_32);
-	__tsan_release_use_user_tid((unsigned long)thread_id, (void*)addr_32);
-	// TODO: This sometimes fails with error: FATAL: ThreadSanitizer CHECK failed: gotsan.cc:4383 "((s->recursion)) == ((0))" (0xfffffffffffffff2, 0x0)
-	//__tsan_mutex_before_unlock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
+
+	if (thr == nullptr)
+		thr = __tsan_create_thread(thread_id);
+	
+	if (write) {
+		__tsan_MutexUnlock(thr, 0, (void*)addr_32, false);
+	}
+	else {
+		__tsan_MutexReadUnlock(thr, 0, (void*)addr_32);
+	}
 }
 
 void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
@@ -224,9 +236,22 @@ void detector::fork(tid_t parent, tid_t child, tls_t tls) {
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {
-	// TODO: Currently not working
 	if (tls == nullptr)
 		tls = __tsan_create_thread(child);
 
-	__tsan_go_end(tls);
+	__tsan_ThreadFinish(tls);
+
+	// TODO: Implement correct join
+	//__tsan_ThreadJoin(tls, 0, child);
+}
+
+void detector::detach(tid_t thread_id, tls_t tls) {
+	if (tls == nullptr)
+		tls = __tsan_create_thread(thread_id);
+
+	__tsan_ThreadDetach(tls, 0, thread_id);
+}
+
+void detector::finish(tid_t thread_id, tls_t tls) {
+	__tsan_ThreadFinish(tls);
 }
