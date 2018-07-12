@@ -129,8 +129,8 @@ static void event_thread_init(void *drcontext)
 	}
 	++num_threads_active;
 
-	// TODO: Try to get parent threadid
-	//detector::fork(runtime_tid.load(), tid);
+	// Detector fork event is executed in
+	// memory-instr's thread init event
 
 	dr_printf("<< [%.5i] Thread started\n", tid);
 }
@@ -160,7 +160,10 @@ void flush_all_threads(per_thread_t * data) {
 	// this is a hacky barrier implementation
 	// and this might live-lock if only one core is avaliable
 	for (auto td : TLS_buckets) {
-		if (td.first != data->tid)
+		// Flush thread given that:
+		// 1. thread is not the calling thread
+		// 2. thread is not disabled
+		if (td.first != data->tid && td.second->enabled)
 		{
 			uint64_t waits = 0;
 			// TODO: validate this!!!

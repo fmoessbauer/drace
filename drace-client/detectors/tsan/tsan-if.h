@@ -31,7 +31,7 @@ extern "C" {
 	void __tsan_init_simple(void(*r_cb)(__tsan_race_info* raceInfo, void* callback_parameter), void* callback_parameter);
 	void __tsan_fini();
 
-	void __tsan_create_thread(unsigned long user_tid);
+	void* __tsan_create_thread(unsigned long user_tid);
 
 	void __tsan_map_shadow(void *addr, unsigned long size);
 	void __tsan_go_start(void *thr, void **chthr, void *pc);

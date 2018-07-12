@@ -167,10 +167,11 @@ void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, t
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		//printf("[%.5i] READ addr tsan: %p\n", thread_id, addr_32);
-		//printf("ADDR  raw: %p\n", addr);
+		if (tls == nullptr)
+			tls = __tsan_create_thread(thread_id);
+		
 		stack_trace[0] = stack_trace[0] = (int*)pc;
-		__tsan_read_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 5, false);
+		__tsan_read(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
 	}
 }
 
@@ -178,19 +179,23 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size, 
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		//printf("[%.5i] WRITE addr tsan: %p\n", thread_id, addr_32);
+		if (tls == nullptr)
+			tls = __tsan_create_thread(thread_id);
+
 		stack_trace[0] = (int*)pc;
-		__tsan_write_use_user_tid((unsigned long)thread_id, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), stack_trace.size(), false, 4, false);
+		__tsan_write(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
 	}
 }
 
 void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
+	if (tls == nullptr)
+		tls = __tsan_create_thread(thread_id);
+
 	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
-
-	__tsan_malloc_use_user_tid(thread_id, (unsigned long)pc, addr_32, size);
+	__tsan_malloc(tls, pc, (void*)addr_32, size);
 	allocations.emplace((uint64_t)addr_32, size);
 
 	alloc_readable.store(true, std::memory_order_release);
@@ -215,12 +220,13 @@ void detector::free(tid_t thread_id, void* addr, tls_t tls) {
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t tls) {
-	// TODO
-	fprintf(stderr, "FORK\n");
-	__tsan_create_thread(child);
+	tls = (tls_t) __tsan_create_thread(child);
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {
 	// TODO: Currently not working
-	__tsan_end_use_user_tid((unsigned long)child);
+	if (tls == nullptr)
+		tls = __tsan_create_thread(child);
+
+	__tsan_go_end(tls);
 }

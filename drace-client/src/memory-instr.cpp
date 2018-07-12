@@ -140,6 +140,7 @@ static void memory_inst::event_thread_init(void *drcontext)
 
 	// clear statistics
 	data->mutex_ops = 0;
+	data->detector_data = nullptr;
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
