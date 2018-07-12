@@ -36,7 +36,7 @@ struct params_t {
 extern params_t params;
 
 using event_stack_t = std::stack<std::string>;
-using mutex_cntr_t = std::map<uint64_t, int>;
+using mutex_cntr_t = std::unordered_map<uint64_t, int>;
 /* Per Thread data (thread-private)
  * \Warning This struct is not default-constructed
  *          but just allocated as a memory block and casted
