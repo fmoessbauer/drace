@@ -25,6 +25,7 @@ TEST_F(DetectorTest, Mutex) {
 }
 
 TEST_F(DetectorTest, ThreadExit) {
+	detector::fork(1, 30);
 	detector::write(30, (void*)0x0031, (void*)0x0030, 8);
 
 	detector::fork(1, 31);
@@ -34,4 +35,10 @@ TEST_F(DetectorTest, ThreadExit) {
 	detector::read(30, (void*)0x0032, (void*)0x0030, 8);
 
 	EXPECT_EQ(num_races, 0);
+}
+
+TEST_F(DetectorTest, MultiFork) {
+	detector::fork(1, 40);
+	detector::fork(1, 41);
+	detector::fork(1, 42);
 }

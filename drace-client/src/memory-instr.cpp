@@ -104,11 +104,11 @@ static void memory_inst::analyze_access(void *drcontext) {
 		}
 		for (; i < num_refs; ++i) {
 			if (mem_ref->write) {
-				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
+				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size, data->detector_data);
 				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			else {
-				detector::read(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size);
+				detector::read(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size, data->detector_data);
 				//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			++mem_ref;

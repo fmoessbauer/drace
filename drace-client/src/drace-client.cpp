@@ -130,7 +130,7 @@ static void event_thread_init(void *drcontext)
 	++num_threads_active;
 
 	// TODO: Try to get parent threadid
-	detector::fork(runtime_tid.load(), tid);
+	//detector::fork(runtime_tid.load(), tid);
 
 	dr_printf("<< [%.5i] Thread started\n", tid);
 }
@@ -141,7 +141,7 @@ static void event_thread_exit(void *drcontext)
 	--num_threads_active;
 
 	// TODO: Try to get parent threadid
-	detector::join(runtime_tid.load(), tid);
+	detector::join(runtime_tid.load(), tid, nullptr);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }

@@ -147,7 +147,7 @@ std::string detector::version() {
 	return std::string("0.1.0");
 }
 
-void detector::acquire(tid_t thread_id, void* mutex) {
+void detector::acquire(tid_t thread_id, void* mutex, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t) mutex);
 	//printf("[%.5i] Acquire Mutex at: %p\n", thread_id, addr_32);
 	__tsan_acquire_use_user_tid((unsigned long)thread_id, (void*)addr_32);
@@ -155,7 +155,7 @@ void detector::acquire(tid_t thread_id, void* mutex) {
 	//__tsan_mutex_after_lock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
-void detector::release(tid_t thread_id, void* mutex) {
+void detector::release(tid_t thread_id, void* mutex, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 	//printf("[%.5i] Release Mutex at: %p\n", thread_id, addr_32);
 	__tsan_release_use_user_tid((unsigned long)thread_id, (void*)addr_32);
@@ -163,7 +163,7 @@ void detector::release(tid_t thread_id, void* mutex) {
 	//__tsan_mutex_before_unlock_use_user_tid((unsigned long)thread_id, (void*)addr_32);
 }
 
-void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) {
+void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
@@ -174,7 +174,7 @@ void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) {
 	}
 }
 
-void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) {
+void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
@@ -184,7 +184,7 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) 
 	}
 }
 
-void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size) {
+void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	mxspin.lock();
@@ -197,7 +197,7 @@ void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size) 
 	mxspin.unlock();
 }
 
-void detector::free(tid_t thread_id, void* addr) {
+void detector::free(tid_t thread_id, void* addr, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
@@ -214,11 +214,13 @@ void detector::free(tid_t thread_id, void* addr) {
 	mxspin.unlock();
 }
 
-void detector::fork(tid_t parent, tid_t child) {
+void detector::fork(tid_t parent, tid_t child, tls_t tls) {
 	// TODO
+	fprintf(stderr, "FORK\n");
+	__tsan_create_thread(child);
 }
 
-void detector::join(tid_t parent, tid_t child) {
+void detector::join(tid_t parent, tid_t child, tls_t tls) {
 	// TODO: Currently not working
 	__tsan_end_use_user_tid((unsigned long)child);
 }

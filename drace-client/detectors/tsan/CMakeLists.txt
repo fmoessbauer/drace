@@ -16,6 +16,11 @@ add_custom_command(TARGET "drace-tsan" POST_BUILD
 		"drace-tsan.dll"
 		"${PROJECT_BINARY_DIR}/drace-client/drace-tsan.dll")
 
+add_custom_command(TARGET "drace-tsan" POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"drace-tsan.pdb"
+		"${PROJECT_BINARY_DIR}/drace-client/drace-tsan.pdb")
+
 # Copy to test dir
 add_custom_command(TARGET "drace-tsan" POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different

@@ -144,6 +144,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	}
 	if (util::common_prefix(mod_name, "KERNEL")) {
 		funwrap::wrap_allocations(mod);
+		funwrap::wrap_thread_start_sys(mod);
 	}
 	if (instrument) {
 		funwrap::wrap_excludes(mod);

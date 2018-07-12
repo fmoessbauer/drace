@@ -14,4 +14,6 @@ namespace funwrap {
 	void wrap_excludes(const module_data_t *mod);
 	/* Wrap C++11 thread starters */
 	void wrap_thread_start(const module_data_t *mod);
+	/* Wrap System thread starters */
+	void wrap_thread_start_sys(const module_data_t *mod);
 }

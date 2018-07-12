@@ -50,7 +50,7 @@ namespace funwrap {
 			dr_mutex_lock(th_mutex);
 			flush_all_threads(data);
 			// flush all other threads before continuing
-			detector::acquire(data->tid, (void*)(data->last_mutex));
+			detector::acquire(data->tid, (void*)(data->last_mutex), data->detector_data);
 			dr_mutex_unlock(th_mutex);
 
 			//printf("<< [%i] post mutex acquire, stack: %i\n", data->tid, data->event_cnt);
@@ -68,7 +68,7 @@ namespace funwrap {
 			// acquire / release must not occur concurrently
 			dr_mutex_lock(th_mutex);
 			flush_all_threads(data);
-			detector::release(data->tid, (void*)(data->last_mutex));
+			detector::release(data->tid, (void*)(data->last_mutex), data->detector_data);
 			dr_mutex_unlock(th_mutex);
 
 			//printf("<< [%i] pre mutex release, stack: %i\n", data->tid, data->event_cnt);
@@ -111,7 +111,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::alloc(data->tid, pc, retval, data->last_alloc_size);
+			detector::alloc(data->tid, pc, retval, data->last_alloc_size, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -127,7 +127,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::free(data->tid, addr);
+			detector::free(data->tid, addr, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -162,6 +162,15 @@ namespace funwrap {
 			TLS_buckets[last_th_start]->enabled = true;
 			dr_mutex_unlock(th_start_mutex);
 			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
+		}
+
+		static void thread_pre_sys(void *wrapctx, void **user_data) {
+		}
+		static void thread_post_sys(void *wrapctx, void *user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+			detector::fork(runtime_tid.load(), dr_get_thread_id(drcontext), data->detector_data);
 		}
 
 		static void begin_excl(void *wrapctx, void **user_data) {
@@ -251,6 +260,20 @@ bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
 	return true;
 }
 
+bool starters_sys_callback(const char *name, size_t modoffs, void *data) {
+	module_data_t * mod = (module_data_t*)data;
+	bool ok = drwrap_wrap_ex(
+		mod->start + modoffs,
+		funwrap::internal::thread_pre_sys,
+		funwrap::internal::thread_post_sys,
+		(void*)name,
+		DRWRAP_CALLCONV_FASTCALL);
+	if (ok) {
+		dr_fprintf(STDERR, "< wrapped system thread-start function %s\n", name);
+	}
+	return true;
+}
+
 void funwrap::wrap_thread_start(const module_data_t *mod) {
 	for (const auto & name : config.get_multi("functions", "thread_starters")) {
 		drsym_error_t err = drsym_search_symbols(
@@ -258,6 +281,17 @@ void funwrap::wrap_thread_start(const module_data_t *mod) {
 			name.c_str(),
 			false,
 			(drsym_enumerate_cb)starters_wrap_callback,
+			(void*)mod);
+	}
+}
+
+void funwrap::wrap_thread_start_sys(const module_data_t *mod) {
+	for (const auto & name : config.get_multi("functions", "thread_starters_sys")) {
+		drsym_error_t err = drsym_search_symbols(
+			mod->full_path,
+			name.c_str(),
+			false,
+			(drsym_enumerate_cb)starters_sys_callback,
 			(void*)mod);
 	}
 }

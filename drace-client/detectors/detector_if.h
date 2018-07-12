@@ -7,6 +7,7 @@
  */
 namespace detector {
 	typedef unsigned int tid_t;
+	typedef void*        tls_t;
 
 	/* Takes command line arguments and a callback to demangle the stack at this address.
 	* Type of callback is (void*) -> void
@@ -14,17 +15,23 @@ namespace detector {
 	bool init(int argc, const char **argv, void(*stack_demangler)(void*));
 	void finalize();
 
-	void acquire(tid_t thread_id, void* mutex);
-	void release(tid_t thread_id, void* mutex);
+	// Legacy interface
+	void acquire(tid_t thread_id, void* mutex, tls_t tls = nullptr);
+	void release(tid_t thread_id, void* mutex, tls_t tls = nullptr);
 
-	void read(tid_t thread_id, void* pc, void* addr, unsigned long size);
-	void write(tid_t thread_id, void* pc, void* addr, unsigned long size);
+	void acquire_pre(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
+	void acquire_post(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
+	void release_pre(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
+	void release_post(tid_t thread_id, void* mutex, bool write, tls_t tls = nullptr);
 
-	void alloc(tid_t thread_id, void* pc, void* addr, unsigned long size);
-	void free(tid_t thread_id, void* addr);
+	void read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
+	void write(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
 
-	void fork(tid_t parent, tid_t child);
-	void join(tid_t parent, tid_t child);
+	void alloc(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
+	void free(tid_t thread_id, void* addr, tls_t tls);
+
+	void fork(tid_t parent, tid_t child, tls_t tls = nullptr);
+	void join(tid_t parent, tid_t child, tls_t tls = nullptr);
 
 	std::string name();
 	std::string version();
