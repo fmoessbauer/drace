@@ -26,9 +26,11 @@ static inline void prepare_and_aquire(
 		return;
 
 	if (trylock) {
-		bool aquired = (bool) drwrap_get_retval(wrapctx);
-		//dr_printf("[%.5i] Try Aquire %p, success %i, rec: %i\n", data->tid, mutex, aquired, data->mutex_rec);
-		if (!aquired)
+		int retval = (int)drwrap_get_retval(wrapctx);
+		//dr_printf("[%.5i] Try Aquire %p, ret %i, rec: %i\n", data->tid, mutex, retval, data->mutex_rec);
+		// If retval == 0, mtx acquired
+		// skip otherwise
+		if (retval != 0)
 			return;
 	}
 
@@ -39,7 +41,7 @@ static inline void prepare_and_aquire(
 
 	dr_mutex_lock(th_mutex);
 	flush_all_threads(data);
-	detector::acquire(data->tid, mutex, ++cnt, write, false, data->detector_data);
+	detector::acquire(data->tid, mutex, ++cnt, write, trylock, data->detector_data);
 	dr_mutex_unlock(th_mutex);
 
 	data->mutex_ops++;
@@ -56,6 +58,7 @@ static inline void prepare_and_release(
 		return;
 
 	void* mutex = drwrap_get_arg(wrapctx, 0);
+	//dr_printf("[%.5i] Release %p, success %i\n", data->tid, mutex);
 
 	mutex_cntr_t & book = *(data->mutex_book);
 	// mutex not in book
