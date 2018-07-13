@@ -6,4 +6,4 @@
 	url = https://github.com/google/benchmark.git
 [submodule "vendor/jtilly/inih"]
 	path = vendor/jtilly/inih
-	url = https://github.com/jtilly/inih
+	url = https://github.com/jtilly/inih.git
