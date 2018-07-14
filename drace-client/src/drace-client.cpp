@@ -53,7 +53,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	parse_args(argc, argv);
 	print_config();
 
-
 	config.loadfile(config_file);
 
 	TLS_buckets.reserve(128);

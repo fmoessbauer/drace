@@ -36,7 +36,7 @@ namespace funwrap {
 
 			// Save alloc size to TLS, disable detector
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			data->last_alloc_size = (size_t)drwrap_get_arg(wrapctx, 2);
+			*user_data = drwrap_get_arg(wrapctx, 2);
 
 			//beg_excl_region(data);
 
@@ -55,7 +55,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::alloc(data->tid, pc, retval, data->last_alloc_size, data->detector_data);
+			detector::alloc(data->tid, pc, retval, (size_t)user_data, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs

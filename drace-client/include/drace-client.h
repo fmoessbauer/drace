@@ -36,7 +36,7 @@ struct params_t {
 extern params_t params;
 
 using event_stack_t = std::stack<std::string>;
-using mutex_cntr_t = std::unordered_map<uint64_t, int>;
+using mutex_map_t = std::unordered_map<uint64_t, int>;
 /* Per Thread data (thread-private)
  * \Warning This struct is not default-constructed
  *          but just allocated as a memory block and casted
@@ -48,22 +48,23 @@ typedef struct {
 	byte         *buf_base;
 	ptr_int_t     buf_end;
 	void         *cache;
-	uint64        last_alloc_size;
-	uint64        last_mutex;
 	uint64        num_refs;
 	thread_id_t   tid;
 	uint64        grace_period;
+	// use ptrsize type for lea
 	uint64        enabled;
 	// inverse of flush pending, jmpecxz
 	std::atomic<uint64> no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
-	uint64        mutex_rec;
-	mutex_cntr_t *mutex_book;
-
-	void         *detector_data;
-	// statistics
+	// book-keeping of active mutexes
+	mutex_map_t   mutex_book;
+	// Mutex statistics
 	uint64        mutex_ops;
+
+	// as the detector cannot allocate TLS,
+	// use this ptr for per-thread data in detector
+	void         *detector_data;
 } per_thread_t;
 
 /* Global data structures */

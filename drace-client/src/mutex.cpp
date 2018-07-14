@@ -36,8 +36,7 @@ static inline void prepare_and_aquire(
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
-	mutex_cntr_t & book = *(data->mutex_book);
-	auto & cnt = book[(uint64_t)mutex];
+	auto & cnt = data->mutex_book[(uint64_t)mutex];
 
 	dr_mutex_lock(th_mutex);
 	flush_all_threads(data);
@@ -60,17 +59,16 @@ static inline void prepare_and_release(
 	void* mutex = drwrap_get_arg(wrapctx, 0);
 	//dr_printf("[%.5i] Release %p, success %i\n", data->tid, mutex);
 
-	mutex_cntr_t & book = *(data->mutex_book);
 	// mutex not in book
-	if (book.count((uint64_t)mutex) == 0) {
+	if (data->mutex_book.count((uint64_t)mutex) == 0) {
 		// This should not be necessary, but as early threads cannot be tracked
 		// mutexes might be locked without book keeping.
 		return;
 	}
-	auto & cnt = book[(uint64_t)mutex];
+	auto & cnt = data->mutex_book[(uint64_t)mutex];
 
 	if (cnt == 1) {
-		book.erase((uint64_t)mutex);
+		data->mutex_book.erase((uint64_t)mutex);
 	}
 	else {
 		--cnt;
