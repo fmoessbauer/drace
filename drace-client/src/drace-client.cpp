@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <string>
+#include <exception>
 
 #include "drace-client.h"
 #include "memory-instr.h"
@@ -53,7 +54,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	parse_args(argc, argv);
 	print_config();
 
-	config.loadfile(config_file);
+	bool success = config.loadfile(config_file);
+	if (!success) {
+		dr_printf("Error loading config file\n");
+		dr_flush_file(stdout);
+		exit(1);
+	}
 
 	TLS_buckets.reserve(128);
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <exception>
 
 #include <INIReader.h>
 
@@ -30,9 +31,13 @@ namespace drace {
 			_sections = _reader->Sections();
 		}
 
-		inline void loadfile(const std::string & filename) {
+		inline bool loadfile(const std::string & filename) {
 			_reader = std::make_unique<INIReader>(filename);
+			if (_reader->ParseError() < 0) {
+				return false;
+			}
 			_sections = _reader->Sections();
+			return true;
 		}
 
 		inline void set(
