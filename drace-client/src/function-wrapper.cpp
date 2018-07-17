@@ -123,8 +123,8 @@ namespace funwrap {
 
 			beg_excl_region(data);
 
-			dr_printf("<< [%.5i] Begin EXCLUDED REGION, stack: %i\n",
-				data->tid, data->event_cnt);
+			//dr_printf("<< [%.5i] Begin EXCLUDED REGION, stack: %i\n",
+			//	data->tid, data->event_cnt);
 		}
 
 		static void end_excl(void *wrapctx, void *user_data) {
@@ -133,8 +133,8 @@ namespace funwrap {
 
 			end_excl_region(data);
 
-			dr_printf("<< [%.5i] End   EXCLUDED REGION: stack: %i\n",
-				data->tid, data->event_cnt);
+			//dr_printf("<< [%.5i] End   EXCLUDED REGION: stack: %i\n",
+			//	data->tid, data->event_cnt);
 		}
 
 	} // namespace internal

@@ -193,6 +193,7 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "-c", 16) == 0) {
 			config_file = std::string(argv[++processed]);
 		}
+		// TODO: Delay to speedup startup
 		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {
 			params.frequent_only = true;
 		}

@@ -151,7 +151,8 @@ namespace mutex_wrap {
 			dr_fprintf(STDERR, "< wrapped custom mutex %s\n", name);
 		}
 		delete info;
-		return true;
+		// Exact matches only, hence quit after each symbol
+		return false;
 	}
 
 	static void wrap_mtx_dbg(
@@ -160,7 +161,6 @@ namespace mutex_wrap {
 		wrapcb_pre_t pre,
 		wrapcb_post_t post)
 	{
-		if(mod->flags)
 		for (const auto & name : syms) {
 			wrap_info_t * info = new wrap_info_t;
 			info->mod = mod;
