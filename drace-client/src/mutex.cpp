@@ -12,6 +12,16 @@
 #include <detector_if.h>
 #include <dr_api.h>
 #include <drwrap.h>
+#include <drsyms.h>
+
+using wrapcb_pre_t = void(void *, void **);
+using wrapcb_post_t = void(void *, void *);
+
+struct wrap_info_t {
+	const module_data_t * mod;
+	wrapcb_pre_t        * pre;
+	wrapcb_post_t       * post;
+};
 
 static inline void prepare_and_aquire(
 	void* wrapctx,
@@ -24,6 +34,8 @@ static inline void prepare_and_aquire(
 
 	if (params.exclude_master && data->tid == runtime_tid)
 		return;
+
+	//dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
 
 	if (trylock) {
 		int retval = (int)drwrap_get_retval(wrapctx);
@@ -127,8 +139,42 @@ namespace mutex_clb {
 }
 
 namespace mutex_wrap {
-	using wrapcb_pre_t  = void(void *, void **);
-	using wrapcb_post_t = void(void *, void *);
+	static bool mutex_wrap_callback(const char *name, size_t modoffs, void *data) {
+		wrap_info_t * info = (wrap_info_t*)data;
+		bool ok = drwrap_wrap_ex(
+			info->mod->start + modoffs,
+			info->pre,
+			info->post,
+			(void*)name,
+			DRWRAP_CALLCONV_FASTCALL);
+		if (ok) {
+			dr_fprintf(STDERR, "< wrapped custom mutex %s\n", name);
+		}
+		delete info;
+		return true;
+	}
+
+	static void wrap_mtx_dbg(
+		const module_data_t *mod,
+		const std::vector<std::string> & syms,
+		wrapcb_pre_t pre,
+		wrapcb_post_t post)
+	{
+		if(mod->flags)
+		for (const auto & name : syms) {
+			wrap_info_t * info = new wrap_info_t;
+			info->mod = mod;
+			info->pre = pre;
+			info->post = post;
+
+			drsym_error_t err = drsym_search_symbols(
+				mod->full_path,
+				name.c_str(),
+				false,
+				(drsym_enumerate_cb)mutex_wrap_callback,
+				(void*)info);
+		}
+	}
 
 	static void wrap_mtx(
 		const module_data_t *mod,
@@ -141,33 +187,42 @@ namespace mutex_wrap {
 			if (towrap != NULL) {
 				bool ok = drwrap_wrap(towrap, pre, post);
 				if (ok)
-					dr_fprintf(STDERR, "< wrapped mutex %s\n", name.c_str());
+					dr_fprintf(STDERR, "< wrapped exported %s\n", name.c_str());
 			}
 		}
 	}
-
 }
 
-void funwrap::wrap_mutexes(const module_data_t *mod) {
+void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 	using namespace mutex_wrap;
 	using namespace mutex_clb;
+	if (sys) {
+		// mutex lock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_excl"), get_arg, mutex_lock);
+		// mutex trylock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_excl_try"), get_arg, mutex_trylock);
+		// mutex unlock
+		wrap_mtx(mod, config.get_multi("sync", "release_excl"), mutex_unlock, NULL);
+		// rec-mutex lock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_rec"), get_arg, recmutex_lock);
+		// rec-mutex trylock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_rec_try"), get_arg, recmutex_trylock);
+		// rec-mutex unlock
+		wrap_mtx(mod, config.get_multi("sync", "release_rec"), recmutex_unlock, NULL);
+		// read-mutex lock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_shared"), get_arg, mutex_read_lock);
+		// read-mutex trylock
+		wrap_mtx(mod, config.get_multi("sync", "acquire_shared_try"), get_arg, mutex_read_trylock);
+		// read-mutex unlock
+		wrap_mtx(mod, config.get_multi("sync", "release_shared"), mutex_read_unlock, NULL);
+	}
+	else {
+		// Custom Mutexes
+		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl"), get_arg, recmutex_lock);
+		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl_try"), get_arg, recmutex_trylock);
+		wrap_mtx_dbg(mod, config.get_multi("qtsync", "release_excl"), recmutex_unlock, NULL);
 
-	// mutex lock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_excl"), get_arg, mutex_lock);
-	// mutex trylock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_excl_try"), get_arg, mutex_trylock);
-	// mutex unlock
-	wrap_mtx(mod, config.get_multi("functions", "release_excl"), mutex_unlock, NULL);
-	// rec-mutex lock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_rec"), get_arg, recmutex_lock);
-	// rec-mutex trylock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_rec_try"), get_arg, recmutex_trylock);
-	// rec-mutex unlock
-	wrap_mtx(mod, config.get_multi("functions", "release_rec"), recmutex_unlock, NULL);
-	// read-mutex lock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_shared"), get_arg, mutex_read_lock);
-	// read-mutex trylock
-	wrap_mtx(mod, config.get_multi("functions", "acquire_shared_try"), get_arg, mutex_read_trylock);
-	// read-mutex unlock
-	wrap_mtx(mod, config.get_multi("functions", "release_shared"), mutex_read_unlock, NULL);
+		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_shared"), get_arg, mutex_read_lock);
+		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_shared_try"), get_arg, mutex_read_trylock);
+	}
 }

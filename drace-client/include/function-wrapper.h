@@ -7,7 +7,7 @@ namespace funwrap {
 	void finalize();
 
 	/* Wrap mutex aquire and release */
-	void wrap_mutexes(const module_data_t *mod);
+	void wrap_mutexes(const module_data_t *mod, bool sys);
 	/* Wrap heap alloc and free */
 	void wrap_allocations(const module_data_t *mod);
 	/* Wrap excluded functions */

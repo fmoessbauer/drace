@@ -140,9 +140,10 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	if (util::common_prefix(mod_name, "MSVCP") ||
 		util::common_prefix(mod_name, "KERNELBASE"))
 	{
-		funwrap::wrap_mutexes(mod);
+		funwrap::wrap_mutexes(mod, true);
 	}
-	if (util::common_prefix(mod_name, "KERNEL")) {
+	if (util::common_prefix(mod_name, "KERNEL"))
+	{
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
@@ -151,6 +152,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		// This requires debug symbols, but avoids false positives during
 		// C++11 thread construction and startup
 		funwrap::wrap_thread_start(mod);
+		funwrap::wrap_mutexes(mod, false);
 	}
 }
 

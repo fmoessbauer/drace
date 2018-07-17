@@ -52,9 +52,9 @@ typedef struct {
 	thread_id_t   tid;
 	uint64        grace_period;
 	// use ptrsize type for lea
-	uint64        enabled;
+	ptr_uint_t    enabled;
 	// inverse of flush pending, jmpecxz
-	std::atomic<uint64> no_flush;
+	std::atomic<ptr_uint_t> no_flush;
 	// Stack used to track state of detector
 	uint64        event_cnt;
 	// book-keeping of active mutexes
