@@ -37,11 +37,21 @@ Currently the following parameters are implemented
 --heap-only       : only detect races on heap-memory (exclude static memory)
 ```
 
-### Debug Builds
+## Testing with GoogleTest
 
-- GoogleTest
-- GoogleBenchmark
+Both the detector and a fully integrated DR-Client can be tested using the following command:
+
+```
+# Detector Tests
+./test/drace-client-Tests.exe --dr <path-to-drrun.exe> --gtest_filter="Detector*"
+# Integration Tests
+./test/drace-client-Tests.exe --dr <path-to-drrun.exe> --gtest_filter="Dr*"
+```
+
+## Benchmarking with GoogleBenchmark
 
 ### Known Issues
 
 - CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)
+- TSAN can only be started once, as the cleanup is not fully working
+
