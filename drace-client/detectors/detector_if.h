@@ -18,7 +18,7 @@ namespace detector {
 	void acquire(
 		tid_t thread_id,
 		void* mutex,
-		int recursive = 0,
+		int recursive = 1,
 		bool write = true,
 		bool try_lock = false,
 		tls_t tls = nullptr);

@@ -1,4 +1,4 @@
-set(SOURCES main algorithms DetectorTest)
+set(SOURCES main algorithms DetectorTest DrIntegrationTest)
 set(TEST_TARGET "${PROJECT_NAME}-Tests")
 
 

@@ -34,7 +34,7 @@ drace::Config config;
 
 std::atomic<uint> runtime_tid{ 0 };
 std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
-std::atomic<uint64> last_th_start{ 0 };
+std::atomic<uint> last_th_start{ 0 };
 std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");
@@ -122,11 +122,11 @@ static void event_thread_init(void *drcontext)
 {
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	// assume that the first event comes from the runtime thread
-	if (0 == num_threads_active) {
-		runtime_tid = tid;
+	unsigned empty_tid = 0;
+	if (runtime_tid.compare_exchange_weak(empty_tid, tid, std::memory_order_relaxed)) {
 		dr_printf("<< [%.5i] Runtime Thread tagged\n", tid);
 	}
-	++num_threads_active;
+	num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
 	// Detector fork event is executed in
 	// memory-instr's thread init event
@@ -137,10 +137,10 @@ static void event_thread_init(void *drcontext)
 static void event_thread_exit(void *drcontext)
 {
 	thread_id_t tid = dr_get_thread_id(drcontext);
-	--num_threads_active;
+	num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
 	// TODO: Try to get parent threadid
-	detector::join(runtime_tid.load(), tid, nullptr);
+	detector::join(runtime_tid.load(std::memory_order_relaxed), tid, nullptr);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }
@@ -152,11 +152,12 @@ void flush_all_threads(per_thread_t * data) {
 		if (td.first != data->tid)
 		{
 			//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
-			td.second->no_flush = false;
+			// check if memory_order_relaxed is sufficient
+			td.second->no_flush.store(false, std::memory_order_release);
 		}
 	}
 	// wait until all threads flushed
-	// this is a hacky barrier implementation
+	// this is a hacky half-barrier implementation
 	// and this might live-lock if only one core is avaliable
 	for (auto td : TLS_buckets) {
 		// Flush thread given that:
@@ -166,7 +167,7 @@ void flush_all_threads(per_thread_t * data) {
 		{
 			uint64_t waits = 0;
 			// TODO: validate this!!!
-			while (!data->no_flush.load(std::memory_order::memory_order_consume)) {
+			while (!data->no_flush.load(std::memory_order::memory_order_acquire)) {
 				if (++waits > 10) {
 					// avoid busy-waiting and blocking CPU if other thread did not flush
 					// within given period
