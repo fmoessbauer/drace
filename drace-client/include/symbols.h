@@ -9,7 +9,7 @@
 namespace symbols {
 	class symbol_location_t {
 	public:
-		app_pc          pc;
+		app_pc          pc{0};
 		app_pc          mod_base;
 		app_pc          mod_end;
 		std::string     mod_name;

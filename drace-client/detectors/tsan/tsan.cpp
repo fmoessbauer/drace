@@ -76,7 +76,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		access.stack_trace.resize(ssize);
 		std::copy((uint64_t*)(race_info_ac->stack_trace),
 			((uint64_t*)(race_info_ac->stack_trace)) + ssize,
-			access.stack_trace.begin());
+			access.stack_trace.data());
 		
 		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
 		auto it = allocations.lower_bound(addr);

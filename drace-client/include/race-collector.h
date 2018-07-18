@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <chrono>
 
+#include <dr_api.h>
+
 class RaceCollector {
 private:
 	using entry_t = std::pair<unsigned long long, detector::Race>;
@@ -18,7 +20,6 @@ private:
 	using tp_t = decltype(clock_t::now());
 
 	std::vector<entry_t> _races;
-	mutable std::unordered_map<void*, symbols::symbol_location_t> _sym_cache;
 	// TODO: histogram
 
 	bool   _delayed_lookup{ false };
@@ -33,7 +34,7 @@ public:
 		  _lookup_function(lookup_clb),
 		  _start_time(clock_t::now())
 	{
-		
+		_races.reserve(1000);
 	}
 
 	/* Adds a race and updates histogram */
@@ -54,13 +55,8 @@ public:
 		std::string header = ss.str();
 		s << header << std::endl;
 		for (int i = 0; i != 2; ++i) {
-			detector::AccessEntry ac;
-			if (i == 0) {
-				ac = race.second.first;
-			}
-			else {
-				ac = race.second.second;
-			}
+			detector::AccessEntry ac = (i==0) ? race.second.first : race.second.second;
+
 			s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
 			s << (ac.write ? "write" : "read") << " to/from " << ac.accessed_memory
 			  << " with size " << ac.access_size << ". Stack(Size " << ac.stack_trace.size() << ")"
@@ -71,9 +67,8 @@ public:
 			else {
 				s << "Block not on heap (anymore)" << std::endl;
 			}
-			//mxspin.unlock();
 
-			s << lookup_syms(ac.stack_trace.data(), force_lookup).get_pretty() << std::endl;
+			s << lookup_syms((void*)(ac.stack_trace.data()), force_lookup).get_pretty() << std::endl;
 		}
 		s << std::string(header.length(), '-') << std::endl;
 	}
@@ -82,10 +77,7 @@ public:
 		using symbols::symbol_location_t;
 		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
 			// Type of stack_demangler: (void*) -> symbol_location_t
-			auto & csloc = _sym_cache[pc];
-			if (csloc.pc == 0) {
-				csloc = ((symbol_location_t(*)(void*))_lookup_function)(pc);
-			}
+			symbol_location_t csloc = ((symbol_location_t(*)(void*))_lookup_function)(pc);
 			return csloc;
 		}
 		return symbols::symbol_location_t();
