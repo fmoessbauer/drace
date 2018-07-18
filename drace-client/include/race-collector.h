@@ -94,7 +94,35 @@ public:
 	/* Write in XML Format */
 	template<typename Stream>
 	void write_xml(Stream & s) const {
-			
+		// header
+		s << "<?xml version=\"1.0\"?>\n"
+			<< "<valgrindoutput>\n"
+			<< "  <protocolversion>4</protocolversion>\n"
+			<< "  <protocoltool>helgrind</protocoltool>\n"
+			<< "  <preamble><line>Drace, a thread error detector</line></preamble>\n"
+			<< "  <tool>drace</tool>\n\n";
+		// errors
+		for (unsigned i = 0; i < _races.size()*2; ++i) {
+			auto & race = (i%2==0) ? _races[i/2].second.first : _races[i/2].second.second;
+			auto syms = lookup_syms((void*)race.stack_trace.data(), true);
+			s   << "  <error>\n"
+			    << "    <unique>0x" << std::hex << i << "</unique>\n"
+				<< "    <tid>" << std::dec << race.thread_id << "</tid>\n"
+				<< "    <kind>Race</kind>\n"
+				<< "    <stack>\n"
+				<< "      <frame>\n"
+				<< "        <ip>0x" << std::hex << (uint64_t)syms.pc << "</ip>\n"
+				<< "        <obj>" << syms.mod_name << "</obj>\n"
+				<< "        <fn>" << syms.sym_name << "</fn>\n"
+				<< "        <dir>" << syms.file.substr(0, syms.file.find_last_of("/\\")) << "</dir>\n"
+				<< "        <file>" << syms.file.substr(syms.file.find_last_of("/\\") + 1) << "</file>\n"
+				<< "        <line>" << std::dec << syms.line << "</line>\n"
+				<< "      </frame>\n"
+				<< "    </stack>\n"
+		        << "  </error>\n";
+		}
+		// footer
+		s << "</valgrindoutput>\n";
 	}
 
 	/* Write in Human Readable Format */

@@ -241,8 +241,12 @@ static void print_config() {
 void generate_summary() {
 	const char * app_name = dr_get_application_name();
 	std::string logfile(app_name);
-	logfile += ".races.log";
-	std::ofstream races_hr_file(logfile, std::ofstream::out);
+	std::ofstream races_hr_file(logfile + ".races.log", std::ofstream::out);
 	race_collector->write_hr(races_hr_file);
 	races_hr_file.close();
+
+	// Write XML output
+	std::ofstream races_xml_file(logfile + ".races.xml", std::ofstream::out);
+	race_collector->write_xml(races_xml_file);
+	races_xml_file.close();
 }
