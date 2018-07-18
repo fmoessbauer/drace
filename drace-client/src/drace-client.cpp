@@ -8,7 +8,9 @@
 
 #include <atomic>
 #include <string>
-#include <exception>
+#include <memory>
+#include <iostream>
+#include <fstream>
 
 #include "drace-client.h"
 #include "memory-instr.h"
@@ -16,10 +18,9 @@
 #include "module-tracker.h"
 #include "stack-demangler.h"
 #include "symbols.h"
+#include "race-collector.h"
 
 #include <detector_if.h>
-
-#include <iostream>
 /*
 * Thread local storage metadata has to be globally accessable
 */
@@ -40,8 +41,12 @@ std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");
 
+std::unique_ptr<RaceCollector> race_collector;
+
 /* Runtime parameters */
 params_t params;
+
+void generate_summary();
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
@@ -90,9 +95,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Setup Symbol Access Lib
 	symbols::init();
 
+	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);
+
 	// Initialize Detector
 	if (!params.delayed_sym_lookup) {
-		detector::init(argc, argv, stack_demangler::demangle);
+		detector::init(argc, argv, race_collector_add_race);
 	}
 	else {
 		detector::init(argc, argv, nullptr);
@@ -104,6 +111,9 @@ static void event_exit()
 	if (!drmgr_register_thread_init_event(event_thread_init) ||
 		!drmgr_register_thread_exit_event(event_thread_exit))
 		DR_ASSERT(false);
+
+	// Generate summary while information is still present
+	generate_summary();
 
 	// Cleanup all drace modules
 	module_tracker::finalize();
@@ -226,4 +236,13 @@ static void print_config() {
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
 		config_file.c_str());
+}
+
+void generate_summary() {
+	const char * app_name = dr_get_application_name();
+	std::string logfile(app_name);
+	logfile += ".races.log";
+	std::ofstream races_hr_file(logfile, std::ofstream::out);
+	race_collector->write_hr(races_hr_file);
+	races_hr_file.close();
 }

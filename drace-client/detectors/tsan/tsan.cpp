@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <atomic>
+#include <algorithm>
 
 #include <iostream>
 #include "tsan-if.h"
@@ -36,7 +37,7 @@ public:
  */
 static std::atomic<bool>		alloc_readable{ true };
 static std::atomic<uint64_t>	misses{ 0 };
-static std::atomic<uint64_t>	races{ 0 };
+static std::atomic<uint64_t>    races{ 0 };
 /* Cannot use std::mutex here, hence use spinlock */
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
@@ -46,46 +47,53 @@ struct tsan_params_t {
 	bool heap_only{ false };
 } params;
 
-void reportRaceCallBack(__tsan_race_info* raceInfo, void* stack_demangler) {
+void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 	// Fixes erronous thread exit handling by ignoring races where at least one tid is 0
 	if (!raceInfo->access1->user_id || !raceInfo->access2->user_id)
 		return;
 
-	// TODO: Currently we assume that there is at most one callback at a time
-	std::cout << "----- DATA Race -----" << std::endl;
-	for (int i = 0; i != 2; ++i) {
-		__tsan_race_info_access* race_info_ac = NULL;
+	detector::Race race;
 
+	// TODO: Currently we assume that there is at most one callback at a time
+	__tsan_race_info_access * race_info_ac;
+	for (int i = 0; i != 2; ++i) {
+		detector::AccessEntry access;
 		if (i == 0) {
 			race_info_ac = raceInfo->access1;
-			std::cout << "Access 1 tid: " << race_info_ac->user_id << " ";
-			++races;
+			races.fetch_add(1, std::memory_order_relaxed);
 		}
 		else {
 			race_info_ac = raceInfo->access2;
-			std::cout << "Access 2 tid: " << race_info_ac->user_id << " ";
 		}
-		std::cout << (race_info_ac->write == 1 ? "write" : "read") << " to/from " << race_info_ac->accessed_memory << " with size " << race_info_ac->size << ". Stack(Size " << race_info_ac->stack_trace_size << ")" << "Type: " << race_info_ac->type << " :" << ::std::endl;
-		// DEBUG: Show HEAP Block if any
-		// Spinlock sometimes dead-locks here
-		//mxspin.lock();
+	
+		access.thread_id = race_info_ac->user_id;
+		access.write = race_info_ac->write;
+		access.accessed_memory = race_info_ac->accessed_memory;
+		access.access_size = race_info_ac->size;
+		access.access_type = race_info_ac->type;
+
+		int ssize = race_info_ac->stack_trace_size;
+		access.stack_trace.resize(ssize);
+		std::copy((uint64_t*)(race_info_ac->stack_trace),
+			((uint64_t*)(race_info_ac->stack_trace)) + ssize,
+			access.stack_trace.begin());
+		
 		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
 		auto it = allocations.lower_bound(addr);
 		if (it != allocations.end() && (addr < (it->first + it->second))) {
-			printf("Block begin at %p, size %d\n", it->first, it->second);
+			access.onheap = true;
+			access.heap_block_begin = (void*) (it->first);
+			access.heap_block_size = it->second;
+		}
+
+		if (i == 0) {
+			race.first = access;
 		}
 		else {
-			printf("Block not on heap (anymore)\n");
-		}
-		//mxspin.unlock();
-
-		// demagle stack
-		if (stack_demangler != nullptr) {
-			// Type of stack_demangler: (void*) -> void
-			((void(*)(void*))stack_demangler)(race_info_ac->stack_trace);
+			race.second = access;
 		}
 	}
-	std::cout << "----- --------- -----" << std::endl;
+	((void(*)(const detector::Race*))add_race_clb)(&race);
 }
 
 /*
@@ -122,20 +130,20 @@ static inline bool on_heap(uint64_t addr) {
 	}
 }
 
-bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) {
+bool detector::init(int argc, const char **argv, void * rc_clb) {
 	parse_args(argc, argv);
 	print_config();
 
 	stack_trace.resize(1);
 
-	__tsan_init_simple(reportRaceCallBack, (void*)stack_demangler);
+	__tsan_init_simple(reportRaceCallBack, rc_clb);
 	return true;
 }
 
 void detector::finalize() {
 	__tsan_fini();
 	std::cout << "> ----- SUMMARY -----" << std::endl;
-	std::cout << "> Found " << races.load() << " possible data-races" << std::endl;
+	std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
 	std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
 }
 

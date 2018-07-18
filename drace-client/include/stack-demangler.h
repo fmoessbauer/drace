@@ -3,6 +3,8 @@
 * Provides routines to demangle and reconstruct the stack at given program counter
 */
 
+#include <string>
+
 namespace stack_demangler {
-	void demangle(void* pc);
+	std::string demangle(void* pc);
 }

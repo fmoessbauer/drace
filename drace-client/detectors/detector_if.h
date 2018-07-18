@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 /**
  * Interface for a drace compatible race detector
@@ -9,10 +10,24 @@ namespace detector {
 	typedef unsigned int tid_t;
 	typedef void*        tls_t;
 
+	struct AccessEntry {
+		unsigned thread_id;
+		bool     write;
+		void    *accessed_memory;
+		size_t   access_size;
+		int      access_type;
+		std::vector<uint64_t> stack_trace;
+		void    *heap_block_begin;
+		size_t   heap_block_size;
+		bool     onheap;
+	};
+
+	using Race = std::pair<AccessEntry, AccessEntry>;
+
 	/* Takes command line arguments and a callback to demangle the stack at this address.
 	* Type of callback is (void*) -> void
 	*/
-	bool init(int argc, const char **argv, void(*stack_demangler)(void*));
+	bool init(int argc, const char **argv, void * add_race_clb);
 	void finalize();
 
 	void acquire(

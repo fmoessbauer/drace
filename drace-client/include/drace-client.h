@@ -3,6 +3,7 @@
 #include "config.h"
 #include "memory-instr.h"
 #include "module-tracker.h"
+#include "race-collector.h"
 #include <dr_api.h>
 #include <set>
 #include <map>
