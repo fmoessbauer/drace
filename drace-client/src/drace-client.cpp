@@ -216,6 +216,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--delayed-syms", 16) == 0) {
 			params.delayed_sym_lookup = true;
 		}
+		else if (strncmp(argv[processed], "--xml-file", 16) == 0) {
+			params.xml_file = argv[++processed];
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
@@ -229,13 +232,15 @@ static void print_config() {
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
 		"< Delayed Sym Lookup:\t%s\n"
-		"< Config File:\t\t%s\n",
+		"< Config File:\t\t%s\n"
+		"< XML File:\t\t%s\n",
 		params.sampling_rate,
 		params.frequent_only  ? "ON" : "OFF",
 		params.yield_on_evt   ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
-		config_file.c_str());
+		config_file.c_str(),
+		params.xml_file != "" ? params.xml_file : "OFF");
 }
 
 void generate_summary() {
@@ -246,7 +251,9 @@ void generate_summary() {
 	races_hr_file.close();
 
 	// Write XML output
-	std::ofstream races_xml_file(logfile + ".races.xml", std::ofstream::out);
-	race_collector->write_xml(races_xml_file);
-	races_xml_file.close();
+	if (params.xml_file != "") {
+		std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
+		race_collector->write_xml(races_xml_file);
+		races_xml_file.close();
+	}
 }
