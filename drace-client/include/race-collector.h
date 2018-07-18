@@ -1,12 +1,14 @@
 #pragma once
 
 #include "drace-client.h"
+#include "symbols.h"
 
 #include <detector_if.h>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <unordered_map>
 #include <chrono>
 
 class RaceCollector {
@@ -16,6 +18,7 @@ private:
 	using tp_t = decltype(clock_t::now());
 
 	std::vector<entry_t> _races;
+	mutable std::unordered_map<void*, symbols::symbol_location_t> _sym_cache;
 	// TODO: histogram
 
 	bool   _delayed_lookup{ false };
@@ -54,12 +57,11 @@ public:
 			detector::AccessEntry ac;
 			if (i == 0) {
 				ac = race.second.first;
-				s << "Access 1 tid: " << ac.thread_id << " ";
 			}
 			else {
 				ac = race.second.second;
-				s << "Access 2 tid: " << ac.thread_id << " ";
 			}
+			s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
 			s << (ac.write ? "write" : "read") << " to/from " << ac.accessed_memory
 			  << " with size " << ac.access_size << ". Stack(Size " << ac.stack_trace.size() << ")"
 			  << "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
@@ -71,17 +73,22 @@ public:
 			}
 			//mxspin.unlock();
 
-			// demagle stack
-			if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
-				// Type of stack_demangler: (void*) -> std::string
-				s << ((std::string(*)(void*))_lookup_function)(ac.stack_trace.data()) << std::endl;
-			}
+			s << lookup_syms(ac.stack_trace.data(), force_lookup).get_pretty() << std::endl;
 		}
 		s << std::string(header.length(), '-') << std::endl;
 	}
 
-	void lookup_syms() const {
-		
+	symbols::symbol_location_t lookup_syms(void* pc, bool force_lookup = false) const {
+		using symbols::symbol_location_t;
+		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
+			// Type of stack_demangler: (void*) -> symbol_location_t
+			auto & csloc = _sym_cache[pc];
+			if (csloc.pc == 0) {
+				csloc = ((symbol_location_t(*)(void*))_lookup_function)(pc);
+			}
+			return csloc;
+		}
+		return symbols::symbol_location_t();
 	}
 
 	/* Write in XML Format */

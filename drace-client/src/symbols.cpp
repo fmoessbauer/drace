@@ -43,9 +43,9 @@ static void symbols::free_drsmy_info(drsym_info_t * info) {
 /* Get last known symbol near the given location
 *  Internally a reverse-search is performed starting at the given pc.
 *  When the first symbol lookup was successful, the search is stopped.
-*  
+*
 * \WARNING If no debug information is available the returned symbol might
-           be misleading, as the search stops at the first imported or exported
+		   be misleading, as the search stops at the first imported or exported
 		   function.
 */
 std::string symbols::get_bb_symbol(app_pc pc) {
@@ -73,33 +73,37 @@ std::string symbols::get_bb_symbol(app_pc pc) {
 be misleading, as the search stops at the first imported or exported
 function.
 */
-std::string symbols::get_symbol_info(app_pc pc) {
+symbols::symbol_location_t symbols::get_symbol_info(app_pc pc) {
+	symbol_location_t sloc;
+	sloc.pc = pc;
+
 	module_info_t current(pc, nullptr);
-	std::stringstream result;
 	auto m_it = modules.lower_bound(current);
-
-	result << "PC " << std::hex << (void*)pc << "\n";
-
 	if (m_it != modules.end() && pc < m_it->end) {
-		const char * name = dr_module_preferred_name(m_it->info);
 
-		// Reverse search from pc until symbol can be decoded
-		int offset = pc - m_it->base;
-		for (; offset >= 0; --offset) {
-			drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, syminfo, DRSYM_DEMANGLE);
-			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
-				result << "\tModule " << name << " - " << syminfo->name << "\n"
-					   << "\tfrom " << (void*)m_it->base
-					   << " to "    << (void*)m_it->end;
-				if (err != DRSYM_ERROR_LINE_NOT_AVAILABLE) {
-					result << "\n\tFile " << syminfo->file << ":" << std::dec
-						<< syminfo->line << " + " << syminfo->line_offs;
+		if (m_it != modules.end() && pc < m_it->end) {
+
+			sloc.mod_base = m_it->base;
+			sloc.mod_end = m_it->end;
+			sloc.mod_name = dr_module_preferred_name(m_it->info);
+
+			// Reverse search from pc until symbol can be decoded
+			int offset = pc - m_it->base;
+			for (; offset >= 0; --offset) {
+				drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, syminfo, DRSYM_DEMANGLE);
+				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
+					sloc.sym_name = syminfo->name;
+					if (err != DRSYM_ERROR_LINE_NOT_AVAILABLE) {
+						sloc.file = syminfo->file;
+						sloc.line = syminfo->line;
+						sloc.line_offs = syminfo->line_offs;
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
-	return result.str();
+	return sloc;
 }
 
 /* Print the related symbol information for each basic block */

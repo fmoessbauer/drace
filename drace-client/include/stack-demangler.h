@@ -3,8 +3,10 @@
 * Provides routines to demangle and reconstruct the stack at given program counter
 */
 
+#include "symbols.h"
+
 #include <string>
 
 namespace stack_demangler {
-	std::string demangle(void* pc);
+	symbols::symbol_location_t demangle(void* pc);
 }
