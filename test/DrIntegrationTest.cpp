@@ -10,3 +10,7 @@ TEST_F(DrIntegrationTest, DefaultParams) {
 	run("", "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
 	run("", "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
 }
+
+TEST_F(DrIntegrationTest, ExcludeRaces) {
+	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
+}

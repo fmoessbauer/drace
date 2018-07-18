@@ -20,5 +20,10 @@ target_include_directories(
 
 target_link_libraries(${TEST_TARGET} "drace-${DRACE_DETECTOR}")
 
+add_custom_command(TARGET ${TEST_TARGET} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini"
+		"${PROJECT_BINARY_DIR}/test/data/drace_excl.ini")
+
 # Prepare Guinea pigs
 add_subdirectory("mini-apps")

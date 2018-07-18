@@ -103,7 +103,10 @@ namespace funwrap {
 			
 			end_excl_region(data);
 			// Enable recently started thread
-			TLS_buckets[last_th_start]->enabled = true;
+			unsigned last_th = last_th_start.load(std::memory_order_relaxed);
+			auto & other_tls = TLS_buckets[last_th];
+			if(other_tls->event_cnt == 0)
+				TLS_buckets[last_th]->enabled = true;
 			dr_mutex_unlock(th_start_mutex);
 			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
 		}
