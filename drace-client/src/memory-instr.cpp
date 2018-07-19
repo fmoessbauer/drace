@@ -178,7 +178,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 
 	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	
-	refs += data->num_refs; // atomic access
+	refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
 
 	dr_mutex_lock(th_mutex);
 	flush_all_threads(data);
@@ -264,8 +264,8 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 
 	// Sampling: Only instrument some instructions
 	// TODO: Improve this by using per-type counters
-	++instrum_count;
-	if (instrum_count % params.sampling_rate != 0) {
+	auto cnt = instrum_count.fetch_add(1, std::memory_order_relaxed);
+	if (cnt % params.sampling_rate != 0) {
 		return DR_EMIT_DEFAULT;
 	}
 
