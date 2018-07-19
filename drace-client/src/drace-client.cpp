@@ -98,7 +98,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);
 
 	// Initialize Detector
-	detector::init(argc, argv, (void*)race_collector_add_race);
+	detector::init(argc, argv, race_collector_add_race);
 }
 
 static void event_exit()

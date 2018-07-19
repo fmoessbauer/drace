@@ -138,7 +138,7 @@ static inline bool on_heap(uint64_t addr) {
 	}
 }
 
-bool detector::init(int argc, const char **argv, void * rc_clb) {
+bool detector::init(int argc, const char **argv, void(*rc_clb)(const detector::Race*)) {
 	parse_args(argc, argv);
 	print_config();
 

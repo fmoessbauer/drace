@@ -1,7 +1,7 @@
 #include "../detector_if.h"
 #include <string>
 
-bool detector::init(int argc, const char **argv, void(*stack_demangler)(void*)) {
+bool detector::init(int argc, const char **argv, void(*rc_clb)(detector::Race*)) {
 	return true;
 }
 

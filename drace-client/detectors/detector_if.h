@@ -29,7 +29,7 @@ namespace detector {
 	/* Takes command line arguments and a callback to process a data-race.
 	* Type of callback is (const detector::Race*) -> void
 	*/
-	bool init(int argc, const char **argv, void * add_race_clb);
+	bool init(int argc, const char **argv, void(*rc_clb)(const detector::Race*));
 
 	/* Finalizes the detector.
 	 * After a finalize, a later init must be possible
