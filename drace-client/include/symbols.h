@@ -7,7 +7,7 @@
 
 // Symbol Access Lib Functions
 namespace symbols {
-	class symbol_location_t {
+	class SymbolLocation {
 	public:
 		app_pc          pc{0};
 		app_pc          mod_base;
@@ -47,7 +47,7 @@ namespace symbols {
 	static void free_drsmy_info(drsym_info_t * info);
 
 	std::string get_bb_symbol(app_pc pc);
-	symbol_location_t get_symbol_info(app_pc pc);
+	SymbolLocation get_symbol_info(app_pc pc);
 
 	void print_bb_symbols(void);
 }

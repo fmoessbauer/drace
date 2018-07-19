@@ -73,8 +73,8 @@ std::string symbols::get_bb_symbol(app_pc pc) {
 be misleading, as the search stops at the first imported or exported
 function.
 */
-symbols::symbol_location_t symbols::get_symbol_info(app_pc pc) {
-	symbol_location_t sloc;
+symbols::SymbolLocation symbols::get_symbol_info(app_pc pc) {
+	SymbolLocation sloc;
 	sloc.pc = pc;
 
 	module_info_t current(pc, nullptr);

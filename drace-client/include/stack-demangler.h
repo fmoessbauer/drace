@@ -8,5 +8,5 @@
 #include <string>
 
 namespace stack_demangler {
-	symbols::symbol_location_t demangle(void* pc);
+	symbols::SymbolLocation demangle(void* pc);
 }

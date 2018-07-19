@@ -14,6 +14,8 @@
 #include <dr_api.h>
 
 class RaceCollector {
+public:
+	using LookupFuncT = symbols::SymbolLocation(*)(void*);
 private:
 	using entry_t = std::pair<unsigned long long, detector::Race>;
 	using clock_t = std::chrono::high_resolution_clock;
@@ -23,13 +25,13 @@ private:
 	// TODO: histogram
 
 	bool   _delayed_lookup{ false };
-	void  *_lookup_function{ nullptr };
+	LookupFuncT _lookup_function{nullptr};
 	tp_t   _start_time;
 
 public:
 	RaceCollector(
 		bool delayed_lookup,
-		void* lookup_clb)
+		LookupFuncT lookup_clb)
 		: _delayed_lookup(delayed_lookup),
 		  _lookup_function(lookup_clb),
 		  _start_time(clock_t::now())
@@ -73,14 +75,14 @@ public:
 		s << std::string(header.length(), '-') << std::endl;
 	}
 
-	symbols::symbol_location_t lookup_syms(void* pc, bool force_lookup = false) const {
-		using symbols::symbol_location_t;
+	symbols::SymbolLocation lookup_syms(void* pc, bool force_lookup = false) const {
+		using symbols::SymbolLocation;
 		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
 			// Type of stack_demangler: (void*) -> symbol_location_t
-			symbol_location_t csloc = ((symbol_location_t(*)(void*))_lookup_function)(pc);
+			SymbolLocation csloc = _lookup_function(pc);
 			return csloc;
 		}
-		return symbols::symbol_location_t();
+		return symbols::SymbolLocation();
 	}
 
 	/* Write in XML Format */
