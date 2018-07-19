@@ -8,7 +8,7 @@ static unsigned num_races = 0;
 class DetectorTest : public ::testing::Test {
 public:
 	// each callback-call increases num_races by two
-	static void callback(void* pc) {
+	static void callback(void*) {
 		++num_races;
 	}
 

@@ -4,6 +4,8 @@
 #include <vector>
 #include <atomic>
 #include <algorithm>
+#include <mutex> // for lock_guard
+#include <unordered_map>
 
 #include <iostream>
 #include "tsan-if.h"
@@ -42,6 +44,7 @@ static std::atomic<uint64_t>    races{ 0 };
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
 static std::vector<int*> stack_trace;
+static std::unordered_map<detector::tid_t, bool> thread_states;
 
 struct tsan_params_t {
 	bool heap_only{ false };
@@ -100,8 +103,13 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
  * split address at 32-bit boundary (zero above)
  * TODO: TSAN seems to only support 32 bit addresses!!!
  */
-inline uint64_t lower_half(uint64_t addr) {
+constexpr uint64_t lower_half(uint64_t addr) {
 	return (addr & 0x00000000FFFFFFFF);
+}
+
+/* Fast trivial hash function using a prime. We expect tids in [1,10^5] */
+constexpr uint64_t get_event_id(detector::tid_t parent, detector::tid_t child) {
+	return parent * 65521 + child;
 }
 
 static void parse_args(int argc, const char ** argv) {
@@ -135,8 +143,9 @@ bool detector::init(int argc, const char **argv, void * rc_clb) {
 	print_config();
 
 	stack_trace.resize(1);
+	thread_states.reserve(128);
 
-	__tsan_init_simple(reportRaceCallBack, rc_clb);
+	__tsan_init_simple(reportRaceCallBack, (void*)rc_clb);
 	return true;
 }
 
@@ -152,7 +161,7 @@ std::string detector::name() {
 }
 
 std::string detector::version() {
-	return std::string("0.1.0");
+	return std::string("0.2.0");
 }
 
 void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool trylock, tls_t thr) {
@@ -183,6 +192,14 @@ void detector::release(tid_t thread_id, void* mutex, bool write, tls_t thr) {
 	}
 }
 
+void detector::happens_before(tid_t thread_id, void* identifier) {
+	__tsan_happens_before_use_user_tid(thread_id, identifier);
+}
+
+void detector::happens_after(tid_t thread_id, void* identifier) {
+	__tsan_happens_after_use_user_tid(thread_id, identifier);
+}
+
 void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
@@ -207,7 +224,7 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size, 
 	}
 }
 
-void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
+void detector::allocate(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (tls == nullptr)
@@ -222,12 +239,12 @@ void detector::alloc(tid_t thread_id, void* pc, void* addr, unsigned long size, 
 	mxspin.unlock();
 }
 
-void detector::free(tid_t thread_id, void* addr, tls_t tls) {
+void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 	mxspin.lock();
 	alloc_readable.store(false, std::memory_order_release);
 
-	// ocasionally free is called more often than alloc, hence guard
+	// ocasionally free is called more often than allocate, hence guard
 	if (allocations.count(addr_32) == 1) {
 		size_t size = allocations[addr_32];
 		allocations.erase(addr_32);
@@ -241,16 +258,37 @@ void detector::free(tid_t thread_id, void* addr, tls_t tls) {
 
 void detector::fork(tid_t parent, tid_t child, tls_t tls) {
 	tls = (tls_t) __tsan_create_thread(child);
+
+	const uint64_t event_id = get_event_id(parent, child);
+	std::lock_guard<spinlock> lg(mxspin);
+
+	for (auto & t : thread_states) {
+		if (t.second) {
+			__tsan_happens_before_use_user_tid(t.first, (void*)(event_id));
+		}
+	}
+	__tsan_happens_after_use_user_tid(child, (void*)(event_id));
+	thread_states[child] = true;
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {
-	if (tls == nullptr)
-		tls = __tsan_create_thread(child);
+	const uint64_t event_id = get_event_id(parent, child);
+	__tsan_happens_before_use_user_tid(child, (void*)(event_id));
 
-	__tsan_ThreadFinish(tls);
+	std::lock_guard<spinlock> lg(mxspin);
+	thread_states[child] = false;
+	for (auto & t : thread_states) {
+		if (t.second) {
+			__tsan_happens_after_use_user_tid(t.first, (void*)(event_id));
+		}
+	}
 
-	// TODO: Implement correct join
-	//__tsan_ThreadJoin(tls, 0, child);
+	if (tls != nullptr) {
+		// we cannot use __tsan_ThreadJoin here, as local tid is not tracked
+		// hence use thread finish and draw edge between exited thread
+		// and all other threads
+		__tsan_ThreadFinish(tls);
+	}
 }
 
 void detector::detach(tid_t thread_id, tls_t tls) {
@@ -261,5 +299,9 @@ void detector::detach(tid_t thread_id, tls_t tls) {
 }
 
 void detector::finish(tid_t thread_id, tls_t tls) {
-	__tsan_ThreadFinish(tls);
+	if (tls != nullptr) {
+		__tsan_ThreadFinish(tls);
+	}
+	std::lock_guard<spinlock> lg(mxspin);
+	thread_states[thread_id] = false;
 }

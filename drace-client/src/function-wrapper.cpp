@@ -34,14 +34,14 @@ namespace funwrap {
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 
-			// Save alloc size to TLS, disable detector
+			// Save allocate size to TLS, disable detector
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			*user_data = drwrap_get_arg(wrapctx, 2);
 
 			//beg_excl_region(data);
 
 			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] pre alloc %i\n", data->tid, data->last_alloc_size);
+			//dr_fprintf(STDERR, "<< [%i] pre allocate %i\n", data->tid, data->last_alloc_size);
 		}
 
 		static void alloc_post(void *wrapctx, void *user_data) {
@@ -49,17 +49,17 @@ namespace funwrap {
 			void * retval    = drwrap_get_retval(wrapctx);
 			void * pc = drwrap_get_func(wrapctx);
 
-			// Read alloc size from TLS
+			// Read allocate size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::alloc(data->tid, pc, retval, (size_t)user_data, data->detector_data);
+			detector::allocate(data->tid, pc, retval, (size_t)user_data, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] post alloc: size %i, addr %p\n", data->tid, data->last_alloc_size, retval);
+			//dr_fprintf(STDERR, "<< [%i] post allocate: size %i, addr %p\n", data->tid, data->last_alloc_size, retval);
 		}
 
 		// TODO: On Linux addr is arg 0
@@ -71,7 +71,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::free(data->tid, addr, data->detector_data);
+			detector::deallocate(data->tid, addr, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
