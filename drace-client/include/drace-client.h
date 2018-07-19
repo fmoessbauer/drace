@@ -82,8 +82,7 @@ extern std::atomic<uint> last_th_start;
 extern std::atomic<bool> th_start_pending;
 
 // Module
-using mod_t = module_tracker::module_info_t;
-extern std::set<mod_t, std::greater<mod_t>> modules;
+extern std::set<ModuleData, std::greater<ModuleData>> modules;
 
 // TLS
 extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;

@@ -10,8 +10,7 @@
 #include <string>
 #include <algorithm>
 
-using mod_t = module_tracker::module_info_t;
-std::set<mod_t, std::greater<mod_t>> modules;
+std::set<ModuleData, std::greater<ModuleData>> modules;
 
 void *module_tracker::mod_lock;
 
@@ -91,7 +90,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 
 	// create shadow struct of current module
 	// for easier comparison
-	module_info_t current(mod->start, mod->end);
+	ModuleData current(mod->start, mod->end);
 
 	dr_rwlock_read_lock(mod_lock);
 	auto modit = modules.find(current);
@@ -157,7 +156,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 }
 
 static void module_tracker::event_module_unload(void *drcontext, const module_data_t *mod) {
-	module_info_t current(mod->start, mod->end);
+	ModuleData current(mod->start, mod->end);
 
 	dr_rwlock_read_lock(mod_lock);
 

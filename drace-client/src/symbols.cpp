@@ -6,8 +6,7 @@
 #include <sstream>
 
 std::string Symbols::get_bb_symbol(app_pc pc) {
-	using module_tracker::module_info_t;
-	module_info_t current(pc, nullptr);
+	ModuleData current(pc, nullptr);
 	auto m_it = modules.lower_bound(current);
 
 	if (m_it != modules.end() && pc < m_it->end) {
@@ -24,11 +23,10 @@ std::string Symbols::get_bb_symbol(app_pc pc) {
 }
 
 SymbolLocation Symbols::get_symbol_info(app_pc pc) {
-	using module_tracker::module_info_t;
 	SymbolLocation sloc;
 	sloc.pc = pc;
 
-	module_info_t current(pc, nullptr);
+	ModuleData current(pc, nullptr);
 	auto m_it = modules.lower_bound(current);
 	if (m_it != modules.end() && pc < m_it->end) {
 
