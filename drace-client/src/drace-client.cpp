@@ -219,6 +219,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--xml-file", 16) == 0) {
 			params.xml_file = argv[++processed];
 		}
+		else if (strncmp(argv[processed], "--out-file", 16) == 0) {
+			params.out_file = argv[++processed];
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
@@ -233,6 +236,7 @@ static void print_config() {
 		"< Exclude Master:\t%s\n"
 		"< Delayed Sym Lookup:\t%s\n"
 		"< Config File:\t\t%s\n"
+		"< Output File:\t\t%s\n"
 		"< XML File:\t\t%s\n",
 		params.sampling_rate,
 		params.frequent_only  ? "ON" : "OFF",
@@ -240,15 +244,17 @@ static void print_config() {
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
 		config_file.c_str(),
+		params.out_file != "" ? params.out_file : "OFF",
 		params.xml_file != "" ? params.xml_file : "OFF");
 }
 
 void generate_summary() {
 	const char * app_name = dr_get_application_name();
-	std::string logfile(app_name);
-	std::ofstream races_hr_file(logfile + ".races.log", std::ofstream::out);
-	race_collector->write_hr(races_hr_file);
-	races_hr_file.close();
+	if (params.out_file != "") {
+		std::ofstream races_hr_file(params.out_file, std::ofstream::out);
+		race_collector->write_hr(races_hr_file);
+		races_hr_file.close();
+	}
 
 	// Write XML output
 	if (params.xml_file != "") {

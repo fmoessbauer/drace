@@ -33,6 +33,7 @@ struct params_t {
 	bool         exclude_master{ false };
 	bool         delayed_sym_lookup{ false };
 	bool         yield_on_evt{ false };
+	std::string  out_file;
 	std::string  xml_file;
 };
 extern params_t params;
