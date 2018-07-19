@@ -36,19 +36,49 @@ public:
 	}
 };
 
-// Symbol Access Lib Functions
-namespace symbols {
+/* Symbol Access Lib Functions */
+class Symbols {
+	static constexpr int buffer_size = 256;
+	drsym_info_t syminfo;
 
-	static drsym_info_t* syminfo;
+public:
+	Symbols() {
+		drsym_init(0);
+		create_drsym_info();
+	}
 
-	void init();
-	void finalize();
+	~Symbols() {
+		free_drsmy_info();
+		drsym_exit();
+	}
 
-	static drsym_info_t* create_drsym_info(void);
-	static void free_drsmy_info(drsym_info_t * info);
-
+	/* Get last known symbol near the given location
+	*  Internally a reverse-search is performed starting at the given pc.
+	*  When the first symbol lookup was successful, the search is stopped.
+	*
+	* \WARNING If no debug information is available the returned symbol might
+	*		   be misleading, as the search stops at the first imported or exported
+	*		   function.
+	*/
 	std::string get_bb_symbol(app_pc pc);
+
+	/* Get last known symbol including as much information as possible.
+	*  Internally a reverse-search is performed starting at the given pc.
+	*  When the first symbol lookup was successful, the search is stopped.
+	*
+	* \WARNING If no debug information is available the returned symbol might
+	*          be misleading, as the search stops at the first imported or exported
+	*          function.
+	*/
 	SymbolLocation get_symbol_info(app_pc pc);
 
-	void print_bb_symbols(void);
-}
+	/* Print the related symbol information for each basic block */
+	void print_bb_symbols();
+
+private:
+	/* Create global symbol lookup data structures */
+	void create_drsym_info();
+
+	/* Cleanup global symbol lookup data structures */
+	void free_drsmy_info();
+};

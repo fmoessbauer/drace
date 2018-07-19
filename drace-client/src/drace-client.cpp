@@ -41,6 +41,7 @@ std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");
 
+std::unique_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 
 /* Runtime parameters */
@@ -92,9 +93,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	memory_inst::init();
 	DR_ASSERT(memory_inst::register_events());
 
-	// Setup Symbol Access Lib
-	symbols::init();
-
+	symbol_table   = std::make_unique<Symbols>();
 	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);
 
 	// Initialize Detector
@@ -113,7 +112,7 @@ static void event_exit()
 	// Cleanup all drace modules
 	module_tracker::finalize();
 	memory_inst::finalize();
-	symbols::finalize();
+	symbol_table.reset();
 	funwrap::finalize();
 
 	// Cleanup DR extensions

@@ -93,6 +93,9 @@ extern void* th_mutex;
 // do not start C++11 threads concurrently
 extern void* th_start_mutex;
 
+// Global Symbol Table
+extern std::unique_ptr<Symbols> symbol_table;
+
 // Global Configuration
 extern drace::Config config;
 

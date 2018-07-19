@@ -1,3 +1,4 @@
+#include "drace-client.h"
 #include "stack-demangler.h"
 #include "symbols.h"
 
@@ -7,5 +8,5 @@
 SymbolLocation stack_demangler::demangle(void *stack) {
 	// get top element of stack
 	app_pc top = *(app_pc *)stack;
-	return symbols::get_symbol_info(top);
+	return symbol_table->get_symbol_info(top);
 }
