@@ -161,6 +161,10 @@ static void event_thread_exit(void *drcontext)
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }
 
+/* Request a flush of all non-disabled threads.
+*  This function is NOT-Threadsafe, hence use it only in a locked-state
+*  Invariant: TLS_buckets is not modified
+*/
 void flush_all_threads(per_thread_t * data) {
 	memory_inst::process_buffer();
 	// issue flushes
@@ -169,21 +173,22 @@ void flush_all_threads(per_thread_t * data) {
 		{
 			//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
 			// check if memory_order_relaxed is sufficient
-			td.second->no_flush.store(false, std::memory_order_release);
+			td.second->no_flush.store(false, std::memory_order_relaxed);
 		}
 	}
 	// wait until all threads flushed
 	// this is a hacky half-barrier implementation
-	// and this might live-lock if only one core is avaliable
+	// and this might dead-lock if only one core is avaliable
 	for (auto td : TLS_buckets) {
 		// Flush thread given that:
 		// 1. thread is not the calling thread
 		// 2. thread is not disabled
 		if (td.first != data->tid && td.second->enabled)
 		{
-			uint64_t waits = 0;
+			unsigned long waits = 0;
 			// TODO: validate this!!!
-			while (!data->no_flush.load(std::memory_order::memory_order_acquire)) {
+			// Only the flush-variable has to be set atomically
+			while (!data->no_flush.load(std::memory_order_relaxed)) {
 				if (++waits > 10) {
 					// avoid busy-waiting and blocking CPU if other thread did not flush
 					// within given period
@@ -201,7 +206,7 @@ static void parse_args(int argc, const char ** argv) {
 			params.sampling_rate = std::stoi(argv[++processed]);
 		}
 		else if (strncmp(argv[processed], "-c", 16) == 0) {
-			config_file = std::string(argv[++processed]);
+			config_file = argv[++processed];
 		}
 		// TODO: Delay to speedup startup
 		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {

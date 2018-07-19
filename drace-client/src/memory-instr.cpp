@@ -356,7 +356,9 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	instrlist_meta_preinsert(ilist, where, INSTR_CREATE_mfence(drcontext));
+	// TODO: validate: We only rely on relatex-memory-order, hence on x86 we
+	// do not need a fence
+	//instrlist_meta_preinsert(ilist, where, INSTR_CREATE_mfence(drcontext));
 
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, no_flush));
