@@ -15,7 +15,7 @@
 
 class RaceCollector {
 public:
-	using LookupFuncT = symbols::SymbolLocation(*)(void*);
+	using LookupFuncT = SymbolLocation(*)(void*);
 private:
 	using entry_t = std::pair<unsigned long long, detector::Race>;
 	using clock_t = std::chrono::high_resolution_clock;
@@ -75,14 +75,13 @@ public:
 		s << std::string(header.length(), '-') << std::endl;
 	}
 
-	symbols::SymbolLocation lookup_syms(void* pc, bool force_lookup = false) const {
-		using symbols::SymbolLocation;
+	SymbolLocation lookup_syms(void* pc, bool force_lookup = false) const {
 		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
 			// Type of stack_demangler: (void*) -> symbol_location_t
 			SymbolLocation csloc = _lookup_function(pc);
 			return csloc;
 		}
-		return symbols::SymbolLocation();
+		return SymbolLocation();
 	}
 
 	/* Write in XML Format */

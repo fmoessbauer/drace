@@ -5,38 +5,39 @@
 #include <string>
 #include <sstream>
 
+class SymbolLocation {
+public:
+	app_pc          pc{ 0 };
+	app_pc          mod_base;
+	app_pc          mod_end;
+	std::string     mod_name;
+	std::string     sym_name;
+	std::string     file;
+	uint64          line;
+	size_t          line_offs;
+
+	/* Pretty print symbol location */
+	std::string get_pretty() const {
+		std::stringstream result;
+		result << "PC " << std::hex << (void*)pc << "\n";
+		if (mod_name != "") {
+			result << "\tModule " << mod_name;
+			if (sym_name != "") {
+				result << " - " << sym_name << "\n";
+			}
+			result << "\tfrom " << (void*)mod_base
+				<< " to " << (void*)mod_end;
+			if (file != "") {
+				result << "\n\tFile " << file << ":" << std::dec
+					<< line << " + " << line_offs;
+			}
+		}
+		return result.str();
+	}
+};
+
 // Symbol Access Lib Functions
 namespace symbols {
-	class SymbolLocation {
-	public:
-		app_pc          pc{0};
-		app_pc          mod_base;
-		app_pc          mod_end;
-		std::string     mod_name;
-		std::string     sym_name;
-		std::string     file;
-		uint64          line;
-		size_t          line_offs;
-
-		/* Pretty print symbol location */
-		std::string get_pretty() const {
-			std::stringstream result;
-			result << "PC " << std::hex << (void*)pc << "\n";
-			if (mod_name != "") {
-				result << "\tModule " << mod_name;
-				if (sym_name != "") {
-					result << " - " << sym_name << "\n";
-				}
-				result << "\tfrom " << (void*)mod_base
-					   << " to "    << (void*)mod_end;
-				if (file != "") {
-					result << "\n\tFile " << file << ":" << std::dec
-						   << line << " + " << line_offs;
-				}
-			}
-			return result.str();
-		}
-	};
 
 	static drsym_info_t* syminfo;
 
