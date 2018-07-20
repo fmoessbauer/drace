@@ -39,23 +39,23 @@ struct per_thread_t {
 	byte         *buf_base;
 	ptr_int_t     buf_end;
 	void         *cache;
-	uint64        num_refs;
+	uint64        num_refs{ 0 };
 	thread_id_t   tid;
-	uint64        grace_period;
+	uint64        grace_period{ GRACE_PERIOD_TH_START };
 	// use ptrsize type for lea
-	ptr_uint_t    enabled;
+	ptr_uint_t    enabled{ false };
 	// inverse of flush pending, jmpecxz
-	std::atomic<ptr_uint_t> no_flush;
+	std::atomic<ptr_uint_t> no_flush{ true };
 	// Stack used to track state of detector
-	uint64        event_cnt;
+	uint64        event_cnt{ 0 };
 	// book-keeping of active mutexes
 	mutex_map_t   mutex_book;
 	// Mutex statistics
-	uint64        mutex_ops;
+	uint64        mutex_ops{ 0 };
 
 	// as the detector cannot allocate TLS,
 	// use this ptr for per-thread data in detector
-	void         *detector_data;
+	void         *detector_data{nullptr};
 };
 
 /* Global data structures */

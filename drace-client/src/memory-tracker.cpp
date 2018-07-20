@@ -12,15 +12,6 @@
 #include "memory-tracker.h"
 #include "symbols.h"
 
-bool MemoryTracker::register_events() {
-	return (
-		drmgr_register_thread_init_event(instr_event_thread_init) &&
-		drmgr_register_thread_exit_event(instr_event_thread_exit) &&
-		drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
-		drmgr_register_bb_instrumentation_event(instr_event_app_analysis, instr_event_app_instruction, NULL)
-		);
-}
-
 MemoryTracker::MemoryTracker() {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
@@ -43,6 +34,12 @@ MemoryTracker::MemoryTracker() {
 
 	// Initialize Code Caches
 	code_cache_init();
+
+	DR_ASSERT(
+		drmgr_register_thread_init_event(instr_event_thread_init) &&
+		drmgr_register_thread_exit_event(instr_event_thread_exit) &&
+		drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
+		drmgr_register_bb_instrumentation_event(instr_event_app_analysis, instr_event_app_instruction, NULL));
 
 	dr_printf("< Initialized\n");
 }
@@ -95,21 +92,17 @@ void MemoryTracker::analyze_access(void *drcontext) {
 void MemoryTracker::event_thread_init(void *drcontext)
 {
 	/* allocate thread private data */
-	per_thread_t* data = (per_thread_t *) dr_thread_alloc(drcontext, sizeof(per_thread_t));
+	per_thread_t* data = reinterpret_cast<per_thread_t*>(dr_thread_alloc(drcontext, sizeof(per_thread_t)));
 	drmgr_set_tls_field(drcontext, tls_idx, data);
+
+	// Initialize struct at given location (placement new)
+	new (data) per_thread_t;
 
 	data->buf_base = (byte*) dr_thread_alloc(drcontext, MEM_BUF_SIZE);
 	data->buf_ptr  = data->buf_base;
 	/* set buf_end to be negative of address of buffer end for the lea later */
 	data->buf_end  = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
-	data->num_refs = 0;
 	data->tid      = dr_get_thread_id(drcontext);
-
-	// clear statistics
-	data->mutex_ops = 0;
-	// use placement new
-	new (&(data->mutex_book)) per_thread_t::mutex_map_t;
-	data->detector_data = nullptr;
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
@@ -117,14 +110,6 @@ void MemoryTracker::event_thread_init(void *drcontext)
 		last_th_start = data->tid;
 		data->enabled = false;
 	}
-	else {
-		data->enabled = true;
-	}
-
-	// avoid races during thread startup
-	data->grace_period  = data->num_refs + GRACE_PERIOD_TH_START;
-	data->no_flush      = true;
-	data->event_cnt     = 0;
 
 	// this is the master thread
 	if (params.exclude_master && (data->tid == runtime_tid)) {
@@ -152,12 +137,11 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	TLS_buckets.erase(data->tid);
 	dr_mutex_unlock(th_mutex);
 
-	// deconstruct mutex book
-	using mutex_map_t = per_thread_t::mutex_map_t;
-	data->mutex_book.~mutex_map_t();
-
 	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	// deconstruct struct
+	data->~per_thread_t();
 
 	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
 }

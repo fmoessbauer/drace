@@ -10,16 +10,6 @@
 #include <string>
 #include <algorithm>
 
-void ModuleTracker::print_modules() {
-	for (const auto & current : modules) {
-		const char * mod_name = dr_module_preferred_name(current.info);
-		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
-			0, mod_name, current.base, current.end,
-			current.instrument ? "YES" : "NO",
-			current.info->full_path);
-	}
-}
-
 /* Global operator to compare module_data_t regarding logic equivalence */
 static bool operator==(const module_data_t & d1, const module_data_t & d2)
 {
@@ -44,6 +34,16 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 	return !(d1 == d2);
 }
 
+void ModuleTracker::print_modules() {
+	for (const auto & current : modules) {
+		const char * mod_name = dr_module_preferred_name(current.info);
+		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+			0, mod_name, current.base, current.end,
+			current.instrument ? "YES" : "NO",
+			current.info->full_path);
+	}
+}
+
 ModuleTracker::ModuleTracker() {
 	mod_lock = dr_rwlock_create();
 
@@ -56,6 +56,11 @@ ModuleTracker::ModuleTracker() {
 	for (auto & prefix : excluded_path_prefix) {
 		std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::tolower);
 	}
+
+	if (!drmgr_register_module_load_event(event_module_load) ||
+		!drmgr_register_module_unload_event(event_module_unload)) {
+		DR_ASSERT(false);
+	}
 }
 
 ModuleTracker::~ModuleTracker() {
@@ -65,12 +70,6 @@ ModuleTracker::~ModuleTracker() {
 	}
 
 	dr_rwlock_destroy(mod_lock);
-}
-
-bool ModuleTracker::register_events() {
-	return (
-		drmgr_register_module_load_event(event_module_load) &&
-		drmgr_register_module_unload_event(event_module_unload));
 }
 
 /* Module load event implementation. As this function is passed
@@ -131,7 +130,6 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		module_tracker->unlock_write();
 	}
 	// wrap functions
-	// TODO: get prefixes from config file
 	if (util::common_prefix(mod_name, "MSVCP") ||
 		util::common_prefix(mod_name, "KERNELBASE"))
 	{

@@ -62,11 +62,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	// Setup Module Tracking
 	module_tracker = std::make_unique<ModuleTracker>();
-	DR_ASSERT(module_tracker->register_events());
 
 	// Setup Memory Tracing
 	memory_tracker = std::make_unique<MemoryTracker>();
-	DR_ASSERT(memory_tracker->register_events());
 
 	symbol_table   = std::make_unique<Symbols>();
 	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);

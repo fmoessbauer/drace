@@ -101,8 +101,6 @@ public:
 	ModuleTracker();
 	~ModuleTracker();
 
-	bool register_events();
-
 	std::pair<bool, ModuleData_Set::iterator> get_module_containing(app_pc pc) const {
 		ModuleData current(pc, nullptr);
 

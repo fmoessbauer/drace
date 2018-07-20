@@ -44,8 +44,6 @@ private:
 
 public:
 
-	bool register_events();
-
 	MemoryTracker();
 	~MemoryTracker();
 
