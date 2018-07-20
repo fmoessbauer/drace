@@ -15,7 +15,7 @@
 
 class RaceCollector {
 public:
-	using LookupFuncT = SymbolLocation(*)(void*);
+	using LookupFuncT = std::function<SymbolLocation(void*)>;
 private:
 	using entry_t = std::pair<unsigned long long, detector::Race>;
 	using clock_t = std::chrono::high_resolution_clock;
