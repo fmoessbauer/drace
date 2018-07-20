@@ -14,7 +14,7 @@
 #include <functional>
 
 #include "drace-client.h"
-#include "memory-instr.h"
+#include "memory-tracker.h"
 #include "function-wrapper.h"
 #include "module-tracker.h"
 #include "stack-demangler.h"
@@ -42,6 +42,7 @@ std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");
 
+std::unique_ptr<MemoryTracker> memory_tracker;
 std::unique_ptr<ModuleTracker> module_tracker;
 std::unique_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
@@ -92,8 +93,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	DR_ASSERT(module_tracker->register_events());
 
 	// Setup Memory Tracing
-	memory_inst::init();
-	DR_ASSERT(memory_inst::register_events());
+	memory_tracker = std::make_unique<MemoryTracker>();
+	DR_ASSERT(memory_tracker->register_events());
 
 	symbol_table   = std::make_unique<Symbols>();
 	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);
@@ -113,7 +114,7 @@ static void event_exit()
 
 	// Cleanup all drace modules
 	module_tracker.reset();
-	memory_inst::finalize();
+	memory_tracker.reset();
 	symbol_table.reset();
 	funwrap::finalize();
 
@@ -162,7 +163,7 @@ static void event_thread_exit(void *drcontext)
 *  Invariant: TLS_buckets is not modified
 */
 void flush_all_threads(per_thread_t * data) {
-	memory_inst::process_buffer();
+	memory_tracker->process_buffer();
 	// issue flushes
 	for (auto td : TLS_buckets) {
 		if (td.first != data->tid)

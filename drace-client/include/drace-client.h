@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "config.h"
-#include "memory-instr.h"
+#include "memory-tracker.h"
 #include "module-tracker.h"
 #include "race-collector.h"
 #include <dr_api.h>
@@ -91,6 +91,8 @@ extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 extern void* th_mutex;
 // do not start C++11 threads concurrently
 extern void* th_start_mutex;
+
+extern std::unique_ptr<MemoryTracker> memory_tracker;
 
 // Global Symbol Table
 extern std::unique_ptr<Symbols> symbol_table;

@@ -1,0 +1,134 @@
+#pragma once
+
+#include <dr_api.h>
+#include <drmgr.h>
+#include <drreg.h>
+#include <drutil.h>
+#include <dr_tools.h>
+
+#include <atomic>
+#include <memory>
+
+class ModuleCache {
+private:
+	/* keep last module here for faster lookup */
+	uint64  mc_beg = 0;
+	uint64  mc_end = 0;
+	bool    mc_instr = false;
+
+public:
+	/* Lookup last module in cache, returns (found, instrument)*/
+	inline std::pair<bool, bool> lookup(app_pc pc) {
+		if ((uint64)pc >= mc_beg && (uint64)pc < mc_end) {
+			return std::make_pair(true, mc_instr);
+		}
+		return std::make_pair(false, false);
+	}
+	inline void update(app_pc beg, app_pc end, bool instrument) {
+		mc_beg = (uint64)beg;
+		mc_end = (uint64)end;
+		mc_instr = instrument;
+	}
+};
+
+class MemoryTracker {
+public:
+	/* Single memory reference */
+	struct mem_ref_t {
+		bool  write;
+		void *addr;
+		size_t size;
+		app_pc pc;
+	};
+
+	/* Maximum number of references between clean calls */
+	static constexpr int MAX_NUM_MEM_REFS = 4096;
+	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
+
+	/* total number of logged memory references */
+	std::atomic<int> refs{ 0 };
+
+private:
+	size_t page_size;
+
+	/* Code Caches */
+	app_pc cc_flush;
+
+	/* Number of instrumented calls, used for sampling */
+	std::atomic<int> instrum_count{ 0 };
+
+	/* XCX registers */
+	drvector_t allowed_xcx;
+
+	ModuleCache mc;
+
+public:
+
+	bool register_events();
+
+	MemoryTracker();
+	~MemoryTracker();
+
+	static void process_buffer(void);
+	static void clear_buffer(void);
+	static void analyze_access(void *drcontext);
+
+	// Events
+	void event_thread_init(void *drcontext);
+
+	void event_thread_exit(void *drcontext);
+
+	/* We transform string loops into regular loops so we can more easily
+	* monitor every memory reference they make.
+	*/
+	dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
+
+	dr_emit_flags_t event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data);
+	/* Instrument application instructions */
+	dr_emit_flags_t event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
+		instr_t *instr, bool for_trace,
+		bool translating, void *user_data);
+
+private:
+
+	void code_cache_init(void);
+	void code_cache_exit(void);
+
+
+
+	// Instrumentation
+	/* Inserts a jump to clean call if a flush is pending */
+	void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2, instr_t *call_flush);
+
+	/* Instrument all memory accessing instructions */
+	void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
+};
+
+extern std::unique_ptr<MemoryTracker> memory_tracker;
+
+// Events
+static inline void instr_event_thread_init(void *drcontext) {
+	memory_tracker->event_thread_init(drcontext);
+}
+
+static inline void instr_event_thread_exit(void *drcontext)
+{
+	memory_tracker->event_thread_exit(drcontext);
+}
+
+static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
+{
+	return memory_tracker->event_bb_app2app(drcontext, tag, bb, for_trace, translating);
+}
+
+static inline dr_emit_flags_t instr_event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data)
+{
+	return memory_tracker->event_app_analysis(drcontext, tag, bb, for_trace, translating, user_data);
+}
+
+static inline dr_emit_flags_t instr_event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
+	instr_t *instr, bool for_trace,
+	bool translating, void *user_data)
+{
+	return memory_tracker->event_app_instruction(drcontext, tag, bb, instr, for_trace, translating, user_data);
+}

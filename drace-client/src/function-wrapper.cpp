@@ -1,6 +1,6 @@
 #include "drace-client.h"
 #include "function-wrapper.h"
-#include "memory-instr.h"
+#include "memory-tracker.h"
 #include "config.h"
 
 #include <vector>
@@ -17,14 +17,14 @@
 namespace funwrap {
 	namespace internal {
 		static void beg_excl_region(per_thread_t * data) {
-			memory_inst::process_buffer();
+			memory_tracker->process_buffer();
 			data->enabled = false;
 			data->event_cnt++;
 		}
 
 		static void end_excl_region(per_thread_t * data) {
 			if (data->event_cnt == 1) {
-				memory_inst::clear_buffer();
+				memory_tracker->clear_buffer();
 				data->enabled = true;
 			}
 			data->event_cnt--;

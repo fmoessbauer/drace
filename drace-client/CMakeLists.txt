@@ -2,7 +2,7 @@
 	"src/drace-client"
 	"src/function-wrapper"
 	"src/mutex"
-	"src/memory-instr"
+	"src/memory-tracker"
 	"src/module-tracker"
 	"src/stack-demangler"
 	"src/symbols"

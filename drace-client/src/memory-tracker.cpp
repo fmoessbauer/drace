@@ -9,43 +9,19 @@
 #include <detector_if.h>
 
 #include "drace-client.h"
-#include "memory-instr.h"
+#include "memory-tracker.h"
 #include "symbols.h"
 
-/* Number of instrumented calls, used for sampling */
-static std::atomic<int> instrum_count{ 0 };
-
-/* XCX registers */
-drvector_t allowed_xcx;
-
-/* keep last module here for faster lookup */
-static uint64  mc_beg = 0;
-static uint64  mc_end = 0;
-static bool  mc_instr = false;
-
-/* Lookup last module in cache, returns (found, instrument)*/
-std::pair<bool, bool> mc_cache_lookup(app_pc pc) {
-	if ((uint64) pc >= mc_beg && (uint64)pc < mc_end) {
-		return std::make_pair(true, mc_instr);
-	}
-	return std::make_pair(false, false);
-}
-void mc_cache_update(app_pc beg, app_pc end, bool instrument) {
-	mc_beg = (uint64) beg;
-	mc_end = (uint64) end;
-	mc_instr = instrument;
-}
-
-bool memory_inst::register_events() {
+bool MemoryTracker::register_events() {
 	return (
-		drmgr_register_thread_init_event(memory_inst::event_thread_init) &&
-		drmgr_register_thread_exit_event(memory_inst::event_thread_exit) &&
-		drmgr_register_bb_app2app_event(event_bb_app2app, NULL) &&
-		drmgr_register_bb_instrumentation_event(event_app_analysis, event_app_instruction, NULL)
+		drmgr_register_thread_init_event(instr_event_thread_init) &&
+		drmgr_register_thread_exit_event(instr_event_thread_exit) &&
+		drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
+		drmgr_register_bb_instrumentation_event(instr_event_app_analysis, instr_event_app_instruction, NULL)
 		);
 }
 
-void memory_inst::init() {
+MemoryTracker::MemoryTracker() {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
 
@@ -65,38 +41,30 @@ void memory_inst::init() {
 	drreg_init_and_fill_vector(&allowed_xcx, false);
 	drreg_set_vector_entry(&allowed_xcx, DR_REG_XCX, true);
 
+	// Initialize Code Caches
 	code_cache_init();
+
 	dr_printf("< Initialized\n");
 }
 
-void memory_inst::finalize() {
-	code_cache_exit();
+MemoryTracker::~MemoryTracker() {
+	dr_nonheap_free(cc_flush, page_size);
 
 	drvector_delete(&allowed_xcx);
 
-	if (!drmgr_unregister_thread_init_event(event_thread_init) ||
-		!drmgr_unregister_thread_exit_event(event_thread_exit) ||
-		!drmgr_unregister_bb_app2app_event(event_bb_app2app) ||
-		!drmgr_unregister_bb_instrumentation_event(event_app_analysis) ||
+	if (!drmgr_unregister_thread_init_event(instr_event_thread_init) ||
+		!drmgr_unregister_thread_exit_event(instr_event_thread_exit) ||
+		!drmgr_unregister_bb_app2app_event(instr_event_bb_app2app) ||
+		!drmgr_unregister_bb_instrumentation_event(instr_event_app_analysis) ||
 		drreg_exit() != DRREG_SUCCESS)
 		DR_ASSERT(false);
 }
 
-static void memory_inst::analyze_access(void *drcontext) {
+void MemoryTracker::analyze_access(void *drcontext) {
 	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	//printf("[%.5i] Process Buffer: Refs: %i, enabled: %i, no_flush: %i\n",
-	//	data->tid, num_refs,
-	//	data->enabled, data->no_flush);
-	//if (!data->no_flush) {
-	//	printf("[%.5i] Flush was pending: Refs: %i\n", data->tid, num_refs);
-	//}
-	//if (!data->enabled && num_refs != 0) {
-	//	printf("Detector is disabled: Refs: %i\n", num_refs);
-	//}
-	//dr_mutex_lock(th_mutex);
 	if (data->enabled) {
 		int i = 0;
 		if (data->grace_period > data->num_refs) {
@@ -121,11 +89,10 @@ static void memory_inst::analyze_access(void *drcontext) {
 		if(params.yield_on_evt)
 			dr_thread_yield();
 	}
-	//dr_mutex_unlock(th_mutex);
 }
 
 // Events
-static void memory_inst::event_thread_init(void *drcontext)
+void MemoryTracker::event_thread_init(void *drcontext)
 {
 	/* allocate thread private data */
 	per_thread_t* data = (per_thread_t *) dr_thread_alloc(drcontext, sizeof(per_thread_t));
@@ -171,14 +138,14 @@ static void memory_inst::event_thread_init(void *drcontext)
 	dr_mutex_unlock(th_mutex);
 }
 
-static void memory_inst::event_thread_exit(void *drcontext)
+void MemoryTracker::event_thread_exit(void *drcontext)
 {
 	// process remaining accesses
-	memory_inst::analyze_access(drcontext);
+	MemoryTracker::analyze_access(drcontext);
 
 	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	
-	refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
+	memory_tracker->refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
 
 	dr_mutex_lock(th_mutex);
 	flush_all_threads(data);
@@ -188,7 +155,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 	// deconstruct mutex book
 	data->mutex_book.~mutex_map_t();
 
-	dr_thread_free(drcontext, data->buf_base, MEM_BUF_SIZE);
+	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
 	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
@@ -198,7 +165,7 @@ static void memory_inst::event_thread_exit(void *drcontext)
 /* We transform string loops into regular loops so we can more easily
 * monitor every memory reference they make.
 */
-static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
+dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
 {
 	if (!drutil_expand_rep_string(drcontext, bb)) {
 		DR_ASSERT(false);
@@ -207,7 +174,7 @@ static dr_emit_flags_t memory_inst::event_bb_app2app(void *drcontext, void *tag,
 	return DR_EMIT_DEFAULT;
 }
 
-static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
+dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
 	bool instrument_bb = true;
 		if (params.frequent_only && !for_trace) {
@@ -219,24 +186,22 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 
 		// Lookup module from cache, hit is very likely as adiacent bb's 
 		// are mostly in the same module
-		auto cached = mc_cache_lookup(bb_addr);
+		auto cached = mc.lookup(bb_addr);
 		if (cached.first) {
 			instrument_bb = cached.second;
 		}
 		else {
 			module_tracker->lock_read();
-			// Create dummy shadow module
 			auto modc = module_tracker->get_module_containing(bb_addr);
 			if (modc.first) {
-				instrument_bb = modc.second->instrument;
 				// bb in known module
+				instrument_bb = modc.second->instrument;
 			}
 			else {
 				// Module not known
-				//dr_printf("< Unknown MOD at %p\n", bb_addr);
 				instrument_bb = false;
 			}
-			mc_cache_update(modc.second->base, modc.second->end, modc.second->instrument);
+			mc.update(modc.second->base, modc.second->end, modc.second->instrument);
 			module_tracker->unlock_read();
 		}
 	}
@@ -244,7 +209,7 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 	return DR_EMIT_DEFAULT;
 }
 
-static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
+dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
 	bool instrument_instr = (bool)user_data;
@@ -284,13 +249,13 @@ static dr_emit_flags_t memory_inst::event_app_instruction(void *drcontext, void 
 }
 
 /* clean_call dumps the memory reference info to the log file */
-void memory_inst::process_buffer(void)
+void MemoryTracker::process_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
-	memory_inst::analyze_access(drcontext);
+	analyze_access(drcontext);
 }
 
-void memory_inst::clear_buffer(void)
+void MemoryTracker::clear_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
 	per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -302,14 +267,14 @@ void memory_inst::clear_buffer(void)
 	data->no_flush      = true;
 }
 
-static void cc_flush_init(void) {
+void MemoryTracker::code_cache_init(void) {
 	void         *drcontext;
 	instrlist_t  *ilist;
 	instr_t      *where;
 	byte         *end;
 
 	drcontext = dr_get_current_drcontext();
-	memory_inst::cc_flush = (app_pc)dr_nonheap_alloc(memory_inst::page_size,
+	cc_flush = (app_pc)dr_nonheap_alloc(page_size,
 		DR_MEMPROT_READ |
 		DR_MEMPROT_WRITE |
 		DR_MEMPROT_EXEC);
@@ -319,30 +284,19 @@ static void cc_flush_init(void) {
 	where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
 	instrlist_meta_append(ilist, where);
 	/* clean call */
-	dr_insert_clean_call(drcontext, ilist, where, (void *)memory_inst::process_buffer, false, 0);
+	dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, false, 0);
 	/* Encodes the instructions into memory and then cleans up. */
-	end = instrlist_encode(drcontext, ilist, memory_inst::cc_flush, false);
-	DR_ASSERT((size_t)(end - memory_inst::cc_flush) < memory_inst::page_size);
+	end = instrlist_encode(drcontext, ilist, cc_flush, false);
+	DR_ASSERT((size_t)(end - cc_flush) < page_size);
 	instrlist_clear_and_destroy(drcontext, ilist);
 	/* set the memory as just +rx now */
-	dr_memory_protect(memory_inst::cc_flush, memory_inst::page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
-}
-
-static void memory_inst::code_cache_init(void)
-{
-	cc_flush_init();
-}
-
-
-static void memory_inst::code_cache_exit(void)
-{
-	dr_nonheap_free(cc_flush, page_size);
+	dr_memory_protect(cc_flush, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
 }
 
 /*
-*
+* Inserts a jump if a flush is pending
 */
-void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2,
+void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2,
 	instr_t *call_flush)
 {
 	instr_t *instr;
@@ -370,7 +324,7 @@ void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, re
 
 
 /* insert inline code to add a memory reference info entry into the buffer */
-static void memory_inst::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
+void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
 	/*
