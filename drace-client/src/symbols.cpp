@@ -10,7 +10,7 @@ std::string Symbols::get_bb_symbol(app_pc pc) {
 	
 	if (modc.first) {
 		// Reverse search from pc until symbol can be decoded
-		int offset = pc - modc.second->base;
+		auto offset = pc - modc.second->base;
 		for (; offset >= 0; --offset) {
 			drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
@@ -51,7 +51,6 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 }
 
 void Symbols::print_bb_symbols(void) {
-	int i, j;
 	drsym_error_t err;
 	dr_printf("\n===\nModules:\n");
 	for (const auto & m : module_tracker->modules) {
@@ -59,7 +58,7 @@ void Symbols::print_bb_symbols(void) {
 		syminfo.end_offs = 0;
 		dr_printf("\t- [%c] %s [%s]\n", (m.loaded ? '+' : '-'), dr_module_preferred_name(m.info), m.info->full_path);
 		int modsize = m.end - m.base;
-		for (j = 0; j < modsize; j++) {
+		for (int j = 0; j < modsize; j++) {
 			int old = (syminfo.start_offs <= j && syminfo.end_offs >= j);
 			if (!old)
 				err = drsym_lookup_address(m.info->full_path, j, &syminfo, DRSYM_DEMANGLE);

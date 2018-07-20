@@ -37,7 +37,7 @@ drace::Config config;
 
 std::atomic<uint> runtime_tid{ 0 };
 std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
-std::atomic<uint> last_th_start{ 0 };
+std::atomic<thread_id_t> last_th_start{ 0 };
 std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");

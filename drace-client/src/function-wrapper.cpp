@@ -55,7 +55,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::allocate(data->tid, pc, retval, (size_t)user_data, data->detector_data);
+			detector::allocate((detector::tid_t)data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -71,7 +71,7 @@ namespace funwrap {
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			//flush_all_threads(data);
-			detector::deallocate(data->tid, addr, data->detector_data);
+			detector::deallocate((detector::tid_t)data->tid, addr, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -103,7 +103,7 @@ namespace funwrap {
 			
 			end_excl_region(data);
 			// Enable recently started thread
-			unsigned last_th = last_th_start.load(std::memory_order_relaxed);
+			auto last_th = last_th_start.load(std::memory_order_relaxed);
 			auto & other_tls = TLS_buckets[last_th];
 			if(other_tls->event_cnt == 0)
 				TLS_buckets[last_th]->enabled = true;
@@ -117,7 +117,7 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			detector::fork(runtime_tid.load(), dr_get_thread_id(drcontext), data->detector_data);
+			detector::fork((detector::tid_t)runtime_tid.load(std::memory_order_relaxed), dr_get_thread_id(drcontext), data->detector_data);
 		}
 
 		static void begin_excl(void *wrapctx, void **user_data) {

@@ -8,8 +8,8 @@
  * Interface for a drace compatible race detector
  */
 namespace detector {
-	typedef unsigned int tid_t;
-	typedef void*        tls_t;
+	typedef unsigned long tid_t;
+	typedef void*         tls_t;
 
 	/* A single memory access */
 	struct AccessEntry {
@@ -61,12 +61,12 @@ namespace detector {
 	void happens_after(tid_t thread_id, void* identifier);
 
 	/* Log a read access */
-	void read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
+	void read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);
 	/* Log a write access */
-	void write(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
+	void write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);
 
 	/* Log a memory allocation */
-	void allocate(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls = nullptr);
+	void allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);
 	/* Log a memory deallocation*/
 	void deallocate(tid_t thread_id, void* addr, tls_t tls);
 

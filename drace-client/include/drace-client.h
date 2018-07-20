@@ -78,7 +78,7 @@ extern int      tls_idx;
 // TODO check if global is better
 static std::atomic<int> num_threads_active{ 0 };
 extern std::atomic<uint> runtime_tid;
-extern std::atomic<uint> last_th_start;
+extern std::atomic<thread_id_t> last_th_start;
 extern std::atomic<bool> th_start_pending;
 
 // Global Module Shadow Data

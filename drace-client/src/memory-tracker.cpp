@@ -66,7 +66,7 @@ void MemoryTracker::analyze_access(void *drcontext) {
 	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 	if (data->enabled) {
-		int i = 0;
+		uint64_t i = 0;
 		if (data->grace_period > data->num_refs) {
 			i = data->grace_period - data->num_refs;
 		}

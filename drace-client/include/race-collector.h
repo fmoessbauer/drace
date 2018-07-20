@@ -127,7 +127,7 @@ public:
 	}
 
 	unsigned long num_races() const {
-		return _races.size();
+		return static_cast<unsigned long>(_races.size());
 	}
 
 	template<typename Stream>

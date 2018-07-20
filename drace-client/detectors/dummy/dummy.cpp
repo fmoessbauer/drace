@@ -11,11 +11,11 @@ void detector::acquire(tid_t thread_id, void* mutex) { }
 
 void detector::release(tid_t thread_id, void* mutex) { }
 
-void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size) { }
+void detector::read(tid_t thread_id, void* pc, void* addr, size_t size) { }
 
-void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size) { }
+void detector::write(tid_t thread_id, void* pc, void* addr, size_t size) { }
 
-void detector::alloc(tid_t thread_id, void* addr, unsigned long size) { }
+void detector::alloc(tid_t thread_id, void* addr, size_t size) { }
 
 void detector::free(tid_t thread_id, void* addr) { }
 

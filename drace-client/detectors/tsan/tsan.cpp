@@ -200,7 +200,7 @@ void detector::happens_after(tid_t thread_id, void* identifier) {
 	__tsan_happens_after_use_user_tid(thread_id, identifier);
 }
 
-void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
+void detector::read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
@@ -212,7 +212,7 @@ void detector::read(tid_t thread_id, void* pc, void* addr, unsigned long size, t
 	}
 }
 
-void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
+void detector::write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
@@ -224,7 +224,7 @@ void detector::write(tid_t thread_id, void* pc, void* addr, unsigned long size, 
 	}
 }
 
-void detector::allocate(tid_t thread_id, void* pc, void* addr, unsigned long size, tls_t tls) {
+void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (tls == nullptr)

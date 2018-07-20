@@ -46,7 +46,7 @@ public:
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	/* total number of logged memory references */
-	std::atomic<int> refs{ 0 };
+	std::atomic<uint64_t> refs{ 0 };
 
 private:
 	size_t page_size;
