@@ -10,14 +10,7 @@
 #include <string>
 #include <algorithm>
 
-std::set<ModuleData, std::greater<ModuleData>> modules;
-
-void *module_tracker::mod_lock;
-
-std::vector<std::string> excluded_mods;
-std::vector<std::string> excluded_path_prefix;
-
-void print_modules() {
+void ModuleTracker::print_modules() {
 	for (const auto & current : modules) {
 		const char * mod_name = dr_module_preferred_name(current.info);
 		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
@@ -51,7 +44,7 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 	return !(d1 == d2);
 }
 
-void module_tracker::init() {
+ModuleTracker::ModuleTracker() {
 	mod_lock = dr_rwlock_create();
 
 	excluded_mods = config.get_multi("modules", "exclude_mods");
@@ -65,9 +58,7 @@ void module_tracker::init() {
 	}
 }
 
-void module_tracker::finalize() {
-	//print_modules();
-
+ModuleTracker::~ModuleTracker() {
 	if (!drmgr_unregister_module_load_event(event_module_load) ||
 		!drmgr_unregister_module_unload_event(event_module_unload)) {
 		DR_ASSERT(false);
@@ -76,13 +67,16 @@ void module_tracker::finalize() {
 	dr_rwlock_destroy(mod_lock);
 }
 
-bool module_tracker::register_events() {
+bool ModuleTracker::register_events() {
 	return (
 		drmgr_register_module_load_event(event_module_load) &&
 		drmgr_register_module_unload_event(event_module_unload));
 }
 
-static void module_tracker::event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
+/* Module load event implementation. As this function is passed
+*  as a callback to a c API, we cannot use std::bind
+*/
+void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	bool instrument = true;
 
 	thread_id_t tid = dr_get_thread_id(drcontext);
@@ -92,7 +86,8 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	// for easier comparison
 	ModuleData current(mod->start, mod->end);
 
-	dr_rwlock_read_lock(mod_lock);
+	module_tracker->lock_read();
+	auto & modules = module_tracker->modules;
 	auto modit = modules.find(current);
 	if (modit != modules.end()) {
 		if (!modit->loaded && (modit->info == mod)) {
@@ -100,7 +95,7 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 			modit->loaded = true;
 			instrument = modit->instrument;
 		}
-		dr_rwlock_read_unlock(mod_lock);
+		module_tracker->unlock_read();
 	}
 	else {
 		// Module not already registered
@@ -109,13 +104,14 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 		std::string mod_path(mod->full_path);
 		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
 
-		for (auto prefix : excluded_path_prefix) {
+		for (auto prefix : module_tracker->excluded_path_prefix) {
 			if (util::common_prefix(prefix, mod_path)) {
 				instrument = false;
 				break;
 			}
 		}
 		if (instrument) {
+			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
 				instrument = false;
 			}
@@ -127,12 +123,12 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 			current.instrument ? "YES" : "NO",
 			current.info->full_path);
 
-		dr_rwlock_read_unlock(mod_lock);
+		module_tracker->unlock_read();
 		// These locks cannot be upgraded, hence unlock and lock
 		// as nobody can change the container, dispatching is no issue
-		dr_rwlock_write_lock(mod_lock);
+		module_tracker->lock_write();
 		modules.insert(std::move(current));
-		dr_rwlock_write_unlock(mod_lock);
+		module_tracker->unlock_write();
 	}
 	// wrap functions
 	// TODO: get prefixes from config file
@@ -155,19 +151,17 @@ static void module_tracker::event_module_load(void *drcontext, const module_data
 	}
 }
 
-static void module_tracker::event_module_unload(void *drcontext, const module_data_t *mod) {
-	ModuleData current(mod->start, mod->end);
+/* Module unload event implementation. As this function is passed
+*  as a callback to a c API, we cannot use std::bind
+*/
+void event_module_unload(void *drcontext, const module_data_t *mod) {
+	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, full path: %s\n",
+		0, dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
-	dr_rwlock_read_lock(mod_lock);
-
-	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
-		0, dr_module_preferred_name(mod), current.base, current.end, current.instrument ? "YES" : "NO",
-		mod->full_path);
-
-	auto modit = modules.find(current);
-	if (modit != modules.end()) {
-		modit->loaded = false;
+	module_tracker->lock_read();
+	auto modc = module_tracker->get_module_containing(mod->start);
+	if(modc.first){
+		modc.second->loaded = false;
 	}
-
-	dr_rwlock_read_unlock(mod_lock);
+	module_tracker->unlock_read();
 }

@@ -11,6 +11,7 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <functional>
 
 #include "drace-client.h"
 #include "memory-instr.h"
@@ -41,6 +42,7 @@ std::atomic<bool> th_start_pending{ false };
 
 std::string config_file("drace.ini");
 
+std::unique_ptr<ModuleTracker> module_tracker;
 std::unique_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 
@@ -86,8 +88,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	DR_ASSERT(funwrap::init());
 
 	// Setup Module Tracking
-	module_tracker::init();
-	DR_ASSERT(module_tracker::register_events());
+	module_tracker = std::make_unique<ModuleTracker>();
+	DR_ASSERT(module_tracker->register_events());
 
 	// Setup Memory Tracing
 	memory_inst::init();
@@ -110,7 +112,7 @@ static void event_exit()
 	generate_summary();
 
 	// Cleanup all drace modules
-	module_tracker::finalize();
+	module_tracker.reset();
 	memory_inst::finalize();
 	symbol_table.reset();
 	funwrap::finalize();

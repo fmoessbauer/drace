@@ -81,8 +81,8 @@ extern std::atomic<uint> runtime_tid;
 extern std::atomic<uint> last_th_start;
 extern std::atomic<bool> th_start_pending;
 
-// Module
-extern std::set<ModuleData, std::greater<ModuleData>> modules;
+// Global Module Shadow Data
+extern std::unique_ptr<ModuleTracker> module_tracker;
 
 // TLS
 extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;

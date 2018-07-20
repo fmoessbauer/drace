@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 /**
  * Interface for a drace compatible race detector
@@ -26,10 +27,12 @@ namespace detector {
 	/* A Data-Race is a tuple of two Accesses*/
 	using Race = std::pair<AccessEntry, AccessEntry>;
 
+	using Callback = void(*)(const detector::Race*);
+
 	/* Takes command line arguments and a callback to process a data-race.
 	* Type of callback is (const detector::Race*) -> void
 	*/
-	bool init(int argc, const char **argv, void(*rc_clb)(const detector::Race*));
+	bool init(int argc, const char **argv, Callback rc_clb);
 
 	/* Finalizes the detector.
 	 * After a finalize, a later init must be possible

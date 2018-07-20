@@ -224,13 +224,11 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 			instrument_bb = cached.second;
 		}
 		else {
-			dr_rwlock_read_lock(module_tracker::mod_lock);
+			module_tracker->lock_read();
 			// Create dummy shadow module
-			ModuleData bb_mod(bb_addr, nullptr);
-
-			auto bb_mod_it = modules.lower_bound(bb_mod);
-			if ((bb_mod_it != modules.end()) && (bb_addr < bb_mod_it->end)) {
-				instrument_bb = bb_mod_it->instrument;
+			auto modc = module_tracker->get_module_containing(bb_addr);
+			if (modc.first) {
+				instrument_bb = modc.second->instrument;
 				// bb in known module
 			}
 			else {
@@ -238,8 +236,8 @@ static dr_emit_flags_t memory_inst::event_app_analysis(void *drcontext, void *ta
 				//dr_printf("< Unknown MOD at %p\n", bb_addr);
 				instrument_bb = false;
 			}
-			mc_cache_update(bb_mod_it->base, bb_mod_it->end, bb_mod_it->instrument);
-			dr_rwlock_read_unlock(module_tracker::mod_lock);
+			mc_cache_update(modc.second->base, modc.second->end, modc.second->instrument);
+			module_tracker->unlock_read();
 		}
 	}
 	*user_data = (void*)instrument_bb;

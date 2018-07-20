@@ -6,14 +6,13 @@
 #include <sstream>
 
 std::string Symbols::get_bb_symbol(app_pc pc) {
-	ModuleData current(pc, nullptr);
-	auto m_it = modules.lower_bound(current);
-
-	if (m_it != modules.end() && pc < m_it->end) {
+	auto modc = module_tracker->get_module_containing(pc);
+	
+	if (modc.first) {
 		// Reverse search from pc until symbol can be decoded
-		int offset = pc - m_it->base;
+		int offset = pc - modc.second->base;
 		for (; offset >= 0; --offset) {
-			drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
+			drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
 				return std::string(syminfo.name);
 			}
@@ -26,20 +25,17 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	SymbolLocation sloc;
 	sloc.pc = pc;
 
-	ModuleData current(pc, nullptr);
-	auto m_it = modules.lower_bound(current);
-	if (m_it != modules.end() && pc < m_it->end) {
+	auto modc = module_tracker->get_module_containing(pc);
+	if (modc.first) {
 
-		if (m_it != modules.end() && pc < m_it->end) {
-
-			sloc.mod_base = m_it->base;
-			sloc.mod_end = m_it->end;
-			sloc.mod_name = dr_module_preferred_name(m_it->info);
+			sloc.mod_base = modc.second->base;
+			sloc.mod_end = modc.second->end;
+			sloc.mod_name = dr_module_preferred_name(modc.second->info);
 
 			// Reverse search from pc until symbol can be decoded
-			int offset = pc - m_it->base;
+			int offset = pc - modc.second->base;
 			for (; offset >= 0; --offset) {
-				drsym_error_t err = drsym_lookup_address(m_it->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
+				drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
 					sloc.sym_name = syminfo.name;
 					if (err != DRSYM_ERROR_LINE_NOT_AVAILABLE) {
@@ -50,7 +46,6 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 					break;
 				}
 			}
-		}
 	}
 	return sloc;
 }
@@ -59,7 +54,7 @@ void Symbols::print_bb_symbols(void) {
 	int i, j;
 	drsym_error_t err;
 	dr_printf("\n===\nModules:\n");
-	for (const auto & m : modules) {
+	for (const auto & m : module_tracker->modules) {
 		syminfo.start_offs = 0;
 		syminfo.end_offs = 0;
 		dr_printf("\t- [%c] %s [%s]\n", (m.loaded ? '+' : '-'), dr_module_preferred_name(m.info), m.info->full_path);
