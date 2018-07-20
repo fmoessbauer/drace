@@ -16,10 +16,8 @@
 
 // Events
 static void event_exit(void);
-static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
 static void event_thread_init(void *drcontext);
 static void event_thread_exit(void *drcontext);
-static void module_load_event(void *drcontext, const module_data_t *mod, bool loaded);
 
 // Runtime Configuration
 static void parse_args(int argc, const char **argv);
@@ -38,15 +36,16 @@ struct params_t {
 };
 extern params_t params;
 
-using event_stack_t = std::stack<std::string>;
-using mutex_map_t = std::unordered_map<uint64_t, int>;
 /* Per Thread data (thread-private)
  * \Warning This struct is not default-constructed
  *          but just allocated as a memory block and casted
  *          Initialisation is done in the thread-creation event
  *          in memory_instr.
  */
-typedef struct {
+struct per_thread_t {
+	using event_stack_t = std::stack<std::string>;
+	using mutex_map_t = std::unordered_map<uint64_t, int>;
+
 	byte         *buf_ptr;
 	byte         *buf_base;
 	ptr_int_t     buf_end;
@@ -68,7 +67,7 @@ typedef struct {
 	// as the detector cannot allocate TLS,
 	// use this ptr for per-thread data in detector
 	void         *detector_data;
-} per_thread_t;
+};
 
 /* Global data structures */
 extern reg_id_t tls_seg;
@@ -99,6 +98,3 @@ extern std::unique_ptr<Symbols> symbol_table;
 
 // Global Configuration
 extern drace::Config config;
-
-/* DRace Client Functions */
-void flush_all_threads(per_thread_t * data);

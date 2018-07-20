@@ -108,7 +108,7 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	// clear statistics
 	data->mutex_ops = 0;
 	// use placement new
-	new (&(data->mutex_book)) mutex_map_t;
+	new (&(data->mutex_book)) per_thread_t::mutex_map_t;
 	data->detector_data = nullptr;
 
 	// If threads are started concurrently, assume first thread is correct one
@@ -153,6 +153,7 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	dr_mutex_unlock(th_mutex);
 
 	// deconstruct mutex book
+	using mutex_map_t = per_thread_t::mutex_map_t;
 	data->mutex_book.~mutex_map_t();
 
 	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
@@ -265,6 +266,44 @@ void MemoryTracker::clear_buffer(void)
 	data->num_refs     += num_refs;
 	data->buf_ptr       = data->buf_base;
 	data->no_flush      = true;
+}
+
+/* Request a flush of all non-disabled threads.
+*  This function is NOT-Threadsafe, hence use it only in a locked-state
+*  Invariant: TLS_buckets is not modified
+*/
+void MemoryTracker::flush_all_threads(per_thread_t * data) {
+	process_buffer();
+	// issue flushes
+	for (auto td : TLS_buckets) {
+		if (td.first != data->tid)
+		{
+			//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
+			// check if memory_order_relaxed is sufficient
+			td.second->no_flush.store(false, std::memory_order_relaxed);
+		}
+	}
+	// wait until all threads flushed
+	// this is a hacky half-barrier implementation
+	// and this might dead-lock if only one core is avaliable
+	for (auto td : TLS_buckets) {
+		// Flush thread given that:
+		// 1. thread is not the calling thread
+		// 2. thread is not disabled
+		if (td.first != data->tid && td.second->enabled)
+		{
+			unsigned long waits = 0;
+			// TODO: validate this!!!
+			// Only the flush-variable has to be set atomically
+			while (!data->no_flush.load(std::memory_order_relaxed)) {
+				if (++waits > 10) {
+					// avoid busy-waiting and blocking CPU if other thread did not flush
+					// within given period
+					dr_thread_yield();
+				}
+			}
+		}
+	}
 }
 
 void MemoryTracker::code_cache_init(void) {

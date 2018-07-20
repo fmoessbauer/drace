@@ -1,5 +1,7 @@
 #pragma once
 
+#include "module-tracker.h"
+
 #include <dr_api.h>
 #include <drmgr.h>
 #include <drreg.h>
@@ -9,27 +11,7 @@
 #include <atomic>
 #include <memory>
 
-class ModuleCache {
-private:
-	/* keep last module here for faster lookup */
-	uint64  mc_beg = 0;
-	uint64  mc_end = 0;
-	bool    mc_instr = false;
-
-public:
-	/* Lookup last module in cache, returns (found, instrument)*/
-	inline std::pair<bool, bool> lookup(app_pc pc) {
-		if ((uint64)pc >= mc_beg && (uint64)pc < mc_end) {
-			return std::make_pair(true, mc_instr);
-		}
-		return std::make_pair(false, false);
-	}
-	inline void update(app_pc beg, app_pc end, bool instrument) {
-		mc_beg = (uint64)beg;
-		mc_end = (uint64)end;
-		mc_instr = instrument;
-	}
-};
+extern struct per_thread_t;
 
 class MemoryTracker {
 public:
@@ -72,6 +54,7 @@ public:
 	static void process_buffer(void);
 	static void clear_buffer(void);
 	static void analyze_access(void *drcontext);
+	static void flush_all_threads(per_thread_t * data);
 
 	// Events
 	void event_thread_init(void *drcontext);

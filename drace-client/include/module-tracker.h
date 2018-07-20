@@ -62,6 +62,28 @@ public:
 	}
 };
 
+class ModuleCache {
+private:
+	/* keep last module here for faster lookup */
+	uint64  mc_beg = 0;
+	uint64  mc_end = 0;
+	bool    mc_instr = false;
+
+public:
+	/* Lookup last module in cache, returns (found, instrument)*/
+	inline std::pair<bool, bool> lookup(app_pc pc) {
+		if ((uint64)pc >= mc_beg && (uint64)pc < mc_end) {
+			return std::make_pair(true, mc_instr);
+		}
+		return std::make_pair(false, false);
+	}
+	inline void update(app_pc beg, app_pc end, bool instrument) {
+		mc_beg = (uint64)beg;
+		mc_end = (uint64)end;
+		mc_instr = instrument;
+	}
+};
+
 class ModuleTracker {
 	// RW mutex for access of modules container
 	void *mod_lock;
