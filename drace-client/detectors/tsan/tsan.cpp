@@ -33,6 +33,11 @@ public:
 	}
 };
 
+struct ThreadState {
+	void* tsan;
+	bool active{ true };
+};
+
 /**
  * To avoid false-positives track races only if they are on the heap
  * invert order to get range using lower_bound
@@ -44,7 +49,7 @@ static std::atomic<uint64_t>    races{ 0 };
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
 static std::vector<int*> stack_trace;
-static std::unordered_map<detector::tid_t, bool> thread_states;
+static std::unordered_map<detector::tid_t, ThreadState> thread_states;
 
 struct tsan_params_t {
 	bool heap_only{ false };
@@ -68,7 +73,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		else {
 			race_info_ac = raceInfo->access2;
 		}
-	
+
 		access.thread_id = race_info_ac->user_id;
 		access.write = race_info_ac->write;
 		access.accessed_memory = race_info_ac->accessed_memory;
@@ -80,12 +85,12 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		std::copy((uint64_t*)(race_info_ac->stack_trace),
 			((uint64_t*)(race_info_ac->stack_trace)) + ssize,
 			access.stack_trace.data());
-		
+
 		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
 		auto it = allocations.lower_bound(addr);
 		if (it != allocations.end() && (addr < (it->first + it->second))) {
 			access.onheap = true;
-			access.heap_block_begin = (void*) (it->first);
+			access.heap_block_begin = (void*)(it->first);
 			access.heap_block_size = it->second;
 		}
 
@@ -130,7 +135,7 @@ static void print_config() {
 }
 
 static inline bool on_heap(uint64_t addr) {
-	while(!alloc_readable.load(std::memory_order_consume)) {
+	while (!alloc_readable.load(std::memory_order_consume)) {
 		auto it = allocations.lower_bound(addr);
 		uint64_t beg = it->first;
 		size_t   sz = it->second;
@@ -150,6 +155,10 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
 }
 
 void detector::finalize() {
+	for (auto & t : thread_states) {
+		if (t.second.active)
+			detector::finish(t.first, t.second.tsan);
+	}
 	__tsan_fini();
 	std::cout << "> ----- SUMMARY -----" << std::endl;
 	std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
@@ -165,8 +174,8 @@ std::string detector::version() {
 }
 
 void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool trylock, tls_t thr) {
-	uint64_t addr_32 = lower_half((uint64_t) mutex);
-	
+	uint64_t addr_32 = lower_half((uint64_t)mutex);
+
 	if (thr == nullptr)
 		thr = __tsan_create_thread(thread_id);
 
@@ -183,7 +192,7 @@ void detector::release(tid_t thread_id, void* mutex, bool write, tls_t thr) {
 
 	if (thr == nullptr)
 		thr = __tsan_create_thread(thread_id);
-	
+
 	if (write) {
 		__tsan_MutexUnlock(thr, 0, (void*)addr_32, false);
 	}
@@ -206,7 +215,7 @@ void detector::read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tl
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
 		if (tls == nullptr)
 			tls = __tsan_create_thread(thread_id);
-		
+
 		stack_trace[0] = stack_trace[0] = (int*)pc;
 		__tsan_read(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
 	}
@@ -257,18 +266,18 @@ void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t tls) {
-	tls = (tls_t) __tsan_create_thread(child);
+	tls = (tls_t)__tsan_create_thread(child);
 
 	const uint64_t event_id = get_event_id(parent, child);
 	std::lock_guard<spinlock> lg(mxspin);
 
 	for (auto & t : thread_states) {
-		if (t.second) {
+		if (t.second.active) {
 			__tsan_happens_before_use_user_tid(t.first, (void*)(event_id));
 		}
 	}
 	__tsan_happens_after_use_user_tid(child, (void*)(event_id));
-	thread_states[child] = true;
+	thread_states[child] = ThreadState{ tls, true };
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {
@@ -276,9 +285,9 @@ void detector::join(tid_t parent, tid_t child, tls_t tls) {
 	__tsan_happens_before_use_user_tid(child, (void*)(event_id));
 
 	std::lock_guard<spinlock> lg(mxspin);
-	thread_states[child] = false;
+	thread_states[child].active = false;
 	for (auto & t : thread_states) {
-		if (t.second) {
+		if (t.second.active) {
 			__tsan_happens_after_use_user_tid(t.first, (void*)(event_id));
 		}
 	}
@@ -303,5 +312,5 @@ void detector::finish(tid_t thread_id, tls_t tls) {
 		__tsan_ThreadFinish(tls);
 	}
 	std::lock_guard<spinlock> lg(mxspin);
-	thread_states[thread_id] = false;
+	thread_states[thread_id].active = false;
 }

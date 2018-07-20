@@ -43,7 +43,7 @@ struct per_thread_t {
 	thread_id_t   tid;
 	uint64        grace_period{ GRACE_PERIOD_TH_START };
 	// use ptrsize type for lea
-	ptr_uint_t    enabled{ false };
+	ptr_uint_t    enabled{ true };
 	// inverse of flush pending, jmpecxz
 	std::atomic<ptr_uint_t> no_flush{ true };
 	// Stack used to track state of detector
