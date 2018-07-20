@@ -8,7 +8,7 @@
 
 #include <detector_if.h>
 
-#include "drace-client.h"
+#include "globals.h"
 #include "memory-tracker.h"
 #include "symbols.h"
 

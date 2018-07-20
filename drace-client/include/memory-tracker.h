@@ -11,8 +11,6 @@
 #include <atomic>
 #include <memory>
 
-extern struct per_thread_t;
-
 class MemoryTracker {
 public:
 	/* Single memory reference */

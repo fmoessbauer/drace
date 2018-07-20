@@ -1,4 +1,5 @@
 ﻿set(SOURCES
+	"src/globals"
 	"src/drace-client"
 	"src/function-wrapper"
 	"src/mutex"

@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <exception>
 
 #include <INIReader.h>
 

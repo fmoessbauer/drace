@@ -1,4 +1,4 @@
-#include "drace-client.h"
+#include "globals.h"
 #include "module-tracker.h"
 #include "function-wrapper.h"
 #include "util.h"
@@ -32,7 +32,7 @@ static bool operator==(const module_data_t & d1, const module_data_t & d2)
 		d1.checksum == d2.checksum  &&
 		d1.timestamp == d2.timestamp &&
 #endif
-		/* treat two modules w/ no name (there are some) as different */
+		/* treat two modules without name (there are some) as different */
 		dr_module_preferred_name(&d1) != NULL &&
 		dr_module_preferred_name(&d2) != NULL &&
 		strcmp(dr_module_preferred_name(&d1),

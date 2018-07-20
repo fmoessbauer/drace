@@ -13,44 +13,16 @@
 #include <fstream>
 #include <functional>
 
+#include "globals.h"
 #include "drace-client.h"
+#include "race-collector.h"
 #include "memory-tracker.h"
 #include "function-wrapper.h"
 #include "module-tracker.h"
 #include "stack-demangler.h"
 #include "symbols.h"
-#include "race-collector.h"
 
 #include <detector_if.h>
-/*
-* Thread local storage metadata has to be globally accessable
-*/
-reg_id_t tls_seg;
-uint     tls_offs;
-int      tls_idx;
-
-void *th_mutex;
-void *th_start_mutex;
-
-// Global Config Object
-drace::Config config;
-
-std::atomic<uint> runtime_tid{ 0 };
-std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
-std::atomic<thread_id_t> last_th_start{ 0 };
-std::atomic<bool> th_start_pending{ false };
-
-std::string config_file("drace.ini");
-
-std::unique_ptr<MemoryTracker> memory_tracker;
-std::unique_ptr<ModuleTracker> module_tracker;
-std::unique_ptr<Symbols> symbol_table;
-std::unique_ptr<RaceCollector> race_collector;
-
-/* Runtime parameters */
-params_t params;
-
-void generate_summary();
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
@@ -63,7 +35,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	parse_args(argc, argv);
 	print_config();
 
-	bool success = config.loadfile(config_file);
+	bool success = config.loadfile(params.config_file);
 	if (!success) {
 		dr_printf("Error loading config file\n");
 		dr_flush_file(stdout);
@@ -152,7 +124,6 @@ static void event_thread_exit(void *drcontext)
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
-	// TODO: Try to get parent threadid
 	detector::join(runtime_tid.load(std::memory_order_relaxed), tid, nullptr);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
@@ -165,7 +136,7 @@ static void parse_args(int argc, const char ** argv) {
 			params.sampling_rate = std::stoi(argv[++processed]);
 		}
 		else if (strncmp(argv[processed], "-c", 16) == 0) {
-			config_file = argv[++processed];
+			params.config_file = argv[++processed];
 		}
 		// TODO: Delay to speedup startup
 		else if (strncmp(argv[processed], "--freq-only", 16) == 0) {
@@ -207,12 +178,12 @@ static void print_config() {
 		params.yield_on_evt   ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
-		config_file.c_str(),
+		params.config_file.c_str(),
 		params.out_file != "" ? params.out_file : "OFF",
 		params.xml_file != "" ? params.xml_file : "OFF");
 }
 
-void generate_summary() {
+static void generate_summary() {
 	const char * app_name = dr_get_application_name();
 	if (params.out_file != "") {
 		std::ofstream races_hr_file(params.out_file, std::ofstream::out);

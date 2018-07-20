@@ -1,4 +1,4 @@
-#include "drace-client.h"
+#include "globals.h"
 #include "symbols.h"
 #include "module-tracker.h"
 

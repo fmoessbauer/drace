@@ -6,9 +6,10 @@
 * All mutexe-types can be try-locked
 */
 
-#include "drace-client.h"
+#include "globals.h"
 #include "function-wrapper.h"
 #include "module-tracker.h"
+#include "memory-tracker.h"
 #include <detector_if.h>
 #include <dr_api.h>
 #include <drwrap.h>

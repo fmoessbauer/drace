@@ -1,4 +1,4 @@
-#include "drace-client.h"
+#include "globals.h"
 #include "stack-demangler.h"
 #include "symbols.h"
 

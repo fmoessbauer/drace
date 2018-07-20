@@ -1,4 +1,4 @@
-#include "drace-client.h"
+#include "globals.h"
 #include "function-wrapper.h"
 #include "memory-tracker.h"
 #include "config.h"

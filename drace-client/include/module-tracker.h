@@ -1,5 +1,7 @@
 #pragma once
 
+#include "globals.h"
+
 #include <dr_api.h>
 
 class ModuleData {
