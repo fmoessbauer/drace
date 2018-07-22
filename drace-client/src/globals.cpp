@@ -12,7 +12,7 @@ uint     tls_offs;
 int      tls_idx;
 
 void *th_mutex;
-void *th_start_mutex;
+void *tls_rw_mutex;
 
 // Global Config Object
 drace::Config config;

@@ -91,9 +91,7 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			
 			beg_excl_region(data);
-			// do not start threads concurrently as otherwise parent -> child relation
-			// cannot be calculated
-			dr_mutex_lock(th_start_mutex);
+
 			th_start_pending.store(true);
 			dr_printf("<< [%.5i] Setup New Thread\n", data->tid);
 		}
@@ -104,10 +102,13 @@ namespace funwrap {
 			end_excl_region(data);
 			// Enable recently started thread
 			auto last_th = last_th_start.load(std::memory_order_relaxed);
+			// TLS is already updated, hence read lock is sufficient
+			dr_rwlock_read_lock(tls_rw_mutex);
+			DR_ASSERT(TLS_buckets.count(last_th) > 0);
 			auto & other_tls = TLS_buckets[last_th];
 			if(other_tls->event_cnt == 0)
 				TLS_buckets[last_th]->enabled = true;
-			dr_mutex_unlock(th_start_mutex);
+			dr_rwlock_read_unlock(tls_rw_mutex);
 			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
 		}
 

@@ -51,10 +51,10 @@ static inline void prepare_and_aquire(
 	// acquire / release must not occur concurrently
 	auto & cnt = data->mutex_book[(uint64_t)mutex];
 
-	dr_mutex_lock(th_mutex);
+	//dr_mutex_lock(th_mutex);
 	MemoryTracker::flush_all_threads(data);
 	detector::acquire(data->tid, mutex, ++cnt, write, trylock, data->detector_data);
-	dr_mutex_unlock(th_mutex);
+	//dr_mutex_unlock(th_mutex);
 
 	data->mutex_ops++;
 }
@@ -89,10 +89,10 @@ static inline void prepare_and_release(
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
-	dr_mutex_lock(th_mutex);
+	//dr_mutex_lock(th_mutex);
 	MemoryTracker::flush_all_threads(data);
 	detector::release(data->tid, mutex, write, data->detector_data);
-	dr_mutex_unlock(th_mutex);
+	//dr_mutex_unlock(th_mutex);
 }
 
 namespace mutex_clb {

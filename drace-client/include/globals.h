@@ -75,11 +75,10 @@ extern std::unique_ptr<ModuleTracker> module_tracker;
 
 // TLS
 extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+extern void* tls_rw_mutex;
 
 // Global mutex to synchronize threads
 extern void* th_mutex;
-// do not start C++11 threads concurrently
-extern void* th_start_mutex;
 
 class MemoryTracker;
 extern std::unique_ptr<MemoryTracker> memory_tracker;

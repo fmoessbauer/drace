@@ -60,7 +60,9 @@ MemoryTracker::~MemoryTracker() {
 void MemoryTracker::analyze_access(void *drcontext) {
 	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
-	uint64_t num_refs   = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+
+	dr_printf("[%i] Process buffer, noflush: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed));
 
 	if (data->enabled) {
 		uint64_t i = 0;
@@ -81,10 +83,12 @@ void MemoryTracker::analyze_access(void *drcontext) {
 	}
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
-	if (!data->no_flush) {
-		data->no_flush = true;
-		if(params.yield_on_evt)
+	uint64_t expect = 0;
+	if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
+		if (params.yield_on_evt) {
+			dr_printf("[%.5i] YIELD\n", data->tid);
 			dr_thread_yield();
+		}
 	}
 }
 
@@ -98,11 +102,11 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	// Initialize struct at given location (placement new)
 	new (data) per_thread_t;
 
-	data->buf_base = (byte*) dr_thread_alloc(drcontext, MEM_BUF_SIZE);
-	data->buf_ptr  = data->buf_base;
+	data->buf_base = (byte*)dr_thread_alloc(drcontext, MEM_BUF_SIZE);
+	data->buf_ptr = data->buf_base;
 	/* set buf_end to be negative of address of buffer end for the lea later */
-	data->buf_end  = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
-	data->tid      = dr_get_thread_id(drcontext);
+	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
+	data->tid = dr_get_thread_id(drcontext);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
@@ -117,31 +121,34 @@ void MemoryTracker::event_thread_init(void *drcontext)
 		data->event_cnt++;
 	}
 
-	dr_mutex_lock(th_mutex);
+	dr_rwlock_write_lock(tls_rw_mutex);
 	TLS_buckets.emplace(data->tid, data);
+	dr_rwlock_write_unlock(tls_rw_mutex);
+
 	flush_all_threads(data);
-	dr_mutex_unlock(th_mutex);
 }
 
 void MemoryTracker::event_thread_exit(void *drcontext)
 {
-	// process remaining accesses
-	MemoryTracker::analyze_access(drcontext);
+	per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-	per_thread_t* data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
-	
+	//dr_mutex_lock(th_mutex);
+	flush_all_threads(data);
+	//dr_mutex_unlock(th_mutex);
+
+	detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, nullptr);
+
 	memory_tracker->refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
 
-	dr_mutex_lock(th_mutex);
-	flush_all_threads(data);
+	dr_rwlock_write_lock(tls_rw_mutex);
 	TLS_buckets.erase(data->tid);
-	dr_mutex_unlock(th_mutex);
-
-	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
-	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+	dr_rwlock_write_unlock(tls_rw_mutex);
 
 	// deconstruct struct
 	data->~per_thread_t();
+
+	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
+	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
 	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
 }
@@ -162,7 +169,7 @@ dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, inst
 dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
 	bool instrument_bb = true;
-		if (params.frequent_only && !for_trace) {
+	if (params.frequent_only && !for_trace) {
 		// only instrument traces, much faster startup
 		instrument_bb = false;
 	}
@@ -245,46 +252,58 @@ void MemoryTracker::clear_buffer(void)
 	void *drcontext = dr_get_current_drcontext();
 	per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 	mem_ref_t *mem_ref = (mem_ref_t *)data->buf_base;
-	uint64_t num_refs  = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	data->num_refs     += num_refs;
-	data->buf_ptr       = data->buf_base;
-	data->no_flush      = true;
+	data->num_refs += num_refs;
+	data->buf_ptr = data->buf_base;
+	data->no_flush = true;
 }
 
 /* Request a flush of all non-disabled threads.
-*  This function is NOT-Threadsafe, hence use it only in a locked-state
-*  Invariant: TLS_buckets is not modified
+*  \Warning: This function is read-locks the TLS mutex
 */
 void MemoryTracker::flush_all_threads(per_thread_t * data) {
 	process_buffer();
+
+	// Preserve state by copying tls pointers to local array
+	dr_rwlock_read_lock(tls_rw_mutex);
+	std::vector<std::pair<thread_id_t, per_thread_t*>> th_towait;
+	th_towait.reserve(TLS_buckets.size());
+
 	// issue flushes
 	for (auto td : TLS_buckets) {
-		if (td.first != data->tid)
+		if (td.first != data->tid && td.second->enabled)
 		{
-			//printf("[%.5i] Flush thread [%i]\n", data->tid, td.first);
-			// check if memory_order_relaxed is sufficient
-			td.second->no_flush.store(false, std::memory_order_relaxed);
+			uint64_t refs = td.second->buf_ptr - td.second->buf_base;
+			if (refs > 0) {
+				printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
+					data->tid, td.first, refs);
+				// TODO: check if memory_order_relaxed is sufficient
+				td.second->no_flush.store(false, std::memory_order_relaxed);
+				th_towait.push_back(td);
+			}
 		}
 	}
+	dr_rwlock_read_unlock(tls_rw_mutex);
 	// wait until all threads flushed
 	// this is a hacky half-barrier implementation
 	// and this might dead-lock if only one core is avaliable
-	for (auto td : TLS_buckets) {
+	for (auto td : th_towait) {
 		// Flush thread given that:
 		// 1. thread is not the calling thread
 		// 2. thread is not disabled
-		if (td.first != data->tid && td.second->enabled)
-		{
-			unsigned long waits = 0;
-			// TODO: validate this!!!
-			// Only the flush-variable has to be set atomically
-			while (!data->no_flush.load(std::memory_order_relaxed)) {
-				if (++waits > 10) {
-					// avoid busy-waiting and blocking CPU if other thread did not flush
-					// within given period
-					dr_thread_yield();
+		unsigned long waits = 0;
+		// TODO: validate this!!!
+		// Only the flush-variable has to be set atomically
+		while (!td.second->no_flush.load(std::memory_order_relaxed)) {
+			if (++waits > 10) {
+				// avoid busy-waiting and blocking CPU if other thread did not flush
+				// within given period
+				if (waits > 1000) {
+					dr_printf("<< Thread %i took to long to flush, skipped\n", td.first);
+					break;
 				}
+				dr_thread_yield();
 			}
 		}
 	}
@@ -339,7 +358,7 @@ void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, ins
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, no_flush));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-	
+
 	opnd1 = opnd_create_instr(call_flush);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
@@ -361,7 +380,7 @@ void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t 
 	per_thread_t *data;
 	app_pc pc;
 
-	data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 	/* Steal two scratch registers.
 	* reg2 must be ECX or RCX for jecxz.
@@ -374,12 +393,12 @@ void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t 
 	}
 
 	/* Create ASM lables */
-	instr_t *restore      = INSTR_CREATE_label(drcontext);
-	instr_t *sh_circ      = INSTR_CREATE_label(drcontext);
-	instr_t *call         = INSTR_CREATE_label(drcontext);
-	instr_t *call_flush   = INSTR_CREATE_label(drcontext);
+	instr_t *restore = INSTR_CREATE_label(drcontext);
+	instr_t *sh_circ = INSTR_CREATE_label(drcontext);
+	instr_t *call = INSTR_CREATE_label(drcontext);
+	instr_t *call_flush = INSTR_CREATE_label(drcontext);
 	instr_t *call_noflush = INSTR_CREATE_label(drcontext);
-	instr_t *after_flush  = INSTR_CREATE_label(drcontext);
+	instr_t *after_flush = INSTR_CREATE_label(drcontext);
 
 	/* use drutil to get mem address */
 	drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
@@ -404,18 +423,18 @@ void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t 
 	   reg2: wiped / unknown state
 	*/
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
-	
+
 	/* Jump if tracing is disabled */
 	/* save reg2 TLS ptr */
 	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
-	
+
 	/* load enalbed flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, enabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
-	
+
 	/* Jump if (E|R)CX is 0 */
 	opnd1 = opnd_create_instr(sh_circ);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
@@ -530,7 +549,7 @@ void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t 
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* ==== .call_noflush ==== */
-	
+
 	/* Prepare return address of code cache*/
 	instrlist_meta_preinsert(ilist, where, call_noflush);
 	/* mov restore DR_REG_XCX */

@@ -44,8 +44,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	TLS_buckets.reserve(128);
 
-	th_mutex       = dr_mutex_create();
-	th_start_mutex = dr_mutex_create();
+	th_mutex     = dr_mutex_create();
+	tls_rw_mutex = dr_rwlock_create();
 
 	// Init DRMGR, Reserve registers
 	if (!drmgr_init() ||
@@ -96,7 +96,7 @@ static void event_exit()
 	detector::finalize();
 
 	dr_mutex_destroy(th_mutex);
-	dr_mutex_destroy(th_start_mutex);
+	dr_rwlock_destroy(tls_rw_mutex);
 
 	dr_printf("< DR Exit\n");
 }
@@ -121,8 +121,6 @@ static void event_thread_exit(void *drcontext)
 {
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	num_threads_active.fetch_sub(1, std::memory_order_relaxed);
-
-	detector::join(runtime_tid.load(std::memory_order_relaxed), tid, nullptr);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }
