@@ -104,10 +104,11 @@ namespace funwrap {
 			auto last_th = last_th_start.load(std::memory_order_relaxed);
 			// TLS is already updated, hence read lock is sufficient
 			dr_rwlock_read_lock(tls_rw_mutex);
-			DR_ASSERT(TLS_buckets.count(last_th) > 0);
-			auto & other_tls = TLS_buckets[last_th];
-			if(other_tls->event_cnt == 0)
-				TLS_buckets[last_th]->enabled = true;
+			if (TLS_buckets.count(last_th) == 1) {
+				auto & other_tls = TLS_buckets[last_th];
+				if (other_tls->event_cnt == 0)
+					TLS_buckets[last_th]->enabled = true;
+			}
 			dr_rwlock_read_unlock(tls_rw_mutex);
 			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
 		}
@@ -118,7 +119,17 @@ namespace funwrap {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-			detector::fork((detector::tid_t)runtime_tid.load(std::memory_order_relaxed), dr_get_thread_id(drcontext), data->detector_data);
+			dr_rwlock_read_lock(tls_rw_mutex);
+			auto other_th = last_th_start.load(std::memory_order_acquire);
+			// There are some spurious failures where the thread init event
+			// is not called but the system call has already returned
+			// Hence, skip the fork here and rely on fallback-fork in
+			// analyze_access
+			if (TLS_buckets.count(other_th) == 1) {
+				auto other_tls = TLS_buckets[other_th];
+				detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
+			}
+			dr_rwlock_read_unlock(tls_rw_mutex);
 		}
 
 		static void begin_excl(void *wrapctx, void **user_data) {

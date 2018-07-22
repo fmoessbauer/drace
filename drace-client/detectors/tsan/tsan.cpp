@@ -213,9 +213,6 @@ void detector::read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tl
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		if (tls == nullptr)
-			tls = __tsan_create_thread(thread_id);
-
 		stack_trace[0] = stack_trace[0] = (int*)pc;
 		__tsan_read(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
 	}
@@ -225,9 +222,6 @@ void detector::write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t t
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		if (tls == nullptr)
-			tls = __tsan_create_thread(thread_id);
-
 		stack_trace[0] = (int*)pc;
 		__tsan_write(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
 	}
@@ -265,8 +259,8 @@ void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 	mxspin.unlock();
 }
 
-void detector::fork(tid_t parent, tid_t child, tls_t tls) {
-	tls = (tls_t)__tsan_create_thread(child);
+void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
+	*tls = __tsan_create_thread(child);
 
 	const uint64_t event_id = get_event_id(parent, child);
 	std::lock_guard<spinlock> lg(mxspin);
@@ -277,7 +271,7 @@ void detector::fork(tid_t parent, tid_t child, tls_t tls) {
 		}
 	}
 	__tsan_happens_after_use_user_tid(child, (void*)(event_id));
-	thread_states[child] = ThreadState{ tls, true };
+	thread_states[child] = ThreadState{ *tls, true };
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {

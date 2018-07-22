@@ -71,7 +71,7 @@ namespace detector {
 	void deallocate(tid_t thread_id, void* addr, tls_t tls);
 
 	/* Log a thread-creation event */
-	void fork(tid_t parent, tid_t child, tls_t tls = nullptr);
+	void fork(tid_t parent, tid_t child, tls_t * tls = nullptr);
 	/* Log a thread join event */
 	void join(tid_t parent, tid_t child, tls_t tls = nullptr);
 	/* Log a thread detach event */

@@ -57,14 +57,19 @@ MemoryTracker::~MemoryTracker() {
 		DR_ASSERT(false);
 }
 
-void MemoryTracker::analyze_access(void *drcontext) {
-	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+void MemoryTracker::analyze_access(per_thread_t * data) {
 	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	dr_printf("[%i] Process buffer, noflush: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed));
-
+	if (data->detector_data == nullptr) {
+		// We missed a fork
+		dr_printf("[%i] Missed a fork, do it now\n", data->tid);
+		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
+	}
 	if (data->enabled) {
+		dr_mutex_lock(th_mutex);
+		//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
+		DR_ASSERT(data->detector_data != nullptr);
 		uint64_t i = 0;
 		if (data->grace_period > data->num_refs) {
 			i = data->grace_period - data->num_refs;
@@ -80,9 +85,11 @@ void MemoryTracker::analyze_access(void *drcontext) {
 			}
 			++mem_ref;
 		}
+		dr_mutex_unlock(th_mutex);
 	}
 	data->num_refs += num_refs;
 	data->buf_ptr = data->buf_base;
+
 	uint64_t expect = 0;
 	if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
 		if (params.yield_on_evt) {
@@ -123,32 +130,39 @@ void MemoryTracker::event_thread_init(void *drcontext)
 
 	dr_rwlock_write_lock(tls_rw_mutex);
 	TLS_buckets.emplace(data->tid, data);
+	data->th_towait.reserve(TLS_buckets.bucket_count());
 	dr_rwlock_write_unlock(tls_rw_mutex);
 
-	flush_all_threads(data);
+	// TODO: investigate why this fails
+	flush_all_threads(data, false, false);
 }
 
 void MemoryTracker::event_thread_exit(void *drcontext)
 {
 	per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-	//dr_mutex_lock(th_mutex);
-	flush_all_threads(data);
-	//dr_mutex_unlock(th_mutex);
+	flush_all_threads(data, true, false);
 
 	detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, nullptr);
+	data->detector_data = nullptr;
 
 	memory_tracker->refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
 
 	dr_rwlock_write_lock(tls_rw_mutex);
+	// As TLS_buckets stores a pointer to this tls,
+	// we cannot release the lock until the deallocation
+	// is finished. Otherwise a second thread might
+	// read a local copy of the tls while holding
+	// a read lock on TLS_buckets during deallocation
+	DR_ASSERT(TLS_buckets.count(data->tid) == 1);
 	TLS_buckets.erase(data->tid);
-	dr_rwlock_write_unlock(tls_rw_mutex);
 
 	// deconstruct struct
 	data->~per_thread_t();
 
 	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+	dr_rwlock_write_unlock(tls_rw_mutex);
 
 	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
 }
@@ -244,7 +258,9 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 void MemoryTracker::process_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
-	analyze_access(drcontext);
+	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+	analyze_access(data);
 }
 
 void MemoryTracker::clear_buffer(void)
@@ -262,33 +278,34 @@ void MemoryTracker::clear_buffer(void)
 /* Request a flush of all non-disabled threads.
 *  \Warning: This function is read-locks the TLS mutex
 */
-void MemoryTracker::flush_all_threads(per_thread_t * data) {
-	process_buffer();
+void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush_external) {
+	if (self) {
+		process_buffer();
+	}
+
+	data->th_towait.clear();
 
 	// Preserve state by copying tls pointers to local array
 	dr_rwlock_read_lock(tls_rw_mutex);
-	std::vector<std::pair<thread_id_t, per_thread_t*>> th_towait;
-	th_towait.reserve(TLS_buckets.size());
+	// TODO: Avoid allocation here, use memory pool
 
 	// issue flushes
 	for (auto td : TLS_buckets) {
-		if (td.first != data->tid && td.second->enabled)
+		if (td.first != data->tid && td.second->enabled && td.second->no_flush.load(std::memory_order_relaxed))
 		{
-			uint64_t refs = td.second->buf_ptr - td.second->buf_base;
+			uint64_t refs = (td.second->buf_ptr - td.second->buf_base) / sizeof(mem_ref_t);
 			if (refs > 0) {
-				printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
-					data->tid, td.first, refs);
+				//printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
+				//	data->tid, td.first, refs);
 				// TODO: check if memory_order_relaxed is sufficient
 				td.second->no_flush.store(false, std::memory_order_relaxed);
-				th_towait.push_back(td);
+				data->th_towait.push_back(td);
 			}
 		}
 	}
-	dr_rwlock_read_unlock(tls_rw_mutex);
 	// wait until all threads flushed
 	// this is a hacky half-barrier implementation
-	// and this might dead-lock if only one core is avaliable
-	for (auto td : th_towait) {
+	for (auto td : data->th_towait) {
 		// Flush thread given that:
 		// 1. thread is not the calling thread
 		// 2. thread is not disabled
@@ -296,17 +313,24 @@ void MemoryTracker::flush_all_threads(per_thread_t * data) {
 		// TODO: validate this!!!
 		// Only the flush-variable has to be set atomically
 		while (!td.second->no_flush.load(std::memory_order_relaxed)) {
-			if (++waits > 10) {
+			if (++waits > 100) {
 				// avoid busy-waiting and blocking CPU if other thread did not flush
 				// within given period
-				if (waits > 1000) {
-					dr_printf("<< Thread %i took to long to flush, skipped\n", td.first);
-					break;
-				}
-				dr_thread_yield();
+				// Do not flush non-forked threads externally
+				//if (flush_external) {
+					bool expect = false;
+					if (td.second->external_flush.compare_exchange_weak(expect, true, std::memory_order_release)) {
+						//	//dr_printf("<< Thread %i took to long to flush, flush externaly\n", td.first);
+						analyze_access(td.second);
+						td.second->external_flush.store(false, std::memory_order_release);
+					}
+				//}
+				// TODO: Here we might loose some refs
+				break;
 			}
 		}
 	}
+	dr_rwlock_read_unlock(tls_rw_mutex);
 }
 
 void MemoryTracker::code_cache_init(void) {

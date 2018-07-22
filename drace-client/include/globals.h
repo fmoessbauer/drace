@@ -34,6 +34,7 @@ extern params_t params;
 */
 struct per_thread_t {
 	using mutex_map_t = std::unordered_map<uint64_t, int>;
+	using tls_map_t = std::vector<std::pair<thread_id_t, per_thread_t*>>;
 
 	byte         *buf_ptr;
 	byte         *buf_base;
@@ -46,12 +47,16 @@ struct per_thread_t {
 	ptr_uint_t    enabled{ true };
 	// inverse of flush pending, jmpecxz
 	std::atomic<ptr_uint_t> no_flush{ true };
+	// external flush is currently executed;
+	std::atomic<bool> external_flush{ false };
 	// Stack used to track state of detector
 	uint64        event_cnt{ 0 };
 	// book-keeping of active mutexes
 	mutex_map_t   mutex_book;
 	// Mutex statistics
 	uint64        mutex_ops{ 0 };
+	// Used for event syncronisation procedure
+	tls_map_t    th_towait;
 
 	// as the detector cannot allocate TLS,
 	// use this ptr for per-thread data in detector
