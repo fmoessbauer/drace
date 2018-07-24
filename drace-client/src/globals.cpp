@@ -3,6 +3,7 @@
 #include "module-tracker.h"
 #include "symbols.h"
 #include "race-collector.h"
+#include "statistics.h"
 
 /*
 * Thread local storage metadata has to be globally accessable
@@ -29,6 +30,7 @@ std::unique_ptr<MemoryTracker> memory_tracker;
 std::unique_ptr<ModuleTracker> module_tracker;
 std::unique_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
+std::unique_ptr<Statistics> stats;
 
 /* Runtime parameters */
 params_t params;

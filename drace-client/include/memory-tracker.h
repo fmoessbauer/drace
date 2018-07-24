@@ -25,9 +25,6 @@ public:
 	static constexpr int MAX_NUM_MEM_REFS = 4096;
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
-	/* total number of logged memory references */
-	std::atomic<uint64_t> refs{ 0 };
-
 	std::atomic<int> flush_active{ false };
 
 private:

@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "module-tracker.h"
 #include "function-wrapper.h"
+#include "statistics.h"
 #include "util.h"
 
 #include <drmgr.h>
@@ -78,7 +79,10 @@ ModuleTracker::~ModuleTracker() {
 void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	bool instrument = true;
 
-	thread_id_t tid = dr_get_thread_id(drcontext);
+	auto start = std::chrono::system_clock::now();
+
+	per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+	thread_id_t tid = data->tid;
 	std::string mod_name(dr_module_preferred_name(mod));
 
 	// create shadow struct of current module
@@ -149,6 +153,9 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		funwrap::wrap_thread_start(mod);
 		funwrap::wrap_mutexes(mod, false);
 	}
+
+	data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
+	data->stats->module_loads++;
 }
 
 /* Module unload event implementation. As this function is passed

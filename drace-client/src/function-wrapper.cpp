@@ -70,8 +70,8 @@ namespace funwrap {
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
-			detector::deallocate(data->tid, addr, data->detector_data);
 			MemoryTracker::flush_all_threads(data);
+			detector::deallocate(data->tid, addr, data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs

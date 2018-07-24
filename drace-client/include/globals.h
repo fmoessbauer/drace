@@ -26,6 +26,8 @@ struct params_t {
 };
 extern params_t params;
 
+extern class Statistics;
+
 /* Per Thread data (thread-private)
 * \Warning This struct is not default-constructed
 *          but just allocated as a memory block and casted
@@ -53,11 +55,10 @@ struct per_thread_t {
 	uint64        event_cnt{ 0 };
 	// book-keeping of active mutexes
 	mutex_map_t   mutex_book;
-	// Mutex statistics
-	uint64        mutex_ops{ 0 };
 	// Used for event syncronisation procedure
 	tls_map_t    th_towait;
-
+	// Statistics
+	std::unique_ptr<Statistics>   stats;
 	// as the detector cannot allocate TLS,
 	// use this ptr for per-thread data in detector
 	void         *detector_data{nullptr};
@@ -97,3 +98,6 @@ extern std::unique_ptr<RaceCollector> race_collector;
 
 // Global Configuration
 extern drace::Config config;
+
+// Global Statistics Collector
+extern std::unique_ptr<Statistics> stats;

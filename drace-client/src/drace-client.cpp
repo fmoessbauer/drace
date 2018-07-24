@@ -21,6 +21,7 @@
 #include "module-tracker.h"
 #include "stack-demangler.h"
 #include "symbols.h"
+#include "statistics.h"
 
 #include <detector_if.h>
 
@@ -57,6 +58,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	drmgr_register_thread_init_event(event_thread_init);
 	drmgr_register_thread_exit_event(event_thread_exit);
 
+	// Setup Statistics Collector
+	stats = std::make_unique<Statistics>();
+
 	// Setup Function Wrapper
 	DR_ASSERT(funwrap::init());
 
@@ -81,11 +85,14 @@ static void event_exit()
 
 	// Generate summary while information is still present
 	generate_summary();
+	stats->print_summary(std::cout);
+
 
 	// Cleanup all drace modules
 	module_tracker.reset();
 	memory_tracker.reset();
 	symbol_table.reset();
+	stats.reset();
 	funwrap::finalize();
 
 	// Cleanup DR extensions

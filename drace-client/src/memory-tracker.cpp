@@ -11,6 +11,7 @@
 #include "globals.h"
 #include "memory-tracker.h"
 #include "symbols.h"
+#include "statistics.h"
 
 MemoryTracker::MemoryTracker() {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
@@ -136,6 +137,8 @@ void MemoryTracker::event_thread_init(void *drcontext)
 		data->event_cnt++;
 	}
 
+	data->stats = std::make_unique<Statistics>(data->tid);
+
 	dr_rwlock_write_lock(tls_rw_mutex);
 	TLS_buckets.emplace(data->tid, data);
 	data->th_towait.reserve(TLS_buckets.bucket_count());
@@ -158,7 +161,9 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 
 	detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
 
-	memory_tracker->refs.fetch_add(data->num_refs, std::memory_order_relaxed); // atomic access
+	dr_mutex_lock(th_mutex);
+	*stats |= *(data->stats);
+	dr_mutex_unlock(th_mutex);
 
 	dr_rwlock_write_lock(tls_rw_mutex);
 	// As TLS_buckets stores a pointer to this tls,
@@ -169,7 +174,7 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	DR_ASSERT(TLS_buckets.count(data->tid) == 1);
 	TLS_buckets.erase(data->tid);
 
-	dr_printf("< [%.5i] local mem refs: %i, mutex ops: %i\n", data->tid, data->num_refs, data->mutex_ops);
+	data->stats->print_summary(std::cout);
 
 	// deconstruct struct
 	data->~per_thread_t();
@@ -304,6 +309,8 @@ void MemoryTracker::clear_buffer(void)
 */
 void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush_external) {
 	DR_ASSERT(data != nullptr);
+	auto start = std::chrono::system_clock::now();
+	data->stats->flushes++;
 
 	// Do not run two flushes simultaneously
 	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
@@ -355,6 +362,7 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 					if (td.second->external_flush.compare_exchange_weak(expect, true, std::memory_order_release)) {
 						//	//dr_printf("<< Thread %i took to long to flush, flush externaly\n", td.first);
 						analyze_access(td.second);
+						td.second->stats->external_flushes++;
 						td.second->external_flush.store(false, std::memory_order_release);
 					}
 				}
@@ -365,6 +373,9 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 	}
 	memory_tracker->flush_active.store(false, std::memory_order_relaxed);
 	dr_rwlock_read_unlock(tls_rw_mutex);
+
+	auto duration = std::chrono::system_clock::now() - start;
+	data->stats->time_in_flushes += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
 }
 
 void MemoryTracker::code_cache_init(void) {

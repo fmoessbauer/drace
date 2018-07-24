@@ -10,6 +10,8 @@
 #include "function-wrapper.h"
 #include "module-tracker.h"
 #include "memory-tracker.h"
+#include "statistics.h"
+
 #include <detector_if.h>
 #include <dr_api.h>
 #include <drwrap.h>
@@ -56,7 +58,7 @@ static inline void prepare_and_aquire(
 	detector::acquire(data->tid, mutex, ++cnt, write, trylock, data->detector_data);
 	//dr_mutex_unlock(th_mutex);
 
-	data->mutex_ops++;
+	data->stats->mutex_ops++;
 }
 
 static inline void prepare_and_release(
