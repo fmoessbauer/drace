@@ -46,7 +46,7 @@ struct per_thread_t {
 	// use ptrsize type for lea
 	ptr_uint_t    enabled{ true };
 	// inverse of flush pending, jmpecxz
-	std::atomic<ptr_uint_t> no_flush{ true };
+	std::atomic<ptr_uint_t> no_flush{ false };
 	// external flush is currently executed;
 	std::atomic<bool> external_flush{ false };
 	// Stack used to track state of detector

@@ -264,7 +264,7 @@ void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
 
 	const uint64_t event_id = get_event_id(parent, child);
 	std::lock_guard<spinlock> lg(mxspin);
-
+	
 	for (auto & t : thread_states) {
 		if (t.second.active) {
 			__tsan_happens_before_use_user_tid(t.first, (void*)(event_id));

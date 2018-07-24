@@ -28,6 +28,8 @@ public:
 	/* total number of logged memory references */
 	std::atomic<uint64_t> refs{ 0 };
 
+	std::atomic<int> flush_active{ false };
+
 private:
 	size_t page_size;
 

@@ -47,6 +47,7 @@ public:
 	}
 
 	inline void print_last_race() const {
+		DR_ASSERT(!dr_using_app_state(dr_get_current_drcontext()));
 		get_race_info(_races.back(), std::cout);
 	}
 
