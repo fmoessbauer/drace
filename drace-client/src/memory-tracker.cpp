@@ -69,7 +69,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		// We missed a fork
 		// 1. Flush all threads (except this thread)
 		// 2. Fork thread
-		dr_printf("[%i] Missed a fork, do it now \n", data->tid, num_refs);
+		dr_printf("<< [%i] Missed a fork, do it now \n", data->tid, num_refs);
 		flush_all_threads(data, false, true);
 		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 	} else if (data->enabled && num_refs > 0) {
@@ -113,6 +113,8 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	drmgr_set_tls_field(drcontext, tls_idx, data);
 
 	// Initialize struct at given location (placement new)
+	// As this includes allocation, we have to be in dr state
+	DR_ASSERT(!dr_using_app_state(drcontext));
 	new (data) per_thread_t;
 
 	data->buf_base = (byte*)dr_thread_alloc(drcontext, MEM_BUF_SIZE);
@@ -139,7 +141,6 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->th_towait.reserve(TLS_buckets.bucket_count());
 	dr_rwlock_write_unlock(tls_rw_mutex);
 
-	DR_ASSERT(!dr_using_app_state(drcontext));
 	// TODO: investigate why this fails
 	flush_all_threads(data, false, false);
 }
@@ -276,8 +277,13 @@ void MemoryTracker::process_buffer(void)
 	analyze_access(data);
 
 	// block until flush is done
+	unsigned tries = 0;
 	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
-		dr_thread_yield();
+		++tries;
+		if (tries > 100) {
+			dr_thread_yield();
+			tries = 0;
+		}
 	}
 }
 
@@ -312,7 +318,6 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 
 	// Preserve state by copying tls pointers to local array
 	dr_rwlock_read_lock(tls_rw_mutex);
-	// TODO: Avoid allocation here, use memory pool
 
 
 	// Get threads and notify them
@@ -337,7 +342,7 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 		// Flush thread given that:
 		// 1. thread is not the calling thread
 		// 2. thread is not disabled
-		unsigned long waits = 0;
+		unsigned waits = 0;
 		// TODO: validate this!!!
 		// Only the flush-variable has to be set atomically
 		while (!td.second->no_flush.load(std::memory_order_relaxed)) {

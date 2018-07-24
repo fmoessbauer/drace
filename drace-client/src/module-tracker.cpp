@@ -129,6 +129,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		modules.insert(std::move(current));
 		module_tracker->unlock_write();
 	}
+
+	DR_ASSERT(!dr_using_app_state(drcontext));
 	// wrap functions
 	if (util::common_prefix(mod_name, "MSVCP") ||
 		util::common_prefix(mod_name, "KERNELBASE"))

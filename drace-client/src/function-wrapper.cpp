@@ -34,7 +34,8 @@ namespace funwrap {
 		static void alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 
-			// Save allocate size to TLS, disable detector
+			// Save allocate size to user_data
+			// we use the pointer directly to avoid an allocation
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			*user_data = drwrap_get_arg(wrapctx, 2);
 
@@ -49,13 +50,12 @@ namespace funwrap {
 			void * retval    = drwrap_get_retval(wrapctx);
 			void * pc = drwrap_get_func(wrapctx);
 
-			// Read allocate size from TLS
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
 			MemoryTracker::flush_all_threads(data);
-			detector::allocate((detector::tid_t)data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
+			detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -70,7 +70,7 @@ namespace funwrap {
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
-			detector::deallocate((detector::tid_t)data->tid, addr, data->detector_data);
+			detector::deallocate(data->tid, addr, data->detector_data);
 			MemoryTracker::flush_all_threads(data);
 			//dr_mutex_unlock(th_mutex);
 
