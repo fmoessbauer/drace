@@ -54,7 +54,7 @@ namespace funwrap {
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
-			//flush_all_threads(data);
+			MemoryTracker::flush_all_threads(data);
 			detector::allocate((detector::tid_t)data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
 			//dr_mutex_unlock(th_mutex);
 
@@ -70,8 +70,8 @@ namespace funwrap {
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
-			//flush_all_threads(data);
 			detector::deallocate((detector::tid_t)data->tid, addr, data->detector_data);
+			MemoryTracker::flush_all_threads(data);
 			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
@@ -127,7 +127,8 @@ namespace funwrap {
 			// analyze_access
 			if (TLS_buckets.count(other_th) == 1) {
 				auto other_tls = TLS_buckets[other_th];
-				detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
+				//MemoryTracker::flush_all_threads(data, false);
+				//detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
 			}
 			dr_rwlock_read_unlock(tls_rw_mutex);
 		}
