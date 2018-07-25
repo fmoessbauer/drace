@@ -22,7 +22,7 @@ public:
 	};
 
 	/* Maximum number of references between clean calls */
-	static constexpr int MAX_NUM_MEM_REFS = 4096;
+	static constexpr int MAX_NUM_MEM_REFS = 128;
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	std::atomic<int> flush_active{ false };

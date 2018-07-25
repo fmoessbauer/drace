@@ -81,20 +81,29 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		if (data->grace_period > data->stats->num_refs) {
 			i = data->grace_period - data->stats->num_refs;
 		}
+
+		drvector_t * stack = &(data->stack);
 		// TODO: Check why this lock helps to avoid false-positives
-		dr_mutex_lock(th_mutex);
+
+		//dr_mutex_lock(th_mutex);
+		drvector_append(stack, nullptr);
+
+		int size = min(stack->entries, params.stack_size);
+		int offset = stack->entries - size;
 		for (; i < num_refs; ++i) {
+			stack->array[stack->entries-1] = mem_ref->pc;
 			if (mem_ref->write) {
-				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size, data->detector_data);
+				detector::write(data->tid, stack->array+offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
 				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			else {
-				detector::read(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size, data->detector_data);
+				detector::read(data->tid, stack->array+offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
 				//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 			}
 			++mem_ref;
 		}
-		dr_mutex_unlock(th_mutex);
+		stack->entries--;
+		//dr_mutex_unlock(th_mutex);
 	}
 	data->stats->num_refs += num_refs;
 	data->stats->flushes++;

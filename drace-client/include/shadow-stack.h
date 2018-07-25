@@ -1,14 +1,23 @@
 #pragma once
 
 #include "globals.h"
+#include "memory-tracker.h"
 #include <iterator>
 #include <dr_api.h>
 #include <drmgr.h>
 #include <drvector.h>
 
 class ShadowStack {
+	static constexpr int max_size = 20;
 	static void push(void *addr, drvector_t* stack)
 	{
+		auto size = stack->entries;
+		if (size > max_size) return;
+		// sometimes we miss return statements, hence check
+		// if pc is new
+		for (int i = 0; i < size; ++i)
+			if (stack->array[i] == addr) return;
+
 		drvector_append(stack, addr);
 	}
 
@@ -22,8 +31,8 @@ class ShadowStack {
 	static void on_call(void *call_ins, void *target_addr)
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
-
 		push(call_ins, &(data->stack));
+		MemoryTracker::analyze_access(data);
 	}
 
 	static void on_ret(void *ret_ins, void *target_addr)

@@ -61,9 +61,9 @@ namespace detector {
 	void happens_after(tid_t thread_id, void* identifier);
 
 	/* Log a read access */
-	void read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);
+	void read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls = nullptr);
 	/* Log a write access */
-	void write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);
+	void write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls = nullptr);
 
 	/* Log a memory allocation */
 	void allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls = nullptr);

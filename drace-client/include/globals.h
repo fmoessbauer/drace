@@ -15,13 +15,14 @@
 
 /* Runtime parameters */
 struct params_t {
-	unsigned int sampling_rate{ 1 };
-	bool         heap_only{ false };
-	bool         frequent_only{ false };
-	bool         exclude_master{ false };
-	bool         delayed_sym_lookup{ false };
-	bool         yield_on_evt{ false };
-	bool         fastmode{ false };
+	unsigned sampling_rate{ 1 };
+	bool     heap_only{ false };
+	bool     frequent_only{ false };
+	bool     exclude_master{ false };
+	bool     delayed_sym_lookup{ false };
+	bool     yield_on_evt{ false };
+	bool     fastmode{ false };
+	unsigned stack_size{ 10 };
 	std::string  config_file{"drace.ini"};
 	std::string  out_file;
 	std::string  xml_file;

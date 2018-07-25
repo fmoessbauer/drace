@@ -163,6 +163,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--out-file", 16) == 0) {
 			params.out_file = argv[++processed];
 		}
+		else if (strncmp(argv[processed], "--stacksz", 16) == 0) {
+			params.stack_size = std::stoi(argv[++processed]);
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
@@ -179,7 +182,8 @@ static void print_config() {
 		"< Fast Mode:\t\t%s\n"
 		"< Config File:\t\t%s\n"
 		"< Output File:\t\t%s\n"
-		"< XML File:\t\t%s\n",
+		"< XML File:\t\t%s\n"
+		"< Stack-Size:\t\t%i\n",
 		params.sampling_rate,
 		params.frequent_only  ? "ON" : "OFF",
 		params.yield_on_evt   ? "ON" : "OFF",
@@ -188,7 +192,8 @@ static void print_config() {
 		params.fastmode ? "ON" : "OFF",
 		params.config_file.c_str(),
 		params.out_file != "" ? params.out_file : "OFF",
-		params.xml_file != "" ? params.xml_file : "OFF");
+		params.xml_file != "" ? params.xml_file : "OFF",
+		params.stack_size);
 }
 
 static void generate_summary() {

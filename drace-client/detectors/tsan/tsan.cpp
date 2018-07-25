@@ -209,21 +209,19 @@ void detector::happens_after(tid_t thread_id, void* identifier) {
 	__tsan_happens_after_use_user_tid(thread_id, identifier);
 }
 
-void detector::read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
+void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		stack_trace[0] = stack_trace[0] = (int*)pc;
-		__tsan_read(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
+		__tsan_read(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
 	}
 }
 
-void detector::write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
+void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
-		stack_trace[0] = (int*)pc;
-		__tsan_write(tls, (void*)addr_32, kSizeLog1, (void*)stack_trace.data(), 1);
+		__tsan_write(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
 	}
 }
 
