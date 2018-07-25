@@ -77,8 +77,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 		DR_ASSERT(data->detector_data != nullptr);
 		uint64_t i = 0;
-		if (data->grace_period > data->num_refs) {
-			i = data->grace_period - data->num_refs;
+		if (data->grace_period > data->stats->num_refs) {
+			i = data->grace_period - data->stats->num_refs;
 		}
 		//dr_mutex_lock(th_mutex);
 		for (; i < num_refs; ++i) {
@@ -94,7 +94,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		}
 		//dr_mutex_unlock(th_mutex);
 	}
-	data->num_refs += num_refs;
+	data->stats->num_refs += num_refs;
+	data->stats->flushes++;
 	data->buf_ptr = data->buf_base;
 
 	uint64_t expect = 0;
@@ -299,9 +300,10 @@ void MemoryTracker::clear_buffer(void)
 	mem_ref_t *mem_ref = (mem_ref_t *)data->buf_base;
 	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-	data->num_refs += num_refs;
+	data->stats->num_refs += num_refs;
+	data->stats->flushes++;
 	data->buf_ptr = data->buf_base;
-	data->no_flush = true;
+	data->no_flush.store(true, std::memory_order_relaxed);
 }
 
 /* Request a flush of all non-disabled threads.
@@ -310,7 +312,7 @@ void MemoryTracker::clear_buffer(void)
 void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush_external) {
 	DR_ASSERT(data != nullptr);
 	auto start = std::chrono::system_clock::now();
-	data->stats->flushes++;
+	data->stats->flush_events++;
 
 	// Do not run two flushes simultaneously
 	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
@@ -350,13 +352,10 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 		// 1. thread is not the calling thread
 		// 2. thread is not disabled
 		unsigned waits = 0;
-		// TODO: validate this!!!
-		// Only the flush-variable has to be set atomically
 		while (!td.second->no_flush.load(std::memory_order_relaxed)) {
 			if (++waits > 100) {
 				// avoid busy-waiting and blocking CPU if other thread did not flush
 				// within given period
-				// Do not flush non-forked threads externally
 				if (flush_external) {
 					bool expect = false;
 					if (td.second->external_flush.compare_exchange_weak(expect, true, std::memory_order_release)) {
@@ -366,7 +365,9 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 						td.second->external_flush.store(false, std::memory_order_release);
 					}
 				}
-				// TODO: Here we might loose some refs
+				// Here we might loose some refs, clear them
+				td.second->buf_ptr = td.second->buf_base;
+				td.second->no_flush.store(true, std::memory_order_relaxed);
 				break;
 			}
 		}

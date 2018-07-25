@@ -42,7 +42,6 @@ struct per_thread_t {
 	byte         *buf_base;
 	ptr_int_t     buf_end;
 	void         *cache;
-	uint64        num_refs{ 0 };
 	thread_id_t   tid;
 	uint64        grace_period{ GRACE_PERIOD_TH_START };
 	// use ptrsize type for lea
