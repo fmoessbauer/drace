@@ -154,6 +154,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--delayed-syms", 16) == 0) {
 			params.delayed_sym_lookup = true;
 		}
+		else if (strncmp(argv[processed], "--fast-mode", 16) == 0) {
+			params.fastmode = true;
+		}
 		else if (strncmp(argv[processed], "--xml-file", 16) == 0) {
 			params.xml_file = argv[++processed];
 		}
@@ -173,6 +176,7 @@ static void print_config() {
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
 		"< Delayed Sym Lookup:\t%s\n"
+		"< Fast Mode:\t\t%s\n"
 		"< Config File:\t\t%s\n"
 		"< Output File:\t\t%s\n"
 		"< XML File:\t\t%s\n",
@@ -181,6 +185,7 @@ static void print_config() {
 		params.yield_on_evt   ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
+		params.fastmode ? "ON" : "OFF",
 		params.config_file.c_str(),
 		params.out_file != "" ? params.out_file : "OFF",
 		params.xml_file != "" ? params.xml_file : "OFF");

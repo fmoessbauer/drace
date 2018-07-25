@@ -80,7 +80,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		if (data->grace_period > data->stats->num_refs) {
 			i = data->grace_period - data->stats->num_refs;
 		}
-		//dr_mutex_lock(th_mutex);
+		// TODO: Check why this lock helps to avoid false-positives
+		dr_mutex_lock(th_mutex);
 		for (; i < num_refs; ++i) {
 			if (mem_ref->write) {
 				detector::write(data->tid, mem_ref->pc, mem_ref->addr, mem_ref->size, data->detector_data);
@@ -92,17 +93,19 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			}
 			++mem_ref;
 		}
-		//dr_mutex_unlock(th_mutex);
+		dr_mutex_unlock(th_mutex);
 	}
 	data->stats->num_refs += num_refs;
 	data->stats->flushes++;
 	data->buf_ptr = data->buf_base;
 
 	uint64_t expect = 0;
-	if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
-		if (params.yield_on_evt) {
-			dr_printf("[%.5i] YIELD\n", data->tid);
-			dr_thread_yield();
+	if (!data->no_flush.load(std::memory_order_relaxed)) {
+		if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
+			if (params.yield_on_evt) {
+				dr_printf("[%.5i] YIELD\n", data->tid);
+				dr_thread_yield();
+			}
 		}
 	}
 }
@@ -307,16 +310,24 @@ void MemoryTracker::clear_buffer(void)
 }
 
 /* Request a flush of all non-disabled threads.
-*  \Warning: This function is read-locks the TLS mutex
+*  \Warning: This function read-locks the TLS mutex
 */
 void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush_external) {
+	if (params.fastmode) {
+		if (self) process_buffer();
+		return;
+	}
+
 	DR_ASSERT(data != nullptr);
 	auto start = std::chrono::system_clock::now();
 	data->stats->flush_events++;
 
 	// Do not run two flushes simultaneously
+	int cntr = 0;
 	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
-		dr_thread_yield();
+		if (++cntr > 100) {
+			dr_thread_yield();
+		}
 	}
 
 	if (self) {
@@ -499,7 +510,7 @@ void MemoryTracker::instrument_mem(void *drcontext, instrlist_t *ilist, instr_t 
 	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	/* load enalbed flag into reg2 */
+	/* load enabled flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
 	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, enabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);

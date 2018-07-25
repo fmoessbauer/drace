@@ -29,6 +29,7 @@ Currently the following parameters are implemented
                     this might be necessary if more threads than cores are active
 --excl-master     : exclude the runtime thread, useful if loader races
 --delayed-syms    : Do not lookup symbols on each race
+--fast-mode       : only flush local buffers on sync-event (all buffers otherwise)
 --xml-file <file> : log races in valkyries xml format in this file
 --out-file <file> : log races in human readable format in this file
 ```

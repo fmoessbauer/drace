@@ -45,7 +45,7 @@ int main() {
 		<< "LOCATION: " << std::hex << (uint64_t) (mem) << std::endl;
 	//mx.unlock();
 #ifdef USE_HEAP
-	delete mem;
+	delete[] mem;
 #endif
 	return 0;
 }
