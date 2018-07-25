@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <dr_api.h>
+#include <drvector.h>
 
 // Defines
 #define GRACE_PERIOD_TH_START 0 // Begin detection after this number of instructions
@@ -27,7 +28,7 @@ struct params_t {
 };
 extern params_t params;
 
-extern class Statistics;
+class Statistics;
 
 /* Per Thread data (thread-private)
 * \Warning This struct is not default-constructed
@@ -51,6 +52,8 @@ struct per_thread_t {
 	std::atomic<ptr_uint_t> no_flush{ false };
 	// external flush is currently executed;
 	std::atomic<bool> external_flush{ false };
+	// Shadow Stack
+	drvector_t    stack;
 	// Stack used to track state of detector
 	uint64        event_cnt{ 0 };
 	// book-keeping of active mutexes

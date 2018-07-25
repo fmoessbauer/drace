@@ -11,6 +11,7 @@
 #include "globals.h"
 #include "memory-tracker.h"
 #include "symbols.h"
+#include "shadow-stack.h"
 #include "statistics.h"
 
 MemoryTracker::MemoryTracker() {
@@ -128,6 +129,8 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
 
+	drvector_init(&(data->stack), 10, false, nullptr);
+
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
 	if (th_start_pending.compare_exchange_weak(true_val, false)) {
@@ -177,6 +180,8 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	// a read lock on TLS_buckets during deallocation
 	DR_ASSERT(TLS_buckets.count(data->tid) == 1);
 	TLS_buckets.erase(data->tid);
+
+	drvector_delete(&(data->stack));
 
 	data->stats->print_summary(std::cout);
 
@@ -241,11 +246,16 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
 	bool instrument_instr = (bool)user_data;
-	if (!instrument_instr)
-		return DR_EMIT_DEFAULT;
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
+
+
+	if (!instrument_instr)
+		return DR_EMIT_DEFAULT;
+
+	// Instrument ShadowStack
+	ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data);
 
 	// Ignore Locked instructions
 	if (instr_get_prefix_flag(instr, PREFIX_LOCK))
