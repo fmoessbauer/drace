@@ -85,7 +85,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		drvector_t * stack = &(data->stack);
 		// TODO: Check why this lock helps to avoid false-positives
 
-		//dr_mutex_lock(th_mutex);
+		if (!params.fastmode) dr_mutex_lock(th_mutex);
 		drvector_append(stack, nullptr);
 
 		int size = min(stack->entries, params.stack_size);
@@ -103,7 +103,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			++mem_ref;
 		}
 		stack->entries--;
-		//dr_mutex_unlock(th_mutex);
+		if(!params.fastmode) dr_mutex_unlock(th_mutex);
 	}
 	data->stats->num_refs += num_refs;
 	data->stats->flushes++;

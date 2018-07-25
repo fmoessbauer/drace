@@ -31,6 +31,11 @@ class ShadowStack {
 	static void on_call(void *call_ins, void *target_addr)
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+		if (!params.fastmode) {
+			while (data->external_flush.load(std::memory_order_relaxed)) {
+				// wait
+			}
+		}
 		push(call_ins, &(data->stack));
 		MemoryTracker::analyze_access(data);
 	}
@@ -39,6 +44,12 @@ class ShadowStack {
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
 		drvector_t * stack = &(data->stack);
+
+		if (!params.fastmode) {
+			while (data->external_flush.load(std::memory_order_relaxed)) {
+				// wait
+			}
+		}
 
 		if (stack->entries == 0) return;
 
