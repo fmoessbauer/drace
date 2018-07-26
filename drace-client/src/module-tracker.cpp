@@ -2,6 +2,7 @@
 #include "module-tracker.h"
 #include "function-wrapper.h"
 #include "statistics.h"
+#include "symbols.h"
 #include "util.h"
 
 #include <drmgr.h>
@@ -38,14 +39,17 @@ bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 void ModuleTracker::print_modules() {
 	for (const auto & current : modules) {
 		const char * mod_name = dr_module_preferred_name(current.info);
-		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, debug info: %s, full path: %s\n",
 			0, mod_name, current.base, current.end,
-			current.instrument ? "YES" : "NO",
+			current.debug_info ? "YES" : " NO",
+			current.instrument ? "YES" : " NO",
 			current.info->full_path);
 	}
 }
 
-ModuleTracker::ModuleTracker() {
+ModuleTracker::ModuleTracker(const std::shared_ptr<Symbols> & symbols)
+	: _syms(symbols)
+	{
 	mod_lock = dr_rwlock_create();
 
 	excluded_mods = config.get_multi("modules", "exclude_mods");
@@ -77,8 +81,6 @@ ModuleTracker::~ModuleTracker() {
 *  as a callback to a c API, we cannot use std::bind
 */
 void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
-	bool instrument = true;
-
 	auto start = std::chrono::system_clock::now();
 
 	per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
@@ -88,6 +90,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	// create shadow struct of current module
 	// for easier comparison
 	ModuleData current(mod->start, mod->end);
+	current.instrument = true;
 
 	module_tracker->lock_read();
 	auto & modules = module_tracker->modules;
@@ -96,7 +99,6 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		if (!modit->loaded && (modit->info == mod)) {
 			// requires mutable, does not modify key
 			modit->loaded = true;
-			instrument = modit->instrument;
 		}
 		module_tracker->unlock_read();
 	}
@@ -108,29 +110,35 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
 
 		for (auto prefix : module_tracker->excluded_path_prefix) {
+			// check if mod path is excluded
 			if (util::common_prefix(prefix, mod_path)) {
-				instrument = false;
+				current.instrument = false;
 				break;
 			}
 		}
-		if (instrument) {
+		if (current.instrument) {
+			// check if mod name is excluded
 			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-				instrument = false;
+				current.instrument = false;
 			}
 		}
+		if (current.instrument) {
+			// check if debug info is available
+			current.debug_info = symbol_table->debug_info_available(mod);
+		}
 
-		current.instrument = instrument;
-		dr_printf("< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, full path: %s\n",
+		dr_printf("< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, debug info: %s, full path: %s\n",
 			tid, mod_name.c_str(), current.base, current.end,
-			current.instrument ? "YES" : "NO",
+			current.instrument ? "YES" : " NO",
+			current.debug_info ? "YES" : " NO",
 			current.info->full_path);
 
 		module_tracker->unlock_read();
 		// These locks cannot be upgraded, hence unlock and lock
 		// as nobody can change the container, dispatching is no issue
 		module_tracker->lock_write();
-		modules.insert(std::move(current));
+		modit = (modules.insert(std::move(current))).first;
 		module_tracker->unlock_write();
 	}
 
@@ -146,12 +154,14 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
-	if (instrument) {
+	if (modit->instrument) {
 		funwrap::wrap_excludes(mod);
 		// This requires debug symbols, but avoids false positives during
 		// C++11 thread construction and startup
-		funwrap::wrap_thread_start(mod);
-		funwrap::wrap_mutexes(mod, false);
+		if (modit->debug_info) {
+			funwrap::wrap_thread_start(mod);
+			funwrap::wrap_mutexes(mod, false);
+		}
 	}
 
 	data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);

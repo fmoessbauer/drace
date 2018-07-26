@@ -38,6 +38,9 @@ public:
 
 /* Symbol Access Lib Functions */
 class Symbols {
+	/* Maximum distance between a pc and the first found symbol */
+	static constexpr std::ptrdiff_t max_distance = 32;
+	/* Maximum length of file pathes and sym names */
 	static constexpr int buffer_size = 256;
 	drsym_info_t syminfo;
 
@@ -71,6 +74,11 @@ public:
 	*          function.
 	*/
 	SymbolLocation get_symbol_info(app_pc pc);
+
+	/*Returns true if debug info is available for this module
+	* Returns false if only exports are available
+	*/
+	bool debug_info_available(const module_data_t *mod) const;
 
 	/* Print the related symbol information for each basic block */
 	void print_bb_symbols();

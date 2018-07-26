@@ -4,19 +4,23 @@
 
 #include <dr_api.h>
 
+extern Symbols;
+
 class ModuleData {
 public:
 	app_pc base;
 	app_pc end;
 	mutable bool   loaded; // This is necessary to modify value in-place in set
 	mutable bool   instrument;
-	module_data_t *info = nullptr;
+	module_data_t *info{ nullptr };
+	mutable bool   debug_info;
 
-	ModuleData(app_pc mbase, app_pc mend, bool mloaded = true) :
+	ModuleData(app_pc mbase, app_pc mend, bool mloaded = true, bool debug_info = false) :
 		base(mbase),
 		end(mend),
 		loaded(mloaded),
-		instrument(false) { }
+		instrument(false),
+		debug_info(debug_info){ }
 
 	~ModuleData() {
 		if (info != nullptr) {
@@ -30,7 +34,8 @@ public:
 		base(other.base),
 		end(other.end),
 		loaded(other.loaded),
-		instrument(other.instrument)
+		instrument(other.instrument),
+		debug_info(other.debug_info)
 	{
 		info = dr_copy_module_data(other.info);
 	}
@@ -41,7 +46,8 @@ public:
 		end(other.end),
 		loaded(other.loaded),
 		instrument(other.instrument),
-		info(other.info)
+		info(other.info),
+		debug_info(other.debug_info)
 	{
 		other.info = nullptr;
 	}
@@ -89,6 +95,7 @@ public:
 class ModuleTracker {
 	// RW mutex for access of modules container
 	void *mod_lock;
+	std::shared_ptr<Symbols> _syms;
 
 public:
 	using ModuleData_Set = std::set<ModuleData, std::greater<ModuleData>>;
@@ -98,7 +105,7 @@ public:
 	std::vector<std::string> excluded_path_prefix;
 
 public:
-	ModuleTracker();
+	explicit ModuleTracker(const std::shared_ptr<Symbols> & syms);
 	~ModuleTracker();
 
 	std::pair<bool, ModuleData_Set::iterator> get_module_containing(app_pc pc) const {

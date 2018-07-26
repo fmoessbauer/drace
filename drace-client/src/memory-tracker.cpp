@@ -138,7 +138,7 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
 
-	drvector_init(&(data->stack), 10, false, nullptr);
+	drvector_init(&(data->stack), ShadowStack::max_size, false, nullptr);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;

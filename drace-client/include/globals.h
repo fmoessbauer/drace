@@ -95,7 +95,7 @@ extern std::unique_ptr<MemoryTracker> memory_tracker;
 
 // Global Symbol Table
 class Symbols;
-extern std::unique_ptr<Symbols> symbol_table;
+extern std::shared_ptr<Symbols> symbol_table;
 
 class RaceCollector;
 extern std::unique_ptr<RaceCollector> race_collector;

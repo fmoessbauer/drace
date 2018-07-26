@@ -10,8 +10,9 @@ std::string Symbols::get_bb_symbol(app_pc pc) {
 	
 	if (modc.first) {
 		// Reverse search from pc until symbol can be decoded
-		auto offset = pc - modc.second->base;
-		for (; offset >= 0; --offset) {
+		uint64_t offset = pc - modc.second->base;
+		auto limit = max((uint64_t)0, offset - (uint64_t)max_distance);
+		for (; offset >= limit; --offset) {
 			drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
 				return std::string(syminfo.name);
@@ -34,7 +35,8 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 
 			// Reverse search from pc until symbol can be decoded
 			int offset = pc - modc.second->base;
-			for (; offset >= 0; --offset) {
+			auto limit = max((uint64_t)0, offset - (uint64_t)max_distance);
+			for (; offset >= limit; --offset) {
 				drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
 					sloc.sym_name = syminfo.name;
@@ -48,6 +50,18 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 			}
 	}
 	return sloc;
+}
+
+bool Symbols::debug_info_available(const module_data_t *mod) const {
+	drsym_debug_kind_t flags;
+	drsym_error_t error;
+	
+	error = drsym_get_module_debug_kind(mod->full_path, &flags);
+	
+	if (error == DRSYM_SUCCESS) {
+		if (flags & DRSYM_SYMBOLS) return true;
+	}
+	return false;
 }
 
 void Symbols::print_bb_symbols(void) {
@@ -82,6 +96,6 @@ void Symbols::create_drsym_info() {
 }
 
 void Symbols::free_drsmy_info() {
-	delete syminfo.file;
-	delete syminfo.name;
+	delete[] syminfo.file;
+	delete[] syminfo.name;
 }

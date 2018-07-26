@@ -19,7 +19,6 @@
 #include "memory-tracker.h"
 #include "function-wrapper.h"
 #include "module-tracker.h"
-#include "stack-demangler.h"
 #include "symbols.h"
 #include "statistics.h"
 
@@ -45,7 +44,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	TLS_buckets.reserve(128);
 
-	th_mutex     = dr_mutex_create();
+	th_mutex = dr_mutex_create();
 	tls_rw_mutex = dr_rwlock_create();
 
 	// Init DRMGR, Reserve registers
@@ -64,14 +63,20 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Setup Function Wrapper
 	DR_ASSERT(funwrap::init());
 
+	symbol_table = std::make_shared<Symbols>();
+
 	// Setup Module Tracking
-	module_tracker = std::make_unique<ModuleTracker>();
+	module_tracker = std::make_unique<ModuleTracker>(symbol_table);
 
 	// Setup Memory Tracing
 	memory_tracker = std::make_unique<MemoryTracker>();
 
-	symbol_table   = std::make_unique<Symbols>();
-	race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup, stack_demangler::demangle);
+	// Setup Race Collector and bind lookup function
+	auto lookup_fun = std::bind(&Symbols::get_symbol_info,
+		symbol_table.get(), std::placeholders::_1);
+	race_collector = std::make_unique<RaceCollector>(
+		params.delayed_sym_lookup,
+		lookup_fun);
 
 	// Initialize Detector
 	detector::init(argc, argv, race_collector_add_race);
@@ -135,7 +140,7 @@ static void event_thread_exit(void *drcontext)
 static void parse_args(int argc, const char ** argv) {
 	int processed = 1;
 	while (processed < argc) {
-		if (strncmp(argv[processed],"-s",16)==0) {
+		if (strncmp(argv[processed], "-s", 16) == 0) {
 			params.sampling_rate = std::stoi(argv[++processed]);
 		}
 		else if (strncmp(argv[processed], "-c", 16) == 0) {
@@ -185,8 +190,8 @@ static void print_config() {
 		"< XML File:\t\t%s\n"
 		"< Stack-Size:\t\t%i\n",
 		params.sampling_rate,
-		params.frequent_only  ? "ON" : "OFF",
-		params.yield_on_evt   ? "ON" : "OFF",
+		params.frequent_only ? "ON" : "OFF",
+		params.yield_on_evt ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",
 		params.fastmode ? "ON" : "OFF",

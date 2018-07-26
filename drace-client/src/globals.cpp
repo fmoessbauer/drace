@@ -28,7 +28,7 @@ std::string config_file("drace.ini");
 
 std::unique_ptr<MemoryTracker> memory_tracker;
 std::unique_ptr<ModuleTracker> module_tracker;
-std::unique_ptr<Symbols> symbol_table;
+std::shared_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 std::unique_ptr<Statistics> stats;
 

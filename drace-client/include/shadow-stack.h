@@ -7,9 +7,23 @@
 #include <drmgr.h>
 #include <drvector.h>
 
+/*
+* This class implements a shadow stack, used for
+* getting stack traces for race detection
+* Whenever a call has been detected, the memory-refs buffer is
+* flushed as all memory-refs happend in the current function.
+* This avoids storing a stack-trace per memory-entry.
+*/
 class ShadowStack {
-	static constexpr int max_size = 20;
-	static void push(void *addr, drvector_t* stack)
+public:
+	static constexpr int max_size = 16; // two cache-lines
+
+private:
+	/* Push a pc on the stack. If the pc is already
+	* on the stack, skip. This avoids ever growing stacks
+	* if the returns are not detected properly
+	*/
+	static inline void push(void *addr, drvector_t* stack)
 	{
 		auto size = stack->entries;
 		if (size > max_size) return;
@@ -21,13 +35,14 @@ class ShadowStack {
 		drvector_append(stack, addr);
 	}
 
-	static void *pop(drvector_t* stack)
+	static inline void *pop(drvector_t* stack)
 	{
 		DR_ASSERT(stack->entries > 0);
 		stack->entries--;
 		return stack->array[stack->entries];
 	}
 
+	/* Call Instrumentation */
 	static void on_call(void *call_ins, void *target_addr)
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
@@ -40,6 +55,7 @@ class ShadowStack {
 		MemoryTracker::analyze_access(data);
 	}
 
+	/* Return Instrumentation */
 	static void on_ret(void *ret_ins, void *target_addr)
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);

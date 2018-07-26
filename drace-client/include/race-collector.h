@@ -15,7 +15,7 @@
 
 class RaceCollector {
 public:
-	using LookupFuncT = std::function<SymbolLocation(void*)>;
+	using LookupFuncT = std::function<SymbolLocation(app_pc)>;
 private:
 	using entry_t = std::pair<unsigned long long, detector::Race>;
 	using clock_t = std::chrono::high_resolution_clock;
@@ -72,13 +72,13 @@ public:
 			}
 
 			for (auto entry : ac.stack_trace) {
-				s << "-> " << lookup_syms((void*)entry, force_lookup).get_pretty() << std::endl;
+				s << "-> " << lookup_syms((app_pc)entry, force_lookup).get_pretty() << std::endl;
 			}
 		}
 		s << std::string(header.length(), '-') << std::endl;
 	}
 
-	SymbolLocation lookup_syms(void* pc, bool force_lookup = false) const {
+	SymbolLocation lookup_syms(app_pc pc, bool force_lookup = false) const {
 		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
 			// Type of stack_demangler: (void*) -> symbol_location_t
 			SymbolLocation csloc = _lookup_function(pc);
@@ -106,7 +106,7 @@ public:
 				<< "    <kind>Race</kind>\n"
 				<< "    <stack>\n";
 			for (auto entry : race.stack_trace) {
-				auto syms = lookup_syms((void*)entry, true);
+				auto syms = lookup_syms((app_pc)entry, true);
 				s <<   "      <frame>\n"
 					<< "        <ip>0x" << std::hex << (uint64_t)syms.pc << "</ip>\n"
 					<< "        <obj>" << syms.mod_name << "</obj>\n"
