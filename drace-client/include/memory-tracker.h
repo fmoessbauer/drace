@@ -34,8 +34,11 @@ private:
 	/* Code Caches */
 	app_pc cc_flush;
 
-	/* Number of instrumented calls, used for sampling */
-	std::atomic<int> instrum_count{ 0 };
+	/* Number of instrumented calls, used for sampling
+	 * \Warning This number is racily incremented by design.
+	 *          Hence, use the largest native type to avoid partial loads
+	 */
+	unsigned long long instrum_count{ 0 };
 
 	/* XCX registers */
 	drvector_t allowed_xcx;

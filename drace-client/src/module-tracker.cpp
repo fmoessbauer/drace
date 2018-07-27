@@ -164,6 +164,9 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		}
 	}
 
+	// Free symbol information. A later access re-reads them, so its safe to do it here
+	drsym_free_resources(mod->full_path);
+
 	data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
 	data->stats->module_loads++;
 }

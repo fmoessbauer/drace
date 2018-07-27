@@ -13,8 +13,8 @@ public:
 	std::string     mod_name;
 	std::string     sym_name;
 	std::string     file;
-	uint64          line;
-	size_t          line_offs;
+	uint64          line{0};
+	size_t          line_offs{0};
 
 	/* Pretty print symbol location */
 	std::string get_pretty() const {
