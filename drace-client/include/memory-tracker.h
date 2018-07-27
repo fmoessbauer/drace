@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <memory>
+#include <random>
 
 class MemoryTracker {
 public:
@@ -40,6 +41,10 @@ private:
 	drvector_t allowed_xcx;
 
 	ModuleCache mc;
+
+	// fast random numbers for sampling
+	std::mt19937 _prng;
+	std::discrete_distribution<int> _dist;
 
 public:
 
