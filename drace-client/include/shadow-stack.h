@@ -1,11 +1,11 @@
 #pragma once
 
 #include "globals.h"
+#include "aligned-stack.h"
 #include "memory-tracker.h"
 #include <iterator>
 #include <dr_api.h>
 #include <drmgr.h>
-#include <drvector.h>
 
 /*
 * This class implements a shadow stack, used for
@@ -16,26 +16,28 @@
 */
 class ShadowStack {
 public:
-	static constexpr int max_size = 16; // two cache-lines
+	// two cache-lines - one element which contains current mem pc
+	static constexpr int max_size = 15;
+	using stack_t = decltype(per_thread_t::stack);
 
 private:
 	/* Push a pc on the stack. If the pc is already
 	* on the stack, skip. This avoids ever growing stacks
 	* if the returns are not detected properly
 	*/
-	static inline void push(void *addr, drvector_t* stack)
+	static inline void push(void *addr, stack_t* stack)
 	{
 		auto size = stack->entries;
-		if (size > max_size) return;
+		if (size >= max_size) return;
 		// sometimes we miss return statements, hence check
 		// if pc is new
 		for (int i = 0; i < size; ++i)
 			if (stack->array[i] == addr) return;
 
-		drvector_append(stack, addr);
+		stack->array[stack->entries++] = addr;
 	}
 
-	static inline void *pop(drvector_t* stack)
+	static inline void *pop(stack_t* stack)
 	{
 		DR_ASSERT(stack->entries > 0);
 		stack->entries--;
@@ -60,7 +62,7 @@ private:
 	static void on_ret(void *ret_ins, void *target_addr)
 	{
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
-		drvector_t * stack = &(data->stack);
+		stack_t * stack = &(data->stack);
 
 		if (!params.fastmode) {
 			while (data->external_flush.load(std::memory_order_relaxed)) {

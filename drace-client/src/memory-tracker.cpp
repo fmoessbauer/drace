@@ -80,12 +80,12 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 		DR_ASSERT(data->detector_data != nullptr);
 
-		drvector_t * stack = &(data->stack);
+		auto * stack = &(data->stack);
 
 		// In non-fast-mode we have to protect the stack
 		if (!params.fastmode) dr_mutex_lock(th_mutex);
-		drvector_append(stack, nullptr);
 
+		stack->entries++; // We have one spare-element
 		int size = min(stack->entries, params.stack_size);
 		int offset = stack->entries - size;
 		for (uint64_t i = 0; i < num_refs; ++i) {
@@ -136,8 +136,7 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	/* set buf_end to be negative of address of buffer end for the lea later */
 	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
-
-	drvector_init(&(data->stack), ShadowStack::max_size, false, nullptr);
+	data->stack.resize(ShadowStack::max_size + 1);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
@@ -189,14 +188,12 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	DR_ASSERT(TLS_buckets.count(data->tid) == 1);
 	TLS_buckets.erase(data->tid);
 
-	drvector_delete(&(data->stack));
-
 	data->stats->print_summary(std::cout);
+
+	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
 
 	// deconstruct struct
 	data->~per_thread_t();
-
-	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 	data = nullptr;
 	dr_rwlock_write_unlock(tls_rw_mutex);

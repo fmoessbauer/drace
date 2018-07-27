@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "aligned-stack.h"
 
 #include <string>
 #include <unordered_map>
@@ -8,7 +9,6 @@
 #include <memory>
 
 #include <dr_api.h>
-#include <drvector.h>
 
 /* Runtime parameters */
 struct params_t {
@@ -25,6 +25,18 @@ struct params_t {
 	std::string  xml_file;
 };
 extern params_t params;
+
+/* Stack implementation that supports aligned memory */
+struct stack_t {
+	/* unaligned buffer begin */
+	void *   mem_beg;
+	/* aligned buffer */
+	void **  array;
+	/* size of the buffer in bytes */
+	size_t   size_in_bytes{ 0 };
+	/* number of items on stack */
+	unsigned entries{ 0 };
+};
 
 class Statistics;
 
@@ -50,7 +62,7 @@ struct per_thread_t {
 	// external flush is currently executed;
 	std::atomic<bool> external_flush{ false };
 	// Shadow Stack
-	drvector_t    stack;
+	AlignedStack<void*, 64> stack;
 	// Stack used to track state of detector
 	uint64        event_cnt{ 0 };
 	// book-keeping of active mutexes
