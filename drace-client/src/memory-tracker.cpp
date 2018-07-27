@@ -72,25 +72,20 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		// 1. Flush all threads (except this thread)
 		// 2. Fork thread
 		dr_printf("<< [%i] Missed a fork, do it now \n", data->tid, num_refs);
-		flush_all_threads(data, false, true);
 		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 	} else if (data->enabled && num_refs > 0) {
 		//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 		DR_ASSERT(data->detector_data != nullptr);
-		uint64_t i = 0;
-		if (data->grace_period > data->stats->num_refs) {
-			i = data->grace_period - data->stats->num_refs;
-		}
 
 		drvector_t * stack = &(data->stack);
-		// TODO: Check why this lock helps to avoid false-positives
 
+		// In non-fast-mode we have to protect the stack
 		if (!params.fastmode) dr_mutex_lock(th_mutex);
 		drvector_append(stack, nullptr);
 
 		int size = min(stack->entries, params.stack_size);
 		int offset = stack->entries - size;
-		for (; i < num_refs; ++i) {
+		for (uint64_t i = 0; i < num_refs; ++i) {
 			stack->array[stack->entries-1] = mem_ref->pc;
 			if (mem_ref->write) {
 				detector::write(data->tid, stack->array+offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
@@ -104,8 +99,9 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		}
 		stack->entries--;
 		if(!params.fastmode) dr_mutex_unlock(th_mutex);
+
+		data->stats->num_refs += num_refs;
 	}
-	data->stats->num_refs += num_refs;
 	data->stats->flushes++;
 	data->buf_ptr = data->buf_base;
 
@@ -306,11 +302,13 @@ void MemoryTracker::process_buffer(void)
 
 	// block until flush is done
 	unsigned tries = 0;
-	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
-		++tries;
-		if (tries > 100) {
-			dr_thread_yield();
-			tries = 0;
+	if (!params.fastmode) {
+		while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
+			++tries;
+			if (tries > 100) {
+				dr_thread_yield();
+				tries = 0;
+			}
 		}
 	}
 }
@@ -342,15 +340,16 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 	data->stats->flush_events++;
 
 	// Do not run two flushes simultaneously
+	int expect = false;
 	int cntr = 0;
-	while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
+	while (memory_tracker->flush_active.compare_exchange_weak(expect, true, std::memory_order_relaxed)) {
 		if (++cntr > 100) {
 			dr_thread_yield();
 		}
 	}
 
 	if (self) {
-		process_buffer();
+		analyze_access(data);
 	}
 
 	data->th_towait.clear();
@@ -360,7 +359,6 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 
 
 	// Get threads and notify them
-	memory_tracker->flush_active.store(true, std::memory_order_relaxed);
 	for (const auto & td : TLS_buckets) {
 		if (td.first != data->tid && td.second->enabled && td.second->no_flush.load(std::memory_order_relaxed))
 		{

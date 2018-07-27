@@ -10,9 +10,6 @@
 #include <dr_api.h>
 #include <drvector.h>
 
-// Defines
-#define GRACE_PERIOD_TH_START 0 // Begin detection after this number of instructions
-
 /* Runtime parameters */
 struct params_t {
 	unsigned sampling_rate{ 1 };
@@ -46,7 +43,6 @@ struct per_thread_t {
 	ptr_int_t     buf_end;
 	void         *cache;
 	thread_id_t   tid;
-	uint64        grace_period{ GRACE_PERIOD_TH_START };
 	// use ptrsize type for lea
 	ptr_uint_t    enabled{ true };
 	// inverse of flush pending, jmpecxz

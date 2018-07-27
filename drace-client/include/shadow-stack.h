@@ -51,8 +51,9 @@ private:
 				// wait
 			}
 		}
-		push(call_ins, &(data->stack));
+		// TODO: possibibly racy in non-fast-mode
 		MemoryTracker::analyze_access(data);
+		push(call_ins, &(data->stack));
 	}
 
 	/* Return Instrumentation */

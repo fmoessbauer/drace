@@ -17,14 +17,16 @@
 namespace funwrap {
 	namespace internal {
 		static void beg_excl_region(per_thread_t * data) {
-			memory_tracker->process_buffer();
+			// We do not flush here, as in disabled state no
+			// refs are recorded
+			//memory_tracker->process_buffer();
 			data->enabled = false;
 			data->event_cnt++;
 		}
 
 		static void end_excl_region(per_thread_t * data) {
 			if (data->event_cnt == 1) {
-				memory_tracker->clear_buffer();
+				//memory_tracker->clear_buffer();
 				data->enabled = true;
 			}
 			data->event_cnt--;
