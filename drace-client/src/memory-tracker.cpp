@@ -14,7 +14,10 @@
 #include "shadow-stack.h"
 #include "statistics.h"
 
-MemoryTracker::MemoryTracker() {
+MemoryTracker::MemoryTracker()
+	: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
+	_dist({1.0/params.sampling_rate, 1.0-1.0/params.sampling_rate})
+{
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
 
@@ -269,11 +272,8 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 		return DR_EMIT_DEFAULT;
 
 	// Sampling: Only instrument some instructions
-	// TODO: Improve this by using per-type counters
-	auto cnt = instrum_count.fetch_add(1, std::memory_order_relaxed);
-	if (cnt % params.sampling_rate != 0) {
+	if(_dist(_prng))
 		return DR_EMIT_DEFAULT;
-	}
 
 	/* insert code to add an entry for each memory reference opnd */
 	for (int i = 0; i < instr_num_srcs(instr); i++) {
