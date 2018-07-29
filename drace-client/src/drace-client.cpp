@@ -21,6 +21,7 @@
 #include "module-tracker.h"
 #include "symbols.h"
 #include "statistics.h"
+#include "sink/hr-text.h"
 
 #include <detector_if.h>
 
@@ -205,7 +206,8 @@ static void generate_summary() {
 	const char * app_name = dr_get_application_name();
 	if (params.out_file != "") {
 		std::ofstream races_hr_file(params.out_file, std::ofstream::out);
-		race_collector->write_hr(races_hr_file);
+		sink::HRText<std::ofstream> hr_sink(races_hr_file);
+		hr_sink.process_all(race_collector->get_races());
 		races_hr_file.close();
 	}
 

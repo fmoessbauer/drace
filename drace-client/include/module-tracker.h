@@ -4,8 +4,6 @@
 
 #include <dr_api.h>
 
-extern Symbols;
-
 class ModuleData {
 public:
 	app_pc base;

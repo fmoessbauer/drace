@@ -2,6 +2,7 @@
 
 #include "globals.h"
 #include "symbols.h"
+#include "sink/hr-text.h"
 
 #include <detector_if.h>
 #include <sstream>
@@ -13,20 +14,45 @@
 
 #include <dr_api.h>
 
+class ResolvedAccess : public detector::AccessEntry {
+public:
+	std::vector<SymbolLocation> resolved_stack;
+
+	ResolvedAccess(const detector::AccessEntry & e)
+		: detector::AccessEntry(e) { }
+};
+
+class DecoratedRace {
+public:
+	ResolvedAccess first;
+	ResolvedAccess second;
+	bool           is_resolved{ false };
+
+	DecoratedRace(const detector::Race & r)
+		: first(r.first), second(r.second) { }
+
+	DecoratedRace(ResolvedAccess && a, ResolvedAccess && b)
+		: first(a), second(b), is_resolved(true) { }
+};
+
 class RaceCollector {
 public:
-	using LookupFuncT = std::function<SymbolLocation(app_pc)>;
+	using LookupFuncT = std::function<SymbolLocation(const app_pc)>;
+	using RaceEntryT = std::pair<unsigned long long, DecoratedRace>;
+	using RaceCollectionT = std::vector<RaceEntryT>;
 private:
-	using entry_t = std::pair<unsigned long long, detector::Race>;
+	using entry_t = RaceEntryT;
 	using clock_t = std::chrono::high_resolution_clock;
 	using tp_t = decltype(clock_t::now());
 
-	std::vector<entry_t> _races;
+	RaceCollectionT _races;
 	// TODO: histogram
 
 	bool   _delayed_lookup{ false };
 	LookupFuncT _lookup_function{nullptr};
 	tp_t   _start_time;
+
+	sink::HRText<decltype(std::cout)> _console;
 
 public:
 	RaceCollector(
@@ -34,7 +60,8 @@ public:
 		LookupFuncT lookup_clb)
 		: _delayed_lookup(delayed_lookup),
 		  _lookup_function(lookup_clb),
-		  _start_time(clock_t::now())
+		  _start_time(clock_t::now()),
+		  _console(std::cout)
 	{
 		_races.reserve(1000);
 	}
@@ -42,44 +69,45 @@ public:
 	/* Adds a race and updates histogram */
 	void add_race(const detector::Race * r) {
 		auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
-		_races.emplace_back(ttr.count(), *r);
+
+		if (!_delayed_lookup) {
+			DecoratedRace dr(
+			std::move(resolve_symbols(r->first)),
+			std::move(resolve_symbols(r->second)));
+			_races.emplace_back(ttr.count(), dr);
+		}
+		else {
+			_races.emplace_back(ttr.count(), *r);
+		}
 		print_last_race();
+	}
+
+	/* Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
+	ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
+		ResolvedAccess ra(e);
+		for (auto & f : e.stack_trace) {
+			ra.resolved_stack.emplace_back(lookup_syms((app_pc)f));
+		}
+		return ra;
+	}
+
+	/* Resolves all unresolved race entries */
+	void resolve_all() {
+		for (auto & r : _races) {
+			if (!r.second.is_resolved) {
+				r.second.first = std::move(resolve_symbols(r.second.first));
+				r.second.second = std::move(resolve_symbols(r.second.second));
+			}
+		}
 	}
 
 	inline void print_last_race() const {
 		DR_ASSERT(!dr_using_app_state(dr_get_current_drcontext()));
-		get_race_info(_races.back(), std::cout);
+		_console.process_single_race(_races.back());
 	}
 
-	template<typename Stream>
-	void get_race_info(const entry_t & race, Stream & s, bool force_lookup = false) const {
-		std::stringstream ss;
-		ss << "----- DATA Race at " << std::dec << race.first << "ms runtime -----";
-		std::string header = ss.str();
-		s << header << std::endl;
-		for (int i = 0; i != 2; ++i) {
-			detector::AccessEntry ac = (i==0) ? race.second.first : race.second.second;
-
-			s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
-			s << (ac.write ? "write" : "read") << " to/from " << ac.accessed_memory
-			  << " with size " << ac.access_size << ". Stack(Size " << ac.stack_trace.size() << ")"
-			  << "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
-			if (ac.onheap) {
-				s << "Block begin at " << std::hex << ac.heap_block_begin << ", size " << ac.heap_block_size << std::endl;
-			}
-			else {
-				s << "Block not on heap (anymore)" << std::endl;
-			}
-
-			for (auto entry : ac.stack_trace) {
-				s << "-> " << lookup_syms((app_pc)entry, force_lookup).get_pretty() << std::endl;
-			}
-		}
-		s << std::string(header.length(), '-') << std::endl;
-	}
-
-	SymbolLocation lookup_syms(app_pc pc, bool force_lookup = false) const {
-		if (_lookup_function != nullptr && (!_delayed_lookup || force_lookup)) {
+	SymbolLocation lookup_syms(app_pc pc) const {
+		if (_lookup_function != nullptr) {
 			// Type of stack_demangler: (void*) -> symbol_location_t
 			SymbolLocation csloc = _lookup_function(pc);
 			return csloc;
@@ -106,7 +134,7 @@ public:
 				<< "    <kind>Race</kind>\n"
 				<< "    <stack>\n";
 			for (auto entry : race.stack_trace) {
-				auto syms = lookup_syms((app_pc)entry, true);
+				auto syms = lookup_syms((app_pc)entry);
 				s <<   "      <frame>\n"
 					<< "        <ip>0x" << std::hex << (uint64_t)syms.pc << "</ip>\n"
 					<< "        <obj>" << syms.mod_name << "</obj>\n"
@@ -123,11 +151,15 @@ public:
 		s << "</valgrindoutput>\n";
 	}
 
+	const RaceCollectionT & get_races() const {
+		return _races;
+	}
+
 	/* Write in Human Readable Format */
 	template<typename Stream>
 	void write_hr(Stream & s) const {
 		for (const auto & r : _races) {
-			get_race_info(r, s, true);
+			//get_race_info(r, s);
 		}
 	}
 
