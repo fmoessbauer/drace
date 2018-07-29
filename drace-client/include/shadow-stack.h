@@ -31,7 +31,7 @@ private:
 		if (size >= max_size) return;
 		// sometimes we miss return statements, hence check
 		// if pc is new
-		for (int i = 0; i < size; ++i)
+		for (unsigned i = 0; i < size; ++i)
 			if (stack->array[i] == addr) return;
 
 		stack->array[stack->entries++] = addr;

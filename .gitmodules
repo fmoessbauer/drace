@@ -7,3 +7,9 @@
 [submodule "vendor/jtilly/inih"]
 	path = vendor/jtilly/inih
 	url = https://github.com/jtilly/inih.git
+[submodule "vendor/leethomason/tinyxml2"]
+	path = vendor/leethomason/tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git
+[submodule "vendor/HowardHinnant/date"]
+	path = vendor/HowardHinnant/date
+	url = https://github.com/HowardHinnant/date.git

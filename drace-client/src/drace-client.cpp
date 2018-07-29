@@ -22,6 +22,7 @@
 #include "symbols.h"
 #include "statistics.h"
 #include "sink/hr-text.h"
+#include "sink/valkyrie.h"
 
 #include <detector_if.h>
 
@@ -81,10 +82,14 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	// Initialize Detector
 	detector::init(argc, argv, race_collector_add_race);
+
+	app_start = std::chrono::system_clock::now();
 }
 
 static void event_exit()
 {
+	app_stop = std::chrono::system_clock::now();
+
 	if (!drmgr_register_thread_init_event(event_thread_init) ||
 		!drmgr_register_thread_exit_event(event_thread_exit))
 		DR_ASSERT(false);
@@ -139,6 +144,9 @@ static void event_thread_exit(void *drcontext)
 }
 
 static void parse_args(int argc, const char ** argv) {
+	params.argc = argc;
+	params.argv = argv;
+
 	int processed = 1;
 	while (processed < argc) {
 		if (strncmp(argv[processed], "-s", 16) == 0) {
@@ -214,7 +222,9 @@ static void generate_summary() {
 	// Write XML output
 	if (params.xml_file != "") {
 		std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
-		race_collector->write_xml(races_xml_file);
-		races_xml_file.close();
+		sink::Valkyrie<std::ofstream> v_sink(races_xml_file,
+			params.argc, params.argv, dr_get_application_name(),
+			app_start, app_stop);
+		v_sink.process_all(race_collector->get_races());
 	}
 }

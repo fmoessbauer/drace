@@ -21,6 +21,12 @@ endif()
 find_package(Threads REQUIRED)
 find_package(DynamoRIO 7.0 REQUIRED)
 
+# TinyXML2 library for Valkyrie output
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build static version of TinyXML2" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "disable tests" FORCE)
+add_subdirectory("vendor/leethomason/tinyxml2")
+
+# DRACE
 add_subdirectory("drace-client")
 
 if(${DRACE_ENABLE_TESTING})

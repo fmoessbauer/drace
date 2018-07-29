@@ -2,6 +2,9 @@
 #include <vector>
 #include <string>
 #include <regex>
+#include <chrono>
+
+#include <date.h>
 
 bool util::common_prefix(const std::string& a, const std::string& b)
 {
@@ -21,4 +24,8 @@ std::vector<std::string> util::split(const std::string & str, const std::string 
 	std::sregex_token_iterator it{ str.begin(), str.end(), regex, -1 };
 	std::vector<std::string> words{ it,{} };
 	return words;
+}
+
+std::string util::to_iso_time(std::chrono::system_clock::time_point tp) {
+	return date::format("%FT%TZ", date::floor<std::chrono::milliseconds>(tp));
 }

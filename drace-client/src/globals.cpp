@@ -24,6 +24,9 @@ std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 std::atomic<thread_id_t> last_th_start{ 0 };
 std::atomic<bool> th_start_pending{ false };
 
+std::chrono::system_clock::time_point app_start;
+std::chrono::system_clock::time_point app_stop;
+
 std::string config_file("drace.ini");
 
 std::unique_ptr<MemoryTracker> memory_tracker;

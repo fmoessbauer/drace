@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <memory>
+#include <chrono>
 
 #include <dr_api.h>
 
@@ -23,6 +24,10 @@ struct params_t {
 	std::string  config_file{"drace.ini"};
 	std::string  out_file;
 	std::string  xml_file;
+
+	// Raw arguments
+	int          argc;
+	const char** argv;
 };
 extern params_t params;
 
@@ -86,6 +91,10 @@ extern std::atomic<int> num_threads_active;
 extern std::atomic<uint> runtime_tid;
 extern std::atomic<thread_id_t> last_th_start;
 extern std::atomic<bool> th_start_pending;
+
+// Start time of the application
+extern std::chrono::system_clock::time_point app_start;
+extern std::chrono::system_clock::time_point app_stop;
 
 // Global Module Shadow Data
 class ModuleTracker;
