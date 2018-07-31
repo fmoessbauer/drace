@@ -61,7 +61,7 @@ MemoryTracker::~MemoryTracker() {
 void MemoryTracker::analyze_access(per_thread_t * data) {
 	DR_ASSERT(data != nullptr);
 
-	mem_ref_t * mem_ref = (mem_ref_t *)data->buf_base;
+	mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.array;
 	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 	if (data->detector_data == nullptr) {
@@ -102,7 +102,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		data->stats->num_refs += num_refs;
 	}
 	data->stats->flushes++;
-	data->buf_ptr = data->buf_base;
+	data->buf_ptr = data->mem_buf.array;
 
 	uint64_t expect = 0;
 	if (!data->no_flush.load(std::memory_order_relaxed)) {
@@ -127,12 +127,12 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	DR_ASSERT(!dr_using_app_state(drcontext));
 	new (data) per_thread_t;
 
-	data->buf_base = (byte*)dr_thread_alloc(drcontext, MEM_BUF_SIZE);
-	data->buf_ptr = data->buf_base;
+	data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
+	data->buf_ptr = data->mem_buf.array;
 	/* set buf_end to be negative of address of buffer end for the lea later */
-	data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
+	data->buf_end = -(ptr_int_t)(data->mem_buf.array + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
-	data->stack.resize(ShadowStack::max_size + 1);
+	data->stack.resize(ShadowStack::max_size + 1, drcontext);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
@@ -186,8 +186,10 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 
 	data->stats->print_summary(std::cout);
 
-	dr_thread_free(drcontext, data->buf_base, MemoryTracker::MEM_BUF_SIZE);
-
+	// Cleanup TLS
+	// As we cannot rely on current context here, use provided one
+	data->stack.deallocate(drcontext);
+	data->mem_buf.deallocate(drcontext);
 	// deconstruct struct
 	data->~per_thread_t();
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -315,12 +317,12 @@ void MemoryTracker::clear_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();
 	per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-	mem_ref_t *mem_ref = (mem_ref_t *)data->buf_base;
+	mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.array;
 	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 	data->stats->num_refs += num_refs;
 	data->stats->flushes++;
-	data->buf_ptr = data->buf_base;
+	data->buf_ptr = data->mem_buf.array;
 	data->no_flush.store(true, std::memory_order_relaxed);
 }
 
@@ -360,7 +362,7 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 	for (const auto & td : TLS_buckets) {
 		if (td.first != data->tid && td.second->enabled && td.second->no_flush.load(std::memory_order_relaxed))
 		{
-			uint64_t refs = (td.second->buf_ptr - td.second->buf_base) / sizeof(mem_ref_t);
+			uint64_t refs = (td.second->buf_ptr - td.second->mem_buf.array) / sizeof(mem_ref_t);
 			if (refs > 0) {
 				//printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
 				//	data->tid, td.first, refs);
@@ -392,7 +394,7 @@ void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush
 					}
 				}
 				// Here we might loose some refs, clear them
-				td.second->buf_ptr = td.second->buf_base;
+				td.second->buf_ptr = td.second->mem_buf.array;
 				td.second->no_flush.store(true, std::memory_order_relaxed);
 				break;
 			}

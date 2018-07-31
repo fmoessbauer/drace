@@ -21,7 +21,7 @@ struct params_t {
 	bool     yield_on_evt{ false };
 	bool     fastmode{ false };
 	unsigned stack_size{ 10 };
-	std::string  config_file{"drace.ini"};
+	std::string  config_file{ "drace.ini" };
 	std::string  out_file;
 	std::string  xml_file;
 
@@ -56,8 +56,9 @@ struct per_thread_t {
 	using tls_map_t = std::vector<std::pair<thread_id_t, per_thread_t*>>;
 
 	byte         *buf_ptr;
-	byte         *buf_base;
 	ptr_int_t     buf_end;
+	AlignedBuffer<byte, 64> mem_buf;
+
 	void         *cache;
 	thread_id_t   tid;
 	// use ptrsize type for lea
@@ -78,7 +79,7 @@ struct per_thread_t {
 	std::unique_ptr<Statistics>   stats;
 	// as the detector cannot allocate TLS,
 	// use this ptr for per-thread data in detector
-	void         *detector_data{nullptr};
+	void         *detector_data{ nullptr };
 };
 
 /* Global data structures */
