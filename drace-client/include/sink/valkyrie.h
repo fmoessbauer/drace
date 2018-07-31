@@ -130,6 +130,10 @@ namespace sink {
 				}
 
 				p.CloseElement();
+
+				// Flush buffer to reduce memory usage
+				_stream << p.CStr() << std::endl;
+				p.ClearBuffer();
 			}
 		}
 
@@ -157,7 +161,7 @@ namespace sink {
 		template<typename RaceEntry>
 		void process_all(const RaceEntry & races) const {
 			tinyxml2::XMLPrinter p(0,true);
-			p.PushHeader(true, true);
+			p.PushHeader(false, true);
 			p.OpenElement("valgrindoutput");
 			print_header(p);
 			print_params(p);
@@ -170,7 +174,7 @@ namespace sink {
 			p.CloseElement();
 			p.CloseElement();
 
-			// Announce Threads
+			// TODO: Announce Threads
 
 			print_races(p, races);
 
@@ -181,12 +185,10 @@ namespace sink {
 			p.CloseElement();
 			p.CloseElement();
 
-			// ERROR COUNTS
-			// SUPPCOUNTS
-
 			p.CloseElement();
 
 			_stream << p.CStr();
+			p.ClearBuffer();
 		}
 	};
 }
