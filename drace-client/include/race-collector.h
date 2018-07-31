@@ -37,7 +37,6 @@ public:
 
 class RaceCollector {
 public:
-	using LookupFuncT = std::function<SymbolLocation(const app_pc)>;
 	using RaceEntryT = std::pair<unsigned long long, DecoratedRace>;
 	using RaceCollectionT = std::vector<RaceEntryT>;
 private:
@@ -49,7 +48,7 @@ private:
 	// TODO: histogram
 
 	bool   _delayed_lookup{ false };
-	LookupFuncT _lookup_function{nullptr};
+	std::shared_ptr<Symbols> _syms;
 	tp_t   _start_time;
 
 	sink::HRText<decltype(std::cout)> _console;
@@ -57,9 +56,9 @@ private:
 public:
 	RaceCollector(
 		bool delayed_lookup,
-		LookupFuncT lookup_clb)
+		const std::shared_ptr<Symbols> & symbols)
 		: _delayed_lookup(delayed_lookup),
-		  _lookup_function(lookup_clb),
+		  _syms(symbols),
 		  _start_time(clock_t::now()),
 		  _console(std::cout)
 	{
@@ -86,7 +85,7 @@ public:
 	ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
 		ResolvedAccess ra(e);
 		for (auto & f : e.stack_trace) {
-			ra.resolved_stack.emplace_back(lookup_syms((app_pc)f));
+			ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)f));
 		}
 		return ra;
 	}
@@ -104,15 +103,6 @@ public:
 	inline void print_last_race() const {
 		DR_ASSERT(!dr_using_app_state(dr_get_current_drcontext()));
 		_console.process_single_race(_races.back());
-	}
-
-	SymbolLocation lookup_syms(app_pc pc) const {
-		if (_lookup_function != nullptr) {
-			// Type of stack_demangler: (void*) -> symbol_location_t
-			SymbolLocation csloc = _lookup_function(pc);
-			return csloc;
-		}
-		return SymbolLocation();
 	}
 
 	/* Write in XML Format */

@@ -11,7 +11,6 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
-#include <functional>
 
 #include "globals.h"
 #include "drace-client.h"
@@ -74,11 +73,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	memory_tracker = std::make_unique<MemoryTracker>();
 
 	// Setup Race Collector and bind lookup function
-	auto lookup_fun = std::bind(&Symbols::get_symbol_info,
-		symbol_table.get(), std::placeholders::_1);
 	race_collector = std::make_unique<RaceCollector>(
 		params.delayed_sym_lookup,
-		lookup_fun);
+		symbol_table);
 
 	// Initialize Detector
 	detector::init(argc, argv, race_collector_add_race);
