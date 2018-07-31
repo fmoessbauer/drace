@@ -134,6 +134,7 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->buf_end = -(ptr_int_t)(data->mem_buf.array + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
 	data->stack.resize(ShadowStack::max_size + 1, drcontext);
+	data->mutex_book.resize(MUTEX_MAP_SIZE*2, drcontext);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;

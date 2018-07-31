@@ -58,6 +58,13 @@ public:
 		}
 	}
 
+	inline const T & operator[](int pos) const {
+		return array[pos];
+	}
+	inline T & operator[](int pos) {
+		return array[pos];
+	}
+
 private:
 	void allocate(void* drcontext, size_t capacity) {
 		if (capacity != 0) {

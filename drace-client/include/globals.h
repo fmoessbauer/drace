@@ -11,6 +11,9 @@
 
 #include <dr_api.h>
 
+/* max number of individual mutexes per thread */
+#define MUTEX_MAP_SIZE 128
+
 /* Runtime parameters */
 struct params_t {
 	unsigned sampling_rate{ 1 };
@@ -52,7 +55,6 @@ class Statistics;
 *          in memory_instr.
 */
 struct per_thread_t {
-	using mutex_map_t = std::unordered_map<uint64_t, int>;
 	using tls_map_t = std::vector<std::pair<thread_id_t, per_thread_t*>>;
 
 	byte         *buf_ptr;
@@ -71,8 +73,13 @@ struct per_thread_t {
 	AlignedStack<void*, 64> stack;
 	// Stack used to track state of detector
 	uint64        event_cnt{ 0 };
-	// book-keeping of active mutexes
-	mutex_map_t   mutex_book;
+
+	/* book-keeping of active mutexes
+	 * All even indices are mutex addresses
+	 * while uneven indices denote the number of
+	 * references at the location in index-1.
+	 * This is tuned for maximum cache-locality */
+	AlignedStack<uint64_t, 64> mutex_book;
 	// Used for event syncronisation procedure
 	tls_map_t     th_towait;
 	// Statistics

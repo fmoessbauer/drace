@@ -174,8 +174,7 @@ std::string detector::version() {
 void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool trylock, tls_t thr) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
-	if (thr == nullptr)
-		thr = __tsan_create_thread(thread_id);
+	if (thr == nullptr) return;
 
 	if (write) {
 		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, trylock);
@@ -188,8 +187,7 @@ void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool t
 void detector::release(tid_t thread_id, void* mutex, bool write, tls_t thr) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
-	if (thr == nullptr)
-		thr = __tsan_create_thread(thread_id);
+	if (thr == nullptr) return;
 
 	if (write) {
 		__tsan_MutexUnlock(thr, 0, (void*)addr_32, false);

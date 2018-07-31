@@ -39,8 +39,6 @@ static inline void prepare_and_aquire(
 	if (params.exclude_master && data->tid == runtime_tid)
 		return;
 
-	//dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
-
 	if (trylock) {
 		int retval = (int)drwrap_get_retval(wrapctx);
 		//dr_printf("[%.5i] Try Aquire %p, ret %i, rec: %i\n", data->tid, mutex, retval, data->mutex_rec);
@@ -52,11 +50,26 @@ static inline void prepare_and_aquire(
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
-	auto & cnt = data->mutex_book[(uint64_t)mutex];
+	int cnt = 0;
+	for (unsigned i = 0; i < data->mutex_book.entries; i+=2) {
+		if ((uint64_t)mutex == data->mutex_book[i]) {
+			cnt = ++(data->mutex_book[i + 1]);
+			break;
+		}
+	}
+	if (cnt == 0) {
+		// TODO: Reallocate if mutex map is too small
+		DR_ASSERT(data->mutex_book.entries + 2 < MUTEX_MAP_SIZE * 2);
+		// Not in book, push
+		data->mutex_book.push((uint64_t)mutex);
+		data->mutex_book.push(++cnt);
+	}
+
+	//dr_printf("[%.5i] Mutex book size: %i, count: %i, mutex: %p\n", data->tid, data->mutex_book.entries, cnt, mutex);
 
 	//dr_mutex_lock(th_mutex);
 	MemoryTracker::flush_all_threads(data);
-	detector::acquire(data->tid, mutex, ++cnt, write, trylock, data->detector_data);
+	detector::acquire(data->tid, mutex, cnt, write, trylock, data->detector_data);
 	//dr_mutex_unlock(th_mutex);
 
 	data->stats->mutex_ops++;
@@ -76,19 +89,27 @@ static inline void prepare_and_release(
 	void* mutex = drwrap_get_arg(wrapctx, 0);
 	//dr_printf("[%.5i] Release %p, success %i\n", data->tid, mutex);
 
-	// mutex not in book
-	if (data->mutex_book.count((uint64_t)mutex) == 0) {
-		// This should not be necessary, but as early threads cannot be tracked
-		// mutexes might be locked without book keeping.
-		return;
+	int cnt = 0;
+	unsigned i = 0;
+	for (; i < data->mutex_book.entries; i += 2) {
+		if ((uint64_t)mutex == data->mutex_book[i]) {
+			cnt = data->mutex_book[i + 1];
+			break;
+		}
 	}
-	auto & cnt = data->mutex_book[(uint64_t)mutex];
+	// mutex not in book
+	// This should not be necessary, but as early threads cannot be tracked
+	// mutexes might be locked without book keeping.
+	if (cnt == 0) return;
 
 	if (cnt == 1) {
-		data->mutex_book.erase((uint64_t)mutex);
+		// copy last mutex to this pos
+		data->mutex_book[i] = data->mutex_book.entries - 2;
+		data->mutex_book[i+1] = data->mutex_book.entries - 1;
+		data->mutex_book.entries -= 2;
 	}
 	else {
-		--cnt;
+		--(data->mutex_book[i + 1]);
 	}
 
 	// To avoid deadlock in flush-waiting spinlock,
