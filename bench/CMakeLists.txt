@@ -1,4 +1,4 @@
-set(SOURCES "main" "detector")
+set(SOURCES "main" "detector" "containers")
 
 set(RELEASE_COMPILE_FLAGS "-O3 -Wall")
 set(DEBUG_COMPILE_FLAGS "-g -Wall -Werror") 
@@ -18,5 +18,10 @@ target_include_directories(
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/drace-client/detectors> "detectors")
 
 target_link_libraries("${PROJECT_NAME}-bench" "drace-${DRACE_DETECTOR}")
+
+add_custom_command(TARGET "${PROJECT_NAME}-bench" POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"${PROJECT_BINARY_DIR}/vendor/google/benchmark/src/benchmark.dll"
+		"${PROJECT_BINARY_DIR}/bench/benchmark.dll")
 
 add_subdirectory(apps)

@@ -19,7 +19,6 @@ if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
 endif()
 
 find_package(Threads REQUIRED)
-find_package(DynamoRIO 7.0 REQUIRED)
 
 # TinyXML2 library for Valkyrie output
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build static version of TinyXML2" FORCE)
@@ -35,4 +34,12 @@ if(${DRACE_ENABLE_TESTING})
 	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
 	add_subdirectory("vendor/google/googletest/googletest")
 	add_subdirectory("test")
+endif()
+
+if(${DRACE_ENABLE_BENCH})
+	message("Build Benchmarks")
+	# force gtest to build static lib
+	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
+	add_subdirectory("vendor/google/benchmark")
+	add_subdirectory("bench")
 endif()

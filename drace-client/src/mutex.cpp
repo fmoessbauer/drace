@@ -103,9 +103,11 @@ static inline void prepare_and_release(
 	if (cnt == 0) return;
 
 	if (cnt == 1) {
-		// copy last mutex to this pos
-		data->mutex_book[i] = data->mutex_book.entries - 2;
-		data->mutex_book[i+1] = data->mutex_book.entries - 1;
+		if (data->mutex_book.entries != 2) {
+			// copy last mutex to this pos
+			data->mutex_book[i] = data->mutex_book.entries - 2;
+			data->mutex_book[i + 1] = data->mutex_book.entries - 1;
+		}
 		data->mutex_book.entries -= 2;
 	}
 	else {

@@ -10,6 +10,8 @@
 	"src/symbols"
 	"src/util")
 
+find_package(DynamoRIO 7.0 REQUIRED)
+
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories(
 	"drace-client" PRIVATE
