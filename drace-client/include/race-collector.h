@@ -87,8 +87,8 @@ public:
 	/* Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
 	ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
 		ResolvedAccess ra(e);
-		for (auto & f : e.stack_trace) {
-			ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)f));
+		for (unsigned i = 0; i < e.stack_size; ++i) {
+			ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
 		}
 		return ra;
 	}
@@ -106,42 +106,6 @@ public:
 	inline void print_last_race() const {
 		DR_ASSERT(!dr_using_app_state(dr_get_current_drcontext()));
 		_console.process_single_race(_races.back());
-	}
-
-	/* Write in XML Format */
-	template<typename Stream>
-	void write_xml(Stream & s) const {
-		// header
-		s << "<?xml version=\"1.0\"?>\n"
-			<< "<valgrindoutput>\n"
-			<< "  <protocolversion>4</protocolversion>\n"
-			<< "  <protocoltool>helgrind</protocoltool>\n"
-			<< "  <preamble><line>Drace, a thread error detector</line></preamble>\n"
-			<< "  <tool>drace</tool>\n\n";
-		// errors
-		for (unsigned i = 0; i < _races.size() * 2; ++i) {
-			auto & race = (i % 2 == 0) ? _races[i / 2].second.first : _races[i / 2].second.second;
-			s << "  <error>\n"
-				<< "    <unique>0x" << std::hex << i << "</unique>\n"
-				<< "    <tid>" << std::dec << race.thread_id << "</tid>\n"
-				<< "    <kind>Race</kind>\n"
-				<< "    <stack>\n";
-			for (auto entry : race.stack_trace) {
-				auto syms = lookup_syms((app_pc)entry);
-				s <<   "      <frame>\n"
-					<< "        <ip>0x" << std::hex << (uint64_t)syms.pc << "</ip>\n"
-					<< "        <obj>" << syms.mod_name << "</obj>\n"
-					<< "        <fn>" << syms.sym_name << "</fn>\n"
-					<< "        <dir>" << syms.file.substr(0, syms.file.find_last_of("/\\")) << "</dir>\n"
-					<< "        <file>" << syms.file.substr(syms.file.find_last_of("/\\") + 1) << "</file>\n"
-					<< "        <line>" << std::dec << syms.line << "</line>\n"
-					<< "      </frame>\n";
-			}
-			s <<   "    </stack>\n"
-		        << "  </error>\n";
-		}
-		// footer
-		s << "</valgrindoutput>\n";
 	}
 
 	const RaceCollectionT & get_races() const {
