@@ -1,13 +1,28 @@
-# drace-client
+# Drace
 
-The drace-client is a race-detector for windows build on top of DynamoRIO.
+The drace-client is a race detector for windows build on top of DynamoRIO.
 It does not require any perparations like instrumentation of the binary to check.
+However if debug information is not available, header-only C++11 constructs
+cannot be detected correctly.
 
 ## Dependencies
 
-- CMake > 3.8 (TODO: could be lessend)
+- CMake > 3.8
 - DynamoRIO 7.0.x
 - C++11 / C99 Compiler
+
+### External Libraries
+
+**Mandatory:**
+
+- [jtilly/inih](https://github.com/jtilly/inih)
+- [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
+- [HowardHinnant/date](https://github.com/HowardHinnant/date)
+
+**Optional:**
+
+- [google/googletest](https://github.com/google/googletest)
+- [google/benchmark](https://github.com/google/benchmark)
 
 ## Using the Drace Race Detector
 
@@ -30,7 +45,7 @@ Currently the following parameters are implemented
 --excl-master     : exclude the runtime thread, useful if loader races
 --delayed-syms    : do not lookup symbols on each race
 --fast-mode       : only flush local buffers on sync-event (all buffers otherwise)
---stacksz         : size of callstack used for race-detection
+--stacksz         : size of callstack used for race-detection (must be in [1,16])
 --xml-file <file> : log races in valkyries xml format in this file
 --out-file <file> : log races in human readable format in this file
 ```
