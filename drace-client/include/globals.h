@@ -34,18 +34,6 @@ struct params_t {
 };
 extern params_t params;
 
-/* Stack implementation that supports aligned memory */
-struct stack_t {
-	/* unaligned buffer begin */
-	void *   mem_beg;
-	/* aligned buffer */
-	void **  array;
-	/* size of the buffer in bytes */
-	size_t   size_in_bytes{ 0 };
-	/* number of items on stack */
-	unsigned entries{ 0 };
-};
-
 class Statistics;
 
 /* Per Thread data (thread-private)
