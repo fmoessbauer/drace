@@ -11,6 +11,8 @@ namespace detector {
 	typedef unsigned long tid_t;
 	typedef void*         tls_t;
 
+	static constexpr int max_stack_size = 16;
+
 	/* A single memory access */
 	struct AccessEntry {
 		unsigned thread_id;
@@ -18,10 +20,11 @@ namespace detector {
 		void    *accessed_memory;
 		size_t   access_size;
 		int      access_type;
-		std::vector<uint64_t> stack_trace;
 		void    *heap_block_begin;
 		size_t   heap_block_size;
 		bool     onheap;
+		size_t   stack_size{ 0 };
+		uint64_t stack_trace[max_stack_size];
 	};
 
 	/* A Data-Race is a tuple of two Accesses*/

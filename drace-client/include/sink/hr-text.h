@@ -38,7 +38,7 @@ namespace sink {
 
 				s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
 				s << (ac.write ? "write" : "read") << " to/from " << ac.accessed_memory
-					<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_trace.size() << ")"
+					<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_size << ")"
 					<< "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
 				if (ac.onheap) {
 					s << "Block begin at " << std::hex << ac.heap_block_begin << ", size " << ac.heap_block_size << std::endl;
@@ -53,7 +53,7 @@ namespace sink {
 					}
 				}
 				else {
-					s << "-> (unresolved stack size: " << ac.stack_trace.size() << ")" << std::endl;
+					s << "-> (unresolved stack size: " << ac.stack_size << ")" << std::endl;
 				}
 			}
 			s << std::string(header.length(), '-') << std::endl;

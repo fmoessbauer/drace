@@ -80,11 +80,9 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		access.access_size = race_info_ac->size;
 		access.access_type = race_info_ac->type;
 
-		int ssize = race_info_ac->stack_trace_size;
-		access.stack_trace.resize(ssize);
-		std::copy((uint64_t*)(race_info_ac->stack_trace),
-			((uint64_t*)(race_info_ac->stack_trace)) + ssize,
-			access.stack_trace.data());
+		size_t ssize = std::min(race_info_ac->stack_trace_size, detector::max_stack_size);
+		memcpy(access.stack_trace, race_info_ac->stack_trace, ssize * sizeof(uint64_t));
+		access.stack_size = ssize;
 
 		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
 		auto it = allocations.lower_bound(addr);

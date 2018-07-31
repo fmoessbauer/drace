@@ -19,7 +19,10 @@ public:
 	std::vector<SymbolLocation> resolved_stack;
 
 	ResolvedAccess(const detector::AccessEntry & e)
-		: detector::AccessEntry(e) { }
+		: detector::AccessEntry(e)
+	{
+		std::copy(e.stack_trace, e.stack_trace + e.stack_size, this->stack_trace);
+	}
 };
 
 class DecoratedRace {
