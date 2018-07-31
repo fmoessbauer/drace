@@ -90,20 +90,20 @@ static void event_exit()
 {
 	app_stop = std::chrono::system_clock::now();
 
-	if (!drmgr_register_thread_init_event(event_thread_init) ||
-		!drmgr_register_thread_exit_event(event_thread_exit))
+	if (!drmgr_unregister_thread_init_event(event_thread_init) ||
+		!drmgr_unregister_thread_exit_event(event_thread_exit))
 		DR_ASSERT(false);
 
 	// Generate summary while information is still present
 	generate_summary();
 	stats->print_summary(std::cout);
 
-
 	// Cleanup all drace modules
 	module_tracker.reset();
 	memory_tracker.reset();
 	symbol_table.reset();
 	stats.reset();
+
 	funwrap::finalize();
 
 	// Cleanup DR extensions
@@ -129,8 +129,7 @@ static void event_thread_init(void *drcontext)
 	}
 	num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
-	// Detector fork event is executed in
-	// memory-instr's thread init event
+	memory_tracker->event_thread_init(drcontext);
 
 	dr_printf("<< [%.5i] Thread started\n", tid);
 }
@@ -139,6 +138,8 @@ static void event_thread_exit(void *drcontext)
 {
 	thread_id_t tid = dr_get_thread_id(drcontext);
 	num_threads_active.fetch_sub(1, std::memory_order_relaxed);
+
+	memory_tracker->event_thread_exit(drcontext);
 
 	dr_printf("<< [%.5i] Thread exited\n", tid);
 }

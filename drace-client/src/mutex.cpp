@@ -34,6 +34,7 @@ static inline void prepare_and_aquire(
 {
 	app_pc drcontext = drwrap_get_drcontext(wrapctx);
 	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	DR_ASSERT(nullptr != data);
 
 	if (params.exclude_master && data->tid == runtime_tid)
 		return;
@@ -67,6 +68,7 @@ static inline void prepare_and_release(
 {
 	app_pc drcontext = drwrap_get_drcontext(wrapctx);
 	per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	DR_ASSERT(nullptr != data);
 
 	if (params.exclude_master && data->tid == runtime_tid)
 		return;

@@ -73,7 +73,7 @@ struct per_thread_t {
 	// book-keeping of active mutexes
 	mutex_map_t   mutex_book;
 	// Used for event syncronisation procedure
-	tls_map_t    th_towait;
+	tls_map_t     th_towait;
 	// Statistics
 	std::unique_ptr<Statistics>   stats;
 	// as the detector cannot allocate TLS,

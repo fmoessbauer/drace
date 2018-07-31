@@ -84,6 +84,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	auto start = std::chrono::system_clock::now();
 
 	per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+	DR_ASSERT(nullptr != data);
+
 	thread_id_t tid = data->tid;
 	std::string mod_name(dr_module_preferred_name(mod));
 

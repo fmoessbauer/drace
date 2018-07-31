@@ -29,26 +29,28 @@ public:
 
 	/* Clears the old buffer and allocates a new one with the specified capacity */
 	void resize(size_t capacity) {
-		deallocate();
-		allocate(capacity);
+		void* drcontext = dr_get_current_drcontext();
+		deallocate(drcontext);
+		allocate(drcontext, capacity);
 	}
 
+	/* Frees the allocated tls, hence has to be called in same thread as allocation */
 	~AlignedBuffer() {
-		deallocate();
+		deallocate(dr_get_current_drcontext());
 	}
 
 private:
-	void allocate(size_t capacity) {
-		void* drcontext = dr_get_current_drcontext();
+	void allocate(void* drcontext, size_t capacity) {
 		_size_in_bytes = capacity * sizeof(T) + alignment;
+		// copy this as value is modified by std::align
+		size_t space_size = _size_in_bytes;
 		_mem = (void*)dr_thread_alloc(drcontext, _size_in_bytes);
-		array = (T*)std::align(alignment, capacity, _mem, _size_in_bytes);
+		array = (T*)std::align(alignment, capacity, _mem, space_size);
 		DR_ASSERT(((uint64_t)array % alignment) == 0);
 	}
 
-	void deallocate() {
+	void deallocate(void* drcontext) {
 		if (_size_in_bytes != 0) {
-			void* drcontext = dr_get_current_drcontext();
 			dr_thread_free(drcontext, _mem, _size_in_bytes);
 			_size_in_bytes = 0;
 			array = nullptr;

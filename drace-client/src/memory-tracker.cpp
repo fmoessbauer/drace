@@ -41,8 +41,6 @@ MemoryTracker::MemoryTracker()
 	code_cache_init();
 
 	DR_ASSERT(
-		drmgr_register_thread_init_event(instr_event_thread_init) &&
-		drmgr_register_thread_exit_event(instr_event_thread_exit) &&
 		drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
 		drmgr_register_bb_instrumentation_event(instr_event_app_analysis, instr_event_app_instruction, NULL));
 
@@ -54,9 +52,7 @@ MemoryTracker::~MemoryTracker() {
 
 	drvector_delete(&allowed_xcx);
 
-	if (!drmgr_unregister_thread_init_event(instr_event_thread_init) ||
-		!drmgr_unregister_thread_exit_event(instr_event_thread_exit) ||
-		!drmgr_unregister_bb_app2app_event(instr_event_bb_app2app) ||
+	if (!drmgr_unregister_bb_app2app_event(instr_event_bb_app2app) ||
 		!drmgr_unregister_bb_instrumentation_event(instr_event_app_analysis) ||
 		drreg_exit() != DRREG_SUCCESS)
 		DR_ASSERT(false);
@@ -195,6 +191,8 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	// deconstruct struct
 	data->~per_thread_t();
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
+
+	// get absolutely sure that tls is not used afterwards
 	data = nullptr;
 	dr_rwlock_write_unlock(tls_rw_mutex);
 }

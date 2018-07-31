@@ -38,7 +38,7 @@ namespace funwrap {
 
 			// Save allocate size to user_data
 			// we use the pointer directly to avoid an allocation
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			*user_data = drwrap_get_arg(wrapctx, 2);
 
 			//beg_excl_region(data);
@@ -53,6 +53,7 @@ namespace funwrap {
 			void * pc = drwrap_get_func(wrapctx);
 
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
 
 			// TODO: Validate if this has to be synchronized
 			//dr_mutex_lock(th_mutex);
@@ -68,6 +69,8 @@ namespace funwrap {
 		static void free_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
+
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
 			// TODO: Validate if this has to be synchronized
@@ -81,8 +84,8 @@ namespace funwrap {
 		}
 
 		static void free_post(void *wrapctx, void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			
 			//end_excl_region(data);
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
@@ -91,6 +94,7 @@ namespace funwrap {
 		static void thread_creation(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
 			
 			beg_excl_region(data);
 
@@ -100,6 +104,7 @@ namespace funwrap {
 		static void thread_handover(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
 			
 			end_excl_region(data);
 			// Enable recently started thread
@@ -118,9 +123,8 @@ namespace funwrap {
 		static void thread_pre_sys(void *wrapctx, void **user_data) {
 		}
 		static void thread_post_sys(void *wrapctx, void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-
+			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			dr_rwlock_read_lock(tls_rw_mutex);
 			auto other_th = last_th_start.load(std::memory_order_acquire);
 			// There are some spurious failures where the thread init event
@@ -138,6 +142,7 @@ namespace funwrap {
 		static void begin_excl(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
 
 			beg_excl_region(data);
 
@@ -148,6 +153,7 @@ namespace funwrap {
 		static void end_excl(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			DR_ASSERT(nullptr != data);
 
 			end_excl_region(data);
 

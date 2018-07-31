@@ -92,16 +92,6 @@ private:
 
 extern std::unique_ptr<MemoryTracker> memory_tracker;
 
-// Events
-static inline void instr_event_thread_init(void *drcontext) {
-	memory_tracker->event_thread_init(drcontext);
-}
-
-static inline void instr_event_thread_exit(void *drcontext)
-{
-	memory_tracker->event_thread_exit(drcontext);
-}
-
 static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
 {
 	return memory_tracker->event_bb_app2app(drcontext, tag, bb, for_trace, translating);
