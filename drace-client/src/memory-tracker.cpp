@@ -119,13 +119,13 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 void MemoryTracker::event_thread_init(void *drcontext)
 {
 	/* allocate thread private data */
-	per_thread_t* data = reinterpret_cast<per_thread_t*>(dr_thread_alloc(drcontext, sizeof(per_thread_t)));
-	drmgr_set_tls_field(drcontext, tls_idx, data);
+	void * tls_buffer = dr_thread_alloc(drcontext, sizeof(per_thread_t));
+	drmgr_set_tls_field(drcontext, tls_idx, tls_buffer);
 
 	// Initialize struct at given location (placement new)
 	// As this includes allocation, we have to be in dr state
 	DR_ASSERT(!dr_using_app_state(drcontext));
-	new (data) per_thread_t;
+	per_thread_t * data = new (tls_buffer) per_thread_t;
 
 	data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
 	data->buf_ptr = data->mem_buf.array;
@@ -187,15 +187,13 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	data->stats->print_summary(std::cout);
 
 	// Cleanup TLS
-	// As we cannot rely on current context here, use provided one
+	// As we cannot rely on current drcontext here, use provided one
 	data->stack.deallocate(drcontext);
 	data->mem_buf.deallocate(drcontext);
 	// deconstruct struct
 	data->~per_thread_t();
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
 
-	// get absolutely sure that tls is not used afterwards
-	data = nullptr;
 	dr_rwlock_write_unlock(tls_rw_mutex);
 }
 
