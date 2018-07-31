@@ -87,7 +87,17 @@ private:
 	void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2, instr_t *call_flush);
 
 	/* Instrument all memory accessing instructions */
-	void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
+	void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
+	void instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
+
+	inline void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write) {
+		if (params.fastmode) {
+			instrument_mem_fast(drcontext, ilist, where, ref, write);
+		}
+		else {
+			instrument_mem_full(drcontext, ilist, where, ref, write);
+		}
+	}
 };
 
 extern std::unique_ptr<MemoryTracker> memory_tracker;

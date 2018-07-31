@@ -4,6 +4,8 @@
 	"src/function-wrapper"
 	"src/mutex"
 	"src/memory-tracker"
+	"src/instr/instr-mem-fast.cpp"
+	"src/instr/instr-mem-full.cpp"
 	"src/module-tracker"
 	"src/symbols"
 	"src/util")

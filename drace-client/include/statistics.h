@@ -35,7 +35,7 @@ public:
 	void print_summary(Stream & s = std::cout) {
 		s << std::string(20, '-') << std::endl
 			<< "Cumulative Stats for:" << std::endl
-			<< "threads:\t\t" << std::dec;
+			<< "thread-ids:\t\t" << std::dec;
 		std::copy(thread_ids.begin(), thread_ids.end(),
 			std::ostream_iterator<thread_id_t>(s, ","));
 		s << std::endl;
