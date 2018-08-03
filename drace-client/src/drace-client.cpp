@@ -150,6 +150,9 @@ static void parse_args(int argc, const char ** argv) {
 		if (strncmp(argv[processed], "-s", 16) == 0) {
 			params.sampling_rate = std::stoi(argv[++processed]);
 		}
+		else if (strncmp(argv[processed], "-i", 16) == 0) {
+			params.instr_rate = std::stoi(argv[++processed]);
+		}
 		else if (strncmp(argv[processed], "-c", 16) == 0) {
 			params.config_file = argv[++processed];
 		}
@@ -187,6 +190,7 @@ static void print_config() {
 	dr_printf(
 		"< Runtime Configuration:\n"
 		"< Sampling Rate:\t%i\n"
+		"< Instr. Rate:\t\t%i\n"
 		"< Frequent Only:\t%s\n"
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
@@ -198,6 +202,7 @@ static void print_config() {
 		"< Stack-Size:\t\t%i\n"
 		"< Private Caches:\t%s\n",
 		params.sampling_rate,
+		params.instr_rate,
 		params.frequent_only ? "ON" : "OFF",
 		params.yield_on_evt ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",

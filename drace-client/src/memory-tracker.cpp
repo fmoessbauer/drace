@@ -16,7 +16,7 @@
 
 MemoryTracker::MemoryTracker()
 	: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
-	_dist({1.0/params.sampling_rate, 1.0-1.0/params.sampling_rate})
+	_prng_border(_max_value / params.sampling_rate)
 {
 	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
 	drreg_options_t ops = { sizeof(ops), 3, false };
@@ -62,46 +62,50 @@ MemoryTracker::~MemoryTracker() {
 void MemoryTracker::analyze_access(per_thread_t * data) {
 	DR_ASSERT(data != nullptr);
 
-	mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.array;
-	uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
-
 	if (data->detector_data == nullptr) {
 		// Thread starts with a pending clean-call
-		if (!params.fastmode) DR_ASSERT(num_refs == 0);
 		// We missed a fork
 		// 1. Flush all threads (except this thread)
 		// 2. Fork thread
-		dr_printf("<< [%i] Missed a fork, do it now \n", data->tid, num_refs);
+		dr_printf("<< [%i] Missed a fork, do it now\n", data->tid);
 		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 	}
-	if (data->enabled && num_refs > 0) {
-		//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
-		DR_ASSERT(data->detector_data != nullptr);
+	if (data->enabled) {
+		mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.array;
+		uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-		auto * stack = &(data->stack);
+		if (num_refs > 0) {
+			// Sampling
+			if (sample_ref()) {
+				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
+				DR_ASSERT(data->detector_data != nullptr);
 
-		// In non-fast-mode we have to protect the stack
-		if (!params.fastmode) dr_mutex_lock(th_mutex);
+				auto * stack = &(data->stack);
 
-		stack->entries++; // We have one spare-element
-		int size = min(stack->entries, params.stack_size);
-		int offset = stack->entries - size;
-		for (uint64_t i = 0; i < num_refs; ++i) {
-			stack->array[stack->entries-1] = mem_ref->pc;
-			if (mem_ref->write) {
-				detector::write(data->tid, stack->array+offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
-				//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
+				// In non-fast-mode we have to protect the stack
+				if (!params.fastmode) dr_mutex_lock(th_mutex);
+
+				stack->entries++; // We have one spare-element
+				int size = min(stack->entries, params.stack_size);
+				int offset = stack->entries - size;
+				for (uint64_t i = 0; i < num_refs; ++i) {
+					stack->array[stack->entries - 1] = mem_ref->pc;
+					if (mem_ref->write) {
+						detector::write(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
+					}
+					else {
+						detector::read(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
+					}
+					++mem_ref;
+				}
+				stack->entries--;
+				if (!params.fastmode) dr_mutex_unlock(th_mutex);
+
+				data->stats->num_refs += num_refs;
 			}
-			else {
-				detector::read(data->tid, stack->array+offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
-				//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
-			}
-			++mem_ref;
 		}
-		stack->entries--;
-		if(!params.fastmode) dr_mutex_unlock(th_mutex);
-
-		data->stats->num_refs += num_refs;
 	}
 	data->stats->flushes++;
 	data->buf_ptr = data->mem_buf.array;
@@ -273,7 +277,7 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 	// Sampling: Only instrument some instructions
 	// This is a racy increment, but we do not rely on exact numbers
 	auto cnt = ++instrum_count;
-	if (cnt % params.sampling_rate != 0) {
+	if (cnt % params.instr_rate != 0) {
 		return DR_EMIT_DEFAULT;
 	}
 

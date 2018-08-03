@@ -48,7 +48,6 @@ static std::atomic<uint64_t>    races{ 0 };
 /* Cannot use std::mutex here, hence use spinlock */
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
-static std::vector<int*> stack_trace;
 static std::unordered_map<detector::tid_t, ThreadState> thread_states;
 
 struct tsan_params_t {
@@ -145,7 +144,6 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
 	parse_args(argc, argv);
 	print_config();
 
-	stack_trace.resize(1);
 	thread_states.reserve(128);
 
 	__tsan_init_simple(reportRaceCallBack, (void*)rc_clb);

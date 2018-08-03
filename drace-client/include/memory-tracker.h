@@ -12,6 +12,9 @@
 #include <memory>
 #include <random>
 
+// DR somewere defines max()
+#undef max
+
 class MemoryTracker {
 public:
 	/* Single memory reference */
@@ -47,7 +50,9 @@ private:
 
 	// fast random numbers for sampling
 	std::mt19937 _prng;
-	std::discrete_distribution<int> _dist;
+	const std::mt19937::result_type _prng_border;
+
+	static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
 public:
 
@@ -80,7 +85,9 @@ private:
 	void code_cache_init(void);
 	void code_cache_exit(void);
 
-
+	static inline bool sample_ref() {
+		return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
+	}
 
 	// Instrumentation
 	/* Inserts a jump to clean call if a flush is pending */
