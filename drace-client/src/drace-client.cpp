@@ -195,7 +195,8 @@ static void print_config() {
 		"< Config File:\t\t%s\n"
 		"< Output File:\t\t%s\n"
 		"< XML File:\t\t%s\n"
-		"< Stack-Size:\t\t%i\n",
+		"< Stack-Size:\t\t%i\n"
+		"< Private Caches:\t%s\n",
 		params.sampling_rate,
 		params.frequent_only ? "ON" : "OFF",
 		params.yield_on_evt ? "ON" : "OFF",
@@ -205,7 +206,8 @@ static void print_config() {
 		params.config_file.c_str(),
 		params.out_file != "" ? params.out_file : "OFF",
 		params.xml_file != "" ? params.xml_file : "OFF",
-		params.stack_size);
+		params.stack_size,
+		dr_using_all_private_caches() ? "ON" : "OFF");
 }
 
 static void generate_summary() {

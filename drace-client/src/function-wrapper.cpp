@@ -55,11 +55,8 @@ namespace funwrap {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			// TODO: Validate if this has to be synchronized
-			//dr_mutex_lock(th_mutex);
 			MemoryTracker::flush_all_threads(data);
 			detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
-			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] post allocate: size %i, addr %p\n", data->tid, data->last_alloc_size, retval);
@@ -73,11 +70,8 @@ namespace funwrap {
 
 			void * addr = drwrap_get_arg(wrapctx, 2);
 
-			// TODO: Validate if this has to be synchronized
-			//dr_mutex_lock(th_mutex);
 			MemoryTracker::flush_all_threads(data);
 			detector::deallocate(data->tid, addr, data->detector_data);
-			//dr_mutex_unlock(th_mutex);
 
 			// spams logs
 			//dr_fprintf(STDERR, "<< [%i] pre free %p\n", data->tid, addr);
