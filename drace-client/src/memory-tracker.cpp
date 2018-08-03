@@ -75,36 +75,33 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 		if (num_refs > 0) {
-			// Sampling
-			if (sample_ref()) {
-				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
-				DR_ASSERT(data->detector_data != nullptr);
+			//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
+			DR_ASSERT(data->detector_data != nullptr);
 
-				auto * stack = &(data->stack);
+			auto * stack = &(data->stack);
 
-				// In non-fast-mode we have to protect the stack
-				if (!params.fastmode) dr_mutex_lock(th_mutex);
+			// In non-fast-mode we have to protect the stack
+			if (!params.fastmode) dr_mutex_lock(th_mutex);
 
-				stack->entries++; // We have one spare-element
-				int size = min(stack->entries, params.stack_size);
-				int offset = stack->entries - size;
-				for (uint64_t i = 0; i < num_refs; ++i) {
-					stack->array[stack->entries - 1] = mem_ref->pc;
-					if (mem_ref->write) {
-						detector::write(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
-						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
-					}
-					else {
-						detector::read(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
-						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
-					}
-					++mem_ref;
+			stack->entries++; // We have one spare-element
+			int size = min(stack->entries, params.stack_size);
+			int offset = stack->entries - size;
+			for (uint64_t i = 0; i < num_refs; ++i) {
+				stack->array[stack->entries - 1] = mem_ref->pc;
+				if (mem_ref->write) {
+					detector::write(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+					//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 				}
-				stack->entries--;
-				if (!params.fastmode) dr_mutex_unlock(th_mutex);
-
-				data->stats->num_refs += num_refs;
+				else {
+					detector::read(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+					//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
+				}
+				++mem_ref;
 			}
+			stack->entries--;
+			if (!params.fastmode) dr_mutex_unlock(th_mutex);
+
+			data->stats->num_refs += num_refs;
 		}
 	}
 	data->stats->flushes++;

@@ -80,14 +80,15 @@ public:
 		instr_t *instr, bool for_trace,
 		bool translating, void *user_data);
 
+	/* Returns true if this reference should be sampled */
+	static inline bool sample_ref() {
+		return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
+	}
+
 private:
 
 	void code_cache_init(void);
 	void code_cache_exit(void);
-
-	static inline bool sample_ref() {
-		return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
-	}
 
 	// Instrumentation
 	/* Inserts a jump to clean call if a flush is pending */

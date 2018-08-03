@@ -55,6 +55,15 @@ private:
 		}
 		// TODO: possibibly racy in non-fast-mode
 		MemoryTracker::analyze_access(data);
+
+		// Sampling: Possibly disable detector during this function
+		if (!MemoryTracker::sample_ref()) {
+			data->enabled = false;
+		}
+		else if (data->event_cnt == 0) {
+			data->enabled = true;
+		}
+
 		push(call_ins, &(data->stack));
 	}
 
