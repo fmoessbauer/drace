@@ -23,8 +23,9 @@ MemoryTracker::MemoryTracker()
 
 	/* Ensure that atomic and native type have equal size as otherwise
 	   instrumentation reads invalid value */
+	using no_flush_t = decltype(per_thread_t::no_flush);
 	static_assert(
-		sizeof(decltype(per_thread_t::no_flush)) == sizeof(uint64_t)
+		sizeof(no_flush_t) == sizeof(no_flush_t::value_type)
 		, "atomic uint64 size differs from uint64 size");
 
 	DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
@@ -243,6 +244,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 			module_tracker->unlock_read();
 		}
 	}
+	// Avoid temporary allocation by using ptr-value directly
 	*user_data = (void*)instrument_bb;
 	return DR_EMIT_DEFAULT;
 }

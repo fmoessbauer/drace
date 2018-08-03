@@ -211,6 +211,7 @@ static void print_config() {
 static void generate_summary() {
 	race_collector->resolve_all();
 	const char * app_name = dr_get_application_name();
+
 	if (params.out_file != "") {
 		std::ofstream races_hr_file(params.out_file, std::ofstream::out);
 		sink::HRText<std::ofstream> hr_sink(races_hr_file);
