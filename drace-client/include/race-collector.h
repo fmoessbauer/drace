@@ -112,14 +112,6 @@ public:
 		return _races;
 	}
 
-	/* Write in Human Readable Format */
-	template<typename Stream>
-	void write_hr(Stream & s) const {
-		for (const auto & r : _races) {
-			//get_race_info(r, s);
-		}
-	}
-
 	unsigned long num_races() const {
 		return static_cast<unsigned long>(_races.size());
 	}
