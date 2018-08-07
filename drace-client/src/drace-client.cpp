@@ -59,7 +59,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	drmgr_register_thread_exit_event(event_thread_exit);
 
 	// Setup Statistics Collector
-	stats = std::make_unique<Statistics>();
+	stats = std::make_unique<Statistics>(0);
 
 	// Setup Function Wrapper
 	DR_ASSERT(funwrap::init());

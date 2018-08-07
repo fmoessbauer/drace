@@ -9,9 +9,12 @@
 
 #include <dr_api.h>
 
+#include <lcm/lossyCountingModel.hpp>
+
 class Statistics {
 public:
 	using ms_t = std::chrono::milliseconds;
+	using hist_t = std::vector<std::pair<uint64_t, size_t>>;
 
 	std::vector<thread_id_t> thread_ids;
 	unsigned long mutex_ops{ 0 };
@@ -23,11 +26,20 @@ public:
 	ms_t module_load_duration{ 0 };
 	unsigned long long num_refs{ 0 };
 
+	LossyCountingModel<uint64_t> page_hits;
+	LossyCountingModel<uint64_t> pc_hits;
+
+	hist_t freq_hits;
+	hist_t freq_pcs;
+
 public:
 
 	Statistics() = default;
 
-	explicit Statistics(thread_id_t tid) {
+	explicit Statistics(thread_id_t tid)
+		: page_hits(0.01, 0.001),
+		  pc_hits(0.01, 0.001)
+	{
 		thread_ids.push_back(tid);
 	}
 
@@ -49,8 +61,16 @@ public:
 			<< "flush-time (total):\t" << std::dec << time_in_flushes.count() << "ms" << std::endl
 			<< "memory-refs:\t\t" << std::dec << num_refs << std::endl
 			<< "module loads:\t\t" << std::dec << module_loads << std::endl
-			<< "mod. load time(total):\t" << std::dec << module_load_duration.count() << "ms" << std::endl
-			<< std::string(20, '-') << std::endl;
+			<< "mod. load time(total):\t" << std::dec << module_load_duration.count() << "ms" << std::endl;
+		s << "top pages:\t\t";
+		for (const auto & p : freq_hits) {
+			s << "(" << std::hex << p.first << "," << std::dec << p.second << "),";
+		}
+		s << std::endl << "top pcs:\t\t";
+		for (const auto & p : freq_pcs) {
+			s << "(" << std::hex << p.first << "," << std::dec << p.second << "),";
+		}
+		s << std::endl << std::string(20, '-') << std::endl;
 	}
 
 	inline Statistics & operator|= (const Statistics & other) {

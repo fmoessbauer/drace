@@ -59,6 +59,32 @@ MemoryTracker::~MemoryTracker() {
 		DR_ASSERT(false);
 }
 
+inline void flush_region(void* drcontext, uint64_t pc) {
+	// Flush this area from the code cache
+	dr_delay_flush_region((app_pc)(pc * 64), 64, 0, NULL);
+	dr_printf("Flushed %p\n", pc * 64);
+}
+/* Update the code cache and remove items where the instrumentation should change.
+* We only consider traces, as other parts are not performance critical
+*/
+void MemoryTracker::update_cache(per_thread_t * data) {
+	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
+
+	dr_printf("[%.5i] Flush Cache\n", data->tid);
+	// we track pc's on 64 element boundaries
+	void * drcontext = dr_get_current_drcontext();
+	// Flush new fragments
+	for (const auto & pc : new_freq) {
+		flush_region(drcontext, pc.first);
+	}
+	// Flush old fragments (re-instrument)
+	for (const auto & pc : data->stats->freq_pcs) {
+		flush_region(drcontext, pc.first);
+	}
+
+	data->stats->freq_pcs = new_freq;
+}
+
 void MemoryTracker::analyze_access(per_thread_t * data) {
 	DR_ASSERT(data != nullptr);
 
@@ -78,6 +104,11 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 			DR_ASSERT(data->detector_data != nullptr);
 
+			constexpr unsigned period = 1024 * 64;
+			if (data->stats->num_refs % period == 0) {
+				update_cache(data);
+			}
+
 			auto * stack = &(data->stack);
 
 			// In non-fast-mode we have to protect the stack
@@ -86,6 +117,10 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			stack->entries++; // We have one spare-element
 			int size = min(stack->entries, params.stack_size);
 			int offset = stack->entries - size;
+
+			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
+			data->stats->pc_hits.processItem((uint64_t)mem_ref->pc / 64);
+
 			for (uint64_t i = 0; i < num_refs; ++i) {
 				stack->array[stack->entries - 1] = mem_ref->pc;
 				if (mem_ref->write) {
@@ -96,11 +131,14 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 					detector::read(data->tid, stack->array + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
 					//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 				}
+
+				// Lossy count page
+				//data->stats->page_hits.processItem(((uint64_t)mem_ref->addr) / 4096);
+
 				++mem_ref;
 			}
 			stack->entries--;
 			if (!params.fastmode) dr_mutex_unlock(th_mutex);
-
 			data->stats->num_refs += num_refs;
 		}
 	}
@@ -217,13 +255,13 @@ dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, inst
 dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
 	bool instrument_bb = true;
+	app_pc bb_addr = dr_fragment_app_pc(tag);
+
 	if (params.frequent_only && !for_trace) {
 		// only instrument traces, much faster startup
 		instrument_bb = false;
 	}
 	else {
-		app_pc bb_addr = dr_fragment_app_pc(tag);
-
 		// Lookup module from cache, hit is very likely as adiacent bb's 
 		// are mostly in the same module
 		auto cached = mc.lookup(bb_addr);
@@ -245,6 +283,18 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 			module_tracker->unlock_read();
 		}
 	}
+	// Do not instrument if block is frequent
+	if (for_trace && instrument_bb) {
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		for (const auto & pc : data->stats->freq_pcs) {
+			if (((uint64_t)bb_addr / 64) == pc.first) {
+				instrument_bb = false;
+				//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
+				break;
+			}
+		}
+	}
+	
 	// Avoid temporary allocation by using ptr-value directly
 	*user_data = (void*)instrument_bb;
 	return DR_EMIT_DEFAULT;

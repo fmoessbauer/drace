@@ -85,6 +85,9 @@ public:
 		return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
 	}
 
+	/* Analyze the page and pc hits and remove frequently occuring entries from cache */
+	static void update_cache(per_thread_t * data);
+
 private:
 
 	void code_cache_init(void);

@@ -50,7 +50,7 @@ static inline void prepare_and_aquire(
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
-	int cnt = 0;
+	uint64_t cnt = 0;
 	for (unsigned i = 0; i < data->mutex_book.entries; i+=2) {
 		if ((uint64_t)mutex == data->mutex_book[i]) {
 			cnt = ++(data->mutex_book[i + 1]);
