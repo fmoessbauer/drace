@@ -61,25 +61,41 @@ MemoryTracker::~MemoryTracker() {
 
 inline void flush_region(void* drcontext, uint64_t pc) {
 	// Flush this area from the code cache
-	dr_delay_flush_region((app_pc)(pc * 64), 64, 0, NULL);
-	dr_printf("Flushed %p\n", pc * 64);
+	dr_delay_flush_region((app_pc)(pc * MemoryTracker::HIST_PC_RES), MemoryTracker::HIST_PC_RES, 0, NULL);
+	dr_printf(">> Flushed %p\n", pc * MemoryTracker::HIST_PC_RES);
 }
-/* Update the code cache and remove items where the instrumentation should change.
-* We only consider traces, as other parts are not performance critical
-*/
+
+inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) {
+	std::vector<uint64_t> result;
+	result.reserve(hist.size());
+
+	std::transform(hist.begin(), hist.end(), std::back_inserter(result),
+		[](const Statistics::hist_t::value_type & v) {return v.first;});
+
+	std::sort(result.begin(), result.end());
+
+	return result;
+}
+
 void MemoryTracker::update_cache(per_thread_t * data) {
+	// TODO: optimize this
 	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
+	auto pc_new = get_pcs_from_hist(new_freq);
+	auto pc_old = get_pcs_from_hist(data->stats->freq_pcs);
+
+	std::vector<uint64_t> difference;
+	difference.reserve(pc_new.size() + pc_old.size());
+
+	// get difference between both histograms
+	std::set_symmetric_difference(pc_new.begin(), pc_new.end(), pc_old.begin(), pc_old.end(), std::back_inserter(difference));
 
 	dr_printf("[%.5i] Flush Cache\n", data->tid);
+
 	// we track pc's on 64 element boundaries
 	void * drcontext = dr_get_current_drcontext();
 	// Flush new fragments
-	for (const auto & pc : new_freq) {
-		flush_region(drcontext, pc.first);
-	}
-	// Flush old fragments (re-instrument)
-	for (const auto & pc : data->stats->freq_pcs) {
-		flush_region(drcontext, pc.first);
+	for (const auto pc : difference) {
+		flush_region(drcontext, pc);
 	}
 
 	data->stats->freq_pcs = new_freq;
@@ -104,11 +120,6 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 			DR_ASSERT(data->detector_data != nullptr);
 
-			constexpr unsigned period = 1024 * 64;
-			if (data->stats->num_refs % period == 0) {
-				update_cache(data);
-			}
-
 			auto * stack = &(data->stack);
 
 			// In non-fast-mode we have to protect the stack
@@ -119,7 +130,10 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			int offset = stack->entries - size;
 
 			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
-			data->stats->pc_hits.processItem((uint64_t)mem_ref->pc / 64);
+			if (params.lossy) {
+				data->stats->pc_hits.processItem((uint64_t)mem_ref->pc / HIST_PC_RES);
+				if (data->stats->flushes % CC_UPDATE_PERIOD == 0) update_cache(data);
+			}
 
 			for (uint64_t i = 0; i < num_refs; ++i) {
 				stack->array[stack->entries - 1] = mem_ref->pc;
@@ -257,37 +271,31 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 	bool instrument_bb = true;
 	app_pc bb_addr = dr_fragment_app_pc(tag);
 
-	if (params.frequent_only && !for_trace) {
-		// only instrument traces, much faster startup
-		instrument_bb = false;
+	// Lookup module from cache, hit is very likely as adiacent bb's 
+	// are mostly in the same module
+	auto cached = mc.lookup(bb_addr);
+	if (cached.first) {
+		instrument_bb = cached.second;
 	}
 	else {
-		// Lookup module from cache, hit is very likely as adiacent bb's 
-		// are mostly in the same module
-		auto cached = mc.lookup(bb_addr);
-		if (cached.first) {
-			instrument_bb = cached.second;
+		module_tracker->lock_read();
+		auto modc = module_tracker->get_module_containing(bb_addr);
+		if (modc.first) {
+			// bb in known module
+			instrument_bb = modc.second->instrument;
 		}
 		else {
-			module_tracker->lock_read();
-			auto modc = module_tracker->get_module_containing(bb_addr);
-			if (modc.first) {
-				// bb in known module
-				instrument_bb = modc.second->instrument;
-			}
-			else {
-				// Module not known
-				instrument_bb = false;
-			}
-			mc.update(modc.second->base, modc.second->end, modc.second->instrument);
-			module_tracker->unlock_read();
+			// Module not known
+			instrument_bb = false;
 		}
+		mc.update(modc.second->base, modc.second->end, modc.second->instrument);
+		module_tracker->unlock_read();
 	}
 	// Do not instrument if block is frequent
 	if (for_trace && instrument_bb) {
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		for (const auto & pc : data->stats->freq_pcs) {
-			if (((uint64_t)bb_addr / 64) == pc.first) {
+			if (((uint64_t)bb_addr / MemoryTracker::HIST_PC_RES) == pc.first) {
 				instrument_bb = false;
 				//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
 				break;

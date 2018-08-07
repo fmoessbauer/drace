@@ -51,8 +51,13 @@ target_include_directories("drace-client" PRIVATE
 target_include_directories("drace-client" PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/HowardHinnant/date/include/date> "date")
 
-set(CMAKE_CXX_FLAGS_RELEASE "/MT")
-set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
+# HowardHinnant Date
+target_include_directories("drace-client" PRIVATE
+	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/greg7mdp/sparsepp> "sparsepp")
+
+if(${DRACE_OPT_HASHMAP})
+	target_compile_definitions("drace-client" PRIVATE DRACE_OPT_HASHMAP=1)
+endif()
 
 # Prepare Binary Dir
 # Copy to test dir

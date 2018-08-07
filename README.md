@@ -23,6 +23,7 @@ cannot be detected correctly.
 
 - [google/googletest](https://github.com/google/googletest)
 - [google/benchmark](https://github.com/google/benchmark)
+- [greq7mdp/sparsepp](https://github.com/greq7mdp/sparsepp)
 
 ## Using the Drace Race Detector
 
@@ -41,6 +42,7 @@ Currently the following parameters are implemented
 -s <sampling-rate>: from all observed memory-references, analyze 1/n
 -i <instr-rate>   : from the considered instructions, 1/n are actually instrumented
 --freq-only       : only instrument high-traffic code fragments
+--lossy           : remove instrumentation from high-traffic application parts after some time
 --yield-on-evt    : yield active thread after buffer is processed due to an event (e.g. mutex lock / unlock)
                     this might be necessary if more threads than cores are active
 --excl-master     : exclude the runtime thread, useful if loader races
@@ -74,4 +76,5 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 
 - CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)
 - TSAN can only be started once, as the cleanup is not fully working
+- If using the SparsePP hashmap, the application might crash if a reallocation occurs which is not detected by DR correctly.
 

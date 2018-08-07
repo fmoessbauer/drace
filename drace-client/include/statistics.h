@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <iterator>
 #include <algorithm>
@@ -38,7 +39,7 @@ public:
 
 	explicit Statistics(thread_id_t tid)
 		: page_hits(0.01, 0.001),
-		  pc_hits(0.01, 0.001)
+		  pc_hits(0.02, 0.002)
 	{
 		thread_ids.push_back(tid);
 	}
@@ -66,9 +67,13 @@ public:
 		for (const auto & p : freq_hits) {
 			s << "(" << std::hex << p.first << "," << std::dec << p.second << "),";
 		}
+
 		s << std::endl << "top pcs:\t\t";
+		const auto & state = pc_hits.getState();
 		for (const auto & p : freq_pcs) {
-			s << "(" << std::hex << p.first << "," << std::dec << p.second << "),";
+			double share = (static_cast<double>(p.second) / state.N)*(100.0+state.e);
+			s << "(" << std::setw(8) << std::hex << p.first << ","
+				<< std::dec << std::setprecision(3) << std::setw(2) << share << "%),";
 		}
 		s << std::endl << std::string(20, '-') << std::endl;
 	}

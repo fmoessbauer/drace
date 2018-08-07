@@ -13,3 +13,6 @@
 [submodule "vendor/HowardHinnant/date"]
 	path = vendor/HowardHinnant/date
 	url = https://github.com/HowardHinnant/date.git
+[submodule "vendor/greg7mdp/sparsepp"]
+	path = vendor/greg7mdp/sparsepp
+	url = https://github.com/greg7mdp/sparsepp.git

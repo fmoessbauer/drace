@@ -2,10 +2,17 @@
 #define LOSSY_COUNTING_MODEL_H
 
 #include <map>
-#include <unordered_map>
 #include <vector>
 #include <algorithm>
 #include <cmath>
+
+// on windows we should use optimized allocator,
+// but that is not possible due to DR
+#ifdef DRACE_OPT_HASHMAP
+#include <sparsepp/spp.h>
+#else
+#include <unordered_map>
+#endif
 
 /**
  * Lossy Counting Model implemenation for processing a
@@ -31,7 +38,11 @@ public:
   };
 
 private:
-  using histogram_type = typename std::unordered_map<T,size_t>;
+#ifdef DRACE_OPT_HASHMAP
+  using histogram_type = typename spp::sparse_hash_map<T,size_t>;
+#else
+  using histogram_type = typename std::unordered_map<T, size_t>;
+#endif
 
   double              _frequency;
   double              _error;
@@ -48,9 +59,7 @@ public:
     _frequency(frequency),
     _error(error),
     _window_size(static_cast<unsigned long>(std::round(1.0 / error))) 
-  {
-	  _histogram.reserve(1024);
-  }
+  { }
 
   /**
    * process a single item of the datastream
@@ -89,7 +98,7 @@ public:
    * the final histogram is stored in can be set using the
    * template parameter.
    */
-  template<typename ContainerT = std::map<T,int>>
+  template<typename ContainerT = std::map<T,size_t>>
   ContainerT computeOutput() const noexcept {
     ContainerT result;
 
@@ -97,15 +106,35 @@ public:
                     (_error * _total_processed_elements);
 
     std::copy_if(_histogram.begin(), _histogram.end(),
-        std::inserter(result, result.end()),
+        std::back_inserter(result),
         [&](const std::pair<T,int> & el){
           return el.second >= threshold;
           });
     return result;
   }
 
+  template<typename ContainerT = std::vector<T>>
+  ContainerT computeOutputKeys() const noexcept {
+	  ContainerT result;
+
+	  const int threshold = (_frequency * _total_processed_elements) -
+		  (_error * _total_processed_elements);
+
+	  for (const auto & el : _histogram) {
+		  if (el.second >= threshold) {
+			  result.push_back(el.first);
+		  }
+	  }
+	  return result;
+  }
+
   State getState() const noexcept {
     return State{_frequency, _error, _window_size, _total_processed_elements};
+  }
+
+  void reset() {
+	  _histogram.clear();
+	  _total_processed_elements = 0;
   }
 
 private:

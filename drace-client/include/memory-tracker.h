@@ -29,6 +29,11 @@ public:
 	static constexpr int MAX_NUM_MEM_REFS = 128;
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
+	/* aggregate frequent pc's on this granularity */
+	static constexpr unsigned HIST_PC_RES = 128;
+	/* update code-cache after this number of flushes */
+	static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
+
 	std::atomic<int> flush_active{ false };
 
 private:
@@ -85,7 +90,9 @@ public:
 		return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
 	}
 
-	/* Analyze the page and pc hits and remove frequently occuring entries from cache */
+	/* Update the code cache and remove items where the instrumentation should change.
+	 * We only consider traces, as other parts are not performance critical
+	 */
 	static void update_cache(per_thread_t * data);
 
 private:
