@@ -35,6 +35,13 @@ struct params_t {
 };
 extern params_t params;
 
+/* Instrumentation Level Flags */
+enum INSTR_FLAGS : uint8_t {
+	NONE = 0,
+	MEMORY = 1,
+	STACK = 2
+};
+
 class Statistics;
 
 /* Per Thread data (thread-private)
@@ -119,3 +126,6 @@ extern drace::Config config;
 
 // Global Statistics Collector
 extern std::unique_ptr<Statistics> stats;
+
+#undef max
+#undef min

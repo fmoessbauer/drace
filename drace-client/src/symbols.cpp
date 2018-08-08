@@ -4,6 +4,7 @@
 
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 std::string Symbols::get_bb_symbol(app_pc pc) {
 	auto modc = module_tracker->get_module_containing(pc);
@@ -11,7 +12,7 @@ std::string Symbols::get_bb_symbol(app_pc pc) {
 	if (modc.first) {
 		// Reverse search from pc until symbol can be decoded
 		uint64_t offset = pc - modc.second->base;
-		auto limit = max((uint64_t)0, offset - (uint64_t)max_distance);
+		auto limit = std::max((uint64_t)0, offset - (uint64_t)max_distance);
 		for (; offset >= limit; --offset) {
 			drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 			if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
@@ -35,7 +36,7 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 
 			// Reverse search from pc until symbol can be decoded
 			int offset = pc - modc.second->base;
-			auto limit = max((uint64_t)0, offset - (uint64_t)max_distance);
+			auto limit = std::max((uint64_t)0, offset - (uint64_t)max_distance);
 			for (; offset >= limit; --offset) {
 				drsym_error_t err = drsym_lookup_address(modc.second->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {

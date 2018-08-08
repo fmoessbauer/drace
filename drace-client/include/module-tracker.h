@@ -9,7 +9,7 @@ public:
 	app_pc base;
 	app_pc end;
 	mutable bool   loaded; // This is necessary to modify value in-place in set
-	mutable bool   instrument;
+	mutable INSTR_FLAGS instrument;
 	module_data_t *info{ nullptr };
 	mutable bool   debug_info;
 
@@ -17,7 +17,7 @@ public:
 		base(mbase),
 		end(mend),
 		loaded(mloaded),
-		instrument(false),
+		instrument(INSTR_FLAGS::NONE),
 		debug_info(debug_info){ }
 
 	~ModuleData() {
@@ -71,19 +71,19 @@ public:
 class ModuleCache {
 private:
 	/* keep last module here for faster lookup */
-	uint64  mc_beg = 0;
-	uint64  mc_end = 0;
-	bool    mc_instr = false;
+	uint64      mc_beg = 0;
+	uint64      mc_end = 0;
+	INSTR_FLAGS mc_instr = INSTR_FLAGS::NONE;
 
 public:
 	/* Lookup last module in cache, returns (found, instrument)*/
-	inline std::pair<bool, bool> lookup(app_pc pc) {
+	inline std::pair<bool, INSTR_FLAGS> lookup(app_pc pc) {
 		if ((uint64)pc >= mc_beg && (uint64)pc < mc_end) {
 			return std::make_pair(true, mc_instr);
 		}
-		return std::make_pair(false, false);
+		return std::make_pair(false, INSTR_FLAGS::NONE);
 	}
-	inline void update(app_pc beg, app_pc end, bool instrument) {
+	inline void update(app_pc beg, app_pc end, INSTR_FLAGS instrument) {
 		mc_beg = (uint64)beg;
 		mc_end = (uint64)end;
 		mc_instr = instrument;

@@ -29,8 +29,8 @@ public:
 	static constexpr int MAX_NUM_MEM_REFS = 128;
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
-	/* aggregate frequent pc's on this granularity */
-	static constexpr unsigned HIST_PC_RES = 128;
+	/* aggregate frequent pc's on this granularity (bytes)*/
+	static constexpr unsigned HIST_PC_RES = 8 * 32;
 	/* update code-cache after this number of flushes */
 	static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 

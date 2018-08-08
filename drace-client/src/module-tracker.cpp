@@ -92,7 +92,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	// create shadow struct of current module
 	// for easier comparison
 	ModuleData current(mod->start, mod->end);
-	current.instrument = true;
+	current.instrument = INSTR_FLAGS::MEMORY;
 
 	module_tracker->lock_read();
 	auto & modules = module_tracker->modules;
@@ -114,25 +114,25 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		for (auto prefix : module_tracker->excluded_path_prefix) {
 			// check if mod path is excluded
 			if (util::common_prefix(prefix, mod_path)) {
-				current.instrument = false;
+				current.instrument = INSTR_FLAGS::NONE;
 				break;
 			}
 		}
-		if (current.instrument) {
+		if (current.instrument != INSTR_FLAGS::NONE) {
 			// check if mod name is excluded
 			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-				current.instrument = false;
+				current.instrument = INSTR_FLAGS::NONE;
 			}
 		}
-		if (current.instrument) {
+		if (current.instrument != INSTR_FLAGS::NONE) {
 			// check if debug info is available
 			current.debug_info = symbol_table->debug_info_available(mod);
 		}
 
 		dr_printf("< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, debug info: %s, full path: %s\n",
 			tid, mod_name.c_str(), current.base, current.end,
-			current.instrument ? "YES" : " NO",
+			util::instr_flags_to_str(current.instrument).c_str(),
 			current.debug_info ? "YES" : " NO",
 			current.info->full_path);
 

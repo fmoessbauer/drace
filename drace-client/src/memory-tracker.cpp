@@ -1,5 +1,7 @@
 #pragma once
 
+#include "globals.h"
+
 #include <dr_api.h>
 #include <drmgr.h>
 #include <drreg.h>
@@ -8,7 +10,6 @@
 
 #include <detector_if.h>
 
-#include "globals.h"
 #include "memory-tracker.h"
 #include "symbols.h"
 #include "shadow-stack.h"
@@ -126,7 +127,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			if (!params.fastmode) dr_mutex_lock(th_mutex);
 
 			stack->entries++; // We have one spare-element
-			int size = min(stack->entries, params.stack_size);
+			int size = std::min((unsigned)stack->entries, params.stack_size);
 			int offset = stack->entries - size;
 
 			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
@@ -268,7 +269,7 @@ dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, inst
 
 dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
-	bool instrument_bb = true;
+	INSTR_FLAGS instrument_bb = INSTR_FLAGS::MEMORY;
 	app_pc bb_addr = dr_fragment_app_pc(tag);
 
 	// Lookup module from cache, hit is very likely as adiacent bb's 
@@ -286,7 +287,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 		}
 		else {
 			// Module not known
-			instrument_bb = false;
+			instrument_bb = INSTR_FLAGS::NONE;
 		}
 		mc.update(modc.second->base, modc.second->end, modc.second->instrument);
 		module_tracker->unlock_read();
@@ -296,7 +297,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		for (const auto & pc : data->stats->freq_pcs) {
 			if (((uint64_t)bb_addr / MemoryTracker::HIST_PC_RES) == pc.first) {
-				instrument_bb = false;
+				instrument_bb = INSTR_FLAGS::NONE;
 				//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
 				break;
 			}
@@ -311,11 +312,10 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
 	bool translating, void *user_data) {
-	bool instrument_instr = (bool)user_data;
+	INSTR_FLAGS instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;
-
 
 	if (!instrument_instr)
 		return DR_EMIT_DEFAULT;

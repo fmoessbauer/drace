@@ -1,4 +1,6 @@
 #include "util.h"
+#include "globals.h"
+
 #include <vector>
 #include <string>
 #include <regex>
@@ -28,4 +30,18 @@ std::vector<std::string> util::split(const std::string & str, const std::string 
 
 std::string util::to_iso_time(std::chrono::system_clock::time_point tp) {
 	return date::format("%FT%TZ", date::floor<std::chrono::milliseconds>(tp));
+}
+
+std::string util::instr_flags_to_str(INSTR_FLAGS flags) {
+	std::stringstream buffer;
+	if (flags & INSTR_FLAGS::MEMORY) {
+		buffer << "MEMORY ";
+	}
+	if (flags & INSTR_FLAGS::STACK) {
+		buffer << "STACK ";
+	}
+	if (!flags) {
+		buffer << "NONE ";
+	}
+	return buffer.str();
 }
