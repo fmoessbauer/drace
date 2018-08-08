@@ -20,6 +20,7 @@ struct params_t {
 	unsigned instr_rate{ 1 };
 	bool     heap_only{ false };
 	bool     lossy{ false };
+	bool     lossy_flush{ false };
 	bool     exclude_master{ false };
 	bool     delayed_sym_lookup{ false };
 	bool     yield_on_evt{ false };

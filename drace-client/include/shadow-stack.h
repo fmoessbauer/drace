@@ -63,6 +63,10 @@ private:
 		else if (data->event_cnt == 0) {
 			data->enabled = true;
 		}
+		// if lossy_flush, disable detector instead of changeing the instructions
+		if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
+			data->enabled = false;
+		}
 
 		push(call_ins, &(data->stack));
 	}

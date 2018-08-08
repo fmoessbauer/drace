@@ -95,6 +95,8 @@ public:
 	 */
 	static void update_cache(per_thread_t * data);
 
+	static bool pc_in_freq(per_thread_t * data, void* bb);
+
 private:
 
 	void code_cache_init(void);

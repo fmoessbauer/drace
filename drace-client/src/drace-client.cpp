@@ -159,6 +159,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--lossy", 16) == 0) {
 			params.lossy = true;
 		}
+		else if (strncmp(argv[processed], "--lossy-flush", 16) == 0) {
+			params.lossy_flush = true;
+		}
 		else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
 			params.exclude_master = true;
 		}
@@ -191,6 +194,7 @@ static void print_config() {
 		"< Sampling Rate:\t%i\n"
 		"< Instr. Rate:\t\t%i\n"
 		"< Lossy:\t\t%s\n"
+		"< Lossy-Flush:\t\t%s\n"
 		"< Yield on Event:\t%s\n"
 		"< Exclude Master:\t%s\n"
 		"< Delayed Sym Lookup:\t%s\n"
@@ -203,6 +207,7 @@ static void print_config() {
 		params.sampling_rate,
 		params.instr_rate,
 		params.lossy ? "ON" : "OFF",
+		params.lossy_flush ? "ON" : "OFF",
 		params.yield_on_evt ? "ON" : "OFF",
 		params.exclude_master ? "ON" : "OFF",
 		params.delayed_sym_lookup ? "ON" : "OFF",

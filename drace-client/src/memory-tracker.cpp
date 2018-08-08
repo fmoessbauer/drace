@@ -81,25 +81,37 @@ inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) 
 void MemoryTracker::update_cache(per_thread_t * data) {
 	// TODO: optimize this
 	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
-	auto pc_new = get_pcs_from_hist(new_freq);
-	auto pc_old = get_pcs_from_hist(data->stats->freq_pcs);
-
-	std::vector<uint64_t> difference;
-	difference.reserve(pc_new.size() + pc_old.size());
-
-	// get difference between both histograms
-	std::set_symmetric_difference(pc_new.begin(), pc_new.end(), pc_old.begin(), pc_old.end(), std::back_inserter(difference));
-
 	dr_printf("[%.5i] Flush Cache\n", data->tid);
-
-	// we track pc's on 64 element boundaries
-	void * drcontext = dr_get_current_drcontext();
-	// Flush new fragments
-	for (const auto pc : difference) {
-		flush_region(drcontext, pc);
+	if (params.lossy_flush) {
+		auto pc_new = get_pcs_from_hist(new_freq);
+		auto pc_old = get_pcs_from_hist(data->stats->freq_pcs);
+		
+		std::vector<uint64_t> difference;
+		difference.reserve(pc_new.size() + pc_old.size());
+		
+		// get difference between both histograms
+		std::set_symmetric_difference(pc_new.begin(), pc_new.end(), pc_old.begin(), pc_old.end(), std::back_inserter(difference));
+		
+		
+		// we track pc's on 64 element boundaries
+		void * drcontext = dr_get_current_drcontext();
+		// Flush new fragments
+		for (const auto pc : difference) {
+			flush_region(drcontext, pc);
+		}
 	}
 
 	data->stats->freq_pcs = new_freq;
+}
+
+bool MemoryTracker::pc_in_freq(per_thread_t * data, void* bb) {
+	for (const auto & pc : data->stats->freq_pcs) {
+		if (((uint64_t)bb / MemoryTracker::HIST_PC_RES) == pc.first) {
+			return true;
+			//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
+		}
+	}
+	return false;
 }
 
 void MemoryTracker::analyze_access(per_thread_t * data) {
