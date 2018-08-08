@@ -32,16 +32,16 @@ private:
 		// sometimes we miss return statements, hence check
 		// if pc is new
 		for (unsigned i = 0; i < size; ++i)
-			if (stack->array[i] == addr) return;
+			if (stack->data[i] == addr) return;
 
-		stack->array[stack->entries++] = addr;
+		stack->data[stack->entries++] = addr;
 	}
 
 	static inline void *pop(stack_t* stack)
 	{
 		DR_ASSERT(stack->entries > 0);
 		stack->entries--;
-		return stack->array[stack->entries];
+		return stack->data[stack->entries];
 	}
 
 	/* Call Instrumentation */

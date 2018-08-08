@@ -4,6 +4,7 @@
 
 #include <dr_api.h>
 
+/* Encapsulates and enriches a dynamorio module_data_t struct */
 class ModuleData {
 public:
 	app_pc base;
@@ -68,24 +69,25 @@ public:
 	}
 };
 
+/* Single element cache to speedup module lookup */
 class ModuleCache {
 private:
 	/* keep last module here for faster lookup */
-	uint64      mc_beg = 0;
-	uint64      mc_end = 0;
+	uint64_t     mc_beg = 0;
+	uint64_t     mc_end = 0;
 	INSTR_FLAGS mc_instr = INSTR_FLAGS::NONE;
 
 public:
 	/* Lookup last module in cache, returns (found, instrument)*/
 	inline std::pair<bool, INSTR_FLAGS> lookup(app_pc pc) {
-		if ((uint64)pc >= mc_beg && (uint64)pc < mc_end) {
+		if ((uint64_t)pc >= mc_beg && (uint64_t)pc < mc_end) {
 			return std::make_pair(true, mc_instr);
 		}
 		return std::make_pair(false, INSTR_FLAGS::NONE);
 	}
 	inline void update(app_pc beg, app_pc end, INSTR_FLAGS instrument) {
-		mc_beg = (uint64)beg;
-		mc_end = (uint64)end;
+		mc_beg = (uint64_t)beg;
+		mc_end = (uint64_t)end;
 		mc_instr = instrument;
 	}
 };
@@ -106,7 +108,11 @@ public:
 	explicit ModuleTracker(const std::shared_ptr<Symbols> & syms);
 	~ModuleTracker();
 
-	std::pair<bool, ModuleData_Set::iterator> get_module_containing(app_pc pc) const {
+	/* Returns an iterator to the module which contains the given program counter.
+	 * The first entry of the pair denots if the pc is in a known module
+	 */
+	std::pair<bool, ModuleData_Set::iterator> get_module_containing(app_pc pc) const
+	{
 		ModuleData current(pc, nullptr);
 
 		auto m_it = modules.lower_bound(current);
@@ -118,6 +124,7 @@ public:
 		}
 	}
 
+	/* Request a read-lock for the module dataset*/
 	inline void lock_read() const {
 		dr_rwlock_read_lock(mod_lock);
 	}
@@ -126,6 +133,7 @@ public:
 		dr_rwlock_read_unlock(mod_lock);
 	}
 
+	/* Request a write-lock for the module dataset*/
 	inline void lock_write() const {
 		dr_rwlock_write_lock(mod_lock);
 	}
@@ -133,9 +141,6 @@ public:
 	inline void unlock_write() const {
 		dr_rwlock_write_unlock(mod_lock);
 	}
-
-private:
-	void ModuleTracker::print_modules();
 };
 
 static void event_module_load(void *drcontext, const module_data_t *mod, bool loaded);

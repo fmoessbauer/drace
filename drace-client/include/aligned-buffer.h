@@ -16,7 +16,7 @@ class AlignedBuffer {
 
 public:
 	using self_t = AlignedBuffer<T, alignment>;
-	T * array{ nullptr };
+	T * data{ nullptr };
 
 public:
 	AlignedBuffer() = default;
@@ -54,15 +54,15 @@ public:
 			}
 			dr_thread_free(drcontext, _mem, _size_in_bytes);
 			_size_in_bytes = 0;
-			array = nullptr;
+			data = nullptr;
 		}
 	}
 
 	inline const T & operator[](int pos) const {
-		return array[pos];
+		return data[pos];
 	}
 	inline T & operator[](int pos) {
-		return array[pos];
+		return data[pos];
 	}
 
 private:
@@ -72,8 +72,8 @@ private:
 			// copy this as value is modified by std::align
 			size_t space_size = _size_in_bytes;
 			_mem = dr_thread_alloc(drcontext, _size_in_bytes);
-			array = (T*)std::align(alignment, capacity, _mem, space_size);
-			DR_ASSERT(((uint64_t)array % alignment) == 0);
+			data = (T*)std::align(alignment, capacity, _mem, space_size);
+			DR_ASSERT(((uint64_t)data % alignment) == 0);
 		}
 	}
 };

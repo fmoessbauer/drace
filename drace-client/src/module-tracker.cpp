@@ -32,19 +32,9 @@ static bool operator==(const module_data_t & d1, const module_data_t & d2)
 		return true;
 	return false;
 }
-bool operator!=(const module_data_t & d1, const module_data_t & d2) {
+/* Global operator to compare module_data_t regarding logic inequivalence */
+static bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 	return !(d1 == d2);
-}
-
-void ModuleTracker::print_modules() {
-	for (const auto & current : modules) {
-		const char * mod_name = dr_module_preferred_name(current.info);
-		dr_printf("<< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, debug info: %s, full path: %s\n",
-			0, mod_name, current.base, current.end,
-			current.debug_info ? "YES" : " NO",
-			current.instrument ? "YES" : " NO",
-			current.info->full_path);
-	}
 }
 
 ModuleTracker::ModuleTracker(const std::shared_ptr<Symbols> & symbols)
@@ -92,7 +82,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	// create shadow struct of current module
 	// for easier comparison
 	ModuleData current(mod->start, mod->end);
-	current.instrument = INSTR_FLAGS::MEMORY;
+	current.instrument = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
 
 	module_tracker->lock_read();
 	auto & modules = module_tracker->modules;
@@ -166,7 +156,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		}
 	}
 
-	// Free symbol information. A later access re-reads them, so its safe to do it here
+	// Free symbol information. A later access re-creates them, so its safe to do it here
 	drsym_free_resources(mod->full_path);
 
 	data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
@@ -174,7 +164,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 }
 
 /* Module unload event implementation. As this function is passed
-*  as a callback to a c API, we cannot use std::bind
+*  as a callback to a C api, we cannot use std::bind
 */
 void event_module_unload(void *drcontext, const module_data_t *mod) {
 	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, full path: %s\n",

@@ -9,7 +9,7 @@ public:
 	unsigned long entries{ 0 };
 
 	inline void push(const T & val) {
-		array[entries++] = val;
+		data[entries++] = val;
 	}
 
 	inline T & pop() {
