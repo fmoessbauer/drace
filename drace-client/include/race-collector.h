@@ -42,6 +42,9 @@ class RaceCollector {
 public:
 	using RaceEntryT = std::pair<unsigned long long, DecoratedRace>;
 	using RaceCollectionT = std::vector<RaceEntryT>;
+
+	/* Maximum number of races to collect */
+	static constexpr int MAX = 1000;
 private:
 	using entry_t = RaceEntryT;
 	using clock_t = std::chrono::high_resolution_clock;
@@ -56,6 +59,8 @@ private:
 
 	sink::HRText<decltype(std::cout)> _console;
 
+	void *_race_mx;
+
 public:
 	RaceCollector(
 		bool delayed_lookup,
@@ -66,10 +71,19 @@ public:
 		  _console(std::cout)
 	{
 		_races.reserve(1000);
+		_race_mx = dr_mutex_create();
+	}
+
+	~RaceCollector() {
+		dr_mutex_destroy(_race_mx);
 	}
 
 	/* Adds a race and updates histogram */
 	void add_race(const detector::Race * r) {
+		if (num_races() > MAX)
+			return;
+
+		dr_mutex_lock(_race_mx);
 		auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
 
 		if (!_delayed_lookup) {
@@ -82,6 +96,7 @@ public:
 			_races.emplace_back(ttr.count(), *r);
 		}
 		print_last_race();
+		dr_mutex_unlock(_race_mx);
 	}
 
 	/* Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */

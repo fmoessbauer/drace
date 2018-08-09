@@ -30,7 +30,7 @@ public:
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 	/* aggregate frequent pc's on this granularity (bytes)*/
-	static constexpr unsigned HIST_PC_RES = 8 * 32;
+	static constexpr unsigned HIST_PC_RES = 8 * 128;
 	/* update code-cache after this number of flushes */
 	static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 

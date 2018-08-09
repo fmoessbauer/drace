@@ -39,7 +39,7 @@ public:
 
 	explicit Statistics(thread_id_t tid)
 		: page_hits(0.01, 0.001),
-		  pc_hits(0.02, 0.002)
+		  pc_hits(0.01, 0.001)
 	{
 		thread_ids.push_back(tid);
 	}

@@ -41,29 +41,19 @@ static inline void prepare_and_aquire(
 
 	if (trylock) {
 		int retval = (int)drwrap_get_retval(wrapctx);
-		//dr_printf("[%.5i] Try Aquire %p, ret %i, rec: %i\n", data->tid, mutex, retval, data->mutex_rec);
+		//dr_printf("[%.5i] Try Aquire %p, ret %i\n", data->tid, mutex, retval);
 		// If retval == 0, mtx acquired
 		// skip otherwise
 		if (retval != 0)
 			return;
 	}
+	//else {
+	//	dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
+	//}
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
-	uint64_t cnt = 0;
-	for (unsigned i = 0; i < data->mutex_book.entries; i+=2) {
-		if ((uint64_t)mutex == data->mutex_book[i]) {
-			cnt = ++(data->mutex_book[i + 1]);
-			break;
-		}
-	}
-	if (cnt == 0) {
-		// TODO: Reallocate if mutex map is too small
-		DR_ASSERT(data->mutex_book.entries + 2 < MUTEX_MAP_SIZE * 2);
-		// Not in book, push
-		data->mutex_book.push((uint64_t)mutex);
-		data->mutex_book.push(++cnt);
-	}
+	uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 
 	//dr_printf("[%.5i] Mutex book size: %i, count: %i, mutex: %p\n", data->tid, data->mutex_book.entries, cnt, mutex);
 
@@ -87,31 +77,15 @@ static inline void prepare_and_release(
 		return;
 
 	void* mutex = drwrap_get_arg(wrapctx, 0);
-	//dr_printf("[%.5i] Release %p, success %i\n", data->tid, mutex);
+	//dr_printf("[%.5i] Release %p\n", data->tid, mutex);
 
-	int cnt = 0;
-	unsigned i = 0;
-	for (; i < data->mutex_book.entries; i += 2) {
-		if ((uint64_t)mutex == data->mutex_book[i]) {
-			cnt = data->mutex_book[i + 1];
-			break;
-		}
+	if (!data->mutex_book.count((uint64_t)mutex)) {
+		// mutex not in book
+		return;
 	}
-	// mutex not in book
-	// This should not be necessary, but as early threads cannot be tracked
-	// mutexes might be locked without book keeping.
-	if (cnt == 0) return;
-
-	if (cnt == 1) {
-		if (data->mutex_book.entries != 2) {
-			// copy last mutex to this pos
-			data->mutex_book[i] = data->mutex_book.entries - 2;
-			data->mutex_book[i + 1] = data->mutex_book.entries - 1;
-		}
-		data->mutex_book.entries -= 2;
-	}
-	else {
-		--(data->mutex_book[i + 1]);
+	auto & cnt = --(data->mutex_book[(uint64_t)mutex]);
+	if (cnt == 0) {
+		data->mutex_book.erase((uint64_t)mutex);
 	}
 
 	// To avoid deadlock in flush-waiting spinlock,
@@ -245,6 +219,7 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 		wrap_mtx(mod, config.get_multi("sync", "release_shared"), mutex_read_unlock, NULL);
 	}
 	else {
+		dr_printf("Try to warp qtsync mutexes\n");
 		// Custom Mutexes
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl"), get_arg, recmutex_lock);
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl_try"), get_arg, recmutex_trylock);

@@ -76,7 +76,8 @@ struct per_thread_t {
 	 * while uneven indices denote the number of
 	 * references at the location in index-1.
 	 * This is tuned for maximum cache-locality */
-	AlignedStack<uint64_t, 64> mutex_book;
+	//AlignedStack<uint64_t, 64> mutex_book;
+	std::unordered_map<uint64_t, unsigned> mutex_book;
 	// Used for event syncronisation procedure
 	tls_map_t     th_towait;
 	// Statistics

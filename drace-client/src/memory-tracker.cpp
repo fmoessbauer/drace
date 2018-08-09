@@ -81,7 +81,7 @@ inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) 
 void MemoryTracker::update_cache(per_thread_t * data) {
 	// TODO: optimize this
 	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
-	dr_printf("[%.5i] Flush Cache\n", data->tid);
+	dr_printf("[%.5i] Flush Cache, size %i\n", data->tid, new_freq.size());
 	if (params.lossy_flush) {
 		auto pc_new = get_pcs_from_hist(new_freq);
 		auto pc_old = get_pcs_from_hist(data->stats->freq_pcs);
@@ -201,7 +201,7 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->buf_end = -(ptr_int_t)(data->mem_buf.data + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
 	data->stack.resize(ShadowStack::max_size + 1, drcontext);
-	data->mutex_book.resize(MUTEX_MAP_SIZE*2, drcontext);
+	data->mutex_book.reserve(MUTEX_MAP_SIZE);
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
@@ -240,11 +240,11 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 
 	detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
 
-	dr_mutex_lock(th_mutex);
-	*stats |= *(data->stats);
-	dr_mutex_unlock(th_mutex);
-
 	dr_rwlock_write_lock(tls_rw_mutex);
+	// as this is a exclusive lock and this is the only place
+	// where stats are combined, we use it
+	*stats |= *(data->stats);
+
 	// As TLS_buckets stores a pointer to this tls,
 	// we cannot release the lock until the deallocation
 	// is finished. Otherwise a second thread might

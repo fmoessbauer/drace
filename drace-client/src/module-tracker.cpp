@@ -146,7 +146,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
-	if (modit->instrument) {
+	if (modit->instrument != INSTR_FLAGS::NONE) {
 		funwrap::wrap_excludes(mod);
 		// This requires debug symbols, but avoids false positives during
 		// C++11 thread construction and startup

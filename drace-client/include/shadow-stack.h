@@ -47,7 +47,10 @@ private:
 	/* Call Instrumentation */
 	static void on_call(void *call_ins, void *target_addr)
 	{
-		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+		void * drcontext = dr_get_current_drcontext();
+		DR_ASSERT(!dr_using_app_state(drcontext));
+
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		if (!params.fastmode) {
 			while (data->external_flush.load(std::memory_order_relaxed)) {
 				// wait

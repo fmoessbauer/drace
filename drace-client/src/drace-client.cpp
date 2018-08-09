@@ -229,7 +229,7 @@ static void generate_summary() {
 		hr_sink.process_all(race_collector->get_races());
 		races_hr_file.close();
 	}
-
+	
 	// Write XML output
 	if (params.xml_file != "") {
 		std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
