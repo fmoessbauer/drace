@@ -31,7 +31,8 @@ public:
 	LossyCountingModel<uint64_t> pc_hits;
 
 	hist_t freq_hits;
-	hist_t freq_pcs;
+	hist_t freq_pc_hist;
+	std::vector<uint64_t> freq_pcs;
 
 public:
 
@@ -70,7 +71,7 @@ public:
 
 		s << std::endl << "top pcs:\t\t";
 		const auto & state = pc_hits.getState();
-		for (const auto & p : freq_pcs) {
+		for (const auto & p : freq_pc_hist) {
 			double share = (static_cast<double>(p.second) / state.N)*(100.0+state.e);
 			s << "(" << std::setw(8) << std::hex << p.first << ","
 				<< std::dec << std::setprecision(3) << std::setw(2) << share << "%),";

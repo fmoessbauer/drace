@@ -59,7 +59,11 @@ public:
     _frequency(frequency),
     _error(error),
     _window_size(static_cast<unsigned long>(std::round(1.0 / error))) 
-  { }
+  {
+	  //int estimated_size = static_cast<int>((1.0 / _error) * std::log2(
+	  //                        _error * static_cast<double>(estimated_length)));
+	  //_histogram.reserve(estimated_size);
+  }
 
   /**
    * process a single item of the datastream

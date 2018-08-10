@@ -8,6 +8,7 @@ set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 set(DRACE_OPT_HASHMAP OFF CACHE BOOL "Use optimized hashmap")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # DR performance tuning
 set(DynamoRIO_FAST_IR ON CACHE BOOL "DynamoRIO_FAST_IR")

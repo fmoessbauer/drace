@@ -84,7 +84,7 @@ void MemoryTracker::update_cache(per_thread_t * data) {
 	dr_printf("[%.5i] Flush Cache, size %i\n", data->tid, new_freq.size());
 	if (params.lossy_flush) {
 		auto pc_new = get_pcs_from_hist(new_freq);
-		auto pc_old = get_pcs_from_hist(data->stats->freq_pcs);
+		auto pc_old = data->stats->freq_pcs;
 		
 		std::vector<uint64_t> difference;
 		difference.reserve(pc_new.size() + pc_old.size());
@@ -99,19 +99,16 @@ void MemoryTracker::update_cache(per_thread_t * data) {
 		for (const auto pc : difference) {
 			flush_region(drcontext, pc);
 		}
+
+		data->stats->freq_pcs = pc_new;
 	}
 
-	data->stats->freq_pcs = new_freq;
+	data->stats->freq_pc_hist = new_freq;
 }
 
 bool MemoryTracker::pc_in_freq(per_thread_t * data, void* bb) {
-	for (const auto & pc : data->stats->freq_pcs) {
-		if (((uint64_t)bb / MemoryTracker::HIST_PC_RES) == pc.first) {
-			return true;
-			//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
-		}
-	}
-	return false;
+	const auto & freq_pcs = data->stats->freq_pcs;
+	return std::binary_search(freq_pcs.begin(), freq_pcs.end(), ((uint64_t)bb / MemoryTracker::HIST_PC_RES));
 }
 
 void MemoryTracker::analyze_access(per_thread_t * data) {
@@ -183,7 +180,9 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 	}
 }
 
-// Events
+/*
+ * Thread init Event
+ */
 void MemoryTracker::event_thread_init(void *drcontext)
 {
 	/* allocate thread private data */
@@ -200,7 +199,9 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	/* set buf_end to be negative of address of buffer end for the lea later */
 	data->buf_end = -(ptr_int_t)(data->mem_buf.data + MEM_BUF_SIZE);
 	data->tid = dr_get_thread_id(drcontext);
+	// Init ShadowStack with max_size + 1 Element for PC of access
 	data->stack.resize(ShadowStack::max_size + 1, drcontext);
+	
 	data->mutex_book.reserve(MUTEX_MAP_SIZE);
 
 	// If threads are started concurrently, assume first thread is correct one
@@ -307,12 +308,8 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 	// Do not instrument if block is frequent
 	if (for_trace && instrument_bb) {
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-		for (const auto & pc : data->stats->freq_pcs) {
-			if (((uint64_t)bb_addr / MemoryTracker::HIST_PC_RES) == pc.first) {
-				instrument_bb = INSTR_FLAGS::NONE;
-				//dr_printf("[%.5i] Skip tag:%p, frag:%p\n", data->tid, tag, bb_addr);
-				break;
-			}
+		if (pc_in_freq(data, bb_addr)) {
+			instrument_bb = INSTR_FLAGS::NONE;
 		}
 	}
 	
