@@ -41,7 +41,7 @@ namespace sink {
 					<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_size << ")"
 					<< "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
 				if (ac.onheap) {
-					s << "Block begin at " << std::hex << ac.heap_block_begin << ", size " << ac.heap_block_size << std::endl;
+					s << "Block begin at " << std::hex << ac.heap_block_begin << ", size " << std::dec << ac.heap_block_size << std::endl;
 				}
 				else {
 					s << "Block not on heap (anymore)" << std::endl;

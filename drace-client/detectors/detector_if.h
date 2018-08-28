@@ -22,7 +22,7 @@ namespace detector {
 		int      access_type;
 		void    *heap_block_begin;
 		size_t   heap_block_size;
-		bool     onheap;
+		bool     onheap{ false };
 		size_t   stack_size{ 0 };
 		uint64_t stack_trace[max_stack_size];
 	};

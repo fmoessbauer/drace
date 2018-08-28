@@ -45,6 +45,10 @@ struct ThreadState {
 static std::atomic<bool>		alloc_readable{ true };
 static std::atomic<uint64_t>	misses{ 0 };
 static std::atomic<uint64_t>    races{ 0 };
+// lower bound of heap
+static std::atomic<uint64_t>    heap_lb{ std::numeric_limits<uint64_t>::max() };
+// upper bound of heap
+static std::atomic<uint64_t>    heap_ub{ 0 };
 /* Cannot use std::mutex here, hence use spinlock */
 static spinlock                 mxspin;
 static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
@@ -84,12 +88,15 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		access.stack_size = ssize;
 
 		uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
+		// todo: lock allocations
+		mxspin.lock();
 		auto it = allocations.lower_bound(addr);
 		if (it != allocations.end() && (addr < (it->first + it->second))) {
 			access.onheap = true;
 			access.heap_block_begin = (void*)(it->first);
 			access.heap_block_size = it->second;
 		}
+		mxspin.unlock();
 
 		if (i == 0) {
 			race.first = access;
@@ -131,13 +138,30 @@ static void print_config() {
 		<< "> heap-only: " << (params.heap_only ? "ON" : "OFF") << std::endl;
 }
 
+/* precisely decide if (cropped to 32 bit) addr is on the heap */
+template<bool fastapprox = false>
 static inline bool on_heap(uint64_t addr) {
-	while (!alloc_readable.load(std::memory_order_consume)) {
+	// filter step without locking
+	if (on_heap<true>(addr)) {
+		mxspin.lock();
 		auto it = allocations.lower_bound(addr);
 		uint64_t beg = it->first;
 		size_t   sz = it->second;
+		mxspin.unlock();
+
 		return (addr < (beg + sz));
 	}
+	else {
+		return false;
+	}
+}
+
+/* approximate if (cropped to 23 bit) addr is on the heap
+*  (no false-negatives, but possibly false positives)
+*/
+template<>
+static inline bool on_heap<true>(uint64_t addr) {
+	return heap_lb.load(std::memory_order_relaxed) <= addr < heap_ub.load(std::memory_order_relaxed);
 }
 
 bool detector::init(int argc, const char **argv, Callback rc_clb) {
@@ -206,7 +230,7 @@ void detector::happens_after(tid_t thread_id, void* identifier) {
 void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
-	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
+	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
 		__tsan_read(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
 	}
 }
@@ -214,7 +238,7 @@ void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* 
 void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
-	if (!params.heap_only || on_heap((uint64_t)addr_32)) {
+	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
 		__tsan_write(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
 	}
 }
@@ -226,28 +250,51 @@ void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_
 		tls = __tsan_create_thread(thread_id);
 
 	mxspin.lock();
-	alloc_readable.store(false, std::memory_order_release);
+	//alloc_readable.store(false, std::memory_order_release);
 	__tsan_malloc(tls, pc, (void*)addr_32, size);
-	allocations.emplace((uint64_t)addr_32, size);
+	allocations.emplace(addr_32, size);
 
-	alloc_readable.store(true, std::memory_order_release);
+	// increase heap upper bound
+	uint64_t new_ub = addr_32 + size;
+	if (new_ub > heap_ub.load(std::memory_order_relaxed)) {
+		heap_ub.store(new_ub, std::memory_order_relaxed);
+		//std::cout << "New heap ub " << std::hex << new_ub << std::endl;
+	}
+	// decrease heap lower bound
+	if (addr_32 < heap_lb.load(std::memory_order_relaxed)) {
+		heap_lb.store(addr_32, std::memory_order_relaxed);
+		//std::cout << "New heap lb " << std::hex << addr_32 << std::endl;
+	}
+
+
+	//alloc_readable.store(true, std::memory_order_release);
 	mxspin.unlock();
 }
 
 void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 	mxspin.lock();
-	alloc_readable.store(false, std::memory_order_release);
+	//alloc_readable.store(false, std::memory_order_release);
 
 	// ocasionally free is called more often than allocate, hence guard
 	if (allocations.count(addr_32) == 1) {
 		size_t size = allocations[addr_32];
 		allocations.erase(addr_32);
+		// if allocation was top of heap, decrease heap_limit
+		if (addr_32 + size == heap_ub.load(std::memory_order_relaxed)) {
+			if (allocations.size() != 0) {
+				auto upper_heap = allocations.rbegin();
+				heap_ub.store(upper_heap->first + upper_heap->second);
+			}
+			else {
+				heap_ub.store(0, std::memory_order_relaxed);
+			}
+		}
 		//__tsan_free(addr, size);
 		__tsan_reset_range((unsigned int)addr_32, size);
 	}
 
-	alloc_readable.store(true, std::memory_order_release);
+	//alloc_readable.store(true, std::memory_order_release);
 	mxspin.unlock();
 }
 

@@ -59,7 +59,7 @@ namespace funwrap {
 			detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
 
 			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] post allocate: size %i, addr %p\n", data->tid, data->last_alloc_size, retval);
+			//dr_fprintf(STDERR, "<< [%i] post allocate: size %i, addr %p\n", data->tid, user_data, retval);
 		}
 
 		// TODO: On Linux addr is arg 0

@@ -18,7 +18,6 @@
 struct params_t {
 	unsigned sampling_rate{ 1 };
 	unsigned instr_rate{ 1 };
-	bool     heap_only{ false };
 	bool     lossy{ false };
 	bool     lossy_flush{ false };
 	bool     exclude_master{ false };
