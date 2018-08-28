@@ -161,7 +161,8 @@ static inline bool on_heap(uint64_t addr) {
 */
 template<>
 static inline bool on_heap<true>(uint64_t addr) {
-	return heap_lb.load(std::memory_order_relaxed) <= addr < heap_ub.load(std::memory_order_relaxed);
+	return ((addr >= heap_lb.load(std::memory_order_relaxed))
+		&& (addr < heap_ub.load(std::memory_order_relaxed)));
 }
 
 bool detector::init(int argc, const char **argv, Callback rc_clb) {
