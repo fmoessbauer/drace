@@ -19,7 +19,8 @@ public:
 	/* Pretty print symbol location */
 	std::string get_pretty() const {
 		std::stringstream result;
-		result << "PC " << std::hex << (void*)pc << "\n";
+		result << "PC " << std::hex << (void*)pc
+			   << " (rel: " << (void*)(pc - mod_base) << ")\n";
 		if (mod_name != "") {
 			result << "\tModule " << mod_name;
 			if (sym_name != "") {
