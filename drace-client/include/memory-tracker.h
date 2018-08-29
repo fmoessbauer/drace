@@ -110,6 +110,11 @@ private:
 	void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
 	void instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
 
+	/*
+	* instrument_mem is called whenever a memory reference is identified.
+	* It inserts code before the memory reference to to fill the memory buffer
+	* and jump to our own code cache to call the clean_call when the buffer is full.
+	*/
 	inline void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write) {
 		if (params.fastmode) {
 			instrument_mem_fast(drcontext, ilist, where, ref, write);

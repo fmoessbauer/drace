@@ -19,8 +19,8 @@ MemoryTracker::MemoryTracker()
 	: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
 	_prng_border(_max_value / params.sampling_rate)
 {
-	/* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
-	drreg_options_t ops = { sizeof(ops), 3, false };
+	/* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
+	drreg_options_t ops = { sizeof(ops), 4, false };
 
 	/* Ensure that atomic and native type have equal size as otherwise
 	   instrumentation reads invalid value */

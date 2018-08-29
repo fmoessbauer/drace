@@ -4,14 +4,12 @@
 void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
-	/*
-	* instrument_mem is called whenever a memory reference is identified.
-	* It inserts code before the memory reference to to fill the memory buffer
-	* and jump to our own code cache to call the clean_call when the buffer is full.
-	*/
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
-	reg_id_t reg1, reg2;
+	// reg1,reg3 is any GP register
+	reg_id_t reg1, reg3;
+	// reg2 is XCX
+	reg_id_t reg2;
 	per_thread_t *data;
 	app_pc pc;
 
@@ -22,14 +20,14 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	*/
 	if (drreg_reserve_register(drcontext, ilist, where, &allowed_xcx, &reg2) !=
 		DRREG_SUCCESS ||
-		drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS) {
+		drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS ||
+		drreg_reserve_register(drcontext, ilist, where, NULL, &reg3) != DRREG_SUCCESS) {
 		DR_ASSERT(false); /* cannot recover */
 		return;
 	}
 
 	/* Create ASM lables */
 	instr_t *restore = INSTR_CREATE_label(drcontext);
-	instr_t *sh_circ = INSTR_CREATE_label(drcontext);
 	instr_t *call = INSTR_CREATE_label(drcontext);
 
 	/* use drutil to get mem address */
@@ -53,30 +51,23 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	reg1: memory address of access
 	reg2: wiped / unknown state
 	*/
-	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg2);
+	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg3);
 
 	/* Jump if tracing is disabled */
-	/* save reg2 TLS ptr */
-	instr = INSTR_CREATE_push(drcontext, opnd_create_reg(reg2));
-	instrlist_meta_preinsert(ilist, where, instr);
-
 	/* load enabled flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, enabled));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, enabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Jump if (E|R)CX is 0 */
-	opnd1 = opnd_create_instr(sh_circ);
+	opnd1 = opnd_create_instr(restore);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-	instrlist_meta_preinsert(ilist, where, instr);
-
-	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Load data->buf_ptr into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg2, offsetof(per_thread_t, buf_ptr));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -118,8 +109,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Update the data->buf_ptr */
-	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg1);
-	opnd1 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_ptr));
+	opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
 	opnd2 = opnd_create_reg(reg2);
 	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
@@ -130,7 +120,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	*/
 	/* lea [reg2 - buf_end] => reg2 */
 	opnd1 = opnd_create_reg(reg1);
-	opnd2 = OPND_CREATE_MEMPTR(reg1, offsetof(per_thread_t, buf_end));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_end));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	opnd1 = opnd_create_reg(reg2);
@@ -171,19 +161,12 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 
 	instrlist_meta_preinsert(ilist, where, instr);
 
-	/* ==== .sh_circ ==== */
-	/* Short circuit needs to restore stack */
-	instrlist_meta_preinsert(ilist, where, sh_circ);
-
-	/* Restore Stack */
-	instr = INSTR_CREATE_pop(drcontext, opnd_create_reg(reg2));
-	instrlist_meta_preinsert(ilist, where, instr);
-
 	/* ==== .restore ==== */
 	/* Restore scratch registers */
 	instrlist_meta_preinsert(ilist, where, restore);
 
 	if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
-		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS)
+		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS ||
+		drreg_unreserve_register(drcontext, ilist, where, reg3) != DRREG_SUCCESS)
 		DR_ASSERT(false);
 }
