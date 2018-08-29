@@ -26,6 +26,13 @@ struct wrap_info_t {
 	wrapcb_post_t       * post;
 };
 
+/* Arguments of a WaitForMultipleObjects call */
+struct wfmo_args_t {
+	DWORD          ncount;
+	BOOL           waitall;
+	const HANDLE*  handles;
+};
+
 static inline void prepare_and_aquire(
 	void* wrapctx,
 	void* mutex,
@@ -47,9 +54,7 @@ static inline void prepare_and_aquire(
 		if (retval != 0)
 			return;
 	}
-	//else {
-	//	dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
-	//}
+	dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
@@ -102,11 +107,11 @@ namespace mutex_clb {
 		*user_data = drwrap_get_arg(wrapctx, 0);
 	}
 
-	void mutex_lock(void *wrapctx, OUT void *user_data) {
+	void mutex_lock(void *wrapctx, void *user_data) {
 		prepare_and_aquire(wrapctx, user_data, true, false);
 	}
 
-	void mutex_trylock(void *wrapctx, OUT void *user_data) {
+	void mutex_trylock(void *wrapctx, void *user_data) {
 		prepare_and_aquire(wrapctx, user_data, true, true);
 	}
 
@@ -114,12 +119,12 @@ namespace mutex_clb {
 		prepare_and_release(wrapctx, true);
 	}
 
-	void recmutex_lock(void *wrapctx, OUT void *user_data) {
+	void recmutex_lock(void *wrapctx, void *user_data) {
 		// TODO: Check recursive parameter
 		prepare_and_aquire(wrapctx, user_data, true, false);
 	}
 
-	void recmutex_trylock(void *wrapctx, OUT void *user_data) {
+	void recmutex_trylock(void *wrapctx, void *user_data) {
 		prepare_and_aquire(wrapctx, user_data, true, true);
 	}
 
@@ -127,17 +132,96 @@ namespace mutex_clb {
 		prepare_and_release(wrapctx, true);
 	}
 
-	void mutex_read_lock(void *wrapctx, OUT void *user_data) {
+	void mutex_read_lock(void *wrapctx, void *user_data) {
 		prepare_and_aquire(wrapctx, user_data, false, false);
 	}
 
-	void mutex_read_trylock(void *wrapctx, OUT void *user_data) {
+	void mutex_read_trylock(void *wrapctx, void *user_data) {
 		prepare_and_aquire(wrapctx, user_data, false, true);
 	}
 
 	void mutex_read_unlock(void *wrapctx, OUT void **user_data) {
 		prepare_and_release(wrapctx, false);
 	}
+
+#ifdef WINDOWS
+	/* WaitForSingleObject Windows API call (experimental)
+	* \warning the mutex parameter is the Handle ID of the mutex and not
+	*          a memory location
+	* \warning the return value is a DWORD (aka 32bit unsigned integer)
+	* \warning A handle does not have to be a mutex,
+	*          however distinction is not possible here
+	*/
+	void wait_for_single_obj(void *wrapctx, void *mutex) {
+		// https://docs.microsoft.com/en-us/windows/desktop/api/synchapi/nf-synchapi-waitforsingleobject
+
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DR_ASSERT(nullptr != data);
+
+		//dr_printf("[%.5i] waitForSingleObject: %p\n", data->tid, mutex);
+
+		if (params.exclude_master && data->tid == runtime_tid)
+			return;
+
+		DWORD retval = (DWORD)drwrap_get_retval(wrapctx);
+		if (retval != WAIT_OBJECT_0) return;
+
+		//dr_printf("[%.5i] waitForSingleObject: %p (Success)\n", data->tid, mutex);
+
+		uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+		MemoryTracker::flush_all_threads(data);
+		detector::acquire(data->tid, mutex, cnt, 1, false, data->detector_data);
+		data->stats->mutex_ops++;
+	}
+
+	void wait_for_mo_getargs(void *wrapctx, OUT void **user_data) {
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DR_ASSERT(nullptr != data);
+
+		wfmo_args_t * args = (wfmo_args_t*)dr_thread_alloc(drcontext, sizeof(wfmo_args_t));
+
+		args->ncount  = (DWORD)drwrap_get_arg(wrapctx, 0);
+		args->handles = (const HANDLE*)drwrap_get_arg(wrapctx, 1);
+		args->waitall = (BOOL)drwrap_get_arg(wrapctx, 2);
+
+		//dr_printf("[%.5i] waitForMultipleObjects: %u, %i\n", data->tid, args->ncount, args->waitall);
+
+		*user_data = (void*)args;
+	}
+
+	/* WaitForMultipleObjects Windows API call (experimental) */
+	void wait_for_mult_obj(void *wrapctx, void *user_data) {
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DWORD retval = (DWORD)drwrap_get_retval(wrapctx);
+
+		wfmo_args_t * info = (wfmo_args_t*)user_data;
+
+		MemoryTracker::flush_all_threads(data);
+		if (info->waitall && (retval == WAIT_OBJECT_0)) {
+			//dr_printf("[%.5i] waitForMultipleObjects: finished all\n", data->tid);
+			for (DWORD i = 0; i < info->ncount; ++i) {
+				HANDLE mutex = info->handles[i];
+				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
+				data->stats->mutex_ops++;
+			}
+		}
+		if (!info->waitall) {
+			if (retval <= (WAIT_OBJECT_0 + info->ncount - 1)) {
+				//dr_printf("[%.5i] waitForMultipleObject: finished one\n", data->tid);
+				HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
+				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
+				data->stats->mutex_ops++;
+			}
+		}
+
+		dr_thread_free(drcontext, user_data, sizeof(wfmo_args_t));
+	}
+#endif
 }
 
 namespace mutex_wrap {
@@ -217,6 +301,12 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 		wrap_mtx(mod, config.get_multi("sync", "acquire_shared_try"), get_arg, mutex_read_trylock);
 		// read-mutex unlock
 		wrap_mtx(mod, config.get_multi("sync", "release_shared"), mutex_read_unlock, NULL);
+#ifdef WINDOWS
+		// waitForSingleObject
+		wrap_mtx(mod, config.get_multi("sync", "wait_for_single_object"), get_arg, wait_for_single_obj);
+		// waitForMultipleObjects
+		wrap_mtx(mod, config.get_multi("sync", "wait_for_multiple_objects"), wait_for_mo_getargs, wait_for_mult_obj);
+#endif
 	}
 	else {
 		dr_printf("Try to warp qtsync mutexes\n");
