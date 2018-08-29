@@ -49,7 +49,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 
 	/* Precondition:
 	reg1: memory address of access
-	reg2: wiped / unknown state
+	reg3: wiped / unknown state
 	*/
 	drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg3);
 

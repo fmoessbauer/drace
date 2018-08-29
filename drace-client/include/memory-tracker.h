@@ -104,7 +104,8 @@ private:
 
 	// Instrumentation
 	/* Inserts a jump to clean call if a flush is pending */
-	void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg2, instr_t *call_flush);
+	void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
+		reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
 
 	/* Instrument all memory accessing instructions */
 	void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
