@@ -60,6 +60,22 @@ Currently the following parameters are implemented
 --heap-only       : only detect races on heap-memory (exclude static memory)
 ```
 
+### Symbol Resolving
+
+Drace requires symbol information for wrapping functions and to resolve stack traces.
+For the main functionality of C and C++ only applications, export information is sufficient.
+However for additional and more precise race-detection (e.g. C++11, QT), debug information is necessary.
+
+The application searches for this information in the path of the module and in `_NT_SYMBOL_PATH`.
+However, only local symbols are searched (non `SRV` parts).
+
+If symbols for system libs are necessary (e.g. for .Net), download them first from a symbol server.
+Thereto it is useful to set the variable as follows:
+
+```
+set _NT_SYMBOL_PATH="c:\\symbolcache\\;SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
+```
+
 ## Testing with GoogleTest
 
 Both the detector and a fully integrated DR-Client can be tested using the following command:
