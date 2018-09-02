@@ -176,7 +176,7 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
 			if (ok)
-				dr_fprintf(STDERR, "< wrapped alloc %s\n", name.c_str());
+				dr_printf("< wrapped alloc %s\n", name.c_str());
 		}
 	}
 	for (const auto & name : config.get_multi("functions", "deallocators")) {
@@ -184,7 +184,7 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
 			if (ok)
-				dr_fprintf(STDERR, "< wrapped deallocs %s\n", name.c_str());
+				dr_printf("< wrapped deallocs %s\n", name.c_str());
 		}
 	}
 }
@@ -198,7 +198,7 @@ bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok) {
-		dr_fprintf(STDERR, "< wrapped thread-start function %s\n", name);
+		dr_printf("< wrapped thread-start function %s\n", name);
 	}
 	return true;
 }
@@ -212,7 +212,7 @@ bool starters_sys_callback(const char *name, size_t modoffs, void *data) {
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok) {
-		dr_fprintf(STDERR, "< wrapped system thread-start function %s\n", name);
+		dr_printf("< wrapped system thread-start function %s\n", name);
 	}
 	return true;
 }
@@ -248,13 +248,13 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 		(void*) name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok) {
-		dr_fprintf(STDERR, "< wrapped excluded function %s\n", name);
+		dr_printf("< wrapped excluded function %s\n", name);
 	}
 	return true;
 }
 
-void funwrap::wrap_excludes(const module_data_t *mod) {
-	for (const auto & name : config.get_multi("functions", "exclude")) {
+void funwrap::wrap_excludes(const module_data_t *mod, std::string section) {
+	for (const auto & name : config.get_multi(section, "exclude")) {
 		drsym_error_t err = drsym_search_symbols(
 			mod->full_path,
 			name.c_str(),

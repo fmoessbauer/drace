@@ -38,8 +38,9 @@ extern params_t params;
 /* Instrumentation Level Flags */
 enum INSTR_FLAGS : uint8_t {
 	NONE = 0,
-	MEMORY = 1,
-	STACK = 2
+	SYMBOLS = 1,
+	MEMORY = 2,
+	STACK = 4
 };
 
 class Statistics;

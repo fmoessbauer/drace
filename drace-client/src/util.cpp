@@ -40,6 +40,9 @@ std::string util::instr_flags_to_str(INSTR_FLAGS flags) {
 	if (flags & INSTR_FLAGS::STACK) {
 		buffer << "STACK ";
 	}
+	if (flags & INSTR_FLAGS::SYMBOLS) {
+		buffer << "SYMBOLS ";
+	}
 	if (!flags) {
 		buffer << "NONE ";
 	}

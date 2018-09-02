@@ -110,9 +110,10 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		}
 		if (current.instrument != INSTR_FLAGS::NONE) {
 			// check if mod name is excluded
+			// in this case, we check for syms but do not instrument
 			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-				current.instrument = INSTR_FLAGS::NONE;
+				current.instrument = INSTR_FLAGS::SYMBOLS;
 			}
 		}
 		if (current.instrument != INSTR_FLAGS::NONE) {
@@ -146,7 +147,16 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
-	if (modit->instrument != INSTR_FLAGS::NONE) {
+	if (util::common_prefix(mod_name, "coreclr")) {
+		if (modit->debug_info) {
+			funwrap::wrap_excludes(mod, "functions_dotnet");
+		}
+		else {
+			dr_fprintf(STDERR, "Warning: Found .Net application but debug information is not available\n"
+			                   "         download it from Microsoft Symbol Server and try again\n");
+		}
+	}
+	else if (modit->instrument != INSTR_FLAGS::NONE) {
 		funwrap::wrap_excludes(mod);
 		// This requires debug symbols, but avoids false positives during
 		// C++11 thread construction and startup
