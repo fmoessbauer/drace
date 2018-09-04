@@ -48,8 +48,10 @@ namespace sink {
 				}
 
 				if (race.second.is_resolved) {
-					for (auto & entry : ac.resolved_stack) {
-						s << "-> " << entry.get_pretty() << std::endl;
+					// stack is stored in reverse order, hence print inverted
+					int ssize = ac.resolved_stack.size();
+					for(int p=0; p<ssize; ++p){
+						s << "#" << p << " " << ac.resolved_stack[ssize-1-p].get_pretty() << std::endl;
 					}
 				}
 				else {

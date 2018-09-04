@@ -20,9 +20,9 @@ public:
 	std::string get_pretty() const {
 		std::stringstream result;
 		result << "PC " << std::hex << (void*)pc
-			   << " (rel: " << (void*)(pc - mod_base) << ")\n";
+			   << " (rel: " << (void*)(pc - mod_base) << ")";
 		if (mod_name != "") {
-			result << "\tModule " << mod_name;
+			result << "\n\tModule " << mod_name;
 			if (sym_name != "") {
 				result << " - " << sym_name << "\n";
 			}

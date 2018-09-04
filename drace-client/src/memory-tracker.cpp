@@ -300,7 +300,8 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 		}
 		else {
 			// Module not known
-			instrument_bb = INSTR_FLAGS::NONE;
+			LOG_TRACE(-1, "Module unknown, probably JIT code");
+			instrument_bb = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
 		}
 		mc.update(modc.second->base, modc.second->end, modc.second->instrument);
 		module_tracker->unlock_read();

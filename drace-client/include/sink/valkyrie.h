@@ -65,7 +65,9 @@ namespace sink {
 
 		void print_stack(tinyxml2::XMLPrinter & p, const std::vector<SymbolLocation> & stack) const {
 			p.OpenElement("stack");
-			for (const auto & f : stack) {
+			int ssize = stack.size();
+			for(int i=0; i<ssize; ++i) {
+				const auto & f = stack[ssize - 1 - i];
 				p.OpenElement("frame");
 			
 				std::stringstream pc;

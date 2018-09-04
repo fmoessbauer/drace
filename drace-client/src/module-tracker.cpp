@@ -67,8 +67,11 @@ ModuleTracker::~ModuleTracker() {
 	dr_rwlock_destroy(mod_lock);
 }
 
-/* Module load event implementation. As this function is passed
-*  as a callback to a c API, we cannot use std::bind
+/* Module load event implementation.
+* To get clean call-stacks, we add the shadow-stack instrumentation
+* to all modules (even the excluded ones).
+* \note As this function is passed as a callback to a c API, we cannot use std::bind
+*
 */
 void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	auto start = std::chrono::system_clock::now();
@@ -82,7 +85,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	// create shadow struct of current module
 	// for easier comparison
 	ModuleData current(mod->start, mod->end);
-	current.instrument = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
+	current.instrument = (INSTR_FLAGS)(
+		INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK | INSTR_FLAGS::SYMBOLS );
 
 	module_tracker->lock_read();
 	auto & modules = module_tracker->modules;
@@ -104,19 +108,20 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		for (auto prefix : module_tracker->excluded_path_prefix) {
 			// check if mod path is excluded
 			if (util::common_prefix(prefix, mod_path)) {
-				current.instrument = INSTR_FLAGS::NONE;
+				current.instrument = INSTR_FLAGS::STACK;
 				break;
 			}
 		}
-		if (current.instrument != INSTR_FLAGS::NONE) {
+		// if not in excluded path
+		if (current.instrument != INSTR_FLAGS::STACK) {
 			// check if mod name is excluded
-			// in this case, we check for syms but do not instrument
+			// in this case, we check for syms but only instrument stack
 			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-				current.instrument = INSTR_FLAGS::SYMBOLS;
+				current.instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
 			}
 		}
-		if (current.instrument != INSTR_FLAGS::NONE) {
+		if (current.instrument & INSTR_FLAGS::SYMBOLS) {
 			// check if debug info is available
 			current.debug_info = symbol_table->debug_info_available(mod);
 		}
@@ -178,7 +183,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 *  as a callback to a C api, we cannot use std::bind
 */
 void event_module_unload(void *drcontext, const module_data_t *mod) {
-	LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s\n",
+	LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s",
 		dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
 	module_tracker->lock_read();
