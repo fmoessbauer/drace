@@ -179,7 +179,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 */
 void event_module_unload(void *drcontext, const module_data_t *mod) {
 	LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s\n",
-		0, dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
+		dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
 	module_tracker->lock_read();
 	auto modc = module_tracker->get_module_containing(mod->start);
