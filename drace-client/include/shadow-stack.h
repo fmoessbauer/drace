@@ -29,10 +29,16 @@ private:
 	{
 		auto size = stack->entries;
 		if (size >= max_size) return;
+
+		// TODO: if not all modules get the shadow-stack
+		// instrumentation, we have to clear here as we
+		// miss return statements
+#if 0
 		// sometimes we miss return statements, hence check
 		// if pc is new
 		for (unsigned i = 0; i < size; ++i)
 			if (stack->data[i] == addr) return;
+#endif
 
 		stack->data[stack->entries++] = addr;
 	}
