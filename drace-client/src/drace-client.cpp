@@ -38,7 +38,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	bool success = config.loadfile(params.config_file);
 	if (!success) {
-		dr_printf("Error loading config file\n");
+		LOG_ERROR(-1, "error loading config file");
 		dr_flush_file(stdout);
 		exit(1);
 	}
@@ -113,7 +113,7 @@ static void event_exit()
 	dr_mutex_destroy(th_mutex);
 	dr_rwlock_destroy(tls_rw_mutex);
 
-	dr_printf("< DR Exit\n");
+	LOG_INFO(-1, "DR exit");
 }
 
 static void event_thread_init(void *drcontext)
@@ -122,13 +122,12 @@ static void event_thread_init(void *drcontext)
 	// assume that the first event comes from the runtime thread
 	unsigned empty_tid = 0;
 	if (runtime_tid.compare_exchange_weak(empty_tid, tid, std::memory_order_relaxed)) {
-		dr_printf("<< [%.5i] Runtime Thread tagged\n", tid);
+		LOG_INFO(tid, "Runtime Thread tagged");
 	}
 	num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
 	memory_tracker->event_thread_init(drcontext);
-
-	dr_printf("<< [%.5i] Thread started\n", tid);
+	LOG_INFO(tid, "Thread started");
 }
 
 static void event_thread_exit(void *drcontext)
@@ -138,7 +137,7 @@ static void event_thread_exit(void *drcontext)
 
 	memory_tracker->event_thread_exit(drcontext);
 
-	dr_printf("<< [%.5i] Thread exited\n", tid);
+	LOG_INFO(tid, "Thread exited");
 }
 
 static void parse_args(int argc, const char ** argv) {
@@ -213,8 +212,8 @@ static void print_config() {
 		params.delayed_sym_lookup ? "ON" : "OFF",
 		params.fastmode ? "ON" : "OFF",
 		params.config_file.c_str(),
-		params.out_file != "" ? params.out_file : "OFF",
-		params.xml_file != "" ? params.xml_file : "OFF",
+		params.out_file != "" ? params.out_file.c_str() : "OFF",
+		params.xml_file != "" ? params.xml_file.c_str() : "OFF",
 		params.stack_size,
 		dr_using_all_private_caches() ? "ON" : "OFF");
 }

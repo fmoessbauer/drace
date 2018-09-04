@@ -1,5 +1,8 @@
 #pragma once
 
+// Log up to notice
+#define LOGLEVEL 3
+
 #include "config.h"
 #include "aligned-stack.h"
 

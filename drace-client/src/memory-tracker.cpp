@@ -46,7 +46,7 @@ MemoryTracker::MemoryTracker()
 		drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
 		drmgr_register_bb_instrumentation_event(instr_event_app_analysis, instr_event_app_instruction, NULL));
 
-	dr_printf("< Initialized\n");
+	LOG_INFO(0, "Initialized");
 }
 
 MemoryTracker::~MemoryTracker() {
@@ -63,7 +63,7 @@ MemoryTracker::~MemoryTracker() {
 inline void flush_region(void* drcontext, uint64_t pc) {
 	// Flush this area from the code cache
 	dr_delay_flush_region((app_pc)(pc * MemoryTracker::HIST_PC_RES), MemoryTracker::HIST_PC_RES, 0, NULL);
-	dr_printf(">> Flushed %p\n", pc * MemoryTracker::HIST_PC_RES);
+	LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc * MemoryTracker::HIST_PC_RES);
 }
 
 inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) {
@@ -81,7 +81,7 @@ inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) 
 void MemoryTracker::update_cache(per_thread_t * data) {
 	// TODO: optimize this
 	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
-	dr_printf("[%.5i] Flush Cache, size %i\n", data->tid, new_freq.size());
+	LOG_NOTICE(data->tid, "Flush Cache with size %i", new_freq.size());
 	if (params.lossy_flush) {
 		auto pc_new = get_pcs_from_hist(new_freq);
 		auto pc_old = data->stats->freq_pcs;
@@ -119,7 +119,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		// We missed a fork
 		// 1. Flush all threads (except this thread)
 		// 2. Fork thread
-		dr_printf("<< [%i] Missed a fork, do it now\n", data->tid);
+		LOG_INFO(data->tid, "Missed a fork, do it now");
 		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 	}
 	if (data->enabled) {
@@ -173,7 +173,7 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		uint64_t expect = 0;
 		if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
 			if (params.yield_on_evt) {
-				dr_printf("[%.5i] YIELD\n", data->tid);
+				LOG_INFO(data->tid, "yield on event");
 				dr_thread_yield();
 			}
 		}

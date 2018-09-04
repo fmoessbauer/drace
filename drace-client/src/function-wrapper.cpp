@@ -93,7 +93,7 @@ namespace funwrap {
 			beg_excl_region(data);
 
 			th_start_pending.store(true);
-			dr_printf("<< [%.5i] Setup New Thread\n", data->tid);
+			LOG_INFO(data->tid, "setup new thread");
 		}
 		static void thread_handover(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
@@ -111,7 +111,7 @@ namespace funwrap {
 					TLS_buckets[last_th]->enabled = true;
 			}
 			dr_rwlock_read_unlock(tls_rw_mutex);
-			dr_printf("<< [%.5i] New Thread Created: %.5i\n", data->tid, last_th_start.load());
+			LOG_INFO(data->tid, "new thread created: %i", last_th_start.load());
 		}
 
 		static void thread_pre_sys(void *wrapctx, void **user_data) {
@@ -139,9 +139,6 @@ namespace funwrap {
 			DR_ASSERT(nullptr != data);
 
 			beg_excl_region(data);
-
-			//dr_printf("<< [%.5i] Begin EXCLUDED REGION, stack: %i\n",
-			//	data->tid, data->event_cnt);
 		}
 
 		static void end_excl(void *wrapctx, void *user_data) {
@@ -150,9 +147,6 @@ namespace funwrap {
 			DR_ASSERT(nullptr != data);
 
 			end_excl_region(data);
-
-			//dr_printf("<< [%.5i] End   EXCLUDED REGION: stack: %i\n",
-			//	data->tid, data->event_cnt);
 		}
 
 	} // namespace internal
@@ -175,8 +169,9 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
-			if (ok)
-				dr_printf("< wrapped alloc %s\n", name.c_str());
+			if (ok) {
+				LOG_INFO(0, "wrapped alloc %s", name.c_str());
+			}
 		}
 	}
 	for (const auto & name : config.get_multi("functions", "deallocators")) {
@@ -184,7 +179,7 @@ void funwrap::wrap_allocations(const module_data_t *mod) {
 		if (towrap != NULL) {
 			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
 			if (ok)
-				dr_printf("< wrapped deallocs %s\n", name.c_str());
+				LOG_INFO(0, "wrapped deallocs %s", name.c_str());
 		}
 	}
 }
@@ -197,9 +192,8 @@ bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
 		funwrap::internal::thread_handover,
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
-	if (ok) {
-		dr_printf("< wrapped thread-start function %s\n", name);
-	}
+	if (ok)
+		LOG_INFO(0, "wrapped thread-start function %s", name);
 	return true;
 }
 
@@ -211,9 +205,8 @@ bool starters_sys_callback(const char *name, size_t modoffs, void *data) {
 		funwrap::internal::thread_post_sys,
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
-	if (ok) {
-		dr_printf("< wrapped system thread-start function %s\n", name);
-	}
+	if (ok)
+		LOG_INFO(0, "wrapped system thread-start function %s", name);
 	return true;
 }
 
@@ -247,9 +240,8 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 		funwrap::internal::end_excl,
 		(void*) name,
 		DRWRAP_CALLCONV_FASTCALL);
-	if (ok) {
-		dr_printf("< wrapped excluded function %s\n", name);
-	}
+	if (ok)
+		LOG_INFO(0, "wrapped excluded function %s", name);
 	return true;
 }
 

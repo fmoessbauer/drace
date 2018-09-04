@@ -54,13 +54,13 @@ static inline void prepare_and_aquire(
 		if (retval != 0)
 			return;
 	}
-	dr_printf("[%.5i] Aquire %p\n", data->tid, mutex);
+	LOG_TRACE(data->tid, "Aquire %p", mutex);
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
 	uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 
-	//dr_printf("[%.5i] Mutex book size: %i, count: %i, mutex: %p\n", data->tid, data->mutex_book.entries, cnt, mutex);
+	LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
 	//dr_mutex_lock(th_mutex);
 	MemoryTracker::flush_all_threads(data);
@@ -82,7 +82,7 @@ static inline void prepare_and_release(
 		return;
 
 	void* mutex = drwrap_get_arg(wrapctx, 0);
-	//dr_printf("[%.5i] Release %p\n", data->tid, mutex);
+	LOG_TRACE(data->tid, "Release %p", mutex);
 
 	if (!data->mutex_book.count((uint64_t)mutex)) {
 		// mutex not in book
@@ -159,7 +159,7 @@ namespace mutex_clb {
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		DR_ASSERT(nullptr != data);
 
-		//dr_printf("[%.5i] waitForSingleObject: %p\n", data->tid, mutex);
+		LOG_TRACE(data->tid, "waitForSingleObject: %p\n", mutex);
 
 		if (params.exclude_master && data->tid == runtime_tid)
 			return;
@@ -167,7 +167,7 @@ namespace mutex_clb {
 		DWORD retval = (DWORD)drwrap_get_retval(wrapctx);
 		if (retval != WAIT_OBJECT_0) return;
 
-		//dr_printf("[%.5i] waitForSingleObject: %p (Success)\n", data->tid, mutex);
+		LOG_TRACE(data->tid, "waitForSingleObject: %p (Success)", mutex);
 
 		uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 		MemoryTracker::flush_all_threads(data);
@@ -186,7 +186,7 @@ namespace mutex_clb {
 		args->handles = (const HANDLE*)drwrap_get_arg(wrapctx, 1);
 		args->waitall = (BOOL)drwrap_get_arg(wrapctx, 2);
 
-		//dr_printf("[%.5i] waitForMultipleObjects: %u, %i\n", data->tid, args->ncount, args->waitall);
+		LOG_TRACE(data->tid, "waitForMultipleObjects: %u, %i", args->ncount, args->waitall);
 
 		*user_data = (void*)args;
 	}
@@ -201,7 +201,7 @@ namespace mutex_clb {
 
 		MemoryTracker::flush_all_threads(data);
 		if (info->waitall && (retval == WAIT_OBJECT_0)) {
-			//dr_printf("[%.5i] waitForMultipleObjects: finished all\n", data->tid);
+			LOG_TRACE(data->tid, "waitForMultipleObjects:finished all");
 			for (DWORD i = 0; i < info->ncount; ++i) {
 				HANDLE mutex = info->handles[i];
 				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
@@ -211,7 +211,7 @@ namespace mutex_clb {
 		}
 		if (!info->waitall) {
 			if (retval <= (WAIT_OBJECT_0 + info->ncount - 1)) {
-				//dr_printf("[%.5i] waitForMultipleObject: finished one\n", data->tid);
+				LOG_TRACE(data->tid, "waitForMultipleObjects:finished one");
 				HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
@@ -233,9 +233,9 @@ namespace mutex_wrap {
 			info->post,
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
-		if (ok) {
-			dr_fprintf(STDERR, "< wrapped custom mutex %s\n", name);
-		}
+		if (ok)
+			LOG_INFO(0, "wrapped custom mutex %s", name);
+
 		delete info;
 		// Exact matches only, hence quit after each symbol
 		return false;
@@ -273,7 +273,7 @@ namespace mutex_wrap {
 			if (towrap != NULL) {
 				bool ok = drwrap_wrap(towrap, pre, post);
 				if (ok)
-					dr_fprintf(STDERR, "< wrapped exported %s\n", name.c_str());
+					LOG_INFO(0, "wrapped exported function %s", name.c_str());
 			}
 		}
 	}
@@ -309,8 +309,8 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 #endif
 	}
 	else {
-		dr_printf("Try to warp qtsync mutexes\n");
-		// Custom Mutexes
+		LOG_INFO(0, "Try to wrap qtsync mutexes");
+		// Qt Mutexes
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl"), get_arg, recmutex_lock);
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl_try"), get_arg, recmutex_trylock);
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "release_excl"), recmutex_unlock, NULL);

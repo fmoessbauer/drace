@@ -121,8 +121,9 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 			current.debug_info = symbol_table->debug_info_available(mod);
 		}
 
-		dr_printf("< [%.5i] Track module: %20s, beg: %p, end: %p, instrument: %s, debug info: %s, full path: %s\n",
-			tid, mod_name.c_str(), current.base, current.end,
+		LOG_INFO(tid,
+			"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
+			mod_name.c_str(), current.base, current.end,
 			util::instr_flags_to_str(current.instrument).c_str(),
 			current.debug_info ? "YES" : " NO",
 			current.info->full_path);
@@ -152,8 +153,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 			funwrap::wrap_excludes(mod, "functions_dotnet");
 		}
 		else {
-			dr_fprintf(STDERR, "Warning: Found .Net application but debug information is not available\n"
-			                   "         download it from Microsoft Symbol Server and try again\n");
+			LOG_WARN(data->tid, "Warning: Found .Net application but debug information is not available\n"
+								"         download it from Microsoft Symbol Server and try again\n");
 		}
 	}
 	else if (modit->instrument != INSTR_FLAGS::NONE) {
@@ -177,7 +178,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 *  as a callback to a C api, we cannot use std::bind
 */
 void event_module_unload(void *drcontext, const module_data_t *mod) {
-	dr_printf("< [%.5i] Unload module: %20s, beg: %p, end: %p, full path: %s\n",
+	LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s\n",
 		0, dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
 	module_tracker->lock_read();
