@@ -8,8 +8,8 @@
 class SymbolLocation {
 public:
 	app_pc          pc{ 0 };
-	app_pc          mod_base;
-	app_pc          mod_end;
+	app_pc          mod_base{ nullptr };
+	app_pc          mod_end{ nullptr };
 	std::string     mod_name;
 	std::string     sym_name;
 	std::string     file;
@@ -19,8 +19,13 @@ public:
 	/* Pretty print symbol location */
 	std::string get_pretty() const {
 		std::stringstream result;
-		result << "PC " << std::hex << (void*)pc
-			   << " (rel: " << (void*)(pc - mod_base) << ")";
+		result << "PC " << std::hex << (void*)pc;
+		if (nullptr != mod_base) {
+			result << " (rel: " << (void*)(pc - mod_base) << ")";
+		}
+		else {
+			result << " (dynamic code)";
+		}
 		if (mod_name != "") {
 			result << "\n\tModule " << mod_name;
 			if (sym_name != "") {
