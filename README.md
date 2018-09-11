@@ -76,6 +76,18 @@ Thereto it is useful to set the variable as follows:
 set _NT_SYMBOL_PATH="c:\\symbolcache\\;SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 ```
 
+### Dotnet
+
+To correctly resolve managed stack frames, `mscordacwks.dll` is required.
+Each Dotnet version is shipped with it's own dll, so copy the correct one from
+the framework directory to the binary dir.
+
+For .Net 4.0 the correct one can be found here
+
+```
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+```
+
 ## Testing with GoogleTest
 
 Both the detector and a fully integrated DR-Client can be tested using the following command:

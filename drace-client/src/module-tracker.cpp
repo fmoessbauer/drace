@@ -4,6 +4,7 @@
 #include "statistics.h"
 #include "symbols.h"
 #include "util.h"
+//#include "dotnet/managed-resolver.h"
 
 #include <drmgr.h>
 
@@ -153,7 +154,22 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
-	if (util::common_prefix(mod_name, "coreclr")) {
+	if (util::common_prefix(mod_name, "clr") || 
+		util::common_prefix(mod_name, "coreclr"))
+	{
+		//--------------------------------------------------------------
+		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
+		auto start = std::chrono::system_clock::now();
+		do {
+			dr_thread_yield();
+			auto end = std::chrono::system_clock::now();
+			if ((end - start) > std::chrono::seconds(10)) {
+				LOG_INFO(data->tid, "Continue execution");
+				break;
+			}
+		} while (1);
+		//--------------------------------------------------------------
+
 		if (modit->debug_info) {
 			funwrap::wrap_excludes(mod, "functions_dotnet");
 		}

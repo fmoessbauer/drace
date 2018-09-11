@@ -59,6 +59,8 @@ if(${DRACE_OPT_HASHMAP})
 	target_compile_definitions("drace-client" PRIVATE DRACE_OPT_HASHMAP=1)
 endif()
 
+#target_link_libraries("drace-client" "${PROJECT_SOURCE_DIR}/vendor/dotnet/core2.0/mscordaccore.lib")
+
 # Prepare Binary Dir
 # Copy to test dir
 add_custom_command(TARGET "drace-client" POST_BUILD

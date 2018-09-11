@@ -43,6 +43,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 		exit(1);
 	}
 
+
 	TLS_buckets.reserve(128);
 
 	th_mutex = dr_mutex_create();
@@ -79,6 +80,16 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
 	// Initialize Detector
 	detector::init(argc, argv, race_collector_add_race);
+
+	// -------------------------------------------------------
+	LOG_INFO(-1, "application pid: %i", dr_get_process_id());
+	//std::string path = "C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll";
+	//dr_auxlib_handle_t mscordacwks_dll = dr_load_aux_library(path.c_str(), NULL, NULL);
+
+	//wchar_t path[MAX_PATH] = { 0 };
+	//wcscat_s(path, L"C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll");
+	//HMODULE mscordacwks_dll = LoadLibraryW(path);
+	// -------------------------------------------------------
 
 	app_start = std::chrono::system_clock::now();
 }
