@@ -4,6 +4,7 @@
 #include "symbols.h"
 #include "race-collector.h"
 #include "statistics.h"
+#include "msr-driver.h"
 
 /*
 * Thread local storage metadata has to be globally accessable
@@ -34,6 +35,7 @@ std::unique_ptr<ModuleTracker> module_tracker;
 std::shared_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 std::unique_ptr<Statistics> stats;
+std::unique_ptr<MsrDriver> msrdriver;
 
 /* Runtime parameters */
 params_t params;

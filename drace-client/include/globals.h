@@ -132,5 +132,9 @@ extern drace::Config config;
 // Global Statistics Collector
 extern std::unique_ptr<Statistics> stats;
 
+// MSR Communication Driver
+class MsrDriver;
+extern std::unique_ptr<MsrDriver> msrdriver;
+
 #undef max
 #undef min

@@ -5,6 +5,9 @@
 #include "symbols.h"
 #include "util.h"
 //#include "dotnet/managed-resolver.h"
+#include "msr-driver.h"
+#include "ipc/SharedMemory.h"
+#include "ipc/SMData.h"
 
 #include <drmgr.h>
 
@@ -159,15 +162,10 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	{
 		//--------------------------------------------------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
-		auto start = std::chrono::system_clock::now();
-		do {
-			dr_thread_yield();
-			auto end = std::chrono::system_clock::now();
-			if ((end - start) > std::chrono::seconds(10)) {
-				LOG_INFO(data->tid, "Continue execution");
-				break;
-			}
-		} while (1);
+		msrdriver = std::make_unique<MsrDriver>();
+		if (!msrdriver->try_attach(std::chrono::seconds(1))) {
+			msrdriver.reset();
+		}
 		//--------------------------------------------------------------
 
 		if (modit->debug_info) {

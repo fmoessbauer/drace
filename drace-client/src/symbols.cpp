@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "symbols.h"
 #include "module-tracker.h"
+#include "msr-driver.h"
 
 #include <string>
 #include <sstream>
@@ -49,6 +50,15 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 					break;
 				}
 			}
+	}
+	else {
+		// Managed Code
+		SMData * comm = msrdriver->get();
+		if (nullptr != comm) {
+			comm->id = SMDataID::IP;
+			comm->data.ip = (uint64_t)pc;
+			msrdriver->commit();
+		}
 	}
 	return sloc;
 }

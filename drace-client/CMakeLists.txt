@@ -26,6 +26,10 @@ target_include_directories(
 	"drace-client" PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/jtilly/inih> "inih")
 
+# Inter Process Communication Headers
+target_include_directories(
+	"drace-client" PRIVATE
+	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/common>)
 
 # Setup as dynamorio client (not-standalone)
 # See https://github.com/DynamoRIO/dynamorio/blob/master/make/DynamoRIOConfig.cmake.in
