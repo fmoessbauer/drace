@@ -8,7 +8,6 @@ typedef mdToken mdFieldDef;
 typedef ULONG   CorElementType;
 
 #include "prebuild/xclrdata.h"
-#include "MStackResolver.h"
 #include <Psapi.h>
 
 class CLRDataTarget : public ICLRDataTarget
@@ -32,7 +31,7 @@ public:
 			*ppvObject = this;
 			return S_OK;
 		}
-	
+
 		*ppvObject = NULL;
 		return E_NOINTERFACE;
 	}

@@ -30,7 +30,7 @@ add_subdirectory("vendor/leethomason/tinyxml2")
 # DRACE
 add_subdirectory("drace-client")
 # Managed Stack Resolver
-add_subdirectory("MStackResolver")
+add_subdirectory("ManagedResolver")
 
 if(${DRACE_ENABLE_TESTING})
 	message("Build Testsuite")
