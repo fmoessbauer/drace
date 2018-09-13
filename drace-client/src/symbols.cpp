@@ -1,7 +1,7 @@
 #include "globals.h"
 #include "symbols.h"
 #include "module-tracker.h"
-#include "msr-driver.h"
+#include "msr-driver-dr.h"
 
 #include <string>
 #include <sstream>
@@ -53,11 +53,18 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	}
 	else {
 		// Managed Code
-		SMData * comm = msrdriver->get();
-		if (nullptr != comm) {
-			comm->id = SMDataID::IP;
-			comm->data.ip = (uint64_t)pc;
+		if (nullptr != msrdriver.get()) {
+			msrdriver->put<uint64_t>(SMDataID::IP, (uint64_t)pc);
 			msrdriver->commit();
+			if (msrdriver->wait_receive(std::chrono::seconds(1))) {
+				const SymbolInfo & sym = msrdriver->get<SymbolInfo>();
+				sloc.mod_name = sym.module;
+				sloc.sym_name = sym.function;
+				sloc.file = sym.path;
+				if (sloc.mod_name.empty() && !sloc.sym_name.empty()) {
+					sloc.mod_name = "managed";
+				}
+			}
 		}
 	}
 	return sloc;

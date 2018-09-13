@@ -3,32 +3,32 @@
 #include <atomic>
 
 #define DRACE_SMR_NAME "drace-msr"
-#define DRACE_SMR_MAXLEN 256
+#define DRACE_SMR_MAXLEN 512
 
 enum class SMDataID : uint8_t {
 	PID,
 	IP,
+	CONNECT,
+	ATTACHED,
 	EXIT
 };
 
-struct IpEntry {
-	uint64_t  ip;
-	char      symbol[DRACE_SMR_MAXLEN];
+struct SymbolInfo {
+	char      module[128];
+	char      function[128];
+	char      path[128];
+	char      line[64];
 };
 
 struct SMData {
-	// Remote sets this after new data is copied
-	std::atomic<bool> process{ false };
+	/* true  = Drace Committed,
+	*  false = MSR Committed
+	*  Drace starts the protocol
+	*/
+	std::atomic<bool> sender{ false };
 
-	// MSR sets this after results are available
-	std::atomic<bool> ready{ false };
-
-	// TODO: Introduce Message IDs
+	// Message IDs
 	SMDataID id;
 
-	// PID of analyzed application
-	int pid;
-
-	// Data
-	IpEntry data;
+	byte buffer[DRACE_SMR_MAXLEN - 16];
 };

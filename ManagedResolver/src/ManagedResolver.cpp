@@ -67,7 +67,6 @@ bool ManagedResolver::InitSymbolResolver(
 		Close();
 		return false;
 	}
-	std::cout << "Attached" << std::endl;
 
 	hr = DebugCreate(__uuidof(IDebugClient), (void**)&debugClient);
 	if (FAILED(hr))

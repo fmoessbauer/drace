@@ -133,8 +133,9 @@ extern drace::Config config;
 extern std::unique_ptr<Statistics> stats;
 
 // MSR Communication Driver
-class MsrDriver;
-extern std::unique_ptr<MsrDriver> msrdriver;
+template<bool SENDER>
+class MsrDriverDr;
+extern std::unique_ptr<MsrDriverDr<true>> msrdriver;
 
 #undef max
 #undef min

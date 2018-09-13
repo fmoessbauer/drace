@@ -1,46 +1,21 @@
 #include "ManagedResolver.h"
-#include "ipc/SharedMemory.h"
-#include "ipc/SMData.h"
+#include "ipc/msr-driver.h"
 
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 ManagedResolver resolver;
-SMData *        comm;
+std::shared_ptr<MsrDriver<false, false>> msrdriver;
+bool keep_running{ true };
 
-void resolveIP() {
-	CString symbol;
-	std::cout << "Got PC: " << (void*)(comm->data.ip) << std::endl;
-	resolver.GetMethodName((void*)comm->data.ip, symbol);
-	char * symname = symbol.GetBuffer(DRACE_SMR_MAXLEN);
-	strncpy(comm->data.symbol, symname, DRACE_SMR_MAXLEN);
-	comm->ready.store(true, std::memory_order_release);
-}
-
-bool process_msg() {
-	// wait for incoming requests
-	do {
-		bool trueval = true;
-		if (comm->process.compare_exchange_weak(trueval, false, std::memory_order_acquire)) {
-			switch (comm->id) {
-			case SMDataID::IP :
-				resolveIP(); break;
-
-			case SMDataID::EXIT :
-				return false;
-			}
-			return true;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	} while (1);
-}
-
-void setup_and_run() {
+void attachProcess() {
 	CString lastError;
 
 	// TODO: Probably less rights are sufficient
-	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, comm->pid);
+	int pid = msrdriver->get<int>();
+	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
 	// we cannot validate this handle, hence pass it
 	// to the resolver and handle errors there
 
@@ -52,36 +27,86 @@ void setup_and_run() {
 		std::cerr << lastError.GetString() << std::endl;
 		return;
 	}
+	std::cout << "--- Attached to " << pid << " ---" << std::endl;
+	msrdriver->state(SMDataID::ATTACHED);
+	msrdriver->commit();
+}
 
-	bool active = true;
-	while (active) {
-		active = process_msg();
+void detachProcess() {
+	std::cout << "--- Detach MSR ---" << std::endl;
+	resolver.Close();
+	msrdriver->state(SMDataID::CONNECT);
+	msrdriver->commit();
+}
+
+void resolveIP() {
+	CString buffer;
+	void* ip = msrdriver->get<void*>();
+	std::cout << "Resolve IP: " << ip << std::endl;
+
+	SymbolInfo & sym = msrdriver->get<SymbolInfo>();
+
+	// Get Module Name
+	resolver.GetModuleName(ip, buffer);
+	strncpy(sym.module, buffer.GetBuffer(128), 128);
+
+	// Get Function Name
+	buffer = "";
+	resolver.GetMethodName(ip, buffer);
+	strncpy(sym.function, buffer.GetBuffer(128), 128);
+
+	// Get Line Info
+	buffer = "";
+	resolver.GetFileLineInfo(ip, buffer);
+	strncpy(sym.path, buffer.GetBuffer(128), 128);
+
+	msrdriver->commit();
+}
+
+void process_msg() {
+	// wait for incoming requests
+	do {
+		if (msrdriver->wait_receive()) {
+			switch (msrdriver->id()) {
+			case SMDataID::PID :
+				attachProcess(); break;
+			case SMDataID::IP :
+				resolveIP(); break;
+			case SMDataID::EXIT :
+				detachProcess(); break;
+			default:
+				std::cerr << "protocol error" << std::endl; keep_running = false;
+			}
+		}
+	} while (keep_running);
+}
+
+BOOL CtrlHandler(DWORD fdwCtrlType) {
+	switch (fdwCtrlType) {
+	case CTRL_C_EVENT:
+	case CTRL_BREAK_EVENT:
+		keep_running = false;
+		return true;
 	}
+	return false;
 }
 
 int main(int argc, char** argv) {
 	std::cout << "Starting Managed Stack Resolver, waiting for Drace" << std::endl;
+
+	// We need this event handler for cleanup of shm
+	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
+		std::cerr << "Warning: Could not register exit handler" << std::endl;
+	}
 
 	/*
 	* The general idea here is to wait until DRACE
 	* sets the pid in the shared memory.
 	* Hence, msr can be started prior to drace
 	*/
-
 	try {
-		SharedMemory<SMData> shared(DRACE_SMR_NAME, true);
-		comm = shared.get();
-		
-		// wait for pid
-		do {
-			bool trueval = true;
-			if (comm->process.compare_exchange_weak(trueval, false, std::memory_order_acquire)) {
-				std::cout << "Found PID: " << comm->pid << std::endl;
-				setup_and_run();
-				break;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
-		} while (1);
+		msrdriver = std::make_unique<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
+		process_msg();
 	}
 	catch (std::runtime_error e) {
 		std::cerr << "Error initialising shared memory: " << e.what() << std::endl;

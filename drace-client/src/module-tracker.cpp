@@ -5,7 +5,7 @@
 #include "symbols.h"
 #include "util.h"
 //#include "dotnet/managed-resolver.h"
-#include "msr-driver.h"
+#include "msr-driver-dr.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
 
@@ -162,9 +162,17 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	{
 		//--------------------------------------------------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
-		msrdriver = std::make_unique<MsrDriver>();
-		if (!msrdriver->try_attach(std::chrono::seconds(1))) {
+		msrdriver = std::make_unique<MsrDriverDr<true>>();
+		msrdriver->put(SMDataID::PID, dr_get_process_id());
+		msrdriver->commit();
+		if (!msrdriver->wait_receive(std::chrono::seconds(1)) ||
+			msrdriver->id() != SMDataID::ATTACHED)
+		{
+			LOG_WARN(data->tid, "MSR did not attach: ID %u", msrdriver->id());
 			msrdriver.reset();
+		}
+		else {
+			LOG_INFO(data->tid, "MSR attached");
 		}
 		//--------------------------------------------------------------
 
