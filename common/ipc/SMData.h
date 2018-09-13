@@ -20,6 +20,11 @@ struct SymbolInfo {
 	char      line[64];
 };
 
+struct BaseInfo {
+	int pid;
+	char path[128];
+};
+
 struct SMData {
 	/* true  = Drace Committed,
 	*  false = MSR Committed

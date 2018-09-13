@@ -1,6 +1,7 @@
 ﻿set(SOURCES
 	"src/main.cpp"
-	"src/ManagedResolver.cpp")
+	"src/ManagedResolver.cpp"
+	"src/ProtocolHandler.cpp")
 
 add_executable("msr" ${SOURCES})
 target_include_directories(

@@ -163,8 +163,12 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		//--------------------------------------------------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
 		msrdriver = std::make_unique<MsrDriverDr<true>>();
-		msrdriver->put(SMDataID::PID, dr_get_process_id());
+		BaseInfo & sendInfo = msrdriver->get<BaseInfo>();
+		sendInfo.pid = dr_get_process_id();
+		strncpy(sendInfo.path, mod->full_path, 128);
+		msrdriver->state(SMDataID::PID);
 		msrdriver->commit();
+
 		if (!msrdriver->wait_receive(std::chrono::seconds(1)) ||
 			msrdriver->id() != SMDataID::ATTACHED)
 		{

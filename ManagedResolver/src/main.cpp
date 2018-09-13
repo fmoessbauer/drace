@@ -1,4 +1,5 @@
 #include "ManagedResolver.h"
+#include "ProtocolHandler.h"
 #include "ipc/msr-driver.h"
 
 #include <iostream>
@@ -6,86 +7,17 @@
 #include <chrono>
 #include <memory>
 
-ManagedResolver resolver;
 std::shared_ptr<MsrDriver<false, false>> msrdriver;
-bool keep_running{ true };
-
-void attachProcess() {
-	CString lastError;
-
-	// TODO: Probably less rights are sufficient
-	int pid = msrdriver->get<int>();
-	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
-	// we cannot validate this handle, hence pass it
-	// to the resolver and handle errors there
-
-	const char * path = "C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll";
-
-	bool success = resolver.InitSymbolResolver(phandle, path, lastError);
-	if (!success) {
-		std::cerr << "Failure" << std::endl;
-		std::cerr << lastError.GetString() << std::endl;
-		return;
-	}
-	std::cout << "--- Attached to " << pid << " ---" << std::endl;
-	msrdriver->state(SMDataID::ATTACHED);
-	msrdriver->commit();
-}
-
-void detachProcess() {
-	std::cout << "--- Detach MSR ---" << std::endl;
-	resolver.Close();
-	msrdriver->state(SMDataID::CONNECT);
-	msrdriver->commit();
-}
-
-void resolveIP() {
-	CString buffer;
-	void* ip = msrdriver->get<void*>();
-	std::cout << "Resolve IP: " << ip << std::endl;
-
-	SymbolInfo & sym = msrdriver->get<SymbolInfo>();
-
-	// Get Module Name
-	resolver.GetModuleName(ip, buffer);
-	strncpy(sym.module, buffer.GetBuffer(128), 128);
-
-	// Get Function Name
-	buffer = "";
-	resolver.GetMethodName(ip, buffer);
-	strncpy(sym.function, buffer.GetBuffer(128), 128);
-
-	// Get Line Info
-	buffer = "";
-	resolver.GetFileLineInfo(ip, buffer);
-	strncpy(sym.path, buffer.GetBuffer(128), 128);
-
-	msrdriver->commit();
-}
-
-void process_msg() {
-	// wait for incoming requests
-	do {
-		if (msrdriver->wait_receive()) {
-			switch (msrdriver->id()) {
-			case SMDataID::PID :
-				attachProcess(); break;
-			case SMDataID::IP :
-				resolveIP(); break;
-			case SMDataID::EXIT :
-				detachProcess(); break;
-			default:
-				std::cerr << "protocol error" << std::endl; keep_running = false;
-			}
-		}
-	} while (keep_running);
-}
+std::unique_ptr<ProtocolHandler> phandler;
 
 BOOL CtrlHandler(DWORD fdwCtrlType) {
+	if (nullptr == phandler.get())
+		return false;
+
 	switch (fdwCtrlType) {
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
-		keep_running = false;
+		phandler->quit();
 		return true;
 	}
 	return false;
@@ -105,11 +37,14 @@ int main(int argc, char** argv) {
 	* Hence, msr can be started prior to drace
 	*/
 	try {
-		msrdriver = std::make_unique<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
-		process_msg();
+		msrdriver = std::make_shared<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
 	}
 	catch (std::runtime_error e) {
 		std::cerr << "Error initialising shared memory: " << e.what() << std::endl;
 	}
+
+	phandler = std::make_unique<ProtocolHandler>(msrdriver);
+	phandler->process_msgs();
+
 	std::cout << "Quit Managed Stack Resolver" << std::endl;
 }
