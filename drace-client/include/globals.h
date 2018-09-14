@@ -133,9 +133,11 @@ extern drace::Config config;
 extern std::unique_ptr<Statistics> stats;
 
 // MSR Communication Driver
-template<bool SENDER>
-class MsrDriverDr;
-extern std::unique_ptr<MsrDriverDr<true>> msrdriver;
+namespace ipc {
+	template<bool, bool>
+	class SyncSHMDriver;
+}
+extern std::unique_ptr<ipc::SyncSHMDriver<true, true>> shmdriver;
 
 #undef max
 #undef min

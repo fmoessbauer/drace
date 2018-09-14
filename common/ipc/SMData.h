@@ -5,29 +5,33 @@
 #define DRACE_SMR_NAME "drace-msr"
 #define DRACE_SMR_MAXLEN 512
 
-enum class SMDataID : uint8_t {
-	PID,
-	IP,
-	CONNECT,
-	ATTACHED,
-	EXIT
-};
+namespace ipc {
 
-struct SymbolInfo {
-	char      module[128];
-	char      function[128];
-	char      path[128];
-	char      line[64];
-};
+	enum class SMDataID : uint8_t {
+		PID,
+		IP,
+		CONNECT,
+		ATTACHED,
+		EXIT
+	};
 
-struct BaseInfo {
-	int pid;
-	char path[128];
-};
+	struct SymbolInfo {
+		char      module[128];
+		char      function[128];
+		char      path[128];
+		char      line[64];
+	};
 
-struct SMData {
-	// Message IDs
-	SMDataID id;
+	struct BaseInfo {
+		int pid;
+		char path[128];
+	};
 
-	byte buffer[DRACE_SMR_MAXLEN - 16];
-};
+	struct SMData {
+		// Message IDs
+		SMDataID id;
+		// Raw data buffer
+		byte buffer[DRACE_SMR_MAXLEN - 16];
+	};
+
+} // namespace ipc

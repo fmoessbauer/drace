@@ -16,37 +16,41 @@
 #include <string>
 #include <iostream>
 
-class ManagedResolver {
-private:
-	HMODULE _mscordacwks_dll;
-	HANDLE  _hProcess{ nullptr };
+namespace msr {
 
-	CComPtr<IDebugClient>       debugClient;
-	CComQIPtr<IDebugControl>    debugControl;
-	CComQIPtr<IDebugSymbols>    debugSymbols;
-	CComQIPtr<IDebugSymbols3>   debugSymbols3;
+	class ManagedResolver {
+	private:
+		HMODULE _mscordacwks_dll;
+		HANDLE  _hProcess{ nullptr };
 
-public:
-	CComPtr<IXCLRDataProcess> clrDataProcess;
-	CComPtr<ICLRDataTarget> target;
+		CComPtr<IDebugClient>       debugClient;
+		CComQIPtr<IDebugControl>    debugControl;
+		CComQIPtr<IDebugSymbols>    debugSymbols;
+		CComQIPtr<IDebugSymbols3>   debugSymbols3;
 
-public:
-	ManagedResolver();
-	~ManagedResolver();
+	public:
+		CComPtr<IXCLRDataProcess> clrDataProcess;
+		CComPtr<ICLRDataTarget> target;
 
-	/*Clean up all open handles and detach debugger*/
-	void Close();
+	public:
+		ManagedResolver();
+		~ManagedResolver();
 
-	bool InitSymbolResolver(
-		HANDLE hProcess,
-		const char * mscordaccore_path,
-		CString& lastError);
+		/*Clean up all open handles and detach debugger*/
+		void Close();
 
-	bool GetFileLineInfo(void* ip, CStringA& lineInfo);
-	bool GetModuleName(void* ip, CStringA& modulePath);
+		bool InitSymbolResolver(
+			HANDLE hProcess,
+			const char * mscordaccore_path,
+			CString& lastError);
 
-	/* Based on a native offset, passed in the first argument this function
-	 * identifies the corresponding source file name and line number. */
-	bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath);
-	bool GetMethodName(void* ip, CStringA& symbol);
-};
+		bool GetFileLineInfo(void* ip, CStringA& lineInfo);
+		bool GetModuleName(void* ip, CStringA& modulePath);
+
+		/* Based on a native offset, passed in the first argument this function
+		 * identifies the corresponding source file name and line number. */
+		bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath);
+		bool GetMethodName(void* ip, CStringA& symbol);
+	};
+
+} // namespace msr

@@ -1,7 +1,7 @@
 #include "globals.h"
 #include "symbols.h"
 #include "module-tracker.h"
-#include "msr-driver-dr.h"
+#include "ipc/SyncSHMDriver.h"
 
 #include <string>
 #include <sstream>
@@ -53,11 +53,11 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	}
 	else {
 		// Managed Code
-		if (nullptr != msrdriver.get()) {
-			msrdriver->put<uint64_t>(SMDataID::IP, (uint64_t)pc);
-			msrdriver->commit();
-			if (msrdriver->wait_receive(std::chrono::seconds(1))) {
-				const SymbolInfo & sym = msrdriver->get<SymbolInfo>();
+		if (nullptr != shmdriver.get()) {
+			shmdriver->put<uint64_t>(ipc::SMDataID::IP, (uint64_t)pc);
+			shmdriver->commit();
+			if (shmdriver->wait_receive(std::chrono::seconds(1))) {
+				const auto & sym = shmdriver->get<ipc::SymbolInfo>();
 				sloc.mod_name = sym.module;
 				sloc.sym_name = sym.function;
 				sloc.file = sym.path;

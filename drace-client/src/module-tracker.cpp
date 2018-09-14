@@ -4,8 +4,8 @@
 #include "statistics.h"
 #include "symbols.h"
 #include "util.h"
-//#include "dotnet/managed-resolver.h"
-#include "msr-driver-dr.h"
+
+#include "ipc/SyncSHMDriver.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
 
@@ -160,22 +160,22 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	if (util::common_prefix(mod_name, "clr") || 
 		util::common_prefix(mod_name, "coreclr"))
 	{
-		//--------------------------------------------------------------
+		//-------------- Attach external MSR process -------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
-		msrdriver = std::make_unique<MsrDriverDr<true>>();
-		if (msrdriver->valid()) {
-			if (msrdriver->wait_receive() && msrdriver->id() == SMDataID::CONNECT) {
-				BaseInfo & sendInfo = msrdriver->get<BaseInfo>();
+		shmdriver = std::make_unique<ipc::SyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
+		if (shmdriver->valid()) {
+			if (shmdriver->wait_receive() && shmdriver->id() == ipc::SMDataID::CONNECT) {
+				auto & sendInfo = shmdriver->get<ipc::BaseInfo>();
 				sendInfo.pid = (int)dr_get_process_id();
 				strncpy(sendInfo.path, mod->full_path, 128);
-				msrdriver->state(SMDataID::PID);
-				msrdriver->commit();
+				shmdriver->id(ipc::SMDataID::PID);
+				shmdriver->commit();
 
-				if (!msrdriver->wait_receive(std::chrono::seconds(1)) ||
-					msrdriver->id() != SMDataID::ATTACHED)
+				if (!shmdriver->wait_receive(std::chrono::seconds(1)) ||
+					shmdriver->id() != ipc::SMDataID::ATTACHED)
 				{
-					LOG_WARN(data->tid, "MSR did not attach: ID %u", msrdriver->id());
-					msrdriver.reset();
+					LOG_WARN(data->tid, "MSR did not attach: ID %u", shmdriver->id());
+					shmdriver.reset();
 				}
 				else {
 					LOG_INFO(data->tid, "MSR attached");
@@ -187,7 +187,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		}
 		else {
 			LOG_WARN(data->tid, "MSR is not running");
-			msrdriver.reset();
+			shmdriver.reset();
 		}
 		//--------------------------------------------------------------
 

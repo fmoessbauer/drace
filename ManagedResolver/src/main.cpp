@@ -1,6 +1,6 @@
 #include "ManagedResolver.h"
 #include "ProtocolHandler.h"
-#include "ipc/msr-driver.h"
+#include "ipc/SyncSHMDriver.h"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_sinks.h"
@@ -11,7 +11,7 @@
 #include <memory>
 
 std::shared_ptr<spdlog::logger> logger;
-std::unique_ptr<ProtocolHandler> phandler;
+std::unique_ptr<msr::ProtocolHandler> phandler;
 
 /* Handle Ctrl Events / Signals */
 BOOL CtrlHandler(DWORD fdwCtrlType) {
@@ -28,6 +28,8 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
 }
 
 int main(int argc, char** argv) {
+	using namespace msr;
+
 	logger = spdlog::stdout_logger_st("console");
 	logger->set_pattern("[%Y-%m-%d %T][%l] %v");
 	logger->set_level(spdlog::level::info);
@@ -49,7 +51,7 @@ int main(int argc, char** argv) {
 	* Hence, msr can be started prior to drace
 	*/
 	try {
-		auto msrdriver = std::make_shared<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
+		auto msrdriver = std::make_shared<ipc::SyncSHMDriver<false, false>>(DRACE_SMR_NAME, true);
 		phandler = std::make_unique<ProtocolHandler>(msrdriver);
 		phandler->process_msgs();
 	}
