@@ -7,6 +7,8 @@ ProtocolHandler::ProtocolHandler(
 	MsrDriverPtr msrdriver)
 	: _msrdriver(msrdriver)
 {
+	_msrdriver->state(SMDataID::CONNECT);
+	_msrdriver->commit();
 }
 
 ProtocolHandler::~ProtocolHandler() {

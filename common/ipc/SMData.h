@@ -26,12 +26,6 @@ struct BaseInfo {
 };
 
 struct SMData {
-	/* true  = Drace Committed,
-	*  false = MSR Committed
-	*  Drace starts the protocol
-	*/
-	std::atomic<bool> sender{ false };
-
 	// Message IDs
 	SMDataID id;
 

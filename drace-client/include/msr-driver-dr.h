@@ -4,6 +4,7 @@
 
 #include "ipc/msr-driver.h"
 
+/*Specialization to replace illegal system calls with DynamoRIO alternatives */
 template<bool SENDER>
 class MsrDriverDr : public MsrDriver<SENDER, true> {
 	void yield() const {

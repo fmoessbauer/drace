@@ -6,7 +6,6 @@
 #include "SMData.h"
 
 /* Handles communication between Drace and MSR */
-
 template<bool SENDER, bool NOTHROW = true>
 class MsrDriver {
 private:
@@ -44,22 +43,12 @@ public:
 	}
 
 	void commit() {
-		_comm->sender.store(SENDER, std::memory_order_release);
+		_shm.notify();
 	}
 
 	template<typename duration = std::chrono::milliseconds>
 	bool wait_receive(const duration & d = std::chrono::milliseconds(100)) {
-		auto start = std::chrono::system_clock::now();
-		do {
-			yield();
-			auto end = std::chrono::system_clock::now();
-			if (_comm->sender.load(std::memory_order_acquire) != SENDER) {
-				return true;
-			}
-			if ((end - start) > d) {
-				return false;
-			}
-		} while (1);
+		return _shm.wait(d);
 	}
 
 	/* Sets the message id / state */
