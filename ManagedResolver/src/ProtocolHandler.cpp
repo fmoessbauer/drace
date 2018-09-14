@@ -14,20 +14,39 @@ void ProtocolHandler::attachProcess() {
 	CString lastError;
 
 	// TODO: Probably less rights are sufficient
-	int pid = _msrdriver->get<int>();
-	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
+	const BaseInfo & bi = _msrdriver->get<BaseInfo>();
+	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, bi.pid);
 	// we cannot validate this handle, hence pass it
 	// to the resolver and handle errors there
 
-	const char * path = "C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll";
+	// Split *clr.dll path into filename and dir
+	std::string path     = bi.path;
+	std::string dirname  = path.substr(0, path.find_last_of("/\\")).c_str();
+	std::string filename = path.substr(path.find_last_of("/\\") + 1).c_str();
 
-	bool success = _resolver.InitSymbolResolver(phandle, path, lastError);
+	// helper dll (default: coreclr.dll)
+	std::string dacdll;
+
+	if (filename == "coreclr.dll") {
+		dacdll = "mscordaccore.dll";
+	} else if(filename == "clr.dll") {
+		dacdll = "mscordacwks.dll";
+	}
+	else {
+		_msrdriver->state(SMDataID::EXIT);
+		_msrdriver->commit();
+		return;
+	}
+	std::string dacdllpath(dirname + '\\' + dacdll);
+	std::cout << "Load helper " << dacdllpath << std::endl;
+
+	bool success = _resolver.InitSymbolResolver(phandle, dacdllpath.c_str(), lastError);
 	if (!success) {
 		std::cerr << "Failure" << std::endl;
 		std::cerr << lastError.GetString() << std::endl;
 		return;
 	}
-	std::cout << "--- Attached to " << pid << " ---" << std::endl;
+	std::cout << "--- Attached to " << bi.pid << " ---" << std::endl;
 	_msrdriver->state(SMDataID::ATTACHED);
 	_msrdriver->commit();
 }
