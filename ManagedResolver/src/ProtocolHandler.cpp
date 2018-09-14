@@ -1,4 +1,7 @@
 #include "ProtocolHandler.h"
+#include "spdlog/logger.h"
+
+extern std::shared_ptr<spdlog::logger> logger;
 
 ProtocolHandler::ProtocolHandler(
 	MsrDriverPtr msrdriver)
@@ -16,6 +19,7 @@ void ProtocolHandler::attachProcess() {
 	// TODO: Probably less rights are sufficient
 	const BaseInfo & bi = _msrdriver->get<BaseInfo>();
 	HANDLE phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, bi.pid);
+	logger->info("--- attached to process {} ---", bi.pid);
 	// we cannot validate this handle, hence pass it
 	// to the resolver and handle errors there
 
@@ -38,21 +42,20 @@ void ProtocolHandler::attachProcess() {
 		return;
 	}
 	std::string dacdllpath(dirname + '\\' + dacdll);
-	std::cout << "Load helper " << dacdllpath << std::endl;
+	logger->info("Load helper {}", dacdllpath);
 
 	bool success = _resolver.InitSymbolResolver(phandle, dacdllpath.c_str(), lastError);
 	if (!success) {
-		std::cerr << "Failure" << std::endl;
-		std::cerr << lastError.GetString() << std::endl;
+		logger->error("{}", lastError.GetString());
 		return;
 	}
-	std::cout << "--- Attached to " << bi.pid << " ---" << std::endl;
+	logger->info("Debugger initialized", bi.pid);
 	_msrdriver->state(SMDataID::ATTACHED);
 	_msrdriver->commit();
 }
 
 void ProtocolHandler::detachProcess() {
-	std::cout << "--- Detach MSR ---" << std::endl;
+	logger->info("--- detach MSR ---");
 	_resolver.Close();
 	_msrdriver->state(SMDataID::CONNECT);
 	_msrdriver->commit();
@@ -61,7 +64,7 @@ void ProtocolHandler::detachProcess() {
 void ProtocolHandler::resolveIP() {
 	CString buffer;
 	void* ip = _msrdriver->get<void*>();
-	std::cout << "Resolve IP: " << ip << std::endl;
+	logger->debug("resolve IP: {}", ip);
 
 	SymbolInfo & sym = _msrdriver->get<SymbolInfo>();
 
@@ -94,7 +97,7 @@ void ProtocolHandler::process_msgs() {
 			case SMDataID::EXIT:
 				detachProcess(); break;
 			default:
-				std::cerr << "protocol error" << std::endl;
+				logger->error("protocol error");
 				_keep_running = false;
 			}
 		}

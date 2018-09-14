@@ -13,6 +13,8 @@ cannot be detected correctly.
 
 ### External Libraries
 
+#### Drace
+
 **Mandatory:**
 
 - [jtilly/inih](https://github.com/jtilly/inih)
@@ -24,6 +26,12 @@ cannot be detected correctly.
 - [google/googletest](https://github.com/google/googletest)
 - [google/benchmark](https://github.com/google/benchmark)
 - [greq7mdp/sparsepp](https://github.com/greq7mdp/sparsepp)
+
+#### MSR
+
+**Mandatory:**
+
+- [gabime/spdlog](https://github.com/gabime/spdlog)
 
 ## Using the Drace Race Detector
 
@@ -78,15 +86,19 @@ set _NT_SYMBOL_PATH="c:\\symbolcache\\;SRV*c:\\symbolcache\\*https://msdl.micros
 
 ### Dotnet
 
-To correctly resolve managed stack frames, `mscordacwks.dll` is required.
-Each Dotnet version is shipped with it's own dll, so copy the correct one from
-the framework directory to the binary dir.
-
-For .Net 4.0 the correct one can be found here
+For .Net managed code, a second process (called MSR) is needed for symbol resolution.
+This can be started as follows:
 
 ```
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+ManagedResolver\msr.exe [-v for verbose]
 ```
+
+After it is started, Drace connects to MSR using shared memory.
+MSR then tries to locate the correct [DAC](https://github.com/dotnet/coreclr/blob/master/Documentation/botr/dac-notes.md)
+dll to resolve managed program counters and symbols.
+
+The output (logs) of MSR are just for debugging reasons. The resolved symbols are passed back to drace
+and merged with the non-managed ones.
 
 ## Testing with GoogleTest
 

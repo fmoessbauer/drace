@@ -16,3 +16,6 @@
 [submodule "vendor/greg7mdp/sparsepp"]
 	path = vendor/greg7mdp/sparsepp
 	url = https://github.com/greg7mdp/sparsepp.git
+[submodule "vendor/gabime/spdlog"]
+	path = vendor/gabime/spdlog
+	url = https://github.com/gabime/spdlog.git

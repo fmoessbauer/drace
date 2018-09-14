@@ -2,14 +2,18 @@
 #include "ProtocolHandler.h"
 #include "ipc/msr-driver.h"
 
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_sinks.h"
+
 #include <iostream>
 #include <thread>
 #include <chrono>
 #include <memory>
 
-std::shared_ptr<MsrDriver<false, false>> msrdriver;
+std::shared_ptr<spdlog::logger> logger;
 std::unique_ptr<ProtocolHandler> phandler;
 
+/* Handle Ctrl Events / Signals */
 BOOL CtrlHandler(DWORD fdwCtrlType) {
 	if (nullptr == phandler.get())
 		return false;
@@ -24,11 +28,19 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
 }
 
 int main(int argc, char** argv) {
-	std::cout << "Starting Managed Stack Resolver, waiting for Drace" << std::endl;
+	logger = spdlog::stdout_logger_st("console");
+	logger->set_pattern("[%Y-%m-%d %T][%l] %v");
+	logger->set_level(spdlog::level::info);
+
+	logger->info("Starting Managed Stack Resolver, waiting for Drace");
+	if (argc == 2 && !strncmp(argv[1], "-v", 2)) {
+		logger->set_level(spdlog::level::debug);
+		logger->debug("Debug mode enabled");
+	}
 
 	// We need this event handler for cleanup of shm
 	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
-		std::cerr << "Warning: Could not register exit handler" << std::endl;
+		logger->warn("Could not register exit handler");
 	}
 
 	/*
@@ -37,14 +49,14 @@ int main(int argc, char** argv) {
 	* Hence, msr can be started prior to drace
 	*/
 	try {
-		msrdriver = std::make_shared<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
+		auto msrdriver = std::make_shared<MsrDriver<false, false>>(DRACE_SMR_NAME, true);
+		phandler = std::make_unique<ProtocolHandler>(msrdriver);
+		phandler->process_msgs();
 	}
 	catch (std::runtime_error e) {
-		std::cerr << "Error initialising shared memory: " << e.what() << std::endl;
+		logger->error("Error initialising shared memory or during protocol: {}", e.what());
+		return 1;
 	}
 
-	phandler = std::make_unique<ProtocolHandler>(msrdriver);
-	phandler->process_msgs();
-
-	std::cout << "Quit Managed Stack Resolver" << std::endl;
+	logger->info("Quit Managed Stack Resolver");
 }

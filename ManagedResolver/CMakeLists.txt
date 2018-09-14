@@ -13,4 +13,9 @@ target_include_directories(
 	"msr" PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/common>)
 
+# gabime/spdlog for logging
+target_include_directories(
+	"msr" PRIVATE
+	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/gabime/spdlog/include>)
+
 target_link_libraries("msr" "dbgeng.dll")
