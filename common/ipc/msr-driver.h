@@ -27,8 +27,10 @@ public:
 	{ }
 
 	~MsrDriver() {
-		_comm->id = SMDataID::EXIT;
-		commit();
+		if (nullptr != _comm) {
+			_comm->id = SMDataID::EXIT;
+			commit();
+		}
 	}
 
 	/* Returns a pointer to the raw buffer */
@@ -77,5 +79,14 @@ public:
 	template<typename T>
 	inline T & get() const {
 		return reinterpret_cast<T*>(_comm->buffer)[0];
+	}
+
+	/*
+	* returns true if the msrdriver is in a valid state and can be used.
+	* This is for the nothrow case, where the constructor cannot 
+	* throw a exception if an error occured during shm attaching
+	*/
+	inline bool valid() const {
+		return (nullptr != _comm);
 	}
 };

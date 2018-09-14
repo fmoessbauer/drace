@@ -10,7 +10,7 @@
 template<typename T = byte, bool nothrow = false>
 class SharedMemory {
 	HANDLE hMapFile;
-	T*     buffer;
+	T*     buffer{ nullptr };
 public:
 	SharedMemory(const char * name, bool create = false) {
 		if (create) {

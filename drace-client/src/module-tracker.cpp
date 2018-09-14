@@ -163,20 +163,26 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		//--------------------------------------------------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
 		msrdriver = std::make_unique<MsrDriverDr<true>>();
-		BaseInfo & sendInfo = msrdriver->get<BaseInfo>();
-		sendInfo.pid = dr_get_process_id();
-		strncpy(sendInfo.path, mod->full_path, 128);
-		msrdriver->state(SMDataID::PID);
-		msrdriver->commit();
+		if (msrdriver->valid()) {
+			BaseInfo & sendInfo = msrdriver->get<BaseInfo>();
+			sendInfo.pid = dr_get_process_id();
+			strncpy(sendInfo.path, mod->full_path, 128);
+			msrdriver->state(SMDataID::PID);
+			msrdriver->commit();
 
-		if (!msrdriver->wait_receive(std::chrono::seconds(1)) ||
-			msrdriver->id() != SMDataID::ATTACHED)
-		{
-			LOG_WARN(data->tid, "MSR did not attach: ID %u", msrdriver->id());
-			msrdriver.reset();
+			if (!msrdriver->wait_receive(std::chrono::seconds(1)) ||
+				msrdriver->id() != SMDataID::ATTACHED)
+			{
+				LOG_WARN(data->tid, "MSR did not attach: ID %u", msrdriver->id());
+				msrdriver.reset();
+			}
+			else {
+				LOG_INFO(data->tid, "MSR attached");
+			}
 		}
 		else {
-			LOG_INFO(data->tid, "MSR attached");
+			LOG_WARN(data->tid, "MSR is not running");
+			msrdriver.reset();
 		}
 		//--------------------------------------------------------------
 
