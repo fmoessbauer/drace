@@ -14,6 +14,10 @@ namespace msr {
 		SyncSHMDriver   _shmdriver;
 		bool _keep_running{ true };
 
+		HMODULE _dbghelp_dll;
+		int    _pid;
+		HANDLE _phandle;
+
 	private:
 		/* Attach to the target process and load correct helper dll */
 		void attachProcess();
@@ -21,6 +25,8 @@ namespace msr {
 		void detachProcess();
 		/* Resolve single instruction pointer */
 		void resolveIP();
+		/* Download Symbols from SymServer */
+		void loadSymbols();
 
 	public:
 		explicit ProtocolHandler(SyncSHMDriver);

@@ -59,10 +59,17 @@ namespace ipc {
 			reinterpret_cast<T*>(_comm->buffer)[0] = val;
 		}
 
+		/* Constructs T at begin of buffer */
+		template<typename T, class... Args>
+		inline T & emplace(SMDataID mid, Args&&... args) {
+			_comm->id = mid;
+			return *(new (_comm->buffer) T(std::forward<Args>(args)...));
+		}
+
 
 		/* Gets value of type T from begin of buffer */
 		template<typename T>
-		inline T & get() const {
+		inline const T & get() const {
 			return reinterpret_cast<T*>(_comm->buffer)[0];
 		}
 

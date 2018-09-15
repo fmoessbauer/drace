@@ -1,4 +1,4 @@
-set(SOURCES main algorithms DetectorTest DrIntegrationTest)
+set(SOURCES main algorithms DetectorTest DrIntegrationTest ShmDriver)
 set(TEST_TARGET "${PROJECT_NAME}-Tests")
 
 
@@ -17,6 +17,10 @@ target_include_directories(
 target_include_directories(
 	${TEST_TARGET} PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/drace-client/detectors> "detectors")
+
+target_include_directories(
+	${TEST_TARGET} PRIVATE
+	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/common>)
 
 target_link_libraries(${TEST_TARGET} "drace-${DRACE_DETECTOR}")
 

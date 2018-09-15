@@ -69,7 +69,11 @@ namespace msr {
 			return false;
 		}
 
-		hr = DebugCreate(__uuidof(IDebugClient), (void**)&debugClient);
+		HMODULE dbgeng_dll = LoadLibrary("dbgeng.dll");
+		using PFN_DebugCreate = decltype(DebugCreate);
+		PFN_DebugCreate* pDebugCreate = (PFN_DebugCreate*)GetProcAddress(dbgeng_dll, "DebugCreate");
+
+		hr = pDebugCreate(__uuidof(IDebugClient), (void**)&debugClient);
 		if (FAILED(hr))
 		{
 			lastError.Format(_T("Could retrieve symbolic debug information using dbgeng.dll (Error code: 0x%08X)"), hr);

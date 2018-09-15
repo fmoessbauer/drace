@@ -163,26 +163,28 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 		//-------------- Attach external MSR process -------------------
 		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
 		shmdriver = std::make_unique<ipc::SyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
-		if (shmdriver->valid()) {
-			if (shmdriver->wait_receive() && shmdriver->id() == ipc::SMDataID::CONNECT) {
-				auto & sendInfo = shmdriver->get<ipc::BaseInfo>();
+		if (shmdriver->valid())
+		{
+			shmdriver->wait_receive(std::chrono::seconds(10));
+			if (shmdriver->id() == ipc::SMDataID::CONNECT) {
+				// Send PID and CLR path
+				auto & sendInfo = shmdriver->emplace<ipc::BaseInfo>(ipc::SMDataID::PID);
 				sendInfo.pid = (int)dr_get_process_id();
 				strncpy(sendInfo.path, mod->full_path, 128);
-				shmdriver->id(ipc::SMDataID::PID);
 				shmdriver->commit();
 
-				if (!shmdriver->wait_receive(std::chrono::seconds(1)) ||
-					shmdriver->id() != ipc::SMDataID::ATTACHED)
+				if (shmdriver->wait_receive(std::chrono::seconds(10)) && shmdriver->id() == ipc::SMDataID::ATTACHED)
 				{
-					LOG_WARN(data->tid, "MSR did not attach: ID %u", shmdriver->id());
-					shmdriver.reset();
+					LOG_INFO(data->tid, "MSR attached");
 				}
 				else {
-					LOG_INFO(data->tid, "MSR attached");
+					LOG_WARN(data->tid, "MSR did not attach");
+					shmdriver.reset();
 				}
 			}
 			else {
-				LOG_WARN(data->tid, "MSR not in CONNECT state");
+				LOG_WARN(data->tid, "MSR is not ready to connect");
+				shmdriver.reset();
 			}
 		}
 		else {
@@ -195,8 +197,40 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 			funwrap::wrap_excludes(mod, "functions_dotnet");
 		}
 		else {
-			LOG_WARN(data->tid, "Warning: Found .Net application but debug information is not available\n"
-								"         download it from Microsoft Symbol Server and try again\n");
+			LOG_WARN(data->tid, "Warning: Found .Net application but debug information is not available");
+
+			if (nullptr != shmdriver.get()) {
+				LOG_INFO(data->tid, "MSR downloads the symbols from a symbol server (might take long)");
+				auto & symreq = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::LOADSYMS);
+				symreq.base = (uint64_t)mod->start;
+				symreq.size = mod->module_internal_size;
+				strncpy(symreq.path, mod->full_path, 128);
+				shmdriver->commit();
+
+				while (bool valid_state = shmdriver->wait_receive(std::chrono::seconds(2))) {
+					if (!valid_state) {
+						LOG_WARN(data->tid, "timeout during symbol download: ID %u", shmdriver->id());
+						shmdriver.reset();
+						break;
+					}
+					// we got a message
+					switch (shmdriver->id()) {
+					case ipc::SMDataID::CONFIRM:
+						LOG_INFO(data->tid, "Symbols downloaded, rescan");
+						break;
+					case ipc::SMDataID::WAIT:
+						LOG_NOTICE(data->tid, "wait for download to finish");
+						shmdriver->id(ipc::SMDataID::CONFIRM);
+						shmdriver->commit();
+						break;
+					default:
+						LOG_WARN(data->tid, "Protocol error, got %u", shmdriver->id());
+						shmdriver.reset();
+						break;
+					}
+				}
+				modit->debug_info = symbol_table->debug_info_available(mod);
+			}
 		}
 	}
 	else if (modit->instrument != INSTR_FLAGS::NONE) {

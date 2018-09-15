@@ -3,15 +3,21 @@
 #include <atomic>
 
 #define DRACE_SMR_NAME "drace-msr"
-#define DRACE_SMR_MAXLEN 512
+#define DRACE_SMR_MAXLEN 1024
 
 namespace ipc {
 
 	enum class SMDataID : uint8_t {
 		PID,
 		IP,
+		SYMBOL,
 		CONNECT,
 		ATTACHED,
+		LOADSYMS,
+
+		WAIT,
+		CONFIRM,
+
 		EXIT
 	};
 
@@ -25,6 +31,12 @@ namespace ipc {
 	struct BaseInfo {
 		int pid;
 		char path[128];
+	};
+
+	struct SymbolRequest {
+		uint64_t base;
+		size_t   size;
+		char     path[128];
 	};
 
 	struct SMData {
