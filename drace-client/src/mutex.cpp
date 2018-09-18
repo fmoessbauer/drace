@@ -309,7 +309,12 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 #endif
 	}
 	else {
-		LOG_INFO(0, "Try to wrap qtsync mutexes");
+		LOG_INFO(0, "Try to wrap non-system mutexes");
+		// Std mutexes
+		wrap_mtx_dbg(mod, config.get_multi("stdsync", "acquire_excl"), get_arg, mutex_lock);
+		wrap_mtx_dbg(mod, config.get_multi("stdsync", "acquire_excl_try"), get_arg, mutex_trylock);
+		wrap_mtx_dbg(mod, config.get_multi("stdsync", "release_excl"), mutex_unlock, NULL);
+
 		// Qt Mutexes
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl"), get_arg, recmutex_lock);
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_excl_try"), get_arg, recmutex_trylock);
