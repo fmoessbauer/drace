@@ -29,8 +29,8 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	sloc.pc = pc;
 
 	auto modptr = module_tracker->get_module_containing(pc);
-	// TODO: tag modules with managed flag
-	if (modptr && !util::common_prefix(dr_module_preferred_name(modptr->info), "System.Private.CoreLib.dll")) {
+	// Not (Jitted PC or PC is in managed module)
+	if (modptr && (modptr->modtype == ModuleData::MOD_TYPE_FLAGS::NATIVE)) {
 
 			sloc.mod_base = modptr->base;
 			sloc.mod_end  = modptr->end;

@@ -8,6 +8,7 @@
 #include "ipc/SyncSHMDriver.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
+#include "MSR.h"
 
 #include <drmgr.h>
 
@@ -41,6 +42,18 @@ static bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 	return !(d1 == d2);
 }
 
+void ModuleData::tag_module() {
+	// We want to read the COM_ENTRY from the data directory
+	// according to https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_data_directory
+	PIMAGE_DOS_HEADER      pidh = (PIMAGE_DOS_HEADER)info->start;
+	PIMAGE_NT_HEADERS      pinh = (PIMAGE_NT_HEADERS)((BYTE*)pidh + pidh->e_lfanew);
+	PIMAGE_FILE_HEADER     pifh = (PIMAGE_FILE_HEADER)&pinh->FileHeader;
+	PIMAGE_OPTIONAL_HEADER pioh = (PIMAGE_OPTIONAL_HEADER)&pinh->OptionalHeader;
+
+	DWORD clrh = pioh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress;
+	modtype = (clrh == 0) ? MOD_TYPE_FLAGS::NATIVE : MOD_TYPE_FLAGS::MANAGED;
+}
+
 ModuleTracker::ModuleTracker(const std::shared_ptr<Symbols> & symbols)
 	: _syms(symbols)
 	{
@@ -71,7 +84,7 @@ ModuleTracker::~ModuleTracker() {
 	dr_rwlock_destroy(mod_lock);
 }
 
-std::shared_ptr<ModuleData> ModuleTracker::get_module_containing(app_pc pc)
+ModuleTracker::PModuleData ModuleTracker::get_module_containing(const app_pc pc) const
 {
 	auto m_it = _modules_idx.lower_bound(pc);
 	if (m_it != _modules_idx.end() && pc < m_it->second->end) {
@@ -80,6 +93,60 @@ std::shared_ptr<ModuleData> ModuleTracker::get_module_containing(app_pc pc)
 	else {
 		return nullptr;
 	}
+}
+
+ModuleTracker::PModuleData ModuleTracker::register_module(const module_data_t * mod, bool loaded)
+{
+	// first check if module is already registered
+	module_tracker->lock_read();
+	auto modptr = module_tracker->get_module_containing(mod->start);
+	module_tracker->unlock_read();
+
+	if (modptr) {
+		if (!modptr->loaded && (modptr->info == mod)) {
+			modptr->loaded = true;
+			return modptr;
+		}
+	}
+
+	// Module is not registered (new)
+	INSTR_FLAGS def_instr_flags = (INSTR_FLAGS)(
+		INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK | INSTR_FLAGS::SYMBOLS);
+
+	module_tracker->lock_write();
+	modptr = module_tracker->add_emplace(mod->start, mod->end);
+	module_tracker->unlock_write();
+
+	// Module not already registered
+	modptr->set_info(mod);
+	modptr->instrument = def_instr_flags;
+
+	std::string mod_path(mod->full_path);
+	std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
+
+	for (auto prefix : module_tracker->excluded_path_prefix) {
+		// check if mod path is excluded
+		if (util::common_prefix(prefix, mod_path)) {
+			modptr->instrument = INSTR_FLAGS::STACK;
+			break;
+		}
+	}
+	// if not in excluded path
+	if (modptr->instrument != INSTR_FLAGS::STACK) {
+		// check if mod name is excluded
+		// in this case, we check for syms but only instrument stack
+		std::string mod_name(dr_module_preferred_name(mod));
+		const auto & excluded_mods = module_tracker->excluded_mods;
+		if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
+			modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
+		}
+	}
+	if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
+		// check if debug info is available
+		modptr->debug_info = symbol_table->debug_info_available(mod);
+	}
+
+	return modptr;
 }
 
 /* Module load event implementation.
@@ -93,64 +160,18 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 
 	per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
 	DR_ASSERT(nullptr != data);
-
 	thread_id_t tid = data->tid;
-	std::string mod_name(dr_module_preferred_name(mod));
 
-	// first check if module is already registered
-	module_tracker->lock_read();
-	auto modptr = module_tracker->get_module_containing(mod->start);
-	module_tracker->unlock_read();
+	auto modptr = module_tracker->register_module(mod, loaded);
 
-	if (modptr) {
-		if (!modptr->loaded && (modptr->info == mod)) {
-			modptr->loaded = true;
-		}
-	}
-	else {
-		// Module is not registered (new)
-		INSTR_FLAGS def_instr_flags = (INSTR_FLAGS)(
-			INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK | INSTR_FLAGS::SYMBOLS);
+	std::string mod_name = dr_module_preferred_name(mod);
 
-		module_tracker->lock_write();
-		modptr = module_tracker->add_emplace(mod->start, mod->end);
-		module_tracker->unlock_write();
-
-		// Module not already registered
-		modptr->set_info(mod);
-		modptr->instrument = def_instr_flags;
-
-		std::string mod_path(mod->full_path);
-		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
-
-		for (auto prefix : module_tracker->excluded_path_prefix) {
-			// check if mod path is excluded
-			if (util::common_prefix(prefix, mod_path)) {
-				modptr->instrument = INSTR_FLAGS::STACK;
-				break;
-			}
-		}
-		// if not in excluded path
-		if (modptr->instrument != INSTR_FLAGS::STACK) {
-			// check if mod name is excluded
-			// in this case, we check for syms but only instrument stack
-			const auto & excluded_mods = module_tracker->excluded_mods;
-			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-				modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
-			}
-		}
-		if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
-			// check if debug info is available
-			modptr->debug_info = symbol_table->debug_info_available(mod);
-		}
-
-		LOG_INFO(tid,
-			"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
-			mod_name.c_str(), modptr->base, modptr->end,
-			util::instr_flags_to_str(modptr->instrument).c_str(),
-			modptr->debug_info ? "YES" : " NO",
-			modptr->info->full_path);
-	}
+	LOG_INFO(tid,
+		"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
+		mod_name.c_str(), modptr->base, modptr->end,
+		util::instr_flags_to_str(modptr->instrument).c_str(),
+		modptr->debug_info ? "YES" : " NO",
+		modptr->info->full_path);
 
 	DR_ASSERT(!dr_using_app_state(drcontext));
 	// wrap functions
@@ -159,89 +180,38 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	{
 		funwrap::wrap_mutexes(mod, true);
 	}
-	if (util::common_prefix(mod_name, "KERNEL"))
+	else if (util::common_prefix(mod_name, "KERNEL"))
 	{
 		funwrap::wrap_allocations(mod);
 		funwrap::wrap_thread_start_sys(mod);
 	}
-	if (util::common_prefix(mod_name, "clr") || 
-		util::common_prefix(mod_name, "coreclr"))
+	else if (util::common_prefix(mod_name, "clr") || 
+		       util::common_prefix(mod_name, "coreclr"))
 	{
-		//-------------- Attach external MSR process -------------------
-		LOG_INFO(data->tid, "wait 10s for external resolver to attach");
-		shmdriver = std::make_unique<ipc::SyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
-		if (shmdriver->valid())
-		{
-			shmdriver->wait_receive(std::chrono::seconds(10));
-			if (shmdriver->id() == ipc::SMDataID::CONNECT) {
-				// Send PID and CLR path
-				auto & sendInfo = shmdriver->emplace<ipc::BaseInfo>(ipc::SMDataID::PID);
-				sendInfo.pid = (int)dr_get_process_id();
-				strncpy(sendInfo.path, mod->full_path, 128);
-				shmdriver->commit();
+		bool m_ok = MSR::attach(mod);
 
-				if (shmdriver->wait_receive(std::chrono::seconds(10)) && shmdriver->id() == ipc::SMDataID::ATTACHED)
-				{
-					LOG_INFO(data->tid, "MSR attached");
-				}
-				else {
-					LOG_WARN(data->tid, "MSR did not attach");
-					shmdriver.reset();
-				}
-			}
-			else {
-				LOG_WARN(data->tid, "MSR is not ready to connect");
-				shmdriver.reset();
-			}
-		}
-		else {
-			LOG_WARN(data->tid, "MSR is not running");
-			shmdriver.reset();
-		}
-		//--------------------------------------------------------------
-
-		if (modptr->debug_info) {
-			funwrap::wrap_excludes(mod, "functions_dotnet");
-		}
-		else {
+		if (!modptr->debug_info) {
 			LOG_WARN(data->tid, "Warning: Found .Net application but debug information is not available");
 
-			if (nullptr != shmdriver.get()) {
-				LOG_INFO(data->tid, "MSR downloads the symbols from a symbol server (might take long)");
-				// TODO: Download Symbols for some other .Net dlls as well
-				auto & symreq = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::LOADSYMS);
-				symreq.base = (uint64_t)mod->start;
-				symreq.size = mod->module_internal_size;
-				strncpy(symreq.path, mod->full_path, 128);
-				shmdriver->commit();
-
-				while (bool valid_state = shmdriver->wait_receive(std::chrono::seconds(2))) {
-					if (!valid_state) {
-						LOG_WARN(data->tid, "timeout during symbol download: ID %u", shmdriver->id());
-						shmdriver.reset();
-						break;
-					}
-					// we got a message
-					switch (shmdriver->id()) {
-					case ipc::SMDataID::CONFIRM:
-						LOG_INFO(data->tid, "Symbols downloaded, rescan");
-						break;
-					case ipc::SMDataID::WAIT:
-						LOG_NOTICE(data->tid, "wait for download to finish");
-						shmdriver->id(ipc::SMDataID::CONFIRM);
-						shmdriver->commit();
-						break;
-					default:
-						LOG_WARN(data->tid, "Protocol error, got %u", shmdriver->id());
-						shmdriver.reset();
-						break;
-					}
-				}
+			if (m_ok) {
+				MSR::request_symbols(mod);
 				modptr->debug_info = symbol_table->debug_info_available(mod);
 			}
 		}
+		if(modptr->debug_info) {
+			funwrap::wrap_excludes(mod, "functions_dotnet");
+		}
 	}
+	else if (modptr->instrument != INSTR_FLAGS::NONE
+		&& modptr->modtype == ModuleData::MOD_TYPE_FLAGS::MANAGED
+		&& !modptr->debug_info)
+	{
+		MSR::request_symbols(mod);
+		modptr->debug_info = symbol_table->debug_info_available(mod);
+	} 
 	else if (modptr->instrument != INSTR_FLAGS::NONE) {
+		// no special handling of this module
+
 		funwrap::wrap_excludes(mod);
 		// This requires debug symbols, but avoids false positives during
 		// C++11 thread construction and startup

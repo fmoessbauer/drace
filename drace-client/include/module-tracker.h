@@ -5,16 +5,33 @@
 #include <map>
 #include <memory>
 
-
 /* Encapsulates and enriches a dynamorio module_data_t struct */
 class ModuleData {
+public:
+	/* Flags describing characteristics of a module */
+	enum class MOD_TYPE_FLAGS : uint8_t {
+		UNKNOWN = 0x0,
+		NATIVE  = 0x1,
+		MANAGED = 0x2,
+	};
+
 public:
 	app_pc base;
 	app_pc end;
 	bool   loaded; // This is necessary to modify value in-place in set
 	INSTR_FLAGS instrument;
+	MOD_TYPE_FLAGS modtype{ MOD_TYPE_FLAGS::UNKNOWN };
 	module_data_t *info{ nullptr };
 	bool   debug_info;
+
+private:
+	/*
+	* Determines if the module is a managed-code module
+	* using the PE header
+	*/
+	void tag_module();
+
+public:
 
 	ModuleData(app_pc mbase, app_pc mend, bool mloaded = true, bool debug_info = false) :
 		base(mbase),
@@ -36,6 +53,7 @@ public:
 		end(other.end),
 		loaded(other.loaded),
 		instrument(other.instrument),
+		modtype(other.modtype),
 		debug_info(other.debug_info)
 	{
 		info = dr_copy_module_data(other.info);
@@ -48,6 +66,7 @@ public:
 		loaded(other.loaded),
 		instrument(other.instrument),
 		info(other.info),
+		modtype(other.modtype),
 		debug_info(other.debug_info)
 	{
 		other.info = nullptr;
@@ -55,6 +74,7 @@ public:
 
 	void set_info(const module_data_t * mod) {
 		info = dr_copy_module_data(mod);
+		tag_module();
 	}
 
 	inline bool operator==(const ModuleData & other) const {
@@ -97,13 +117,14 @@ public:
 class ModuleTracker {
 	// as we use lower_bound search, we have to reverse the sorting
 	using map_t = std::map<app_pc, std::shared_ptr<ModuleData>, std::greater<app_pc>>;
+
 	// RW mutex for access of modules container
 	void *mod_lock;
 	std::shared_ptr<Symbols> _syms;
-
 	map_t _modules_idx;
 
 public:
+	using PModuleData = std::shared_ptr<ModuleData>;
 
 	std::vector<std::string> excluded_mods;
 	std::vector<std::string> excluded_path_prefix;
@@ -115,27 +136,30 @@ public:
 	/* Returns a shared_ptr to the module which contains the given program counter.
 	 * If the pc is not in a known module, returns a nullptr
 	 */
-	std::shared_ptr<ModuleData> get_module_containing(app_pc pc);
+	PModuleData get_module_containing(const app_pc pc) const;
 
 	/* Registers a new module by moving it */
-	inline std::shared_ptr<ModuleData> add(ModuleData && mod) {
-		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
+	inline PModuleData add(ModuleData && mod) {
+		PModuleData ptr = std::make_shared<ModuleData>(mod);
 		return ptr;
 	}
 
 	/* Registers a new module by copying it */
-	inline std::shared_ptr<ModuleData> add(const ModuleData & mod) {
-		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
+	inline PModuleData add(const ModuleData & mod) {
+		PModuleData ptr = std::make_shared<ModuleData>(mod);
 		return ptr;
 	}
 
 	/* Creates new module in place */
 	template<class... Args>
-	inline std::shared_ptr<ModuleData> add_emplace(Args&&... args) {
-		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(std::forward<Args>(args)...);
+	inline PModuleData add_emplace(Args&&... args) {
+		PModuleData ptr = std::make_shared<ModuleData>(std::forward<Args>(args)...);
 		_modules_idx.emplace(ptr->base, ptr);
 		return ptr;
 	}
+
+	/* Registers a module and sets flags accordingly */
+	PModuleData register_module(const module_data_t * mod, bool loaded);
 
 	/* Request a read-lock for the module dataset*/
 	inline void lock_read() const {

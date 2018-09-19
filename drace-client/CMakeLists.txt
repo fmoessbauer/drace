@@ -7,6 +7,7 @@
 	"src/instr/instr-mem-fast.cpp"
 	"src/instr/instr-mem-full.cpp"
 	"src/module-tracker"
+	"src/MSR"
 	"src/symbols"
 	"src/util")
 
