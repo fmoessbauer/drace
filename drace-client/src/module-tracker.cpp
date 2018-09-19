@@ -204,7 +204,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 	}
 	else if (modptr->instrument != INSTR_FLAGS::NONE
 		&& modptr->modtype == ModuleData::MOD_TYPE_FLAGS::MANAGED
-		&& !modptr->debug_info)
+		&& !modptr->debug_info
+		&& shmdriver)
 	{
 		MSR::request_symbols(mod);
 		modptr->debug_info = symbol_table->debug_info_available(mod);
