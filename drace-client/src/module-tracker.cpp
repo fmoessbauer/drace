@@ -71,6 +71,17 @@ ModuleTracker::~ModuleTracker() {
 	dr_rwlock_destroy(mod_lock);
 }
 
+std::shared_ptr<ModuleData> ModuleTracker::get_module_containing(app_pc pc)
+{
+	auto m_it = _modules_idx.lower_bound(pc);
+	if (m_it != _modules_idx.end() && pc < m_it->second->end) {
+		return m_it->second;
+	}
+	else {
+		return nullptr;
+	}
+}
+
 /* Module load event implementation.
 * To get clean call-stacks, we add the shadow-stack instrumentation
 * to all modules (even the excluded ones).

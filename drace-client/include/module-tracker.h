@@ -108,46 +108,30 @@ public:
 	std::vector<std::string> excluded_mods;
 	std::vector<std::string> excluded_path_prefix;
 
-private:
-	//ModuleData* add_to_index() {
-	//	ModuleData* mptr = &(_modules.back());
-	//	_modules_idx.emplace(mptr->base, mptr);
-	//	return mptr;
-	//}
-
 public:
 	explicit ModuleTracker(const std::shared_ptr<Symbols> & syms);
 	~ModuleTracker();
 
-	/* Returns an iterator to the module which contains the given program counter.
-	 * The first entry of the pair denots if the pc is in a known module
+	/* Returns a shared_ptr to the module which contains the given program counter.
+	 * If the pc is not in a known module, returns a nullptr
 	 */
-	std::shared_ptr<ModuleData> get_module_containing(app_pc pc) const
-	{
-		auto m_it = _modules_idx.lower_bound(pc);
-		if (m_it != _modules_idx.end() && pc < m_it->second->end) {
-			return m_it->second;
-		}
-		else {
-			return nullptr;
-		}
-	}
+	std::shared_ptr<ModuleData> get_module_containing(app_pc pc);
 
 	/* Registers a new module by moving it */
-	std::shared_ptr<ModuleData> add(ModuleData && mod) {
+	inline std::shared_ptr<ModuleData> add(ModuleData && mod) {
 		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
 		return ptr;
 	}
 
 	/* Registers a new module by copying it */
-	std::shared_ptr<ModuleData> add(const ModuleData & mod) {
+	inline std::shared_ptr<ModuleData> add(const ModuleData & mod) {
 		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
 		return ptr;
 	}
 
 	/* Creates new module in place */
 	template<class... Args>
-	std::shared_ptr<ModuleData> add_emplace(Args&&... args) {
+	inline std::shared_ptr<ModuleData> add_emplace(Args&&... args) {
 		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(std::forward<Args>(args)...);
 		_modules_idx.emplace(ptr->base, ptr);
 		return ptr;
