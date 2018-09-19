@@ -234,7 +234,7 @@ namespace mutex_wrap {
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
 		if (ok)
-			LOG_INFO(0, "wrapped custom mutex %s", name);
+			LOG_INFO(0, "wrapped custom mutex %s at %p", name, info->mod->start + modoffs);
 
 		delete info;
 		// Exact matches only, hence quit after each symbol

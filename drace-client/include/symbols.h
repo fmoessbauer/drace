@@ -88,9 +88,6 @@ public:
 	*/
 	bool debug_info_available(const module_data_t *mod) const;
 
-	/* Print the related symbol information for each basic block */
-	void print_bb_symbols();
-
 private:
 	/* Create global symbol lookup data structures */
 	void create_drsym_info();

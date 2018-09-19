@@ -293,17 +293,17 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 	}
 	else {
 		module_tracker->lock_read();
-		auto modc = module_tracker->get_module_containing(bb_addr);
-		if (modc.first) {
+		auto modptr = module_tracker->get_module_containing(bb_addr);
+		if (modptr) {
 			// bb in known module
-			instrument_bb = modc.second->instrument;
+			instrument_bb = modptr->instrument;
+			mc.update(modptr->base, modptr->end, instrument_bb);
 		}
 		else {
 			// Module not known
-			LOG_TRACE(-1, "Module unknown, probably JIT code");
+			LOG_TRACE(0, "Module unknown, probably JIT code (%p)", bb_addr);
 			instrument_bb = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
 		}
-		mc.update(modc.second->base, modc.second->end, modc.second->instrument);
 		module_tracker->unlock_read();
 	}
 	// Do not instrument if block is frequent

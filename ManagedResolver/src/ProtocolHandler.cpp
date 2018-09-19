@@ -42,6 +42,9 @@ namespace msr {
 		_pid = bi.pid;
 		// TODO: Probably less rights are sufficient
 		_phandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, _pid);
+		if (_phandle == NULL) {
+			throw std::runtime_error("could not attach to process");
+		}
 		logger->info("--- attached to process {} ---", _pid);
 		// we cannot validate this handle, hence pass it
 		// to the resolver and handle errors there
@@ -71,7 +74,7 @@ namespace msr {
 		bool success = _resolver.InitSymbolResolver(_phandle, dacdllpath.c_str(), lastError);
 		if (!success) {
 			logger->error("{}", lastError.GetString());
-			return;
+			throw std::runtime_error("could not initialize resolver");
 		}
 		logger->info("Debugger initialized", bi.pid);
 		_shmdriver->id(SMDataID::ATTACHED);
@@ -112,6 +115,7 @@ namespace msr {
 	void ProtocolHandler::loadSymbols() {
 		using PFN_SymInitialize       = decltype(SymInitialize)*;
 		using PFN_SymLoadModuleExW    = decltype(SymLoadModuleExW)*;
+		using PFN_SymUnloadModule     = decltype(SymUnloadModule)*;
 		using PFN_SymGetModuleInfoW64 = decltype(SymGetModuleInfoW64)*;
 		using PFN_SymSearch           = decltype(SymSearch)*;
 		using PFN_SymGetOptions       = decltype(SymGetOptions)*;
@@ -119,6 +123,7 @@ namespace msr {
 
 		PFN_SymInitialize syminit = (PFN_SymInitialize)GetProcAddress(_dbghelp_dll, "SymInitialize");
 		PFN_SymLoadModuleExW symloadmod = (PFN_SymLoadModuleExW)GetProcAddress(_dbghelp_dll, "SymLoadModuleExW");
+		PFN_SymUnloadModule symunloadmod = (PFN_SymUnloadModule)GetProcAddress(_dbghelp_dll, "SymUnloadModule");
 		PFN_SymGetModuleInfoW64 symgetmoduleinfo = (PFN_SymGetModuleInfoW64)GetProcAddress(_dbghelp_dll, "SymGetModuleInfoW64");
 		PFN_SymSearch symsearch = (PFN_SymSearch)GetProcAddress(_dbghelp_dll, "SymSearch");
 		PFN_SymGetOptions symgetopts = (PFN_SymGetOptions)GetProcAddress(_dbghelp_dll, "SymGetOptions");
@@ -150,7 +155,7 @@ namespace msr {
 				|| (_shmdriver->id() != ipc::SMDataID::CONFIRM))
 			{
 				logger->error("protocol error during symbol download");
-				_keep_running = false;
+				quit();
 				return;
 			}
 		}
@@ -190,6 +195,7 @@ namespace msr {
 					logger->debug("  module has line number information");
 				}
 			}
+			symunloadmod(_phandle, sr.base);
 			logger->info("download finished");
 		}
 		_shmdriver->id(ipc::SMDataID::CONFIRM);
@@ -212,7 +218,7 @@ namespace msr {
 					detachProcess(); break;
 				default:
 					logger->error("protocol error, got: {}", (int)_shmdriver->id());
-					_keep_running = false;
+					quit();
 				}
 			}
 		} while (_keep_running);

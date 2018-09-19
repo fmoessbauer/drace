@@ -1,18 +1,20 @@
 #pragma once
 
 #include "globals.h"
-
 #include <dr_api.h>
+#include <map>
+#include <memory>
+
 
 /* Encapsulates and enriches a dynamorio module_data_t struct */
 class ModuleData {
 public:
 	app_pc base;
 	app_pc end;
-	mutable bool   loaded; // This is necessary to modify value in-place in set
-	mutable INSTR_FLAGS instrument;
+	bool   loaded; // This is necessary to modify value in-place in set
+	INSTR_FLAGS instrument;
 	module_data_t *info{ nullptr };
-	mutable bool   debug_info;
+	bool   debug_info;
 
 	ModuleData(app_pc mbase, app_pc mend, bool mloaded = true, bool debug_info = false) :
 		base(mbase),
@@ -93,16 +95,25 @@ public:
 };
 
 class ModuleTracker {
+	// as we use lower_bound search, we have to reverse the sorting
+	using map_t = std::map<app_pc, std::shared_ptr<ModuleData>, std::greater<app_pc>>;
 	// RW mutex for access of modules container
 	void *mod_lock;
 	std::shared_ptr<Symbols> _syms;
 
+	map_t _modules_idx;
+
 public:
-	using ModuleData_Set = std::set<ModuleData, std::greater<ModuleData>>;
-	ModuleData_Set modules;
 
 	std::vector<std::string> excluded_mods;
 	std::vector<std::string> excluded_path_prefix;
+
+private:
+	//ModuleData* add_to_index() {
+	//	ModuleData* mptr = &(_modules.back());
+	//	_modules_idx.emplace(mptr->base, mptr);
+	//	return mptr;
+	//}
 
 public:
 	explicit ModuleTracker(const std::shared_ptr<Symbols> & syms);
@@ -111,17 +122,35 @@ public:
 	/* Returns an iterator to the module which contains the given program counter.
 	 * The first entry of the pair denots if the pc is in a known module
 	 */
-	std::pair<bool, ModuleData_Set::iterator> get_module_containing(app_pc pc) const
+	std::shared_ptr<ModuleData> get_module_containing(app_pc pc) const
 	{
-		ModuleData current(pc, nullptr);
-
-		auto m_it = modules.lower_bound(current);
-		if (m_it != modules.end() && pc < m_it->end) {
-			return std::make_pair(true, m_it);
+		auto m_it = _modules_idx.lower_bound(pc);
+		if (m_it != _modules_idx.end() && pc < m_it->second->end) {
+			return m_it->second;
 		}
 		else {
-			return std::make_pair(false, modules.end());
+			return nullptr;
 		}
+	}
+
+	/* Registers a new module by moving it */
+	std::shared_ptr<ModuleData> add(ModuleData && mod) {
+		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
+		return ptr;
+	}
+
+	/* Registers a new module by copying it */
+	std::shared_ptr<ModuleData> add(const ModuleData & mod) {
+		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(mod);
+		return ptr;
+	}
+
+	/* Creates new module in place */
+	template<class... Args>
+	std::shared_ptr<ModuleData> add_emplace(Args&&... args) {
+		std::shared_ptr<ModuleData> ptr = std::make_shared<ModuleData>(std::forward<Args>(args)...);
+		_modules_idx.emplace(ptr->base, ptr);
+		return ptr;
 	}
 
 	/* Request a read-lock for the module dataset*/
