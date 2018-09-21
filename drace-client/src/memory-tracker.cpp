@@ -11,6 +11,7 @@
 #include <detector_if.h>
 
 #include "memory-tracker.h"
+#include "Module.h"
 #include "symbols.h"
 #include "shadow-stack.h"
 #include "statistics.h"
@@ -287,9 +288,9 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 
 	// Lookup module from cache, hit is very likely as adiacent bb's 
 	// are mostly in the same module
-	auto cached = mc.lookup(bb_addr);
-	if (cached.first) {
-		instrument_bb = cached.second;
+	const module::Metadata * cached = mc.lookup(bb_addr);
+	if (nullptr != cached) {
+		instrument_bb = cached->instrument;
 	}
 	else {
 		module_tracker->lock_read();
@@ -297,7 +298,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 		if (modptr) {
 			// bb in known module
 			instrument_bb = modptr->instrument;
-			mc.update(modptr->base, modptr->end, instrument_bb);
+			mc.update(modptr.get());
 		}
 		else {
 			// Module not known

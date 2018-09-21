@@ -8,7 +8,7 @@
 
 #include "globals.h"
 #include "function-wrapper.h"
-#include "module-tracker.h"
+#include "Module.h"
 #include "memory-tracker.h"
 #include "statistics.h"
 

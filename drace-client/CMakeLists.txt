@@ -6,7 +6,8 @@
 	"src/memory-tracker"
 	"src/instr/instr-mem-fast.cpp"
 	"src/instr/instr-mem-full.cpp"
-	"src/module-tracker"
+	"src/module/Metadata.cpp"
+	"src/module/Tracker.cpp"
 	"src/MSR"
 	"src/symbols"
 	"src/util")

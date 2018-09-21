@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "symbols.h"
-#include "module-tracker.h"
+#include "Module.h"
 #include "ipc/SyncSHMDriver.h"
 
 #include <string>
@@ -30,7 +30,9 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 
 	auto modptr = module_tracker->get_module_containing(pc);
 	// Not (Jitted PC or PC is in managed module)
-	if (modptr && (modptr->modtype == ModuleData::MOD_TYPE_FLAGS::NATIVE)) {
+	// OR managed module, but MSR is not attached
+	if (modptr && ((modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::NATIVE) 
+		|| (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::MANAGED && !shmdriver))) {
 
 			sloc.mod_base = modptr->base;
 			sloc.mod_end  = modptr->end;
@@ -54,7 +56,7 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	}
 	else {
 		// Managed Code
-		if (nullptr != shmdriver.get()) {
+		if (shmdriver) {
 			shmdriver->put<uint64_t>(ipc::SMDataID::IP, (uint64_t)pc);
 			shmdriver->commit();
 			if (shmdriver->wait_receive(std::chrono::seconds(1))) {
@@ -62,8 +64,16 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 				sloc.mod_name = sym.module;
 				sloc.sym_name = sym.function;
 				sloc.file = sym.path;
+				// if the PC is not JITTED, try to get native module
+				if (sloc.mod_name.empty() && modptr) {
+					sloc.mod_name = dr_module_preferred_name(modptr->info);
+					sloc.mod_base = modptr->base;
+					sloc.mod_end  = modptr->end;
+				}
+				// we should never get here, as this must be jitted code
+				// where we have symbol information, but no module
 				if (sloc.mod_name.empty() && !sloc.sym_name.empty()) {
-					sloc.mod_name = "managed";
+					sloc.mod_name = "JIT";
 				}
 			}
 		}

@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "memory-tracker.h"
-#include "module-tracker.h"
+#include "Module.h"
 #include "symbols.h"
 #include "race-collector.h"
 #include "statistics.h"
@@ -31,7 +31,7 @@ std::chrono::system_clock::time_point app_stop;
 std::string config_file("drace.ini");
 
 std::unique_ptr<MemoryTracker> memory_tracker;
-std::unique_ptr<ModuleTracker> module_tracker;
+std::unique_ptr<module::Tracker> module_tracker;
 std::shared_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 std::unique_ptr<Statistics> stats;
