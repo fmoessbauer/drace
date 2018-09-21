@@ -28,6 +28,14 @@ std::vector<std::string> util::split(const std::string & str, const std::string 
 	return words;
 }
 
+std::string util::dir_from_path(const std::string & fullpath) {
+	return fullpath.substr(0, fullpath.find_last_of("/\\"));
+}
+
+std::string util::basename(const std::string & fullpath) {
+	return fullpath.substr(fullpath.find_last_of("/\\") + 1);
+}
+
 std::string util::to_iso_time(std::chrono::system_clock::time_point tp) {
 	return date::format("%FT%TZ", date::floor<std::chrono::milliseconds>(tp));
 }

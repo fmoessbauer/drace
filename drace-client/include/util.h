@@ -16,6 +16,10 @@ struct util {
 		const std::string & str,
 		const std::string & delimiter);
 
+	static std::string dir_from_path(const std::string & fullpath);
+
+	static std::string basename(const std::string & fullpath);
+
 	static std::string to_iso_time(std::chrono::system_clock::time_point tp);
 
 	static std::string instr_flags_to_str(INSTR_FLAGS flags);
