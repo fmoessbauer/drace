@@ -48,15 +48,17 @@ add_subdirectory("detectors/${DRACE_DETECTOR}")
 target_link_libraries("drace-client" "drace-${DRACE_DETECTOR}")
 
 # TinyXML2
-target_link_libraries("drace-client" "tinyxml2")
-target_include_directories("drace-client" PRIVATE
-	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/leethomason/tinyxml2> "tinyxml2")
+if(${DRACE_XML_EXPORTER})
+	target_link_libraries("drace-client" "tinyxml2")
+	target_include_directories("drace-client" PRIVATE
+		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/leethomason/tinyxml2> "tinyxml2")
+endif()
 
 # HowardHinnant Date
 target_include_directories("drace-client" PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/HowardHinnant/date/include/date> "date")
 
-# HowardHinnant Date
+# greg7mdp sparsepp
 target_include_directories("drace-client" PRIVATE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/greg7mdp/sparsepp> "sparsepp")
 
@@ -71,10 +73,14 @@ endif()
 add_custom_command(TARGET "drace-client" POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${PROJECT_SOURCE_DIR}/drace.ini"
-		"${PROJECT_BINARY_DIR}/drace.ini"
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_BINARY_DIR}/vendor/leethomason/tinyxml2/tinyxml2.dll"
-		"${PROJECT_BINARY_DIR}/drace-tsan/tinyxml2.dll"
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_BINARY_DIR}/vendor/leethomason/tinyxml2/tinyxml2.pdb"
-		"${PROJECT_BINARY_DIR}/drace-tsan/tinyxml2.pdb")
+		"${PROJECT_BINARY_DIR}/drace.ini")
+
+if(${DRACE_XML_EXPORTER})
+	add_custom_command(TARGET "drace-client" POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${PROJECT_BINARY_DIR}/vendor/leethomason/tinyxml2/tinyxml2.dll"
+			"${PROJECT_BINARY_DIR}/drace-tsan/tinyxml2.dll"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${PROJECT_BINARY_DIR}/vendor/leethomason/tinyxml2/tinyxml2.pdb"
+			"${PROJECT_BINARY_DIR}/drace-tsan/tinyxml2.pdb")
+endif()

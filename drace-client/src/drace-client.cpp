@@ -21,7 +21,9 @@
 #include "symbols.h"
 #include "statistics.h"
 #include "sink/hr-text.h"
+#ifdef XML_EXPORTER
 #include "sink/valkyrie.h"
+#endif
 
 #include <detector_if.h>
 
@@ -240,6 +242,7 @@ static void generate_summary() {
 		races_hr_file.close();
 	}
 	
+#ifdef XML_EXPORTER
 	// Write XML output
 	if (params.xml_file != "") {
 		std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
@@ -248,4 +251,5 @@ static void generate_summary() {
 			app_start, app_stop);
 		v_sink.process_all(race_collector->get_races());
 	}
+#endif
 }
