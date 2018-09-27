@@ -32,7 +32,7 @@ namespace module {
 		// according to https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_data_directory
 		PIMAGE_DOS_HEADER      pidh = (PIMAGE_DOS_HEADER)info->start;
 		PIMAGE_NT_HEADERS      pinh = (PIMAGE_NT_HEADERS)((BYTE*)pidh + pidh->e_lfanew);
-		PIMAGE_FILE_HEADER     pifh = (PIMAGE_FILE_HEADER)&pinh->FileHeader;
+		//PIMAGE_FILE_HEADER     pifh = (PIMAGE_FILE_HEADER)&pinh->FileHeader;
 		PIMAGE_OPTIONAL_HEADER pioh = (PIMAGE_OPTIONAL_HEADER)&pinh->OptionalHeader;
 
 		DWORD clrh = pioh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress;

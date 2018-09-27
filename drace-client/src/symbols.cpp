@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "symbols.h"
 #include "Module.h"
+#include "MSR.h"
 #include "ipc/SyncSHMDriver.h"
 
 #include <string>
@@ -57,24 +58,20 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	else {
 		// Managed Code
 		if (shmdriver) {
-			shmdriver->put<uint64_t>(ipc::SMDataID::IP, (uint64_t)pc);
-			shmdriver->commit();
-			if (shmdriver->wait_receive(std::chrono::seconds(1))) {
-				const auto & sym = shmdriver->get<ipc::SymbolInfo>();
-				sloc.mod_name = sym.module;
-				sloc.sym_name = sym.function;
-				sloc.file = sym.path;
-				// if the PC is not JITTED, try to get native module
-				if (sloc.mod_name.empty() && modptr) {
-					sloc.mod_name = dr_module_preferred_name(modptr->info);
-					sloc.mod_base = modptr->base;
-					sloc.mod_end  = modptr->end;
-				}
-				// we should never get here, as this must be jitted code
-				// where we have symbol information, but no module
-				if (sloc.mod_name.empty() && !sloc.sym_name.empty()) {
-					sloc.mod_name = "JIT";
-				}
+			const auto & sym = MSR::lookup_address(pc);
+			sloc.mod_name = sym.module.data();
+			sloc.sym_name = sym.function.data();
+			sloc.file = sym.path.data();
+			// if the PC is not JITTED, try to get native module
+			if (sloc.mod_name.empty() && modptr) {
+				sloc.mod_name = dr_module_preferred_name(modptr->info);
+				sloc.mod_base = modptr->base;
+				sloc.mod_end  = modptr->end;
+			}
+			// we should never get here, as this must be jitted code
+			// where we have symbol information, but no module
+			if (sloc.mod_name.empty() && !sloc.sym_name.empty()) {
+				sloc.mod_name = "JIT";
 			}
 		}
 	}

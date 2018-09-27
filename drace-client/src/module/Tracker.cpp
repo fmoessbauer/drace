@@ -89,7 +89,14 @@ namespace module {
 		modptr->instrument = def_instr_flags;
 
 		std::string mod_path(mod->full_path);
+		std::string mod_name(dr_module_preferred_name(mod));
 		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
+
+		/* We must ensure that no symbol lookup using MPCR is done until this dll is loaded.
+		*  Otherwise, Jitted IPs are always resolved to unknown */
+		if (util::common_prefix("System.Threading.Thread.dll", mod_name)) {
+			_dotnet_rt_ready = true;
+		}
 
 		for (auto prefix : module_tracker->excluded_path_prefix) {
 			// check if mod path is excluded
@@ -102,7 +109,6 @@ namespace module {
 		if (modptr->instrument != INSTR_FLAGS::STACK) {
 			// check if mod name is excluded
 			// in this case, we check for syms but only instrument stack
-			std::string mod_name(dr_module_preferred_name(mod));
 			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
 				modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
@@ -133,13 +139,6 @@ namespace module {
 
 		std::string mod_name = dr_module_preferred_name(mod);
 
-		LOG_INFO(tid,
-			"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
-			mod_name.c_str(), modptr->base, modptr->end,
-			util::instr_flags_to_str(modptr->instrument).c_str(),
-			modptr->debug_info ? "YES" : " NO",
-			modptr->info->full_path);
-
 		DR_ASSERT(!dr_using_app_state(drcontext));
 		// wrap functions
 		if (util::common_prefix(mod_name, "MSVCP") ||
@@ -169,13 +168,30 @@ namespace module {
 				funwrap::wrap_excludes(mod, "functions_dotnet");
 			}
 		}
-		else if (modptr->instrument != INSTR_FLAGS::NONE
-			&& modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED
-			&& !modptr->debug_info
-			&& shmdriver)
+		else if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED)
 		{
-			MSR::request_symbols(mod);
-			modptr->debug_info = symbol_table->debug_info_available(mod);
+			if (!modptr->debug_info && shmdriver) {
+				MSR::request_symbols(mod);
+				modptr->debug_info = symbol_table->debug_info_available(mod);
+			}
+			// Name of .Net modules often contains a full path
+			std::string basename = util::basename(mod_name);
+
+			if (util::common_prefix(basename, "System.")) {
+				// TODO: This is highly experimental
+				// Check impact on correctness
+				LOG_NOTICE(data->tid, "Detected %s", basename.c_str());
+				modptr->instrument = INSTR_FLAGS::STACK;
+				if (!util::common_prefix(basename, "System.Private")) {
+					modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
+				}
+			}
+			else {
+				// Not a System DLL
+				LOG_NOTICE(data->tid, "Detected %s", basename.c_str());
+				modptr->instrument = INSTR_FLAGS::STACK;
+				modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
+			}
 		}
 		else if (modptr->instrument != INSTR_FLAGS::NONE) {
 			// no special handling of this module
@@ -188,6 +204,13 @@ namespace module {
 				funwrap::wrap_mutexes(mod, false);
 			}
 		}
+
+		LOG_INFO(tid,
+			"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
+			mod_name.c_str(), modptr->base, modptr->end,
+			util::instr_flags_to_str(modptr->instrument).c_str(),
+			modptr->debug_info ? "YES" : " NO",
+			modptr->info->full_path);
 
 		// Free symbol information. A later access re-creates them, so its safe to do it here
 		drsym_free_resources(mod->full_path);

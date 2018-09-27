@@ -241,7 +241,7 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 		(void*) name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok)
-		LOG_INFO(0, "wrapped excluded function %s", name);
+		LOG_INFO(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
 	return true;
 }
 

@@ -8,10 +8,15 @@ namespace module {
 	class Metadata {
 	public:
 		/* Flags describing characteristics of a module */
-		enum class MOD_TYPE_FLAGS : uint8_t {
+		enum MOD_TYPE_FLAGS : uint8_t {
+			// no information available
 			UNKNOWN = 0x0,
-			NATIVE = 0x1,
+			// native module
+			NATIVE  = 0x1,
+			// managed module
 			MANAGED = 0x2,
+			// this (managed module) contains sync mechanisms
+			SYNC    = 0x4 | MANAGED
 		};
 
 	public:

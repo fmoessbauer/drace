@@ -1,4 +1,6 @@
 #pragma once
+#include <Windows.h>
+#include <Dbghelp.h>
 #include <memory>
 
 #include "ManagedResolver.h"
@@ -18,6 +20,26 @@ namespace msr {
 		int    _pid;
 		HANDLE _phandle;
 
+		/* DbgHelp.dll Symbols */
+
+		using PFN_SymInitialize = decltype(SymInitialize)*;
+		using PFN_SymCleanup = decltype(SymCleanup)*;
+		using PFN_SymLoadModuleExW = decltype(SymLoadModuleExW)*;
+		using PFN_SymUnloadModule = decltype(SymUnloadModule)*;
+		using PFN_SymGetModuleInfoW64 = decltype(SymGetModuleInfoW64)*;
+		using PFN_SymSearch = decltype(SymSearch)*;
+		using PFN_SymGetOptions = decltype(SymGetOptions)*;
+		using PFN_SymSetOptions = decltype(SymSetOptions)*;
+
+		PFN_SymInitialize syminit;
+		PFN_SymCleanup symcleanup;
+		PFN_SymLoadModuleExW symloadmod;
+		PFN_SymUnloadModule symunloadmod;
+		PFN_SymGetModuleInfoW64 symgetmoduleinfo;
+		PFN_SymSearch symsearch;
+		PFN_SymGetOptions symgetopts;
+		PFN_SymSetOptions symsetopts;
+
 	private:
 		/* Attach to the target process and load correct helper dll */
 		void attachProcess();
@@ -25,6 +47,8 @@ namespace msr {
 		void detachProcess();
 		/* Resolve single instruction pointer */
 		void resolveIP();
+		/* Initialize symbol resolver */
+		void init_symbols();
 		/* Download Symbols from SymServer */
 		void loadSymbols();
 

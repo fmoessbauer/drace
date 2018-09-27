@@ -17,6 +17,8 @@ namespace module {
 		std::shared_ptr<Symbols> _syms;
 		map_t _modules_idx;
 
+		bool _dotnet_rt_ready = false;
+
 	public:
 		using PMetadata = std::shared_ptr<Metadata>;
 
@@ -54,6 +56,10 @@ namespace module {
 
 		/* Registers a module and sets flags accordingly */
 		PMetadata register_module(const module_data_t * mod, bool loaded);
+
+		inline bool dotnet_rt_ready() const {
+			return _dotnet_rt_ready;
+		}
 
 		/* Request a read-lock for the module dataset*/
 		inline void lock_read() const {

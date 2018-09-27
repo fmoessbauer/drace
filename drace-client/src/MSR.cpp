@@ -1,11 +1,14 @@
 #include "MSR.h"
 #include "globals.h"
-#include "ipc/SyncSHMDriver.h"
+#include "ipc/SMData.h"
+#include "ipc/MtSyncSHMDriver.h"
+
+#include <mutex>
 
 bool MSR::attach(const module_data_t * mod)
 {
 	LOG_INFO(0, "wait 10s for external resolver to attach");
-	shmdriver = std::make_unique<ipc::SyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
+	shmdriver = std::make_unique<ipc::MtSyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
 	if (shmdriver->valid())
 	{
 		shmdriver->wait_receive(std::chrono::seconds(10));
@@ -13,7 +16,7 @@ bool MSR::attach(const module_data_t * mod)
 			// Send PID and CLR path
 			auto & sendInfo = shmdriver->emplace<ipc::BaseInfo>(ipc::SMDataID::PID);
 			sendInfo.pid = (int)dr_get_process_id();
-			strncpy(sendInfo.path, mod->full_path, 128);
+			strncpy(sendInfo.path.data(), mod->full_path, sendInfo.path.size());
 			shmdriver->commit();
 
 			if (shmdriver->wait_receive(std::chrono::seconds(10)) && shmdriver->id() == ipc::SMDataID::ATTACHED)
@@ -39,12 +42,13 @@ bool MSR::attach(const module_data_t * mod)
 
 bool MSR::request_symbols(const module_data_t * mod)
 {
+	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	LOG_INFO(0, "MSR downloads the symbols from a symbol server (might take long)");
 	// TODO: Download Symbols for some other .Net dlls as well
 	auto & symreq = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::LOADSYMS);
 	symreq.base = (uint64_t)mod->start;
 	symreq.size = mod->module_internal_size;
-	strncpy(symreq.path, mod->full_path, 128);
+	strncpy(symreq.path.data(), mod->full_path, symreq.path.size());
 	shmdriver->commit();
 
 	while (bool valid_state = shmdriver->wait_receive(std::chrono::seconds(2))) {
@@ -69,4 +73,15 @@ bool MSR::request_symbols(const module_data_t * mod)
 			break;
 		}
 	}
+}
+
+ipc::SymbolInfo MSR::lookup_address(app_pc pc) {
+	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
+	shmdriver->put<uint64_t>(ipc::SMDataID::IP, (uint64_t)pc);
+	shmdriver->commit();
+	if (shmdriver->wait_receive(std::chrono::seconds(100))) {
+		return shmdriver->get<ipc::SymbolInfo>();
+	}
+	LOG_WARN(0, "Timeout expired");
+	return ipc::SymbolInfo();
 }

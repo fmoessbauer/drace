@@ -137,9 +137,9 @@ extern std::unique_ptr<Statistics> stats;
 // MSR Communication Driver
 namespace ipc {
 	template<bool, bool>
-	class SyncSHMDriver;
+	class MtSyncSHMDriver;
 }
-extern std::unique_ptr<ipc::SyncSHMDriver<true, true>> shmdriver;
+extern std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
 
 #undef max
 #undef min
