@@ -85,3 +85,19 @@ ipc::SymbolInfo MSR::lookup_address(app_pc pc) {
 	LOG_WARN(0, "Timeout expired");
 	return ipc::SymbolInfo();
 }
+
+ipc::SymbolResponse MSR::search_symbol(const module_data_t * mod, const std::string & match) {
+	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
+	auto & sr = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::SEARCHSYMS);
+	sr.base = (uint64_t)mod->start;
+	sr.size = mod->module_internal_size;
+	strncpy(sr.path.data(), mod->full_path, sr.path.size());
+	DR_ASSERT(match.size() <= sr.match.size(), "Matchstr larger than buffer");
+	std::copy(match.begin(), match.end(), sr.match.begin());
+	shmdriver->commit();
+	if (shmdriver->wait_receive(std::chrono::seconds(100))) {
+		return shmdriver->get<ipc::SymbolResponse>();
+	}
+	LOG_WARN(0, "Timeout expired");
+	return ipc::SymbolResponse();
+}

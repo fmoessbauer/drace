@@ -51,6 +51,8 @@ namespace msr {
 		void init_symbols();
 		/* Download Symbols from SymServer */
 		void loadSymbols();
+		/* Return adresses of matching symols */
+		void searchSymbols();
 
 	public:
 		explicit ProtocolHandler(SyncSHMDriver);

@@ -17,6 +17,7 @@ namespace ipc {
 		CONNECT,
 		ATTACHED,
 		LOADSYMS,
+		SEARCHSYMS,
 
 		WAIT,
 		CONFIRM,
@@ -45,6 +46,12 @@ namespace ipc {
 		uint64_t base;
 		size_t   size;
 		std::array<char, 256> path;
+		std::array<char, 256> match;
+	};
+
+	struct SymbolResponse {
+		size_t size{0};
+		std::array<uint64_t, 64> adresses;
 	};
 
 	struct SMData {

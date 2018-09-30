@@ -13,7 +13,18 @@ BOOL PsymEnumeratesymbolsCallback(
 	ULONG SymbolSize,
 	PVOID UserContext)
 {
-	logger->debug("called {}", pSymInfo->Name);
+	logger->debug("called {} @ {}", pSymInfo->Name, (void*)pSymInfo->Address);
+	return true;
+}
+
+BOOL SymbolMatchCallback(
+	PSYMBOL_INFO pSymInfo,
+	ULONG SymbolSize,
+	PVOID UserContext)
+{
+	auto vec = (std::vector<uint64_t> *)UserContext;
+	vec->push_back(pSymInfo->Address);
+	logger->debug("called {} @ {}", pSymInfo->Name, (void*)pSymInfo->Address);
 	return true;
 }
 
@@ -129,7 +140,7 @@ namespace msr {
 	}
 
 	void ProtocolHandler::init_symbols() {
-		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
+		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEBUG;
 		symopts &= ~(SYMOPT_DEFERRED_LOADS); // remove this flag
 		symsetopts(symopts);
 
@@ -145,7 +156,7 @@ namespace msr {
 		logger->info("download symbols for {}", sr.path.data());
 		logger->debug("base: {}, size: {}", (void*)sr.base, sr.size);
 		auto symload = std::async([&]() {
-			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, 0);
+			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
 		});
 		// wait for download to become ready
 		while(symload.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
@@ -197,6 +208,26 @@ namespace msr {
 		_shmdriver->commit();
 	}
 
+	void ProtocolHandler::searchSymbols() {
+		const auto & sr = _shmdriver->get<ipc::SymbolRequest>();
+		std::vector<uint64_t> symbol_addrs;
+		std::string strpath(sr.path.data());
+		std::wstring wstrpath(strpath.begin(), strpath.end());
+
+		logger->debug("search symobls matching {} at {}", sr.match.data(), (void*)sr.base);
+		symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
+		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback, (void*)&symbol_addrs, SYMSEARCH_ALLITEMS)) {
+			auto & sr = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
+			sr.size = symbol_addrs.size(); // Real size
+			logger->debug("found {} matching symbols", symbol_addrs.size());
+			// Do not copy more symbols than buffersize
+			auto cpy_range_end = sr.size <= sr.adresses.size() ? symbol_addrs.end() : (symbol_addrs.begin() + sr.adresses.size());
+			std::copy(symbol_addrs.begin(), cpy_range_end, sr.adresses.begin());
+			_shmdriver->commit();
+		}
+		symunloadmod(_phandle, sr.base);
+	}
+
 	void ProtocolHandler::process_msgs() {
 		// wait for incoming requests
 		do {
@@ -209,6 +240,10 @@ namespace msr {
 					resolveIP(); break;
 				case SMDataID::LOADSYMS:
 					loadSymbols(); break;
+				case SMDataID::SEARCHSYMS:
+					searchSymbols(); break;
+				case SMDataID::CONFIRM:
+					break;
 				case SMDataID::EXIT:
 					detachProcess(); break;
 				default:

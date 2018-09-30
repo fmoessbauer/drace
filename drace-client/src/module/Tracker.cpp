@@ -164,9 +164,10 @@ namespace module {
 					modptr->debug_info = symbol_table->debug_info_available(mod);
 				}
 			}
-			if (modptr->debug_info) {
-				funwrap::wrap_excludes(mod, "functions_dotnet");
-			}
+			//if (modptr->debug_info) {
+				//funwrap::wrap_excludes(mod, "functions_dotnet");
+				funwrap::wrap_sync_dotnet(mod, true);
+			//}
 		}
 		else if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED)
 		{
@@ -177,6 +178,19 @@ namespace module {
 			// Name of .Net modules often contains a full path
 			std::string basename = util::basename(mod_name);
 
+			if (util::common_prefix(basename, "System.Private.CoreLib.dll")) {
+				//funwrap::wrap_sync_dotnet(mod, false);
+				//{
+				//	auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Enter*");
+				//	auto endit = sr.adresses.begin() + std::min(sr.size, sr.adresses.size());
+				//	funwrap::wrap_dotnet(sr.adresses.begin(), endit);
+				//}
+				//{
+				//	auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Exit");
+				//	auto endit = sr.adresses.begin() + std::min(sr.size, sr.adresses.size());
+				//	funwrap::wrap_dotnet(sr.adresses.begin(), endit);
+				//}
+			}
 			if (util::common_prefix(basename, "System.")) {
 				// TODO: This is highly experimental
 				// Check impact on correctness
