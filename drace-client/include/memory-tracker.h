@@ -1,6 +1,6 @@
 #pragma once
 
-#include "module-tracker.h"
+#include "Module.h"
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -51,7 +51,7 @@ private:
 	/* XCX registers */
 	drvector_t allowed_xcx;
 
-	ModuleCache mc;
+	module::Cache mc;
 
 	// fast random numbers for sampling
 	std::mt19937 _prng;

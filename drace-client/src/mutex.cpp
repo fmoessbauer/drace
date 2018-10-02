@@ -8,9 +8,10 @@
 
 #include "globals.h"
 #include "function-wrapper.h"
-#include "module-tracker.h"
+#include "Module.h"
 #include "memory-tracker.h"
 #include "statistics.h"
+#include "MSR.h"
 
 #include <detector_if.h>
 #include <dr_api.h>
@@ -104,6 +105,11 @@ static inline void prepare_and_release(
 namespace mutex_clb {
 	/* Get addr of mutex */
 	void get_arg(void *wrapctx, OUT void **user_data) {
+		*user_data = drwrap_get_arg(wrapctx, 0);
+	}
+
+	void get_arg_dotnet(void *wrapctx, OUT void **user_data) {
+		LOG_INFO(-1, "Hit Monitor.Enter");
 		*user_data = drwrap_get_arg(wrapctx, 0);
 	}
 
@@ -262,6 +268,9 @@ namespace mutex_wrap {
 		}
 	}
 
+	static bool wrap_mtx_at(app_pc pc, wrapcb_pre_t pre, wrapcb_post_t post) {
+		return drwrap_wrap(pc, pre, post);
+	}
 	static void wrap_mtx(
 		const module_data_t *mod,
 		const std::vector<std::string> & syms,
@@ -271,7 +280,7 @@ namespace mutex_wrap {
 		for (const auto & name : syms) {
 			app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 			if (towrap != NULL) {
-				bool ok = drwrap_wrap(towrap, pre, post);
+				bool ok = wrap_mtx_at(towrap, pre, post);
 				if (ok)
 					LOG_INFO(0, "wrapped exported function %s", name.c_str());
 			}
@@ -322,5 +331,28 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_shared"), get_arg, mutex_read_lock);
 		wrap_mtx_dbg(mod, config.get_multi("qtsync", "acquire_shared_try"), get_arg, mutex_read_trylock);
+	}
+}
+
+void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
+	using namespace mutex_wrap;
+	using namespace mutex_clb;
+
+	// Monitor
+	if (!native) {
+		// [managed] System.Threading.Monitor.Enter
+		auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Enter*");
+		// TODO: Check range
+		for (int i = 0; i < std::min(sr.size, sr.adresses.size()); ++i) {
+			if (wrap_mtx_at((app_pc)sr.adresses[i], get_arg, mutex_lock)) {
+				LOG_INFO(0, "wrapped dotnet monitor enter @ %p", sr.adresses[i]);
+			}
+		}
+	}
+	else {
+		// [native] JIT_MonExit
+		LOG_INFO(-1, "Try to wrap dotnetsync native");
+		wrap_mtx_dbg(mod, config.get_multi("dotnetsync", "monitor_enter"), get_arg, mutex_lock);
+		wrap_mtx_dbg(mod, config.get_multi("dotnetsync", "monitor_exit"), mutex_unlock, NULL);
 	}
 }

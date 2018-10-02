@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+#include <array>
+
 #define DRACE_SMR_NAME "drace-msr"
 #define DRACE_SMR_MAXLEN 1024
 
@@ -13,6 +17,7 @@ namespace ipc {
 		CONNECT,
 		ATTACHED,
 		LOADSYMS,
+		SEARCHSYMS,
 
 		WAIT,
 		CONFIRM,
@@ -22,10 +27,10 @@ namespace ipc {
 
 	/* Resolved Symbol Information */
 	struct SymbolInfo {
-		char      module[128];
-		char      function[128];
-		char      path[128];
-		char      line[64];
+		std::array<char, 128> module;
+		std::array<char, 128> function;
+		std::array<char, 256> path;
+		std::array<char, 128>  line;
 	};
 
 	/* Basic Information for attaching */
@@ -33,14 +38,20 @@ namespace ipc {
 		// process id
 		int pid;
 		// Path to *clr.dll
-		char path[128];
+		std::array<char,256> path;
 	};
 
 	/* Request symbols for this module */
 	struct SymbolRequest {
 		uint64_t base;
 		size_t   size;
-		char     path[128];
+		std::array<char, 256> path;
+		std::array<char, 256> match;
+	};
+
+	struct SymbolResponse {
+		size_t size{0};
+		std::array<uint64_t, 64> adresses;
 	};
 
 	struct SMData {

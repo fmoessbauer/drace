@@ -10,7 +10,10 @@
 
 bool util::common_prefix(const std::string& a, const std::string& b)
 {
-	if (a.size() > b.size()) {
+	if (!a.size() || !b.size()) {
+		return false;
+	}
+	else  if (a.size() > b.size()) {
 		return a.substr(0, b.size()) == b;
 	}
 	else {
@@ -26,6 +29,14 @@ std::vector<std::string> util::split(const std::string & str, const std::string 
 	std::sregex_token_iterator it{ str.begin(), str.end(), regex, -1 };
 	std::vector<std::string> words{ it,{} };
 	return words;
+}
+
+std::string util::dir_from_path(const std::string & fullpath) {
+	return fullpath.substr(0, fullpath.find_last_of("/\\"));
+}
+
+std::string util::basename(const std::string & fullpath) {
+	return fullpath.substr(fullpath.find_last_of("/\\") + 1);
 }
 
 std::string util::to_iso_time(std::chrono::system_clock::time_point tp) {

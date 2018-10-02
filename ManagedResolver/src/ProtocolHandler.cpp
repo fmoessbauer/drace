@@ -13,7 +13,18 @@ BOOL PsymEnumeratesymbolsCallback(
 	ULONG SymbolSize,
 	PVOID UserContext)
 {
-	logger->debug("called {}", pSymInfo->Name);
+	logger->debug("called {} @ {}", pSymInfo->Name, (void*)pSymInfo->Address);
+	return true;
+}
+
+BOOL SymbolMatchCallback(
+	PSYMBOL_INFO pSymInfo,
+	ULONG SymbolSize,
+	PVOID UserContext)
+{
+	auto vec = (std::vector<uint64_t> *)UserContext;
+	vec->push_back(pSymInfo->Address);
+	logger->debug("called {} @ {}", pSymInfo->Name, (void*)pSymInfo->Address);
 	return true;
 }
 
@@ -26,6 +37,13 @@ namespace msr {
 	{
 		// Load external libs
 		_dbghelp_dll = LoadLibrary("dbghelp.dll");
+		syminit = (PFN_SymInitialize)GetProcAddress(_dbghelp_dll, "SymInitialize");
+		symloadmod = (PFN_SymLoadModuleExW)GetProcAddress(_dbghelp_dll, "SymLoadModuleExW");
+		symunloadmod = (PFN_SymUnloadModule)GetProcAddress(_dbghelp_dll, "SymUnloadModule");
+		symgetmoduleinfo = (PFN_SymGetModuleInfoW64)GetProcAddress(_dbghelp_dll, "SymGetModuleInfoW64");
+		symsearch = (PFN_SymSearch)GetProcAddress(_dbghelp_dll, "SymSearch");
+		symgetopts = (PFN_SymGetOptions)GetProcAddress(_dbghelp_dll, "SymGetOptions");
+		symsetopts = (PFN_SymSetOptions)GetProcAddress(_dbghelp_dll, "SymSetOptions");
 
 		_shmdriver->id(SMDataID::CONNECT);
 		_shmdriver->commit();
@@ -50,7 +68,7 @@ namespace msr {
 		// to the resolver and handle errors there
 
 		// Split *clr.dll path into filename and dir
-		std::string path = bi.path;
+		std::string path = bi.path.data();
 		std::string dirname = path.substr(0, path.find_last_of("/\\")).c_str();
 		std::string filename = path.substr(path.find_last_of("/\\") + 1).c_str();
 
@@ -79,17 +97,23 @@ namespace msr {
 		logger->info("Debugger initialized", bi.pid);
 		_shmdriver->id(SMDataID::ATTACHED);
 		_shmdriver->commit();
+
+		// Initialize DbgHelp Symbol Resolver
+		init_symbols();
 	}
 
 	void ProtocolHandler::detachProcess() {
 		logger->info("--- detach MSR ---");
+		//symcleanup(_phandle);
 		_resolver.Close();
+		
 		_shmdriver->id(SMDataID::CONNECT);
 		_shmdriver->commit();
 	}
 
 	void ProtocolHandler::resolveIP() {
 		CString buffer;
+		size_t bs; // buffer size
 		void* ip = _shmdriver->get<void*>();
 		logger->debug("resolve IP: {}", ip);
 
@@ -97,53 +121,42 @@ namespace msr {
 
 		// Get Module Name
 		_resolver.GetModuleName(ip, buffer);
-		strncpy_s(sym.module, buffer.GetBuffer(128), 128);
+		bs = sym.module.size();
+		strncpy_s(sym.module.data(), bs, buffer.GetBuffer(bs), bs);
 
 		// Get Function Name
 		buffer = "";
 		_resolver.GetMethodName(ip, buffer);
-		strncpy_s(sym.function, buffer.GetBuffer(128), 128);
+		bs = sym.function.size();
+		strncpy_s(sym.function.data(), bs, buffer.GetBuffer(bs), bs);
 
 		// Get Line Info
 		buffer = "";
 		_resolver.GetFileLineInfo(ip, buffer);
-		strncpy_s(sym.path, buffer.GetBuffer(128), 128);
-
+		bs = sym.path.size();
+		strncpy_s(sym.path.data(), bs, buffer.GetBuffer(bs), bs);
+		logger->debug("+ resolve IP to: {}", sym.function.data());
 		_shmdriver->commit();
 	}
 
-	void ProtocolHandler::loadSymbols() {
-		using PFN_SymInitialize       = decltype(SymInitialize)*;
-		using PFN_SymLoadModuleExW    = decltype(SymLoadModuleExW)*;
-		using PFN_SymUnloadModule     = decltype(SymUnloadModule)*;
-		using PFN_SymGetModuleInfoW64 = decltype(SymGetModuleInfoW64)*;
-		using PFN_SymSearch           = decltype(SymSearch)*;
-		using PFN_SymGetOptions       = decltype(SymGetOptions)*;
-		using PFN_SymSetOptions       = decltype(SymSetOptions)*;
-
-		PFN_SymInitialize syminit = (PFN_SymInitialize)GetProcAddress(_dbghelp_dll, "SymInitialize");
-		PFN_SymLoadModuleExW symloadmod = (PFN_SymLoadModuleExW)GetProcAddress(_dbghelp_dll, "SymLoadModuleExW");
-		PFN_SymUnloadModule symunloadmod = (PFN_SymUnloadModule)GetProcAddress(_dbghelp_dll, "SymUnloadModule");
-		PFN_SymGetModuleInfoW64 symgetmoduleinfo = (PFN_SymGetModuleInfoW64)GetProcAddress(_dbghelp_dll, "SymGetModuleInfoW64");
-		PFN_SymSearch symsearch = (PFN_SymSearch)GetProcAddress(_dbghelp_dll, "SymSearch");
-		PFN_SymGetOptions symgetopts = (PFN_SymGetOptions)GetProcAddress(_dbghelp_dll, "SymGetOptions");
-		PFN_SymSetOptions symsetopts = (PFN_SymSetOptions)GetProcAddress(_dbghelp_dll, "SymSetOptions");
-
-		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
+	void ProtocolHandler::init_symbols() {
+		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEBUG;
 		symopts &= ~(SYMOPT_DEFERRED_LOADS); // remove this flag
 		symsetopts(symopts);
 
 		syminit(_phandle, NULL, false);
+	}
 
+	void ProtocolHandler::loadSymbols() {
 		const auto & sr = _shmdriver->get<ipc::SymbolRequest>();
 		// Convert path
-		std::string strpath(sr.path);
+		std::string strpath(sr.path.data());
 		std::wstring wstrpath(strpath.begin(), strpath.end());
 
-		logger->info("download symbols for {}", sr.path);
-		logger->debug("base: {}, size: {}", sr.base, sr.size);
+		logger->info("download symbols for {}", sr.path.data());
+		logger->debug("base: {}, size: {}", (void*)sr.base, sr.size);
 		auto symload = std::async([&]() {
-			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, 0);
+			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
 		});
 		// wait for download to become ready
 		while(symload.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
@@ -166,15 +179,8 @@ namespace msr {
 		}
 		else {
 			IMAGEHLP_MODULEW64 info;
-			/* i#1376c#12: we want to use the pre-SDK 8.0 size.  Otherwise we'll
-			 * fail when used with an older dbghelp.dll.
-			 */
-			#define IMAGEHLP_MODULEW64_SIZE_COMPAT 0xcb8
 			memset(&info, 0, sizeof(info));
-			info.SizeOfStruct = IMAGEHLP_MODULEW64_SIZE_COMPAT;
-			/* i#1197: SymGetModuleInfo64 fails on internal wide-to-ascii conversion,
-			 * so we use wchar version SymGetModuleInfoW64 instead.
-			 */
+			info.SizeOfStruct = sizeof(info);
 			if (symgetmoduleinfo(_phandle, sr.base, &info)) {
 				switch (info.SymType) {
 				case SymNone: logger->debug("No symbols found"); break;
@@ -202,6 +208,26 @@ namespace msr {
 		_shmdriver->commit();
 	}
 
+	void ProtocolHandler::searchSymbols() {
+		const auto & sr = _shmdriver->get<ipc::SymbolRequest>();
+		std::vector<uint64_t> symbol_addrs;
+		std::string strpath(sr.path.data());
+		std::wstring wstrpath(strpath.begin(), strpath.end());
+
+		logger->debug("search symobls matching {} at {}", sr.match.data(), (void*)sr.base);
+		symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
+		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback, (void*)&symbol_addrs, SYMSEARCH_ALLITEMS)) {
+			auto & sr = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
+			sr.size = symbol_addrs.size(); // Real size
+			logger->debug("found {} matching symbols", symbol_addrs.size());
+			// Do not copy more symbols than buffersize
+			auto cpy_range_end = sr.size <= sr.adresses.size() ? symbol_addrs.end() : (symbol_addrs.begin() + sr.adresses.size());
+			std::copy(symbol_addrs.begin(), cpy_range_end, sr.adresses.begin());
+			_shmdriver->commit();
+		}
+		symunloadmod(_phandle, sr.base);
+	}
+
 	void ProtocolHandler::process_msgs() {
 		// wait for incoming requests
 		do {
@@ -214,6 +240,10 @@ namespace msr {
 					resolveIP(); break;
 				case SMDataID::LOADSYMS:
 					loadSymbols(); break;
+				case SMDataID::SEARCHSYMS:
+					searchSymbols(); break;
+				case SMDataID::CONFIRM:
+					break;
 				case SMDataID::EXIT:
 					detachProcess(); break;
 				default:

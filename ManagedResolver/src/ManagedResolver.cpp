@@ -134,7 +134,8 @@ namespace msr {
 
 		// Get managed method by address
 		CLRDATA_ENUM methEnum;
-		HRESULT hr = clrDataProcess->StartEnumMethodInstancesByAddress((ULONG64)ip, NULL, &methEnum);
+		// TODO: This does not work for coreclr (reason is unclear even after massive debugging)
+		HRESULT hr = clrDataProcess->StartEnumMethodInstancesByAddress((CLRDATA_ADDRESS)ip, NULL, &methEnum);
 		if (hr == S_OK)
 		{
 			hr = clrDataProcess->EnumMethodInstanceByAddress(&methEnum, &method);

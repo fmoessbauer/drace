@@ -17,7 +17,7 @@
 #include "race-collector.h"
 #include "memory-tracker.h"
 #include "function-wrapper.h"
-#include "module-tracker.h"
+#include "Module.h"
 #include "symbols.h"
 #include "statistics.h"
 #include "sink/hr-text.h"
@@ -70,7 +70,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	symbol_table = std::make_shared<Symbols>();
 
 	// Setup Module Tracking
-	module_tracker = std::make_unique<ModuleTracker>(symbol_table);
+	module_tracker = std::make_unique<module::Tracker>(symbol_table);
 
 	// Setup Memory Tracing
 	memory_tracker = std::make_unique<MemoryTracker>();

@@ -78,8 +78,8 @@ namespace sink {
 					p.OpenElement("fn"); p.PushText(f.sym_name.c_str()); p.CloseElement();
 				}
 				if (!f.file.empty()) {
-					p.OpenElement("dir"); p.PushText(f.file.substr(0, f.file.find_last_of("/\\")).c_str()); p.CloseElement();
-					p.OpenElement("file"); p.PushText(f.file.substr(f.file.find_last_of("/\\") + 1).c_str()); p.CloseElement();
+					p.OpenElement("dir"); p.PushText(util::dir_from_path(f.file).c_str()); p.CloseElement();
+					p.OpenElement("file"); p.PushText(util::basename(f.file).c_str()); p.CloseElement();
 				}
 				if (f.line) {
 					p.OpenElement("line"); p.PushText(std::to_string(f.line).c_str()); p.CloseElement();

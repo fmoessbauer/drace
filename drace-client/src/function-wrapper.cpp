@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 
 #include <detector_if.h>
 #include <dr_api.h>
@@ -149,6 +150,24 @@ namespace funwrap {
 			end_excl_region(data);
 		}
 
+		static void dotnet_enter(void *wrapctx, void **user_data) {
+			LOG_NOTICE(0, "enter dotnet function");
+		}
+		static void dotnet_leave(void *wrapctx, void *user_data) {
+			LOG_NOTICE(0, "leave dotnet function");
+		}
+
+		void wrap_dotnet_helper(uint64_t addr) {
+			bool ok = drwrap_wrap_ex(
+				(app_pc)addr,
+				funwrap::internal::dotnet_enter,
+				funwrap::internal::dotnet_leave,
+				nullptr,
+				DRWRAP_CALLCONV_FASTCALL);
+			if (ok)
+				LOG_INFO(0, "- wrapped dotnet function @ %p", addr);
+		}
+
 	} // namespace internal
 } // namespace funwrap
 
@@ -241,7 +260,7 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 		(void*) name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok)
-		LOG_INFO(0, "wrapped excluded function %s", name);
+		LOG_INFO(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
 	return true;
 }
 
@@ -254,4 +273,44 @@ void funwrap::wrap_excludes(const module_data_t *mod, std::string section) {
 			(drsym_enumerate_cb)exclude_wrap_callback,
 			(void*)mod);
 	}
+}
+
+// TODO: Obsolete Code
+bool dotnet_wrap_callback(const char *name, size_t modoffs, void *data) {
+	module_data_t * mod = (module_data_t*)data;
+	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
+	return true;
+}
+
+bool dotnet_wrap_callback2(const char *name, size_t modoffs, void *data) {
+	module_data_t * mod = (module_data_t*)data;
+	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
+	uint64_t addr = (uint64_t)mod->start + modoffs;
+
+	bool ok = drwrap_wrap_ex(
+		(app_pc)addr,
+		funwrap::internal::dotnet_enter,
+		NULL,
+		nullptr,
+		DRWRAP_CALLCONV_FASTCALL);
+	if (ok)
+		LOG_INFO(0, "- wrapped dotnet enter function @ %p", addr);
+
+	return true;
+}
+
+bool dotnet_wrap_callback3(const char *name, size_t modoffs, void *data) {
+	module_data_t * mod = (module_data_t*)data;
+	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
+	uint64_t addr = (uint64_t)mod->start + modoffs;
+
+	bool ok = drwrap_wrap_ex(
+		(app_pc)addr,
+		NULL,
+		funwrap::internal::dotnet_leave,
+		nullptr,
+		DRWRAP_CALLCONV_FASTCALL);
+	if (ok)
+		LOG_INFO(0, "- wrapped dotnet leave function @ %p", addr);
+	return true;
 }

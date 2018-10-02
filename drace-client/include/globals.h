@@ -106,8 +106,10 @@ extern std::chrono::system_clock::time_point app_start;
 extern std::chrono::system_clock::time_point app_stop;
 
 // Global Module Shadow Data
-class ModuleTracker;
-extern std::unique_ptr<ModuleTracker> module_tracker;
+namespace module {
+	class Tracker;
+}
+extern std::unique_ptr<module::Tracker> module_tracker;
 
 // TLS
 extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
@@ -135,9 +137,9 @@ extern std::unique_ptr<Statistics> stats;
 // MSR Communication Driver
 namespace ipc {
 	template<bool, bool>
-	class SyncSHMDriver;
+	class MtSyncSHMDriver;
 }
-extern std::unique_ptr<ipc::SyncSHMDriver<true, true>> shmdriver;
+extern std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
 
 #undef max
 #undef min

@@ -11,9 +11,13 @@
 #include <detector_if.h>
 
 #include "memory-tracker.h"
+#include "Module.h"
+#include "MSR.h"
 #include "symbols.h"
 #include "shadow-stack.h"
 #include "statistics.h"
+
+int hits = 0;
 
 MemoryTracker::MemoryTracker()
 	: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
@@ -133,7 +137,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			auto * stack = &(data->stack);
 
 			// In non-fast-mode we have to protect the stack
-			if (!params.fastmode) dr_mutex_lock(th_mutex);
+			if (!params.fastmode)
+				dr_mutex_lock(th_mutex);
 
 			stack->entries++; // We have one spare-element
 			int size = std::min((unsigned)stack->entries, params.stack_size);
@@ -162,7 +167,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 				++mem_ref;
 			}
 			stack->entries--;
-			if (!params.fastmode) dr_mutex_unlock(th_mutex);
+			if (!params.fastmode) 
+				dr_mutex_unlock(th_mutex);
 			data->stats->num_refs += num_refs;
 		}
 	}
@@ -282,30 +288,50 @@ dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, inst
 
 dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
+	if (translating)
+		return DR_EMIT_DEFAULT;
+
 	INSTR_FLAGS instrument_bb = INSTR_FLAGS::MEMORY;
 	app_pc bb_addr = dr_fragment_app_pc(tag);
 
 	// Lookup module from cache, hit is very likely as adiacent bb's 
 	// are mostly in the same module
-	auto cached = mc.lookup(bb_addr);
-	if (cached.first) {
-		instrument_bb = cached.second;
+	module::Metadata * modptr = mc.lookup(bb_addr);
+	if (nullptr != modptr) {
+		instrument_bb = modptr->instrument;
 	}
 	else {
 		module_tracker->lock_read();
-		auto modptr = module_tracker->get_module_containing(bb_addr);
+		modptr = (module_tracker->get_module_containing(bb_addr)).get();
 		if (modptr) {
 			// bb in known module
 			instrument_bb = modptr->instrument;
-			mc.update(modptr->base, modptr->end, instrument_bb);
+			mc.update(modptr);
 		}
 		else {
 			// Module not known
 			LOG_TRACE(0, "Module unknown, probably JIT code (%p)", bb_addr);
 			instrument_bb = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
+			//if (shmdriver && module_tracker->dotnet_rt_ready()) {
+			//	// Lookup IP
+			//	const ipc::SymbolInfo & sym = MSR::lookup_address(bb_addr);
+			//	if (util::common_prefix(sym.function.data(), "System.Threading.Mutex")) {
+			//		LOG_NOTICE(0, "Found %s @ %p", sym.function.data(), bb_addr);
+			//	}
+			//}
 		}
 		module_tracker->unlock_read();
 	}
+	// TODO: This currently breaks symbol resolution on races
+	//if (shmdriver && modptr && (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::SYNC)) {
+	//	// we rely on the assumption that a sync construct
+	//	// uses a call and hence is detectable on the first pc in this bb
+	//	LOG_NOTICE(0, "TEST IP on %s", dr_module_preferred_name(modptr->info));
+	//	const ipc::SymbolInfo & sym = MSR::lookup_address(bb_addr);
+	//	if (util::common_prefix(sym.function.data(), "System.Threading.Mutex")) {
+	//		LOG_NOTICE(0, "Found %s @ %p", sym.function.data(), bb_addr);
+	//	}
+	//}
 	// Do not instrument if block is frequent
 	if (for_trace && instrument_bb) {
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -321,7 +347,11 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 
 dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
 	instr_t *instr, bool for_trace,
-	bool translating, void *user_data) {
+	bool translating, void *user_data)
+{
+	if (translating)
+		return DR_EMIT_DEFAULT;
+
 	INSTR_FLAGS instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
 
 	if (!instr_is_app(instr))
