@@ -179,7 +179,9 @@ namespace module {
 			std::string basename = util::basename(mod_name);
 
 			if (util::common_prefix(basename, "System.Private.CoreLib.dll")) {
-				//funwrap::wrap_sync_dotnet(mod, false);
+				if (shmdriver) {
+					funwrap::wrap_sync_dotnet(mod, false);
+				}
 				//{
 				//	auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Enter*");
 				//	auto endit = sr.adresses.begin() + std::min(sr.size, sr.adresses.size());

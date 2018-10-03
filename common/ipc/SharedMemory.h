@@ -104,7 +104,7 @@ namespace ipc {
 				using ms_t = std::chrono::milliseconds;
 
 				const HANDLE & evt = _creator ? _event_out : _event_in;
-				DWORD result = WaitForSingleObject(evt, std::chrono::duration_cast<ms_t>(d).count());
+				DWORD result = WaitForSingleObject(evt, (DWORD)(std::chrono::duration_cast<ms_t>(d).count()));
 				switch (result)
 				{
 					// Event fired

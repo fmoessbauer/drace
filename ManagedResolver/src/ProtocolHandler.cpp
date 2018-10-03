@@ -6,6 +6,9 @@
 #include <Windows.h>
 #include <DbgHelp.h>
 
+#undef min
+#undef max
+
 extern std::shared_ptr<spdlog::logger> logger;
 
 BOOL PsymEnumeratesymbolsCallback(
@@ -113,7 +116,7 @@ namespace msr {
 
 	void ProtocolHandler::resolveIP() {
 		CString buffer;
-		size_t bs; // buffer size
+		size_t bs;
 		void* ip = _shmdriver->get<void*>();
 		logger->debug("resolve IP: {}", ip);
 
@@ -218,7 +221,7 @@ namespace msr {
 		symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
 		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback, (void*)&symbol_addrs, SYMSEARCH_ALLITEMS)) {
 			auto & sr = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
-			sr.size = symbol_addrs.size(); // Real size
+			sr.size = std::min(symbol_addrs.size(), sr.adresses.size());
 			logger->debug("found {} matching symbols", symbol_addrs.size());
 			// Do not copy more symbols than buffersize
 			auto cpy_range_end = sr.size <= sr.adresses.size() ? symbol_addrs.end() : (symbol_addrs.begin() + sr.adresses.size());

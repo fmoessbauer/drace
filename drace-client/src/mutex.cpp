@@ -109,7 +109,7 @@ namespace mutex_clb {
 	}
 
 	void get_arg_dotnet(void *wrapctx, OUT void **user_data) {
-		LOG_INFO(-1, "Hit Monitor.Enter");
+		LOG_INFO(-1, "Hit Whatever with arg %p", drwrap_get_arg(wrapctx, 0));
 		*user_data = drwrap_get_arg(wrapctx, 0);
 	}
 
@@ -259,6 +259,8 @@ namespace mutex_wrap {
 			info->pre = pre;
 			info->post = post;
 
+			LOG_TRACE(-1, "Search for %s", name.c_str());
+
 			drsym_error_t err = drsym_search_symbols(
 				mod->full_path,
 				name.c_str(),
@@ -283,6 +285,24 @@ namespace mutex_wrap {
 				bool ok = wrap_mtx_at(towrap, pre, post);
 				if (ok)
 					LOG_INFO(0, "wrapped exported function %s", name.c_str());
+			}
+		}
+	}
+
+	static void wrap_sync_dotnet(
+		const module_data_t *mod,
+		const std::vector<std::string> & syms,
+		wrapcb_pre_t pre,
+		wrapcb_post_t post)
+	{
+		std::string modname(dr_module_preferred_name(mod));
+		for (const auto & name : syms) {
+			std::string symname = (modname + '!') + name;
+			auto sr = MSR::search_symbol(mod, symname.c_str());
+			for (int i = 0; i < sr.size; ++i) {
+				if (wrap_mtx_at((app_pc)sr.adresses[i], pre, post)) {
+					LOG_INFO(0, "wrapped dotnet function %s @ %p", name.c_str(), sr.adresses[i]);
+				}
 			}
 		}
 	}
@@ -338,21 +358,22 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 	using namespace mutex_wrap;
 	using namespace mutex_clb;
 
-	// Monitor
+	std::string modname = util::basename(dr_module_preferred_name(mod));
+	// Managed IPs
 	if (!native) {
-		// [managed] System.Threading.Monitor.Enter
-		auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Enter*");
-		// TODO: Check range
-		for (int i = 0; i < std::min(sr.size, sr.adresses.size()); ++i) {
-			if (wrap_mtx_at((app_pc)sr.adresses[i], get_arg, mutex_lock)) {
-				LOG_INFO(0, "wrapped dotnet monitor enter @ %p", sr.adresses[i]);
-			}
-		}
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), get_arg_dotnet, mutex_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), get_arg_dotnet, mutex_trylock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), get_arg_dotnet, mutex_read_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), get_arg_dotnet, mutex_read_trylock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), get_arg_dotnet, mutex_read_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), get_arg_dotnet, mutex_read_trylock);
+
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), mutex_unlock, NULL);
 	}
 	else {
 		// [native] JIT_MonExit
 		LOG_INFO(-1, "Try to wrap dotnetsync native");
-		wrap_mtx_dbg(mod, config.get_multi("dotnetsync", "monitor_enter"), get_arg, mutex_lock);
-		wrap_mtx_dbg(mod, config.get_multi("dotnetsync", "monitor_exit"), mutex_unlock, NULL);
+		wrap_mtx_dbg(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), get_arg, mutex_lock);
+		wrap_mtx_dbg(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), mutex_unlock, NULL);
 	}
 }
