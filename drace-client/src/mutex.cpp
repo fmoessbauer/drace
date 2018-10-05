@@ -11,6 +11,7 @@
 #include "Module.h"
 #include "memory-tracker.h"
 #include "statistics.h"
+#include "symbols.h"
 #include "MSR.h"
 
 #include <detector_if.h>
@@ -49,13 +50,14 @@ static inline void prepare_and_aquire(
 
 	if (trylock) {
 		int retval = (int)drwrap_get_retval(wrapctx);
+		LOG_TRACE(data->tid, "Try Aquire %p, res: %i", mutex, retval);
 		//dr_printf("[%.5i] Try Aquire %p, ret %i\n", data->tid, mutex, retval);
 		// If retval == 0, mtx acquired
 		// skip otherwise
 		if (retval != 0)
 			return;
 	}
-	LOG_TRACE(data->tid, "Aquire %p", mutex);
+	LOG_TRACE(data->tid, "Aquire %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 
 	// To avoid deadlock in flush-waiting spinlock,
 	// acquire / release must not occur concurrently
@@ -83,9 +85,9 @@ static inline void prepare_and_release(
 		return;
 
 	void* mutex = drwrap_get_arg(wrapctx, 0);
-	LOG_TRACE(data->tid, "Release %p", mutex);
 
 	if (!data->mutex_book.count((uint64_t)mutex)) {
+		LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 		// mutex not in book
 		return;
 	}
@@ -98,6 +100,7 @@ static inline void prepare_and_release(
 	// acquire / release must not occur concurrently
 	//dr_mutex_lock(th_mutex);
 	MemoryTracker::flush_all_threads(data);
+	LOG_TRACE(data->tid, "Release %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 	detector::release(data->tid, mutex, write, data->detector_data);
 	//dr_mutex_unlock(th_mutex);
 }
@@ -370,6 +373,7 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), true, get_arg_dotnet, mutex_read_trylock);
 
 		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, mutex_unlock, NULL);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetexclude", "exclude"), true, funwrap::internal::begin_excl, funwrap::internal::end_excl);
 	}
 	else {
 		// [native] JIT_MonExit

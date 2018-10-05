@@ -174,6 +174,11 @@ namespace module {
 					funwrap::wrap_sync_dotnet(mod, false);
 				}
 			}
+			if (util::common_prefix(basename, "System.Console.dll")) {
+				if (shmdriver) {
+					funwrap::wrap_sync_dotnet(mod, false);
+				}
+			}
 			if (util::common_prefix(basename, "System.")) {
 				// TODO: This is highly experimental
 				// Check impact on correctness

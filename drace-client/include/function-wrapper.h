@@ -22,8 +22,8 @@ namespace funwrap {
 		static void thread_pre_sys(void *wrapctx, void **user_data);
 		static void thread_post_sys(void *wrapctx, void *user_data);
 
-		static void begin_excl(void *wrapctx, void **user_data);
-		static void end_excl(void *wrapctx, void *user_data);
+		void begin_excl(void *wrapctx, void **user_data);
+		void end_excl(void *wrapctx, void *user_data);
 
 		static void dotnet_enter(void *wrapctx, void **user_data);
 		static void dotnet_leave(void *wrapctx, void *user_data);

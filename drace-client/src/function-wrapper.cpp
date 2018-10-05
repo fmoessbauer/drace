@@ -21,11 +21,13 @@ namespace funwrap {
 			// We do not flush here, as in disabled state no
 			// refs are recorded
 			//memory_tracker->process_buffer();
+			LOG_TRACE(data->tid, "Begin excluded region");
 			data->enabled = false;
 			data->event_cnt++;
 		}
 
 		static void end_excl_region(per_thread_t * data) {
+			LOG_TRACE(data->tid, "End excluded region");
 			if (data->event_cnt == 1) {
 				//memory_tracker->clear_buffer();
 				data->enabled = true;
@@ -134,7 +136,7 @@ namespace funwrap {
 			dr_rwlock_read_unlock(tls_rw_mutex);
 		}
 
-		static void begin_excl(void *wrapctx, void **user_data) {
+		void begin_excl(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -142,7 +144,7 @@ namespace funwrap {
 			beg_excl_region(data);
 		}
 
-		static void end_excl(void *wrapctx, void *user_data) {
+		void end_excl(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
