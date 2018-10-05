@@ -217,8 +217,8 @@ namespace mutex_clb {
 		}
 		if (!info->waitall) {
 			if (retval <= (WAIT_OBJECT_0 + info->ncount - 1)) {
-				LOG_TRACE(data->tid, "waitForMultipleObjects:finished one");
 				HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
+				LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
 				data->stats->mutex_ops++;
