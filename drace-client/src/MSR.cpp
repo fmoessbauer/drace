@@ -5,6 +5,15 @@
 
 #include <mutex>
 
+void MSR::wait_heart_beat() {
+	while (shmdriver->wait_receive(std::chrono::seconds(2)) && shmdriver->id() == ipc::SMDataID::WAIT)
+	{
+		LOG_NOTICE(0, "wait for download to finish");
+		shmdriver->id(ipc::SMDataID::CONFIRM);
+		shmdriver->commit();
+	}
+}
+
 bool MSR::attach(const module_data_t * mod)
 {
 	LOG_INFO(0, "wait 10s for external resolver to attach");
@@ -19,13 +28,18 @@ bool MSR::attach(const module_data_t * mod)
 			strncpy(sendInfo.path.data(), mod->full_path, sendInfo.path.size());
 			shmdriver->commit();
 
-			if (shmdriver->wait_receive(std::chrono::seconds(10)) && shmdriver->id() == ipc::SMDataID::ATTACHED)
-			{
+			MSR::wait_heart_beat();
+			switch (shmdriver->id()) {
+			case ipc::SMDataID::ATTACHED:
 				LOG_INFO(0, "MSR attached");
-			}
-			else {
-				LOG_WARN(0, "MSR did not attach");
+				break;
+			default:
+				LOG_WARN(0, "Protocol error, got %u", shmdriver->id());
 				shmdriver.reset();
+				break;
+			}
+			if(!shmdriver){
+				LOG_WARN(0, "MSR did not attach");
 			}
 		}
 		else {
@@ -51,28 +65,25 @@ bool MSR::request_symbols(const module_data_t * mod)
 	strncpy(symreq.path.data(), mod->full_path, symreq.path.size());
 	shmdriver->commit();
 
-	while (bool valid_state = shmdriver->wait_receive(std::chrono::seconds(2))) {
-		if (!valid_state) {
-			LOG_WARN(0, "timeout during symbol download: ID %u", shmdriver->id());
-			shmdriver.reset();
-			break;
-		}
-		// we got a message
-		switch (shmdriver->id()) {
-		case ipc::SMDataID::CONFIRM:
-			LOG_INFO(0, "Symbols downloaded, rescan");
-			break;
-		case ipc::SMDataID::WAIT:
-			LOG_NOTICE(0, "wait for download to finish");
-			shmdriver->id(ipc::SMDataID::CONFIRM);
-			shmdriver->commit();
-			break;
-		default:
-			LOG_WARN(0, "Protocol error, got %u", shmdriver->id());
-			shmdriver.reset();
-			break;
-		}
+	MSR::wait_heart_beat();
+	// TODO
+	if (shmdriver->id() == ipc::SMDataID::CONFIRM) {
+		LOG_INFO(0, "Symbols downloaded");
+		return true;
 	}
+	else {
+		return false;
+	}
+}
+
+void MSR::unload_symbols(app_pc mod_start) {
+	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
+	auto & sr = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::UNLOADSYMS);
+	sr.base = (uint64_t)mod_start;
+	shmdriver->commit();
+	shmdriver->wait_receive();
+	DR_ASSERT(shmdriver->id() == ipc::SMDataID::CONFIRM);
+	LOG_NOTICE(-1, "Closed Symbols");
 }
 
 ipc::SymbolInfo MSR::lookup_address(app_pc pc) {
@@ -86,11 +97,16 @@ ipc::SymbolInfo MSR::lookup_address(app_pc pc) {
 	return ipc::SymbolInfo();
 }
 
-ipc::SymbolResponse MSR::search_symbol(const module_data_t * mod, const std::string & match) {
+ipc::SymbolResponse MSR::search_symbol(
+	const module_data_t * mod,
+	const std::string & match,
+	bool full_search)
+{
 	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	auto & sr = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::SEARCHSYMS);
 	sr.base = (uint64_t)mod->start;
 	sr.size = mod->module_internal_size;
+	sr.full = full_search;
 	strncpy(sr.path.data(), mod->full_path, sr.path.size());
 	DR_ASSERT(match.size() <= sr.match.size(), "Matchstr larger than buffer");
 	std::copy(match.begin(), match.end(), sr.match.begin());

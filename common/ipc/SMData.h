@@ -17,6 +17,7 @@ namespace ipc {
 		CONNECT,
 		ATTACHED,
 		LOADSYMS,
+		UNLOADSYMS,
 		SEARCHSYMS,
 
 		WAIT,
@@ -45,6 +46,7 @@ namespace ipc {
 	struct SymbolRequest {
 		uint64_t base;
 		size_t   size;
+		bool     full{ false };
 		std::array<char, 256> path;
 		std::array<char, 256> match;
 	};

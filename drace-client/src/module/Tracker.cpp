@@ -151,29 +151,20 @@ namespace module {
 			funwrap::wrap_allocations(mod);
 			funwrap::wrap_thread_start_sys(mod);
 		}
-		else if (util::common_prefix(mod_name, "clr") ||
-			util::common_prefix(mod_name, "coreclr"))
+		else if (util::common_prefix(mod_name, "clr.dll") ||
+			util::common_prefix(mod_name, "coreclr.dll"))
 		{
 			bool m_ok = MSR::attach(mod);
 
-			if (!modptr->debug_info) {
-				LOG_WARN(data->tid, "Warning: Found .Net application but debug information is not available");
-
-				if (m_ok) {
-					MSR::request_symbols(mod);
-					modptr->debug_info = symbol_table->debug_info_available(mod);
-				}
-			}
-			//if (modptr->debug_info) {
-				//funwrap::wrap_excludes(mod, "functions_dotnet");
+			if (m_ok) {
+				MSR::request_symbols(mod);
 				funwrap::wrap_sync_dotnet(mod, true);
-			//}
+			}
 		}
 		else if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED)
 		{
-			if (!modptr->debug_info && shmdriver) {
+			if (shmdriver) {
 				MSR::request_symbols(mod);
-				modptr->debug_info = symbol_table->debug_info_available(mod);
 			}
 			// Name of .Net modules often contains a full path
 			std::string basename = util::basename(mod_name);
@@ -182,16 +173,6 @@ namespace module {
 				if (shmdriver) {
 					funwrap::wrap_sync_dotnet(mod, false);
 				}
-				//{
-				//	auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Enter*");
-				//	auto endit = sr.adresses.begin() + std::min(sr.size, sr.adresses.size());
-				//	funwrap::wrap_dotnet(sr.adresses.begin(), endit);
-				//}
-				//{
-				//	auto sr = MSR::search_symbol(mod, "System.Private.CoreLib.dll!System.Threading.Monitor.Exit");
-				//	auto endit = sr.adresses.begin() + std::min(sr.size, sr.adresses.size());
-				//	funwrap::wrap_dotnet(sr.adresses.begin(), endit);
-				//}
 			}
 			if (util::common_prefix(basename, "System.")) {
 				// TODO: This is highly experimental
@@ -230,6 +211,10 @@ namespace module {
 
 		// Free symbol information. A later access re-creates them, so its safe to do it here
 		drsym_free_resources(mod->full_path);
+		// free symbols on MPCR side
+		if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED && shmdriver) {
+			MSR::unload_symbols(mod->start);
+		}
 
 		data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
 		data->stats->module_loads++;

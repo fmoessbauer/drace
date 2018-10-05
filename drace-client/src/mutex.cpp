@@ -292,13 +292,14 @@ namespace mutex_wrap {
 	static void wrap_sync_dotnet(
 		const module_data_t *mod,
 		const std::vector<std::string> & syms,
+		bool full_search,
 		wrapcb_pre_t pre,
 		wrapcb_post_t post)
 	{
 		std::string modname(dr_module_preferred_name(mod));
 		for (const auto & name : syms) {
 			std::string symname = (modname + '!') + name;
-			auto sr = MSR::search_symbol(mod, symname.c_str());
+			auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
 			for (int i = 0; i < sr.size; ++i) {
 				if (wrap_mtx_at((app_pc)sr.adresses[i], pre, post)) {
 					LOG_INFO(0, "wrapped dotnet function %s @ %p", name.c_str(), sr.adresses[i]);
@@ -361,19 +362,21 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 	std::string modname = util::basename(dr_module_preferred_name(mod));
 	// Managed IPs
 	if (!native) {
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), get_arg_dotnet, mutex_lock);
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), get_arg_dotnet, mutex_trylock);
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), get_arg_dotnet, mutex_read_lock);
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), get_arg_dotnet, mutex_read_trylock);
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), get_arg_dotnet, mutex_read_lock);
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), get_arg_dotnet, mutex_read_trylock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), true, get_arg_dotnet, mutex_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), true, get_arg_dotnet, mutex_trylock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), true, get_arg_dotnet, mutex_read_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), true, get_arg_dotnet, mutex_read_trylock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), true, get_arg_dotnet, mutex_read_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), true, get_arg_dotnet, mutex_read_trylock);
 
-		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), mutex_unlock, NULL);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, mutex_unlock, NULL);
 	}
 	else {
 		// [native] JIT_MonExit
+		// We also use MPCR here, as DR syms has problems finding the correct debug
+		// information if multiple versions of a dll are in the cache
 		LOG_INFO(-1, "Try to wrap dotnetsync native");
-		wrap_mtx_dbg(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), get_arg, mutex_lock);
-		wrap_mtx_dbg(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), mutex_unlock, NULL);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, get_arg, mutex_lock);
+		mutex_wrap::wrap_sync_dotnet(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, mutex_unlock, NULL);
 	}
 }

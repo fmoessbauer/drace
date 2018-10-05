@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Dbghelp.h>
 #include <memory>
+#include <future>
 
 #include "ManagedResolver.h"
 #include "ipc/SyncSHMDriver.h"
@@ -51,8 +52,13 @@ namespace msr {
 		void init_symbols();
 		/* Download Symbols from SymServer */
 		void loadSymbols();
+		/* Close opened symbols and release resources */
+		void unloadSymbols();
 		/* Return adresses of matching symols */
 		void searchSymbols();
+		/* wait for a long running action to finish and perform a heartbeat in the meantime */
+		template<typename T>
+		void waitHeartbeat(const std::future<T> & fut);
 
 	public:
 		explicit ProtocolHandler(SyncSHMDriver);

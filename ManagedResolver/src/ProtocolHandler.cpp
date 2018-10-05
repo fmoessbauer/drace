@@ -92,8 +92,12 @@ namespace msr {
 		std::string dacdllpath(dirname + '\\' + dacdll);
 		logger->info("Load helper {}", dacdllpath);
 
-		bool success = _resolver.InitSymbolResolver(_phandle, dacdllpath.c_str(), lastError);
-		if (!success) {
+		auto result = std::async([&]() {
+			return _resolver.InitSymbolResolver(_phandle, dacdllpath.c_str(), lastError);
+		});
+		waitHeartbeat(result);
+
+		if (!result.get()) {
 			logger->error("{}", lastError.GetString());
 			throw std::runtime_error("could not initialize resolver");
 		}
@@ -143,11 +147,11 @@ namespace msr {
 	}
 
 	void ProtocolHandler::init_symbols() {
+		syminit(_phandle, NULL, false);
+
 		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEBUG;
 		symopts &= ~(SYMOPT_DEFERRED_LOADS); // remove this flag
 		symsetopts(symopts);
-
-		syminit(_phandle, NULL, false);
 	}
 
 	void ProtocolHandler::loadSymbols() {
@@ -162,19 +166,7 @@ namespace msr {
 			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
 		});
 		// wait for download to become ready
-		while(symload.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
-			_shmdriver->id(ipc::SMDataID::WAIT);
-			_shmdriver->commit();
-			logger->debug("sent WAIT");
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			if (!_shmdriver->wait_receive(std::chrono::seconds(2))
-				|| (_shmdriver->id() != ipc::SMDataID::CONFIRM))
-			{
-				logger->error("protocol error during symbol download");
-				quit();
-				return;
-			}
-		}
+		waitHeartbeat(symload);
 		DWORD64 loaded_base = symload.get();
 		
 		if (!loaded_base && GetLastError() != ERROR_SUCCESS) {
@@ -204,9 +196,19 @@ namespace msr {
 					logger->debug("  module has line number information");
 				}
 			}
-			symunloadmod(_phandle, sr.base);
+			// Do not close automatically, as further requests otherwise have to reopen
+			// close using unloadSymbols()
+			//symunloadmod(_phandle, sr.base);
 			logger->info("download finished");
 		}
+		_shmdriver->id(ipc::SMDataID::CONFIRM);
+		_shmdriver->commit();
+	}
+
+	void ProtocolHandler::unloadSymbols() {
+		const auto & sr = _shmdriver->get<ipc::SymbolRequest>();
+		symunloadmod(_phandle, sr.base);
+		logger->debug("closed symbols");
 		_shmdriver->id(ipc::SMDataID::CONFIRM);
 		_shmdriver->commit();
 	}
@@ -218,8 +220,9 @@ namespace msr {
 		std::wstring wstrpath(strpath.begin(), strpath.end());
 
 		logger->debug("search symobls matching {} at {}", sr.match.data(), (void*)sr.base);
-		symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
-		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback, (void*)&symbol_addrs, SYMSEARCH_ALLITEMS)) {
+		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback,
+			(void*)&symbol_addrs, sr.full ? SYMSEARCH_ALLITEMS : NULL))
+		{
 			auto & sr = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
 			sr.size = std::min(symbol_addrs.size(), sr.adresses.size());
 			logger->debug("found {} matching symbols", symbol_addrs.size());
@@ -228,7 +231,23 @@ namespace msr {
 			std::copy(symbol_addrs.begin(), cpy_range_end, sr.adresses.begin());
 			_shmdriver->commit();
 		}
-		symunloadmod(_phandle, sr.base);
+	}
+
+	template<typename T>
+	void ProtocolHandler::waitHeartbeat(const std::future<T> & fut) {
+		while (fut.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
+			_shmdriver->id(ipc::SMDataID::WAIT);
+			_shmdriver->commit();
+			logger->debug("sent WAIT");
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			if (!_shmdriver->wait_receive(std::chrono::seconds(2))
+				|| (_shmdriver->id() != ipc::SMDataID::CONFIRM))
+			{
+				logger->error("protocol error during symbol download");
+				quit();
+				return;
+			}
+		}
 	}
 
 	void ProtocolHandler::process_msgs() {
@@ -243,6 +262,8 @@ namespace msr {
 					resolveIP(); break;
 				case SMDataID::LOADSYMS:
 					loadSymbols(); break;
+				case SMDataID::UNLOADSYMS:
+					unloadSymbols(); break;
 				case SMDataID::SEARCHSYMS:
 					searchSymbols(); break;
 				case SMDataID::CONFIRM:
