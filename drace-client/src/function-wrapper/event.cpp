@@ -175,7 +175,7 @@ namespace funwrap {
 
 		//dr_mutex_lock(th_mutex);
 		MemoryTracker::flush_all_threads(data);
-		detector::acquire(data->tid, mutex, cnt, write, trylock, data->detector_data);
+		detector::acquire(data->tid, mutex, cnt, write, false, data->detector_data);
 		//dr_mutex_unlock(th_mutex);
 
 		data->stats->mutex_ops++;

@@ -38,7 +38,7 @@ void funwrap::wrap_functions(
 {
 	std::string modname(dr_module_preferred_name(mod));
 	for (const auto & name : syms) {
-		LOG_TRACE(-1, "Search for %s", name.c_str());
+		LOG_INFO(-1, "Search for %s", name.c_str());
 		if (method == Method::EXTERNAL_MPCR) {
 			std::string symname = (modname + '!') + name;
 			auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
@@ -192,22 +192,24 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 	std::string modname = util::basename(dr_module_preferred_name(mod));
 	// Managed IPs
 	if (!native) {
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_lock);
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_trylock);
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_lock);
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_trylock);
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_lock);
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_trylock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_trylock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_read_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_read_trylock);
+		// upgradable locks are semantically read-locks. However it is valid to upgrade it to a write lock without relinquishing the ressource
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_read_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_read_trylock);
 
-		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, Method::DBGSYMS, event::mutex_unlock, NULL);
-		wrap_functions(mod, config.get_multi("dotnetexclude", "exclude"), true, Method::DBGSYMS, event::begin_excl, event::end_excl);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_shared"), true, Method::EXTERNAL_MPCR, event::mutex_read_unlock, NULL);
+		wrap_functions(mod, config.get_multi("dotnetexclude", "exclude"), true, Method::EXTERNAL_MPCR, event::begin_excl, event::end_excl);
 	}
 	else {
 		// [native] JIT_MonExit
 		// We also use MPCR here, as DR syms has problems finding the correct debug
 		// information if multiple versions of a dll are in the cache
 		LOG_INFO(-1, "Try to wrap dotnetsync native");
-		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::DBGSYMS, event::get_arg, event::mutex_lock);
-		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::DBGSYMS, event::mutex_unlock, NULL);
+		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
 	}
 }

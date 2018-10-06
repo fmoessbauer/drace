@@ -55,6 +55,7 @@ namespace detector {
 	void release(
 		tid_t thread_id,
 		void* mutex,
+		int recursive = 1,
 		bool write = true,
 		tls_t tls = nullptr);
 

@@ -170,11 +170,14 @@ namespace module {
 			std::string basename = util::basename(mod_name);
 
 			if (util::common_prefix(basename, "System.Private.CoreLib.dll")) {
-				if (shmdriver) {
+				if (shmdriver)
 					funwrap::wrap_sync_dotnet(mod, false);
-				}
 			}
-			if (util::common_prefix(basename, "System.Console.dll")) {
+			else if (util::common_prefix(basename, "System.Threading.dll")) {
+				if (shmdriver)
+					funwrap::wrap_sync_dotnet(mod, false);
+			}
+			else if (util::common_prefix(basename, "System.Console.dll")) {
 				if (shmdriver) {
 					funwrap::wrap_functions(
 						mod,

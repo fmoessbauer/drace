@@ -209,7 +209,7 @@ void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool t
 	}
 }
 
-void detector::release(tid_t thread_id, void* mutex, bool write, tls_t thr) {
+void detector::release(tid_t thread_id, void* mutex, int rec, bool write, tls_t thr) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
 	//std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;

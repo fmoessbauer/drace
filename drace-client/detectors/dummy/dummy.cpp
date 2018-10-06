@@ -19,6 +19,7 @@ void detector::acquire(
 void detector::release(
 	tid_t thread_id,
 	void* mutex,
+	int recursive,
 	bool write,
 	tls_t tls) { }
 
