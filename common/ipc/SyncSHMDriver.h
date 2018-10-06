@@ -3,7 +3,7 @@
 #include <thread>
 #include <cstring>
 
-#include "SharedMemory.h";
+#include "SharedMemory.h"
 #include "SMData.h"
 
 namespace ipc {

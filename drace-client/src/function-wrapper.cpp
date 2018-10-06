@@ -2,6 +2,7 @@
 #include "function-wrapper.h"
 #include "memory-tracker.h"
 #include "config.h"
+#include "MSR.h"
 
 #include <vector>
 #include <string>
@@ -15,164 +16,6 @@
 
 #include <unordered_map>
 
-namespace funwrap {
-	namespace internal {
-		static void beg_excl_region(per_thread_t * data) {
-			// We do not flush here, as in disabled state no
-			// refs are recorded
-			//memory_tracker->process_buffer();
-			LOG_TRACE(data->tid, "Begin excluded region");
-			data->enabled = false;
-			data->event_cnt++;
-		}
-
-		static void end_excl_region(per_thread_t * data) {
-			LOG_TRACE(data->tid, "End excluded region");
-			if (data->event_cnt == 1) {
-				//memory_tracker->clear_buffer();
-				data->enabled = true;
-			}
-			data->event_cnt--;
-		}
-
-		// TODO: On Linux size is arg 0
-		static void alloc_pre(void *wrapctx, void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-
-			// Save allocate size to user_data
-			// we use the pointer directly to avoid an allocation
-			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			*user_data = drwrap_get_arg(wrapctx, 2);
-
-			//beg_excl_region(data);
-
-			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] pre allocate %i\n", data->tid, data->last_alloc_size);
-		}
-
-		static void alloc_post(void *wrapctx, void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			void * retval    = drwrap_get_retval(wrapctx);
-			void * pc = drwrap_get_func(wrapctx);
-
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			MemoryTracker::flush_all_threads(data);
-			detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
-
-			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] post allocate: size %i, addr %p\n", data->tid, user_data, retval);
-		}
-
-		// TODO: On Linux addr is arg 0
-		static void free_pre(void *wrapctx, void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			void * addr = drwrap_get_arg(wrapctx, 2);
-
-			MemoryTracker::flush_all_threads(data);
-			detector::deallocate(data->tid, addr, data->detector_data);
-
-			// spams logs
-			//dr_fprintf(STDERR, "<< [%i] pre free %p\n", data->tid, addr);
-		}
-
-		static void free_post(void *wrapctx, void *user_data) {
-			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			
-			//end_excl_region(data);
-			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
-		}
-
-		static void thread_creation(void *wrapctx, void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-			
-			beg_excl_region(data);
-
-			th_start_pending.store(true);
-			LOG_INFO(data->tid, "setup new thread");
-		}
-		static void thread_handover(void *wrapctx, void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-			
-			end_excl_region(data);
-			// Enable recently started thread
-			auto last_th = last_th_start.load(std::memory_order_relaxed);
-			// TLS is already updated, hence read lock is sufficient
-			dr_rwlock_read_lock(tls_rw_mutex);
-			if (TLS_buckets.count(last_th) == 1) {
-				auto & other_tls = TLS_buckets[last_th];
-				if (other_tls->event_cnt == 0)
-					TLS_buckets[last_th]->enabled = true;
-			}
-			dr_rwlock_read_unlock(tls_rw_mutex);
-			LOG_INFO(data->tid, "new thread created: %i", last_th_start.load());
-		}
-
-		static void thread_pre_sys(void *wrapctx, void **user_data) {
-		}
-		static void thread_post_sys(void *wrapctx, void *user_data) {
-			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			dr_rwlock_read_lock(tls_rw_mutex);
-			auto other_th = last_th_start.load(std::memory_order_acquire);
-			// There are some spurious failures where the thread init event
-			// is not called but the system call has already returned
-			// Hence, skip the fork here and rely on fallback-fork in
-			// analyze_access
-			if (TLS_buckets.count(other_th) == 1) {
-				auto other_tls = TLS_buckets[other_th];
-				//MemoryTracker::flush_all_threads(data, false);
-				//detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
-			}
-			dr_rwlock_read_unlock(tls_rw_mutex);
-		}
-
-		void begin_excl(void *wrapctx, void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			beg_excl_region(data);
-		}
-
-		void end_excl(void *wrapctx, void *user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			end_excl_region(data);
-		}
-
-		static void dotnet_enter(void *wrapctx, void **user_data) {
-			LOG_NOTICE(0, "enter dotnet function");
-		}
-		static void dotnet_leave(void *wrapctx, void *user_data) {
-			LOG_NOTICE(0, "leave dotnet function");
-		}
-
-		void wrap_dotnet_helper(uint64_t addr) {
-			bool ok = drwrap_wrap_ex(
-				(app_pc)addr,
-				funwrap::internal::dotnet_enter,
-				funwrap::internal::dotnet_leave,
-				nullptr,
-				DRWRAP_CALLCONV_FASTCALL);
-			if (ok)
-				LOG_INFO(0, "- wrapped dotnet function @ %p", addr);
-		}
-
-	} // namespace internal
-} // namespace funwrap
-
 bool funwrap::init() {
 	bool state = drwrap_init();
 
@@ -185,32 +28,59 @@ void funwrap::finalize() {
 	drwrap_exit();
 }
 
-void funwrap::wrap_allocations(const module_data_t *mod) {
-	for (const auto & name : config.get_multi("functions", "allocators")) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::alloc_pre, internal::alloc_post);
-			if (ok) {
-				LOG_INFO(0, "wrapped alloc %s", name.c_str());
+void funwrap::wrap_functions(
+	const module_data_t *mod,
+	const std::vector<std::string> & syms,
+	bool full_search,
+	funwrap::Method method,
+	wrapcb_pre_t pre,
+	wrapcb_post_t post)
+{
+	std::string modname(dr_module_preferred_name(mod));
+	for (const auto & name : syms) {
+		LOG_TRACE(-1, "Search for %s", name.c_str());
+		if (method == Method::EXTERNAL_MPCR) {
+			std::string symname = (modname + '!') + name;
+			auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
+			for (int i = 0; i < sr.size; ++i) {
+				wrap_info_t info{ mod, pre, post };
+				internal::wrap_function_clbck(
+					"<unknown>",
+					sr.adresses[i] - (size_t)mod->start,
+					(void*)(&info));
+			}
+		}
+		else if(method == Method::DBGSYMS)
+		{
+			wrap_info_t info{ mod, pre, post };
+			drsym_error_t err = drsym_search_symbols(
+				mod->full_path,
+				name.c_str(),
+				false,
+				(drsym_enumerate_cb)internal::wrap_function_clbck,
+				(void*)&info);
+		}
+		else if(method == Method::EXPORTS)
+		{
+			app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
+			if (drwrap_wrap(towrap, pre, post)) {
+				LOG_INFO(0, "Wrapped %s at %p", name.c_str(), towrap);
 			}
 		}
 	}
-	for (const auto & name : config.get_multi("functions", "deallocators")) {
-		app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
-		if (towrap != NULL) {
-			bool ok = drwrap_wrap(towrap, internal::free_pre, NULL);
-			if (ok)
-				LOG_INFO(0, "wrapped deallocs %s", name.c_str());
-		}
-	}
+}
+
+void funwrap::wrap_allocations(const module_data_t *mod) {
+	wrap_functions(mod, config.get_multi("functions", "allocators"), false, Method::EXPORTS, event::alloc_pre, event::alloc_post);
+	wrap_functions(mod, config.get_multi("functions", "deallocators"), false, Method::EXPORTS, event::free_pre, nullptr);
 }
 
 bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
 	module_data_t * mod = (module_data_t*)data;
 	bool ok = drwrap_wrap_ex(
 		mod->start + modoffs,
-		funwrap::internal::thread_creation,
-		funwrap::internal::thread_handover,
+		funwrap::event::thread_creation,
+		funwrap::event::thread_handover,
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok)
@@ -222,8 +92,8 @@ bool starters_sys_callback(const char *name, size_t modoffs, void *data) {
 	module_data_t * mod = (module_data_t*)data;
 	bool ok = drwrap_wrap_ex(
 		mod->start + modoffs,
-		funwrap::internal::thread_pre_sys,
-		funwrap::internal::thread_post_sys,
+		funwrap::event::thread_pre_sys,
+		funwrap::event::thread_post_sys,
 		(void*)name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok)
@@ -257,8 +127,8 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 		module_data_t * mod = (module_data_t*) data;
 	bool ok = drwrap_wrap_ex(
 		mod->start + modoffs,
-		funwrap::internal::begin_excl,
-		funwrap::internal::end_excl,
+		funwrap::event::begin_excl,
+		funwrap::event::end_excl,
 		(void*) name,
 		DRWRAP_CALLCONV_FASTCALL);
 	if (ok)
@@ -267,52 +137,77 @@ bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
 }
 
 void funwrap::wrap_excludes(const module_data_t *mod, std::string section) {
-	for (const auto & name : config.get_multi(section, "exclude")) {
-		drsym_error_t err = drsym_search_symbols(
-			mod->full_path,
-			name.c_str(),
-			false,
-			(drsym_enumerate_cb)exclude_wrap_callback,
-			(void*)mod);
+	wrap_functions(mod, config.get_multi(section, "exclude"), false, Method::DBGSYMS, event::begin_excl, event::end_excl);
+}
+
+void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
+	using namespace internal;
+
+	if (sys) {
+		// mutex lock
+		wrap_functions(mod, config.get_multi("sync", "acquire_excl"), false, Method::EXPORTS, event::get_arg, event::mutex_lock);
+		// mutex trylock
+		wrap_functions(mod, config.get_multi("sync", "acquire_excl_try"), false, Method::EXPORTS, event::get_arg, event::mutex_trylock);
+		// mutex unlock
+		wrap_functions(mod, config.get_multi("sync", "release_excl"), false, Method::EXPORTS, event::mutex_unlock, NULL);
+		// rec-mutex lock
+		wrap_functions(mod, config.get_multi("sync", "acquire_rec"), false, Method::EXPORTS, event::get_arg, event::recmutex_lock);
+		// rec-mutex trylock
+		wrap_functions(mod, config.get_multi("sync", "acquire_rec_try"), false, Method::EXPORTS, event::get_arg, event::recmutex_trylock);
+		// rec-mutex unlock
+		wrap_functions(mod, config.get_multi("sync", "release_rec"), false, Method::EXPORTS, event::recmutex_unlock, NULL);
+		// read-mutex lock
+		wrap_functions(mod, config.get_multi("sync", "acquire_shared"), false, Method::EXPORTS, event::get_arg, event::mutex_read_lock);
+		// read-mutex trylock
+		wrap_functions(mod, config.get_multi("sync", "acquire_shared_try"), false, Method::EXPORTS, event::get_arg, event::mutex_read_trylock);
+		// read-mutex unlock
+		wrap_functions(mod, config.get_multi("sync", "release_shared"), false, Method::EXPORTS, event::mutex_read_unlock, NULL);
+#ifdef WINDOWS
+		// waitForSingleObject
+		wrap_functions(mod, config.get_multi("sync", "wait_for_single_object"), false, Method::EXPORTS, event::get_arg, event::wait_for_single_obj);
+		// waitForMultipleObjects
+		wrap_functions(mod, config.get_multi("sync", "wait_for_multiple_objects"), false, Method::EXPORTS, event::wait_for_mo_getargs, event::wait_for_mult_obj);
+#endif
+	}
+	else {
+		LOG_INFO(0, "Try to wrap non-system mutexes");
+		// Std mutexes
+		wrap_functions(mod, config.get_multi("stdsync", "acquire_excl"), false, Method::DBGSYMS, event::get_arg, event::mutex_lock);
+		wrap_functions(mod, config.get_multi("stdsync", "acquire_excl_try"), false, Method::DBGSYMS, event::get_arg, event::mutex_trylock);
+		wrap_functions(mod, config.get_multi("stdsync", "release_excl"), false, Method::DBGSYMS, event::mutex_unlock, NULL);
+
+		// Qt Mutexes
+		wrap_functions(mod, config.get_multi("qtsync", "acquire_excl"), false, Method::DBGSYMS, event::get_arg, event::recmutex_lock);
+		wrap_functions(mod, config.get_multi("qtsync", "acquire_excl_try"), false, Method::DBGSYMS, event::get_arg, event::recmutex_trylock);
+		wrap_functions(mod, config.get_multi("qtsync", "release_excl"), false, Method::DBGSYMS, event::recmutex_unlock, NULL);
+
+		wrap_functions(mod, config.get_multi("qtsync", "acquire_shared"), false, Method::DBGSYMS, event::get_arg, event::mutex_read_lock);
+		wrap_functions(mod, config.get_multi("qtsync", "acquire_shared_try"), false, Method::DBGSYMS, event::get_arg, event::mutex_read_trylock);
 	}
 }
 
-// TODO: Obsolete Code
-bool dotnet_wrap_callback(const char *name, size_t modoffs, void *data) {
-	module_data_t * mod = (module_data_t*)data;
-	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
-	return true;
-}
+void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
+	using namespace internal;
 
-bool dotnet_wrap_callback2(const char *name, size_t modoffs, void *data) {
-	module_data_t * mod = (module_data_t*)data;
-	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
-	uint64_t addr = (uint64_t)mod->start + modoffs;
+	std::string modname = util::basename(dr_module_preferred_name(mod));
+	// Managed IPs
+	if (!native) {
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_trylock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_shared_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_trylock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_upgrade_try"), true, Method::DBGSYMS, event::get_arg_dotnet, event::mutex_read_trylock);
 
-	bool ok = drwrap_wrap_ex(
-		(app_pc)addr,
-		funwrap::internal::dotnet_enter,
-		NULL,
-		nullptr,
-		DRWRAP_CALLCONV_FASTCALL);
-	if (ok)
-		LOG_INFO(0, "- wrapped dotnet enter function @ %p", addr);
-
-	return true;
-}
-
-bool dotnet_wrap_callback3(const char *name, size_t modoffs, void *data) {
-	module_data_t * mod = (module_data_t*)data;
-	LOG_INFO(0, "Hit DotNet function %s @ %p", name, mod->start + modoffs);
-	uint64_t addr = (uint64_t)mod->start + modoffs;
-
-	bool ok = drwrap_wrap_ex(
-		(app_pc)addr,
-		NULL,
-		funwrap::internal::dotnet_leave,
-		nullptr,
-		DRWRAP_CALLCONV_FASTCALL);
-	if (ok)
-		LOG_INFO(0, "- wrapped dotnet leave function @ %p", addr);
-	return true;
+		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, Method::DBGSYMS, event::mutex_unlock, NULL);
+		wrap_functions(mod, config.get_multi("dotnetexclude", "exclude"), true, Method::DBGSYMS, event::begin_excl, event::end_excl);
+	}
+	else {
+		// [native] JIT_MonExit
+		// We also use MPCR here, as DR syms has problems finding the correct debug
+		// information if multiple versions of a dll are in the cache
+		LOG_INFO(-1, "Try to wrap dotnetsync native");
+		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::DBGSYMS, event::get_arg, event::mutex_lock);
+		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::DBGSYMS, event::mutex_unlock, NULL);
+	}
 }

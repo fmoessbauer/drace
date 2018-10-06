@@ -176,7 +176,13 @@ namespace module {
 			}
 			if (util::common_prefix(basename, "System.Console.dll")) {
 				if (shmdriver) {
-					funwrap::wrap_sync_dotnet(mod, false);
+					funwrap::wrap_functions(
+						mod,
+						config.get_multi("dotnetexclude", "exclude"),
+						true,
+						funwrap::Method::EXTERNAL_MPCR,
+						funwrap::event::begin_excl,
+						funwrap::event::end_excl);
 				}
 			}
 			if (util::common_prefix(basename, "System.")) {

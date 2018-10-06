@@ -4,33 +4,41 @@
 #include <string>
 #include <ipc/SMData.h>
 
+#include "function-wrapper/internal.h"
+#include "function-wrapper/event.h"
+
 namespace funwrap {
-	namespace internal {
-		void wrap_dotnet_helper(uint64_t addr);
+	using wrapcb_pre_t = void(void *, void **);
+	using wrapcb_post_t = void(void *, void *);
 
-		static void beg_excl_region(per_thread_t * data);
-		static void end_excl_region(per_thread_t * data);
+	struct wrap_info_t {
+		const module_data_t * mod;
+		wrapcb_pre_t        * pre;
+		wrapcb_post_t       * post;
+	};
 
-		static void alloc_pre(void *wrapctx, void **user_data);
-		static void alloc_post(void *wrapctx, void *user_data);
-
-		static void free_pre(void *wrapctx, void **user_data);
-		static void free_post(void *wrapctx, void *user_data);
-
-		static void thread_creation(void *wrapctx, void **user_data);
-		static void thread_handover(void *wrapctx, void *user_data);
-		static void thread_pre_sys(void *wrapctx, void **user_data);
-		static void thread_post_sys(void *wrapctx, void *user_data);
-
-		void begin_excl(void *wrapctx, void **user_data);
-		void end_excl(void *wrapctx, void *user_data);
-
-		static void dotnet_enter(void *wrapctx, void **user_data);
-		static void dotnet_leave(void *wrapctx, void *user_data);
-	}
+	enum class Method : uint8_t {
+		EXPORTS = 1,
+		DBGSYMS = 2,
+		EXTERNAL_MPCR = 3
+	};
 
 	bool init();
 	void finalize();
+
+	void wrap_functions(
+		/*Module to inspect for symbols */
+		const module_data_t *mod,
+		/* Vector of symbol names or patterns */
+		const std::vector<std::string> & syms,
+		/* Perform a full search (set to true for managed symbols) */
+		bool full_search,
+		/* method to use for symbol lookup */
+		Method method,
+		/* Pre-function callback for each symbol found */
+		wrapcb_pre_t pre,
+		/* Post-function callback for each symbol found */
+		wrapcb_post_t post);
 
 	/* Wrap mutex aquire and release */
 	void wrap_mutexes(const module_data_t *mod, bool sys);
