@@ -23,9 +23,12 @@ namespace funwrap {
 
 	void event::end_excl_region(per_thread_t * data) {
 		LOG_TRACE(data->tid, "End excluded region");
-		if (data->event_cnt == 1) {
+		if (data->event_cnt <= 1) {
 			//memory_tracker->clear_buffer();
 			data->enabled = true;
+			// recover from missed events
+			if (data->event_cnt < 0)
+				data->event_cnt = 0;
 		}
 		data->event_cnt--;
 	}

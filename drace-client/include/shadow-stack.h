@@ -16,8 +16,8 @@
 */
 class ShadowStack {
 public:
-	// two cache-lines - one element which contains current mem pc
-	static constexpr int max_size = 15;
+	// four cache-lines - one element which contains current mem pc
+	static constexpr int max_size = 31;
 	using stack_t = decltype(per_thread_t::stack);
 
 private:

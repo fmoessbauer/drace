@@ -57,6 +57,13 @@ namespace ipc {
 		std::array<uint64_t, 64> adresses;
 	};
 
+	struct MachineContext {
+		int      threadid;
+		uint64_t rbp;
+		uint64_t rsp;
+		uint64_t rip;
+	};
+
 	struct SMData {
 		static constexpr unsigned BUFFER_SIZE = DRACE_SMR_MAXLEN - 16;
 

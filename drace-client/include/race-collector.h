@@ -108,9 +108,15 @@ public:
 			ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
 		}
 
+		void* drcontext = dr_get_current_drcontext();
+		dr_mcontext_t mc;
+		mc.size = sizeof(dr_mcontext_t);
+		mc.flags = DR_MC_ALL;
+		dr_get_mcontext(drcontext, &mc);
+
 		// TODO: Validate external callstacks
-		//if(shmdriver)
-		//	MSR::getCurrentStack(e.thread_id);
+		if(shmdriver)
+			MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
 
 		return ra;
 	}

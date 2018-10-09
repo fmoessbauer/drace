@@ -119,10 +119,16 @@ namespace msr {
 	}
 
 	void ProtocolHandler::getCurrentStack() {
-		int threadid = _shmdriver->get<int>();
+		auto ctx = _shmdriver->get<ipc::MachineContext>();
 		logger->info("getCurrentStack");
 
-		HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT, FALSE, threadid);
+		// theoretically a connection to the thread is not required
+		// as the relevant information is passed from DRace
+		// TODO: It is unclear if the stack-walk also works if the thread is not suspended
+		// 
+		// The stack-walk has to be performend at or shortly after the interesting ip
+		// as otherwise the history gets blurry
+		HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT, FALSE, ctx.threadid);
 		if (hThread == NULL) {
 			logger->error("could not attach to thread");
 		}
@@ -131,6 +137,13 @@ namespace msr {
 		context.ContextFlags = CONTEXT_FULL;
 		if (GetThreadContext(hThread, &context)) {
 			logger->info("Got Context");
+			logger->info("Patch Context:");
+			logger->debug("\tRbp {}->{}", (void*)context.Rbp, (void*)ctx.rbp);
+			logger->debug("\tRsp {}->{}", (void*)context.Rsp, (void*)ctx.rsp);
+			logger->debug("\tRip {}->{}", (void*)context.Rip, (void*)ctx.rip);
+			context.Rbp = ctx.rbp;
+			context.Rsp = ctx.rsp;
+			context.Rip = ctx.rip;
 			auto debugCtrl = _resolver.getController();
 
 			PDEBUG_STACK_FRAME frames   = new DEBUG_STACK_FRAME[32];
@@ -151,6 +164,10 @@ namespace msr {
 			} else {
 				logger->error("Could not walk stack");
 			}
+
+			//cleanup
+			delete[] frames;
+			delete[] contexts;
 		}
 
 		if(hThread)

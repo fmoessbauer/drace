@@ -118,8 +118,12 @@ ipc::SymbolResponse MSR::search_symbol(
 	return ipc::SymbolResponse();
 }
 
-void MSR::getCurrentStack(int threadid) {
-	shmdriver->put<int>(ipc::SMDataID::STACK, threadid);
+void MSR::getCurrentStack(int threadid, void* rbp, void* rsp, void* rip) {
+	auto & mc = shmdriver->emplace<ipc::MachineContext>(ipc::SMDataID::STACK);
+	mc.threadid = threadid;
+	mc.rbp = (uint64_t)rbp;
+	mc.rsp = (uint64_t)rsp;
+	mc.rip = (uint64_t)rip;
 	shmdriver->commit();
 	shmdriver->wait_receive();
 }
