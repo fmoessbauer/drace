@@ -7,6 +7,9 @@ static unsigned num_races = 0;
 
 class DetectorTest : public ::testing::Test {
 public:
+	uint64_t stack[1];
+
+public:
 	// each callback-call increases num_races by two
 	static void callback(const detector::Race*) {
 		++num_races;
