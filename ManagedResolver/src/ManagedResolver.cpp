@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ManagedResolver.h"
+#include "spdlog/spdlog.h"
+
+extern std::shared_ptr<spdlog::logger> logger;
 
 namespace msr {
 
@@ -236,13 +239,15 @@ namespace msr {
 				CLRDATA_MODULE_EXTENT extent;
 				while (module->EnumExtent(&enumExtents, &extent) == S_OK)
 				{
+					logger->debug("+ EnumExtent @ {}, type {}", (void*)extent.base, extent.type);
 					if (extentType != extent.type)
 						continue;
 
 					ULONG startIndex = 0;
 					ULONG64 modBase = 0;
 
-					hr = debugSymbols->GetModuleByOffset((ULONG64)extent.base, 0, &startIndex, &modBase);
+					hr = debugSymbols3->GetModuleByOffset((ULONG64)extent.base, 0, &startIndex, &modBase);
+					logger->debug("++ Extent: base {}, length {}, status {}", (void*)extent.base, extent.length, hr);
 					if (FAILED(hr))
 						continue;
 
@@ -328,4 +333,17 @@ namespace msr {
 		return true;
 	}
 
+	void ManagedResolver::getStackTrace(void* ip) {
+		ULONG frames_size = 32;
+		PDEBUG_STACK_FRAME frames = new DEBUG_STACK_FRAME[frames_size];
+		ULONG frames_filled;
+		HRESULT hr = debugControl->GetStackTrace(0, 0, 0, frames, frames_size, &frames_filled);
+		if (hr == S_OK) {
+			logger->error("Could not resolve stack");
+		}
+	}
+
+	CComQIPtr<IDebugControl4> ManagedResolver::getController() {
+		return debugControl;
+	}
 } // namespace msr

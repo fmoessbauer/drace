@@ -14,6 +14,7 @@ namespace ipc {
 		PID,
 		IP,
 		SYMBOL,
+		STACK,
 		CONNECT,
 		ATTACHED,
 		LOADSYMS,

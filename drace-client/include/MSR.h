@@ -14,4 +14,6 @@ public:
 
 	static ipc::SymbolInfo lookup_address(app_pc pc);
 	static ipc::SymbolResponse search_symbol(const module_data_t * mod, const std::string & match, bool full_search);
+
+	static void getCurrentStack(int thread_id);
 };

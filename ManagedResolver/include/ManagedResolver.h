@@ -24,7 +24,7 @@ namespace msr {
 		HANDLE  _hProcess{ nullptr };
 
 		CComPtr<IDebugClient>       debugClient;
-		CComQIPtr<IDebugControl>    debugControl;
+		CComQIPtr<IDebugControl4>   debugControl;
 		CComQIPtr<IDebugSymbols>    debugSymbols;
 		CComQIPtr<IDebugSymbols3>   debugSymbols3;
 
@@ -51,6 +51,10 @@ namespace msr {
 		 * identifies the corresponding source file name and line number. */
 		bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath);
 		bool GetMethodName(void* ip, CStringA& symbol);
+
+		void getStackTrace(void* ip);
+
+		CComQIPtr<IDebugControl4> getController();
 	};
 
 } // namespace msr

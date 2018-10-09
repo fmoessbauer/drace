@@ -117,3 +117,9 @@ ipc::SymbolResponse MSR::search_symbol(
 	LOG_WARN(0, "Timeout expired");
 	return ipc::SymbolResponse();
 }
+
+void MSR::getCurrentStack(int threadid) {
+	shmdriver->put<int>(ipc::SMDataID::STACK, threadid);
+	shmdriver->commit();
+	shmdriver->wait_receive();
+}

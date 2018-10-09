@@ -118,6 +118,48 @@ namespace msr {
 		_shmdriver->commit();
 	}
 
+	void ProtocolHandler::getCurrentStack() {
+		int threadid = _shmdriver->get<int>();
+		logger->info("getCurrentStack");
+
+		HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT, FALSE, threadid);
+		if (hThread == NULL) {
+			logger->error("could not attach to thread");
+		}
+
+		CONTEXT context = { 0 };
+		context.ContextFlags = CONTEXT_FULL;
+		if (GetThreadContext(hThread, &context)) {
+			logger->info("Got Context");
+			auto debugCtrl = _resolver.getController();
+
+			PDEBUG_STACK_FRAME frames   = new DEBUG_STACK_FRAME[32];
+			PCONTEXT           contexts = new CONTEXT[32];
+			ULONG              filled;
+			HRESULT hr = debugCtrl->GetContextStackTrace(
+				&context, sizeof(CONTEXT),
+				frames, 32,
+				contexts, 32 * sizeof(CONTEXT),
+				sizeof(CONTEXT),
+				&filled);
+			if (hr == S_OK){
+				for (int i = 0; i < filled; ++i) {
+					ATL::CString symbol;
+					_resolver.GetMethodName((void*)contexts[i].Rip, symbol);
+					logger->info("+ {}: Rip is {}, symbol: {}", i, (void*)contexts[i].Rip, symbol.GetBuffer(128));
+				}
+			} else {
+				logger->error("Could not walk stack");
+			}
+		}
+
+		if(hThread)
+			CloseHandle(hThread);
+
+		_shmdriver->id(SMDataID::CONFIRM);
+		_shmdriver->commit();
+	}
+
 	void ProtocolHandler::resolveIP() {
 		CString buffer;
 		size_t bs;
@@ -258,6 +300,8 @@ namespace msr {
 				switch (_shmdriver->id()) {
 				case SMDataID::PID:
 					attachProcess(); break;
+				case SMDataID::STACK:
+					getCurrentStack(); break;
 				case SMDataID::IP:
 					resolveIP(); break;
 				case SMDataID::LOADSYMS:

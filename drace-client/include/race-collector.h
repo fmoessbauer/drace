@@ -4,6 +4,8 @@
 #include "symbols.h"
 #include "sink/hr-text.h"
 
+#include "MSR.h"
+
 #include <detector_if.h>
 #include <sstream>
 #include <iostream>
@@ -105,6 +107,11 @@ public:
 		for (unsigned i = 0; i < e.stack_size; ++i) {
 			ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
 		}
+
+		// TODO: Validate external callstacks
+		//if(shmdriver)
+		//	MSR::getCurrentStack(e.thread_id);
+
 		return ra;
 	}
 

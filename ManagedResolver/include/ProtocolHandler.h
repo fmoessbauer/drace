@@ -46,6 +46,8 @@ namespace msr {
 		void attachProcess();
 		/* Detach from process */
 		void detachProcess();
+		/* TEST: Determin current Stack */
+		void getCurrentStack();
 		/* Resolve single instruction pointer */
 		void resolveIP();
 		/* Initialize symbol resolver */
