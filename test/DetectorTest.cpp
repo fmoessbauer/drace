@@ -114,20 +114,27 @@ TEST_F(DetectorTest, Barrier) {
 	stack[0] = 0x0070;
 	detector::write(70, stack, 1, (void*)0x0070, 8, tls70);
 	detector::write(70, stack, 1, (void*)0x0071, 8, tls70);
+	detector::write(71, stack, 1, (void*)0x0171, 8, tls71);
 
 	// Barrier
 	{
 		void* barrier_id = (void*)0x0700;
 		// barrier enter
 		detector::happens_before(70, barrier_id);
+		// each thread enters individually
+		detector::write(71, stack, 1, (void*)0x0072, 8, tls71);
 		detector::happens_before(71, barrier_id);
-		// barrier leave
+
+		// sufficient threads have arrived => barrier leave
 		detector::happens_after(71, barrier_id);
+		detector::write(71, stack, 1, (void*)0x0071, 8, tls71);
 		detector::happens_after(70, barrier_id);
 	}
 
 	stack[0] = 0x0071;
 	detector::write(71, stack, 1, (void*)0x0070, 8, tls71);
+	stack[0] = 0x0072;
+	detector::write(70, stack, 1, (void*)0x0072, 8, tls70);
 
 	EXPECT_EQ(num_races, 0);
 	// This thread did not paricipate in barrier, hence expect race

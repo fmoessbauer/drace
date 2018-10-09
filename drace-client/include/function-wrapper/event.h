@@ -81,5 +81,9 @@ namespace funwrap {
 		/* WaitForMultipleObjects Windows API call (experimental) */
 		static void wait_for_mult_obj(void *wrapctx, void *user_data);
 #endif
+		/* Call this function before a thread-barrier is entered */
+		static void barrier_enter(void *wrapctx, void **user_data);
+		/* Call this function after a thread-barrier is passed */
+		static void barrier_leave(void *wrapctx, void *user_data);
 	};
 }
