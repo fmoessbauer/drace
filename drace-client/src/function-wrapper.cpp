@@ -203,6 +203,9 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_excl"), true, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
 		wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "release_shared"), true, Method::EXTERNAL_MPCR, event::mutex_read_unlock, NULL);
 		wrap_functions(mod, config.get_multi("dotnetexclude", "exclude"), true, Method::EXTERNAL_MPCR, event::begin_excl, event::end_excl);
+
+		wrap_functions(mod, config.get_multi("dotnetsync_barrier", "wait_blocking"), true, Method::EXTERNAL_MPCR, event::barrier_enter, event::barrier_leave);
+		wrap_functions(mod, config.get_multi("dotnetsync_barrier", "wait_nonblocking"), true, Method::EXTERNAL_MPCR, event::barrier_enter, event::barrier_leave_or_cancel);
 	}
 	else {
 		// [native] JIT_MonExit

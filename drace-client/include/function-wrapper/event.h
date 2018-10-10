@@ -2,7 +2,7 @@
 
 #include <dr_api.h>
 
-extern struct per_thread_t;
+struct per_thread_t;
 
 namespace funwrap {
 	class event {
@@ -85,5 +85,7 @@ namespace funwrap {
 		static void barrier_enter(void *wrapctx, void **user_data);
 		/* Call this function after a thread-barrier is passed */
 		static void barrier_leave(void *wrapctx, void *user_data);
+		/* Call this function after a thread-barrier is passed or the waiting was cancelled */
+		static void barrier_leave_or_cancel(void *wrapctx, void *user_data);
 	};
 }

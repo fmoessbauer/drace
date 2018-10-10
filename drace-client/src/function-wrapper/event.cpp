@@ -332,16 +332,17 @@ namespace funwrap {
 		dr_thread_free(drcontext, user_data, sizeof(wfmo_args_t));
 	}
 
-	static void barrier_enter(void *wrapctx, void** addr) {
+	void event::barrier_enter(void *wrapctx, void** addr) {
 		app_pc drcontext = drwrap_get_drcontext(wrapctx);
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		DR_ASSERT(nullptr != data);
-		*addr = drwrap_get_arg(wrapctx, 1);
+		*addr = drwrap_get_arg(wrapctx, 0);
+		LOG_TRACE(data->tid, "barrier enter %p", *addr);
 		// each thread enters the barrier individually
 		detector::happens_before(data->tid, *addr);
 	}
 
-	static void barrier_leave(void *wrapctx, void *addr) {
+	void event::barrier_leave(void *wrapctx, void *addr) {
 		app_pc drcontext = drwrap_get_drcontext(wrapctx);
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		DR_ASSERT(nullptr != data);
@@ -350,6 +351,21 @@ namespace funwrap {
 
 		// each thread leaves individually, but only after all barrier_enters have been called
 		detector::happens_after(data->tid, addr);
+	}
+
+	void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DR_ASSERT(nullptr != data);
+
+		bool passed = (bool) drwrap_get_retval(wrapctx);
+		LOG_TRACE(data->tid, "barrier left with status %i", passed);
+
+		// TODO: Validate cancellation path, where happens_before will be called again
+		if (passed) {
+			// each thread leaves individually, but only after all barrier_enters have been called
+			detector::happens_after(data->tid, addr);
+		}
 	}
 #endif
 } // namespace funwrap

@@ -2,7 +2,7 @@
 
 // Log up to notice
 #ifndef LOGLEVEL
-#define LOGLEVEL 4
+#define LOGLEVEL 3
 #endif
 
 #include "config.h"
