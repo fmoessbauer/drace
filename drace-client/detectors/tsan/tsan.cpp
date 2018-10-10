@@ -225,11 +225,13 @@ void detector::release(tid_t thread_id, void* mutex, int rec, bool write, tls_t 
 }
 
 void detector::happens_before(tid_t thread_id, void* identifier) {
-	__tsan_happens_before_use_user_tid(thread_id, identifier);
+	uint64_t addr_32 = lower_half((uint64_t)identifier);
+	__tsan_happens_before_use_user_tid(thread_id, (void*)addr_32);
 }
 
 void detector::happens_after(tid_t thread_id, void* identifier) {
-	__tsan_happens_after_use_user_tid(thread_id, identifier);
+	uint64_t addr_32 = lower_half((uint64_t)identifier);
+	__tsan_happens_after_use_user_tid(thread_id, (void*)addr_32);
 }
 
 void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
