@@ -14,16 +14,42 @@ void MSR::wait_heart_beat() {
 	}
 }
 
+bool MSR::connect() {
+	LOG_INFO(0, "wait 10s for MPCR to connect");
+	shmdriver = std::make_unique<ipc::MtSyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
+	if (shmdriver->valid()) {
+		shmdriver->wait_receive(std::chrono::seconds(10));
+		if (shmdriver->id() == ipc::SMDataID::READY) {
+			shmdriver->id(ipc::SMDataID::CONNECT);
+			shmdriver->commit();
+			// Got stable connection, attach to CB
+			extcb = std::make_unique<ipc::SharedMemory<ipc::ClientCB, true>>(DRACE_SMR_CB_NAME, false);
+			DR_ASSERT(extcb->get() != nullptr);
+			// TODO: Error handling (rarely necessary)
+			// Initialize extcb
+			extcb->get()->sampling_rate.store(params.sampling_rate, std::memory_order_relaxed);
+		} else {
+			LOG_WARN(0, "MSR is not ready to connect");
+			shmdriver.reset();
+		}
+	}
+	else {
+		LOG_WARN(0, "could not create SHM");
+		shmdriver.reset();
+	}
+	return static_cast<bool>(shmdriver);
+}
+
 bool MSR::attach(const module_data_t * mod)
 {
+	DR_ASSERT(shmdriver != nullptr);
 	LOG_INFO(0, "wait 10s for external resolver to attach");
-	shmdriver = std::make_unique<ipc::MtSyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
-	if (shmdriver->valid())
+	if (shmdriver)
 	{
 		shmdriver->wait_receive(std::chrono::seconds(10));
-		if (shmdriver->id() == ipc::SMDataID::CONNECT) {
+		if (shmdriver->id() == ipc::SMDataID::CONFIRM) {
 			// Send PID and CLR path
-			auto & sendInfo = shmdriver->emplace<ipc::BaseInfo>(ipc::SMDataID::PID);
+			auto & sendInfo = shmdriver->emplace<ipc::BaseInfo>(ipc::SMDataID::ATTACH);
 			sendInfo.pid = (int)dr_get_process_id();
 			strncpy(sendInfo.path.data(), mod->full_path, sendInfo.path.size());
 			shmdriver->commit();
@@ -56,6 +82,7 @@ bool MSR::attach(const module_data_t * mod)
 
 bool MSR::request_symbols(const module_data_t * mod)
 {
+	DR_ASSERT(shmdriver != nullptr);
 	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	LOG_INFO(0, "MSR downloads the symbols from a symbol server (might take long)");
 	// TODO: Download Symbols for some other .Net dlls as well
@@ -77,6 +104,7 @@ bool MSR::request_symbols(const module_data_t * mod)
 }
 
 void MSR::unload_symbols(app_pc mod_start) {
+	DR_ASSERT(shmdriver != nullptr);
 	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	auto & sr = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::UNLOADSYMS);
 	sr.base = (uint64_t)mod_start;
@@ -87,6 +115,7 @@ void MSR::unload_symbols(app_pc mod_start) {
 }
 
 ipc::SymbolInfo MSR::lookup_address(app_pc pc) {
+	DR_ASSERT(shmdriver != nullptr);
 	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	shmdriver->put<uint64_t>(ipc::SMDataID::IP, (uint64_t)pc);
 	shmdriver->commit();
@@ -102,6 +131,7 @@ ipc::SymbolResponse MSR::search_symbol(
 	const std::string & match,
 	bool full_search)
 {
+	DR_ASSERT(shmdriver != nullptr);
 	std::lock_guard<decltype(*shmdriver)> lg(*shmdriver);
 	auto & sr = shmdriver->emplace<ipc::SymbolRequest>(ipc::SMDataID::SEARCHSYMS);
 	sr.base = (uint64_t)mod->start;
@@ -119,6 +149,7 @@ ipc::SymbolResponse MSR::search_symbol(
 }
 
 void MSR::getCurrentStack(int threadid, void* rbp, void* rsp, void* rip) {
+	DR_ASSERT(shmdriver != nullptr);
 	auto & mc = shmdriver->emplace<ipc::MachineContext>(ipc::SMDataID::STACK);
 	mc.threadid = threadid;
 	mc.rbp = (uint64_t)rbp;

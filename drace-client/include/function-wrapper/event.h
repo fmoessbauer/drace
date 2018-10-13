@@ -14,9 +14,6 @@ namespace funwrap {
 		};
 
 	private:
-		static void beg_excl_region(per_thread_t * data);
-		static void end_excl_region(per_thread_t * data);
-
 		static void prepare_and_aquire(
 			void* wrapctx,
 			void* mutex,
@@ -26,6 +23,9 @@ namespace funwrap {
 		static inline void prepare_and_release(void* wrapctx, bool write);
 
 	public:
+
+		static void beg_excl_region(per_thread_t * data);
+		static void end_excl_region(per_thread_t * data);
 
 		// TODO: On Linux size is arg 0
 		static void alloc_pre(void *wrapctx, void **user_data);

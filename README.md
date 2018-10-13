@@ -1,4 +1,4 @@
-# Drace
+# DRace
 
 The drace-client is a race detector for windows build on top of DynamoRIO.
 It does not require any perparations like instrumentation of the binary to check.
@@ -13,7 +13,7 @@ cannot be detected correctly.
 
 ### External Libraries
 
-#### Drace
+#### DRace
 
 **Mandatory:**
 
@@ -33,7 +33,7 @@ cannot be detected correctly.
 
 - [gabime/spdlog](https://github.com/gabime/spdlog)
 
-## Using the Drace Race Detector
+## Using the DRace Race Detector
 
 **Run the detector as follows**
 
@@ -60,6 +60,7 @@ Currently the following parameters are implemented
 --stacksz         : size of callstack used for race-detection (must be in [1,16])
 --xml-file <file> : log races in valkyries xml format in this file
 --out-file <file> : log races in human readable format in this file
+--extctrl         : Use second process for symbol lookup and state-controlling (required for Dotnet)
 ```
 
 *Detector Parameters:*
@@ -68,9 +69,20 @@ Currently the following parameters are implemented
 --heap-only       : only detect races on heap-memory (exclude static memory)
 ```
 
+### External Controlling DRace
+
+DRace can be externally controlled using the external controller `msr.exe`.
+To set the detector state during runtime, the following keys (committed using `enter`) are available:
+
+```
+e\t enable detector on all threads
+d\t disable detector on all threads
+s\t <rate> set sampling rate to 1/x (similar to `-s` in DRace)
+```
+
 ### Symbol Resolving
 
-Drace requires symbol information for wrapping functions and to resolve stack traces.
+DRace requires symbol information for wrapping functions and to resolve stack traces.
 For the main functionality of C and C++ only applications, export information is sufficient.
 However for additional and more precise race-detection (e.g. C++11, QT), debug information is necessary.
 
@@ -93,7 +105,7 @@ This can be started as follows:
 ManagedResolver\msr.exe [-v for verbose]
 ```
 
-After it is started, Drace connects to MSR using shared memory.
+After it is started, DRace connects to MSR using shared memory.
 MSR then tries to locate the correct [DAC](https://github.com/dotnet/coreclr/blob/master/Documentation/botr/dac-notes.md)
 dll to resolve managed program counters and symbols.
 

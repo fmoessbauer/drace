@@ -1,5 +1,5 @@
 #include "ProtocolHandler.h"
-#include "spdlog/logger.h"
+#include "LoggerTypes.h"
 
 #include <future>
 
@@ -8,8 +8,6 @@
 
 #undef min
 #undef max
-
-extern std::shared_ptr<spdlog::logger> logger;
 
 BOOL PsymEnumeratesymbolsCallback(
 	PSYMBOL_INFO pSymInfo,
@@ -48,12 +46,19 @@ namespace msr {
 		symgetopts = (PFN_SymGetOptions)GetProcAddress(_dbghelp_dll, "SymGetOptions");
 		symsetopts = (PFN_SymSetOptions)GetProcAddress(_dbghelp_dll, "SymSetOptions");
 
-		_shmdriver->id(SMDataID::CONNECT);
+		_shmdriver->id(SMDataID::READY);
 		_shmdriver->commit();
 	}
 
 	ProtocolHandler::~ProtocolHandler() {
 		quit();
+	}
+
+	void ProtocolHandler::connect() {
+		const auto & bi = _shmdriver->get<BaseInfo>();
+		logger->info("--- connected with DRace ---");
+		_shmdriver->id(SMDataID::CONFIRM);
+		_shmdriver->commit();
 	}
 
 	void ProtocolHandler::attachProcess() {
@@ -114,7 +119,7 @@ namespace msr {
 		//symcleanup(_phandle);
 		_resolver.Close();
 		
-		_shmdriver->id(SMDataID::CONNECT);
+		_shmdriver->id(SMDataID::READY);
 		_shmdriver->commit();
 	}
 
@@ -145,6 +150,7 @@ namespace msr {
 			context.Rsp = ctx.rsp;
 			context.Rip = ctx.rip;
 			auto debugCtrl = _resolver.getController();
+			if (!debugCtrl) goto cleanup;
 
 			PDEBUG_STACK_FRAME frames   = new DEBUG_STACK_FRAME[32];
 			PCONTEXT           contexts = new CONTEXT[32];
@@ -170,6 +176,7 @@ namespace msr {
 			delete[] contexts;
 		}
 
+		cleanup:
 		if(hThread)
 			CloseHandle(hThread);
 
@@ -315,7 +322,9 @@ namespace msr {
 			if (_shmdriver->wait_receive()) {
 				logger->trace("Message with id {}", (int)_shmdriver->id());
 				switch (_shmdriver->id()) {
-				case SMDataID::PID:
+				case SMDataID::CONNECT:
+					connect(); break;
+				case SMDataID::ATTACH:
 					attachProcess(); break;
 				case SMDataID::STACK:
 					getCurrentStack(); break;

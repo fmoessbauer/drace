@@ -1,9 +1,7 @@
 #pragma once
 
 #include "ManagedResolver.h"
-#include "spdlog/spdlog.h"
-
-extern std::shared_ptr<spdlog::logger> logger;
+#include "LoggerTypes.h"
 
 namespace msr {
 

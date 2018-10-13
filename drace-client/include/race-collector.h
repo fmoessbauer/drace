@@ -115,8 +115,8 @@ public:
 		dr_get_mcontext(drcontext, &mc);
 
 		// TODO: Validate external callstacks
-		if(shmdriver)
-			MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
+		//if(shmdriver)
+		//	MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
 
 		return ra;
 	}

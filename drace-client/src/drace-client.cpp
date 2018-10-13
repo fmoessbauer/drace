@@ -83,15 +83,13 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Initialize Detector
 	detector::init(argc, argv, race_collector_add_race);
 
-	// -------------------------------------------------------
 	LOG_INFO(-1, "application pid: %i", dr_get_process_id());
-	//std::string path = "C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll";
-	//dr_auxlib_handle_t mscordacwks_dll = dr_load_aux_library(path.c_str(), NULL, NULL);
-
-	//wchar_t path[MAX_PATH] = { 0 };
-	//wcscat_s(path, L"C:\\Users\\z003xucc\\.nuget\\packages\\runtime.win-x64.microsoft.netcore.app\\2.0.0\\runtimes\\win-x64\\native\\mscordaccore.dll");
-	//HMODULE mscordacwks_dll = LoadLibraryW(path);
-	// -------------------------------------------------------
+	
+	// if we try to access a non-existing SHM,
+	// DR will spuriously fail some time later
+	if (params.extctrl) {
+		MSR::connect();
+	}
 
 	app_start = std::chrono::system_clock::now();
 }
@@ -195,6 +193,9 @@ static void parse_args(int argc, const char ** argv) {
 		else if (strncmp(argv[processed], "--stacksz", 16) == 0) {
 			params.stack_size = std::stoi(argv[++processed]);
 		}
+		else if (strncmp(argv[processed], "--extctrl", 16) == 0) {
+			params.extctrl = true;
+		}
 		// unknown argument skip as probably for detector
 		++processed;
 	}
@@ -215,6 +216,7 @@ static void print_config() {
 		"< Output File:\t\t%s\n"
 		"< XML File:\t\t%s\n"
 		"< Stack-Size:\t\t%i\n"
+		"< External Ctrl:\t%s\n"
 		"< Private Caches:\t%s\n",
 		params.sampling_rate,
 		params.instr_rate,
@@ -228,6 +230,7 @@ static void print_config() {
 		params.out_file != "" ? params.out_file.c_str() : "OFF",
 		params.xml_file != "" ? params.xml_file.c_str() : "OFF",
 		params.stack_size,
+		params.extctrl ? "ON" : "OFF",
 		dr_using_all_private_caches() ? "ON" : "OFF");
 }
 

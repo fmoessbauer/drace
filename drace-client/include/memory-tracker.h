@@ -55,7 +55,7 @@ private:
 
 	// fast random numbers for sampling
 	std::mt19937 _prng;
-	const std::mt19937::result_type _prng_border;
+	std::mt19937::result_type _prng_border;
 
 	static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
@@ -124,6 +124,9 @@ private:
 			instrument_mem_full(drcontext, ilist, where, ref, write);
 		}
 	}
+
+	/* Read data from external CB and modify instrumentation / detection accordingly */
+	void handle_ext_state(per_thread_t * data);
 };
 
 extern std::unique_ptr<MemoryTracker> memory_tracker;

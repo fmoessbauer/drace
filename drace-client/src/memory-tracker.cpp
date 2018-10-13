@@ -15,7 +15,10 @@
 #include "MSR.h"
 #include "symbols.h"
 #include "shadow-stack.h"
+#include "function-wrapper.h"
 #include "statistics.h"
+#include "ipc/SharedMemory.h"
+#include "ipc/SMData.h"
 
 int hits = 0;
 
@@ -126,6 +129,13 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 		LOG_INFO(data->tid, "Missed a fork, do it now");
 		detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 	}
+
+	// toggle detector on external state change
+	if (data->stats->flushes % 10 == 0) {
+		// lessen impact of expensive SHM accesses
+		memory_tracker->handle_ext_state(data);
+	}
+
 	if (data->enabled) {
 		mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.data;
 		uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
@@ -534,6 +544,31 @@ void MemoryTracker::code_cache_init(void) {
 	instrlist_clear_and_destroy(drcontext, ilist);
 	/* set the memory as just +rx now */
 	dr_memory_protect(cc_flush, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
+}
+
+void MemoryTracker::handle_ext_state(per_thread_t * data) {
+	if (shmdriver) {
+		bool external_state = extcb->get()->enabled.load(std::memory_order_relaxed);
+		if (data->enable_external != external_state) {
+			{
+				LOG_INFO(0, "externally switched state: %s", external_state ? "ON" : "OFF");
+				data->enable_external = external_state;
+				if (!external_state) {
+					funwrap::event::beg_excl_region(data);
+				}
+				else {
+					funwrap::event::end_excl_region(data);
+				}
+			}
+		}
+		// set sampling rate
+		unsigned sampling_rate = extcb->get()->sampling_rate.load(std::memory_order_relaxed);
+		if (sampling_rate != params.sampling_rate) {
+			LOG_INFO(0, "externally changed sampling rate to: %i", sampling_rate);
+			params.sampling_rate = sampling_rate;
+			_prng_border = _max_value / sampling_rate;
+		}
+	}
 }
 
 // Inline Instrumentation in src/instr

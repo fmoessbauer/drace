@@ -29,6 +29,8 @@ struct params_t {
 	bool     delayed_sym_lookup{ false };
 	bool     yield_on_evt{ false };
 	bool     fastmode{ false };
+	/* Use external controller */
+	bool     extctrl{ false };
 	unsigned stack_size{ 10 };
 	std::string  config_file{ "drace.ini" };
 	std::string  out_file;
@@ -75,6 +77,10 @@ struct per_thread_t {
 	AlignedStack<void*, 64> stack;
 	// Stack used to track state of detector
 	uint64        event_cnt{ 0 };
+	// bool external change detected
+	// this flag is used to trigger the enable or disable
+	// logic on this thread
+	bool enable_external{ true };
 
 	/* book-keeping of active mutexes
 	 * All even indices are mutex addresses
@@ -140,8 +146,15 @@ extern std::unique_ptr<Statistics> stats;
 namespace ipc {
 	template<bool, bool>
 	class MtSyncSHMDriver;
+
+	template<typename T,bool>
+	class SharedMemory;
+
+	struct ClientCB;
 }
 extern std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
+extern std::unique_ptr<ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 
+// infected by windows.h and clashes with std::min/max
 #undef max
 #undef min

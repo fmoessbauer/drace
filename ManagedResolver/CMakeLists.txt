@@ -1,5 +1,6 @@
 ﻿set(SOURCES
 	"src/main.cpp"
+	"src/Controller.cpp"
 	"src/ManagedResolver.cpp"
 	"src/ProtocolHandler.cpp")
 

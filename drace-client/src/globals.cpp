@@ -4,6 +4,7 @@
 #include "symbols.h"
 #include "race-collector.h"
 #include "statistics.h"
+#include "ipc/SharedMemory.h"
 #include "ipc/MtSyncSHMDriver.h"
 
 /*
@@ -36,6 +37,7 @@ std::shared_ptr<Symbols> symbol_table;
 std::unique_ptr<RaceCollector> race_collector;
 std::unique_ptr<Statistics> stats;
 std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
+std::unique_ptr<ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 
 /* Runtime parameters */
 params_t params;

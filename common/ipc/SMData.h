@@ -3,19 +3,22 @@
 #include <cstdint>
 #include <string>
 #include <array>
+#include <atomic>
 
 #define DRACE_SMR_NAME "drace-msr"
+#define DRACE_SMR_CB_NAME "drace-cb"
 #define DRACE_SMR_MAXLEN 1024
 
 namespace ipc {
 
 	/* Protocol Message IDs */
 	enum class SMDataID : uint8_t {
-		PID,
 		IP,
 		SYMBOL,
 		STACK,
+		READY,
 		CONNECT,
+		ATTACH,
 		ATTACHED,
 		LOADSYMS,
 		UNLOADSYMS,
@@ -71,6 +74,11 @@ namespace ipc {
 		SMDataID id;
 		// Raw data buffer
 		byte buffer[BUFFER_SIZE];
+	};
+
+	struct ClientCB {
+		std::atomic<bool>     enabled{ true };
+		std::atomic<uint32_t> sampling_rate;
 	};
 
 } // namespace ipc

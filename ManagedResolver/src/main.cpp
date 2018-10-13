@@ -1,3 +1,4 @@
+#include "Controller.h"
 #include "ManagedResolver.h"
 #include "ProtocolHandler.h"
 #include "ipc/SyncSHMDriver.h"
@@ -12,6 +13,9 @@
 
 std::shared_ptr<spdlog::logger> logger;
 std::unique_ptr<msr::ProtocolHandler> phandler;
+std::shared_ptr<msr::Controller> controller;
+/* future for controller loop */
+std::future<void> ctl_fut;
 
 /* Handle Ctrl Events / Signals */
 BOOL CtrlHandler(DWORD fdwCtrlType) {
@@ -21,10 +25,20 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
 	switch (fdwCtrlType) {
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
-		phandler->quit();
+		// cleanup
+		controller->stop();
+		controller.reset();
+		phandler.reset();
 		return true;
 	}
 	return false;
+}
+
+void printhelp() {
+	std::cout << "Change detector state using the following keys:" << std::endl
+		<< "e\tenable detector" << std::endl
+		<< "d\tdisable detector" << std::endl
+		<< "s\tset sampling rate" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -45,12 +59,20 @@ int main(int argc, char** argv) {
 		logger->warn("Could not register exit handler");
 	}
 
+	printhelp();
+
 	/*
 	* The general idea here is to wait until DRACE
 	* sets the pid in the shared memory.
 	* Hence, msr can be started prior to drace
 	*/
 	try {
+		// create memory for DRace controlblock
+		auto drace_cb = std::make_shared<ipc::SharedMemory<ipc::ClientCB, false>>(DRACE_SMR_CB_NAME, true);
+		controller = std::make_shared<Controller>(drace_cb);
+		ctl_fut = std::async(std::launch::async, [=]() {controller->start();});
+
+		// create driver + block for message passing
 		auto msrdriver = std::make_shared<ipc::SyncSHMDriver<false, false>>(DRACE_SMR_NAME, true);
 		phandler = std::make_unique<ProtocolHandler>(msrdriver);
 		phandler->process_msgs();

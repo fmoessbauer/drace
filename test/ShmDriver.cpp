@@ -12,11 +12,11 @@ TEST(SyncShmDriver, InitFinalize) {
 	receiver.wait_receive();
 	ASSERT_EQ(receiver.id(), ipc::SMDataID::CONNECT);
 
-	receiver.put<int>(ipc::SMDataID::PID, 42);
+	receiver.put<int>(ipc::SMDataID::ATTACH, 42);
 	receiver.commit();
 
 	sender.wait_receive();
-	ASSERT_EQ(sender.id(), ipc::SMDataID::PID);
+	ASSERT_EQ(sender.id(), ipc::SMDataID::ATTACH);
 	ASSERT_EQ(sender.get<int>(), 42);
 }
 

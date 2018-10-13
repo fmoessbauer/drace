@@ -42,6 +42,8 @@ namespace msr {
 		PFN_SymSetOptions symsetopts;
 
 	private:
+		/* Connect with DRace */
+		void connect();
 		/* Attach to the target process and load correct helper dll */
 		void attachProcess();
 		/* Detach from process */
