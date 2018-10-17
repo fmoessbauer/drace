@@ -80,25 +80,32 @@ public:
 		dr_mutex_destroy(_race_mx);
 	}
 
-	/* Adds a race and updates histogram */
+	/* Adds a race and updates histogram
+	* TODO: The locking has to be removed completely as this callback 
+	* heavily interferes with application locks. Use lockfree queue for 
+	* storing the races
+	*/
 	void add_race(const detector::Race * r) {
 		if (num_races() > MAX)
 			return;
 
-		dr_mutex_lock(_race_mx);
 		auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
 
 		if (!_delayed_lookup) {
 			DecoratedRace dr(
 			std::move(resolve_symbols(r->first)),
 			std::move(resolve_symbols(r->second)));
+
+			dr_mutex_lock(_race_mx);
 			_races.emplace_back(ttr.count(), dr);
+			dr_mutex_unlock(_race_mx);
 		}
 		else {
+			dr_mutex_lock(_race_mx);
 			_races.emplace_back(ttr.count(), *r);
+			dr_mutex_unlock(_race_mx);
 		}
 		print_last_race();
-		dr_mutex_unlock(_race_mx);
 	}
 
 	/* Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
