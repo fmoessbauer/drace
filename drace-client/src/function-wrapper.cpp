@@ -170,7 +170,7 @@ void funwrap::wrap_mutexes(const module_data_t *mod, bool sys) {
 #endif
 	}
 	else {
-		LOG_INFO(0, "Try to wrap non-system mutexes");
+		LOG_INFO(0, "try to wrap non-system mutexes");
 		// Std mutexes
 		wrap_functions(mod, config.get_multi("stdsync", "acquire_excl"), false, Method::DBGSYMS, event::get_arg, event::mutex_lock);
 		wrap_functions(mod, config.get_multi("stdsync", "acquire_excl_try"), false, Method::DBGSYMS, event::get_arg, event::mutex_trylock);
@@ -211,8 +211,19 @@ void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 		// [native] JIT_MonExit
 		// We also use MPCR here, as DR syms has problems finding the correct debug
 		// information if multiple versions of a dll are in the cache
-		LOG_INFO(-1, "Try to wrap dotnetsync native");
+		LOG_INFO(-1, "try to wrap dotnetsync native");
 		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
 		wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
 	}
+}
+
+void funwrap::wrap_annotations(const module_data_t *mod) {
+	LOG_INFO(0, "try to wrap annotations");
+	// wrap happens before
+	wrap_functions(mod, config.get_multi("sync", "happens_before"), false, Method::EXPORTS, event::get_arg, event::happens_before);
+	wrap_functions(mod, config.get_multi("sync", "happens_after"), false, Method::EXPORTS, event::get_arg, event::happens_after);
+
+	// wrap excludes
+	wrap_functions(mod, config.get_multi("functions", "exclude_enter"), false, Method::EXPORTS, event::begin_excl, NULL);
+	wrap_functions(mod, config.get_multi("functions", "exclude_leave"), false, Method::EXPORTS, NULL, event::end_excl);
 }

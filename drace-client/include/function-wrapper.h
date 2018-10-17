@@ -46,6 +46,8 @@ namespace funwrap {
 	void wrap_allocations(const module_data_t *mod);
 	/* Wrap excluded functions */
 	void wrap_excludes(const module_data_t *mod, std::string section = "exclude");
+	/* Wrap annotations */
+	void wrap_annotations(const module_data_t *mod);
 	/* Wrap C++11 thread starters */
 	void wrap_thread_start(const module_data_t *mod);
 	/* Wrap System thread starters */

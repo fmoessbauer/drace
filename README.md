@@ -112,6 +112,14 @@ dll to resolve managed program counters and symbols.
 The output (logs) of MSR are just for debugging reasons. The resolved symbols are passed back to drace
 and merged with the non-managed ones.
 
+### Custom Annotations
+
+Custom synchonisation logic is supported by annotating the corresponding code sections.
+Thereto we provide a header with macros in `annotations/drace_annotation.h`.
+To enable these macros, define `DRACE_ANNOTATION` prior to including the header.
+
+A example how to use the annotations is given in `test/mini-apps/annotations/`.
+
 ## Testing with GoogleTest
 
 Both the detector and a fully integrated DR-Client can be tested using the following command:

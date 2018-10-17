@@ -164,8 +164,10 @@ namespace msr {
 			if (hr == S_OK){
 				for (int i = 0; i < filled; ++i) {
 					ATL::CString symbol;
+					ATL::CString line;
 					_resolver.GetMethodName((void*)contexts[i].Rip, symbol);
-					logger->info("+ {}: Rip is {}, symbol: {}", i, (void*)contexts[i].Rip, symbol.GetBuffer(128));
+					_resolver.GetFileLineInfo((void*)contexts[i].Rip, line);
+					logger->info("+ {}: Rip is {}, symbol: {} @ {}", i, (void*)contexts[i].Rip, symbol.GetBuffer(128), line.GetBuffer(128));
 				}
 			} else {
 				logger->error("Could not walk stack");

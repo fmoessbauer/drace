@@ -208,6 +208,7 @@ namespace module {
 			// no special handling of this module
 
 			funwrap::wrap_excludes(mod);
+			funwrap::wrap_annotations(mod);
 			// This requires debug symbols, but avoids false positives during
 			// C++11 thread construction and startup
 			if (modptr->debug_info) {

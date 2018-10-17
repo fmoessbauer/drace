@@ -367,5 +367,21 @@ namespace funwrap {
 			detector::happens_after(data->tid, addr);
 		}
 	}
+
+	void event::happens_before(void *wrapctx, void *identifier) {
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DR_ASSERT(nullptr != data);
+
+		detector::happens_before(data->tid, identifier);
+	}
+
+	void event::happens_after(void *wrapctx, void *identifier) {
+		app_pc drcontext = drwrap_get_drcontext(wrapctx);
+		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+		DR_ASSERT(nullptr != data);
+
+		detector::happens_after(data->tid, identifier);
+	}
 #endif
 } // namespace funwrap

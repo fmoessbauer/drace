@@ -87,5 +87,10 @@ namespace funwrap {
 		static void barrier_leave(void *wrapctx, void *user_data);
 		/* Call this function after a thread-barrier is passed or the waiting was cancelled */
 		static void barrier_leave_or_cancel(void *wrapctx, void *user_data);
+
+		/* Custom annotated happens before */
+		static void happens_before(void *wrapctx, void *identifier);
+		/* Custom annotated happens after */
+		static void happens_after(void *wrapctx, void *identifier);
 	};
 }

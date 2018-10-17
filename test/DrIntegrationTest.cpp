@@ -22,3 +22,7 @@ TEST_F(DrIntegrationTest, FastMode) {
 TEST_F(DrIntegrationTest, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
+
+TEST_F(DrIntegrationTest, Annotations) {
+	run("", "mini-apps/annotations/gp-annotations.exe", 0, 0);
+}
