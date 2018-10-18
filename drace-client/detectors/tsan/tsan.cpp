@@ -20,7 +20,16 @@ class spinlock {
 public:
 	inline void lock() noexcept
 	{
-		while (_flag.test_and_set(std::memory_order_acquire)) {}
+		unsigned cnt = 0;
+		while (_flag.test_and_set(std::memory_order_acquire)) {
+			if (++cnt == 100) {
+				// congestion on the lock
+				std::this_thread::yield();
+#ifdef DEBUG
+				std::cout << "spinlock congestion" << std::endl;
+#endif
+			}
+		}
 	}
 
 	inline bool try_lock() noexcept
@@ -144,11 +153,11 @@ template<bool fastapprox = false>
 static inline bool on_heap(uint64_t addr) {
 	// filter step without locking
 	if (on_heap<true>(addr)) {
-		mxspin.lock();
+		std::lock_guard<spinlock> lg(mxspin);
+
 		auto it = allocations.lower_bound(addr);
 		uint64_t beg = it->first;
 		size_t   sz = it->second;
-		mxspin.unlock();
 
 		return (addr < (beg + sz));
 	}
@@ -257,10 +266,15 @@ void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_
 	if (tls == nullptr)
 		tls = __tsan_create_thread(thread_id);
 
-	mxspin.lock();
-	//alloc_readable.store(false, std::memory_order_release);
 	__tsan_malloc(tls, pc, (void*)addr_32, size);
-	allocations.emplace(addr_32, size);
+
+	{
+		std::lock_guard<spinlock> lg(mxspin);
+		allocations.emplace(addr_32, size);
+	}
+
+	// this is a bit racy as other allocations might finish first
+	// but this is ok as only approximations are necessary
 
 	// increase heap upper bound
 	uint64_t new_ub = addr_32 + size;
@@ -274,16 +288,12 @@ void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_
 		//std::cout << "New heap lb " << std::hex << addr_32 << std::endl;
 	}
 
-
-	//alloc_readable.store(true, std::memory_order_release);
-	mxspin.unlock();
 }
 
 void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
-	mxspin.lock();
-	//alloc_readable.store(false, std::memory_order_release);
 
+	mxspin.lock();
 	// ocasionally free is called more often than allocate, hence guard
 	if (allocations.count(addr_32) == 1) {
 		size_t size = allocations[addr_32];
@@ -298,12 +308,13 @@ void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 				heap_ub.store(0, std::memory_order_relaxed);
 			}
 		}
-		//__tsan_free(addr, size);
+		mxspin.unlock();
+
 		__tsan_reset_range((unsigned int)addr_32, size);
 	}
-
-	//alloc_readable.store(true, std::memory_order_release);
-	mxspin.unlock();
+	else {
+		mxspin.unlock();
+	}
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
