@@ -212,7 +212,7 @@ namespace funwrap {
 		//dr_mutex_lock(th_mutex);
 		MemoryTracker::flush_all_threads(data);
 		LOG_TRACE(data->tid, "Release %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
-		detector::release(data->tid, mutex, write, data->detector_data);
+		detector::release(data->tid, mutex, 1, write, data->detector_data);
 		//dr_mutex_unlock(th_mutex);
 	}
 

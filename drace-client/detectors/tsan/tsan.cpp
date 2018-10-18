@@ -6,8 +6,9 @@
 #include <algorithm>
 #include <mutex> // for lock_guard
 #include <unordered_map>
-
 #include <iostream>
+#include <cassert>
+
 #include "tsan-if.h"
 
 /*
@@ -199,7 +200,7 @@ void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool t
 
 	//std::cout << "detector::acquire " << thread_id << " @ " << mutex << std::endl;
 
-	if (thr == nullptr) return;
+	assert(thr != nullptr);
 
 	if (write) {
 		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, trylock);
@@ -214,7 +215,7 @@ void detector::release(tid_t thread_id, void* mutex, int rec, bool write, tls_t 
 
 	//std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;
 
-	if (thr == nullptr) return;
+	assert(thr != nullptr);
 
 	if (write) {
 		__tsan_MutexUnlock(thr, 0, (void*)addr_32, false);
