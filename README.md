@@ -38,7 +38,8 @@ cannot be detected correctly.
 **Run the detector as follows**
 
 ```bash
-drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app parameter>
+drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- application.exe <app parameter>
+# see limitations for -no_follow_children option
 ```
 
 Currently the following parameters are implemented
@@ -133,9 +134,10 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 
 ## Benchmarking with GoogleBenchmark
 
-### Known Issues
+### Limitations
 
 - CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)
 - TSAN can only be started once, as the cleanup is not fully working
+- `no_follow_children`: Due to the TSAN limitation, drace can only analyze a single process. This process is the initially started one.
 - If using the SparsePP hashmap, the application might crash if a reallocation occurs which is not detected by DR correctly.
 
