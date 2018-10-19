@@ -52,7 +52,14 @@ namespace funwrap {
 		DR_ASSERT(nullptr != data);
 
 		MemoryTracker::flush_all_threads(data);
+
+
+		// to avoid high pressure on the internal spinlock,
+		// we lock externally using a os lock
+		// TODO: optimize tsan wrapper internally
+		dr_mutex_lock(th_mutex);
 		detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
+		dr_mutex_unlock(th_mutex);
 	}
 
 	// TODO: On Linux addr is arg 0
@@ -64,7 +71,11 @@ namespace funwrap {
 		void * addr = drwrap_get_arg(wrapctx, 2);
 
 		MemoryTracker::flush_all_threads(data);
+
+		// TODO: optimize tsan wrapper internally (see comment in alloc_post)
+		dr_mutex_lock(th_mutex);
 		detector::deallocate(data->tid, addr, data->detector_data);
+		dr_mutex_unlock(th_mutex);
 	}
 
 	void event::free_post(void *wrapctx, void *user_data) {
@@ -176,10 +187,9 @@ namespace funwrap {
 
 		LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
-		//dr_mutex_lock(th_mutex);
 		MemoryTracker::flush_all_threads(data);
+
 		detector::acquire(data->tid, mutex, cnt, write, false, data->detector_data);
-		//dr_mutex_unlock(th_mutex);
 
 		data->stats->mutex_ops++;
 	}
@@ -209,11 +219,10 @@ namespace funwrap {
 
 		// To avoid deadlock in flush-waiting spinlock,
 		// acquire / release must not occur concurrently
-		//dr_mutex_lock(th_mutex);
+
 		MemoryTracker::flush_all_threads(data);
 		LOG_TRACE(data->tid, "Release %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 		detector::release(data->tid, mutex, 1, write, data->detector_data);
-		//dr_mutex_unlock(th_mutex);
 	}
 
 	void event::get_arg(void *wrapctx, OUT void **user_data) {
