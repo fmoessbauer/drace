@@ -27,15 +27,17 @@ void detector::happens_before(tid_t thread_id, void* identifier) { }
 
 void detector::happens_after(tid_t thread_id, void* identifier) { }
 
-void detector::read(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) { }
+void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) { }
 
-void detector::write(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) { }
+void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) { }
 
 void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) { }
 
 void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) { }
 
-void detector::fork(tid_t parent, tid_t child, tls_t tls) { }
+void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
+	*tls = (void*)0x42;
+}
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) { }
 
