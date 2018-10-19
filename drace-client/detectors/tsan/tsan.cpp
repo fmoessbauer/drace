@@ -212,10 +212,10 @@ void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool t
 	assert(thr != nullptr);
 
 	if (write) {
-		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, trylock);
+		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, false);
 	}
 	else {
-		__tsan_MutexReadLock(thr, 0, (void*)addr_32, trylock);
+		__tsan_MutexReadLock(thr, 0, (void*)addr_32, false);
 	}
 }
 
