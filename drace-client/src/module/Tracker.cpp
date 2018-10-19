@@ -149,7 +149,7 @@ namespace module {
 		else if (util::common_prefix(mod_name, "KERNEL"))
 		{
 			funwrap::wrap_allocations(mod);
-			funwrap::wrap_thread_start_sys(mod);
+			//funwrap::wrap_thread_start_sys(mod);
 		}
 		else if (util::common_prefix(mod_name, "clr.dll") ||
 			util::common_prefix(mod_name, "coreclr.dll"))
@@ -212,7 +212,7 @@ namespace module {
 			// This requires debug symbols, but avoids false positives during
 			// C++11 thread construction and startup
 			if (modptr->debug_info) {
-				funwrap::wrap_thread_start(mod);
+				//funwrap::wrap_thread_start(mod);
 				funwrap::wrap_mutexes(mod, false);
 			}
 		}

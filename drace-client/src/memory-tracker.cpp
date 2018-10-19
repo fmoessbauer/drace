@@ -269,6 +269,7 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	// a read lock on TLS_buckets during deallocation
 	DR_ASSERT(TLS_buckets.count(data->tid) == 1);
 	TLS_buckets.erase(data->tid);
+	dr_rwlock_write_unlock(tls_rw_mutex);
 
 	data->stats->print_summary(std::cout);
 
@@ -279,8 +280,6 @@ void MemoryTracker::event_thread_exit(void *drcontext)
 	// deconstruct struct
 	data->~per_thread_t();
 	dr_thread_free(drcontext, data, sizeof(per_thread_t));
-
-	dr_rwlock_write_unlock(tls_rw_mutex);
 }
 
 

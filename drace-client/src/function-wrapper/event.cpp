@@ -117,7 +117,11 @@ namespace funwrap {
 
 	void event::thread_pre_sys(void *wrapctx, void **user_data) {
 	}
+
+	/* Deprecated as this did never really work */
 	void event::thread_post_sys(void *wrapctx, void *user_data) {
+		return; // TODO: Fix or remove this code
+
 		//app_pc drcontext = drwrap_get_drcontext(wrapctx);
 		//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		dr_rwlock_read_lock(tls_rw_mutex);
