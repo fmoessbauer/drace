@@ -5,9 +5,9 @@
 #include <array>
 #include <atomic>
 
-#define DRACE_SMR_NAME "drace-msr"
-#define DRACE_SMR_CB_NAME "drace-cb"
-#define DRACE_SMR_MAXLEN 1024
+constexpr auto DRACE_SMR_NAME = "drace-msr";
+constexpr auto DRACE_SMR_CB_NAME = "drace-cb";
+constexpr auto DRACE_SMR_MAXLEN = 1024;
 
 namespace ipc {
 
@@ -73,7 +73,7 @@ namespace ipc {
 		// Message IDs
 		SMDataID id;
 		// Raw data buffer
-		byte buffer[BUFFER_SIZE];
+		char buffer[BUFFER_SIZE];
 	};
 
 	struct ClientCB {

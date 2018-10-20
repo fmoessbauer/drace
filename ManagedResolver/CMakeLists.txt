@@ -2,7 +2,8 @@
 	"src/main.cpp"
 	"src/Controller.cpp"
 	"src/ManagedResolver.cpp"
-	"src/ProtocolHandler.cpp")
+	"src/ProtocolHandler.cpp"
+	"src/QueueHandler.cpp")
 
 add_executable("msr" ${SOURCES})
 target_include_directories(
