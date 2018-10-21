@@ -16,6 +16,8 @@
 #include <limits>
 #include <atomic>
 
+#include "spinlock.h"
+
 namespace ipc {
 
 	/*!
@@ -33,6 +35,8 @@ namespace ipc {
 	public:
 		using value_type = T;
 		static constexpr size_t slots = buffer_size;
+
+		spinlock mxspin;
 
 	public:
 		/*!

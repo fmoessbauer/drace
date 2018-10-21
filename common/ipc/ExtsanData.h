@@ -13,17 +13,21 @@ namespace ipc {
 			NONE,
 			MEMREAD,
 			MEMWRITE,
-			MUTEX,
+			ACQUIRE,
+			RELEASE,
 			ALLOCATION,
-			FORKJOIN,
-			DETACHFINISH
+			FREE,
+			FORK,
+			JOIN,
+			DETACH,
+			FINISH
 		};
 
 		struct MemAccess {
 			uint32_t thread_id;
 			uint32_t stacksize;
 			uint64_t addr;
-			std::array<uint64_t, 4> callstack;
+			std::array<uint64_t, 16> callstack;
 		};
 
 		struct Mutex {
@@ -36,15 +40,14 @@ namespace ipc {
 
 		struct Allocation {
 			unsigned long thread_id;
+			uint64_t pc;
 			uint64_t addr;
 			size_t size;
-			bool alloc;
 		};
 
 		struct ForkJoin {
 			unsigned long parent;
 			unsigned long child;
-			bool fork;
 		};
 
 		struct DetachFinish {
@@ -67,4 +70,10 @@ namespace ipc {
 	}
 
 	using queue_t = ipc::Ringbuffer<ipc::event::BufferEntry, 1 << 20, false, 64>;
+
+	struct QueueMetadata {
+		static constexpr unsigned num_queues{ 2 };
+		unsigned next_queue{ 0 };
+		queue_t queues[num_queues];
+	};
 }

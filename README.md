@@ -141,3 +141,53 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 - `no_follow_children`: Due to the TSAN limitation, drace can only analyze a single process. This process is the initially started one.
 - If using the SparsePP hashmap, the application might crash if a reallocation occurs which is not detected by DR correctly.
 
+
+## Build
+
+DRace is build using CMake. The only external dependency is DynamoRIO.
+For best compability with Windows 10, use the latest available weekly build.
+The path to your DynamoRIO installation has to be set using `-DDynamoRIO_DIR`.
+
+A sample VisualStudio `CMakeSettings.json` is given here:
+
+```
+{
+  "name": "x64-Release-TSAN",
+  "generator": "Ninja",
+  "configurationType": "RelWithDebInfo",
+  "inheritEnvironments": [ "msvc_x64_x64" ],
+  "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+  "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=/Users/z003xucc/opt/DynamoRIO-Windows-7.0.0-RC1/cmake -DDRACE_DETECTOR=tsan",
+  "buildCommandArgs": "-v",
+  "ctestCommandArgs": ""
+}
+```
+
+
+### Available Detectors
+
+DRace is shipped with the following detector backends:
+
+- tsan (internal ThreadSanitizer)
+- extsan (external ThreadSanitizer, WIP)
+- dummy (no detection at all)
+
+To select which detector is build, set `-DDRACE_DETECTOR=<value>` CMake flag.
+
+**tsan**
+
+The detector is run along with the application. No further threads are started.
+
+**extsan**
+
+DRace sends all events (memory-accesses, sync events, ...) to a different process (MSR) using shared memory and fifo queues.
+The MSR process then passes the events to the ThreadSanitizer. For communication and analysis, an arbitrary number of queues can be used.
+Each queue is then processed and analyzed by it's own thread.
+
+*Note*: This is work-in-progress and is there for evaluation of this concept. On systems with only a few cores, the performance is poor.
+
+**dummy**
+
+This detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
+

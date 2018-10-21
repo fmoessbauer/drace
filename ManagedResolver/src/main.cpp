@@ -1,7 +1,9 @@
 #include "Controller.h"
 #include "ManagedResolver.h"
 #include "ProtocolHandler.h"
+#ifdef EXTSAN
 #include "QueueHandler.h"
+#endif
 #include "ipc/SyncSHMDriver.h"
 #include "ipc/ExtsanData.h"
 
@@ -16,11 +18,14 @@
 std::shared_ptr<spdlog::logger> logger;
 std::unique_ptr<msr::ProtocolHandler> phandler;
 std::shared_ptr<msr::Controller> controller;
-std::shared_ptr<msr::QueueHandler> qhandler;
 /* future for controller loop */
 std::future<void> ctl_fut;
+
+#ifdef EXTSAN
+std::shared_ptr<msr::QueueHandler> qhandler;
 std::future<void> q_fut;
 std::future<void> qm_fut; // Queue Monitor
+#endif
 
 /* Handle Ctrl Events / Signals */
 BOOL CtrlHandler(DWORD fdwCtrlType) {
@@ -77,11 +82,13 @@ int main(int argc, char** argv) {
 		controller = std::make_shared<Controller>(drace_cb);
 		ctl_fut = std::async(std::launch::async, [=]() {controller->start();});
 
+#ifdef EXTSAN
 		// Event message queue
-		auto shm_queue = std::make_shared<ipc::SharedMemory<ipc::queue_t, false>>("drace-events", true);
+		auto shm_queue = std::make_shared<ipc::SharedMemory<ipc::QueueMetadata, false>>("drace-events", true);
 		qhandler = std::make_shared<QueueHandler>(*(shm_queue->get()));
 		q_fut = std::async(std::launch::async, [=]() {qhandler->start(); });
 		qm_fut = std::async(std::launch::async, [=]() {qhandler->monitor(); });
+#endif
 
 		// create driver + block for message passing
 		auto msrdriver = std::make_shared<ipc::SyncSHMDriver<false, false>>(DRACE_SMR_NAME, true);
