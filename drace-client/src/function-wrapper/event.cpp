@@ -4,7 +4,7 @@
 #include "memory-tracker.h"
 #include "symbols.h"
 #include "statistics.h"
-#include "detector_if.h"
+#include <detector/detector_if.h>
 
 #include <dr_api.h>
 #include <drmgr.h>

@@ -8,7 +8,7 @@
 #include <string>
 #include <functional>
 
-#include <detector_if.h>
+#include <detector/detector_if.h>
 #include <dr_api.h>
 #include <drwrap.h>
 #include <drutil.h>

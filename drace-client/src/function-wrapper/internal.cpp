@@ -4,7 +4,7 @@
 #include "globals.h"
 #include "function-wrapper.h"
 #include "memory-tracker.h"
-#include "detector_if.h"
+#include <detector/detector_if.h>
 
 namespace funwrap {
 	bool internal::wrap_function_clbck(const char *name, size_t modoffs, void *data) {

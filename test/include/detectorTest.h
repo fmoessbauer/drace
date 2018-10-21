@@ -1,5 +1,5 @@
 #pragma once
-#include <detector_if.h>
+#include <detector/detector_if.h>
 #include <string>
 #include <iostream>
 

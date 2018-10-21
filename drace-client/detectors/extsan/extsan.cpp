@@ -1,10 +1,11 @@
-#include "../detector_if.h"
 #include <string>
 #include <memory>
 #include <algorithm>
 #include <thread>
 #include <mutex>
 #include <iostream>
+
+#include <detector/detector_if.h>
 
 #include "ipc/ExtsanData.h"
 #include "ipc/SharedMemory.h"

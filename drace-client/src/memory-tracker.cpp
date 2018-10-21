@@ -8,7 +8,7 @@
 #include <drutil.h>
 #include <dr_tools.h>
 
-#include <detector_if.h>
+#include <detector/detector_if.h>
 
 #include "memory-tracker.h"
 #include "Module.h"

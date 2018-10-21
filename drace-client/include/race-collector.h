@@ -6,7 +6,7 @@
 
 #include "MSR.h"
 
-#include <detector_if.h>
+#include <detector/detector_if.h>
 #include <sstream>
 #include <iostream>
 #include <iomanip>

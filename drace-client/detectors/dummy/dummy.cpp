@@ -1,5 +1,6 @@
-#include "../detector_if.h"
 #include <string>
+
+#include <detector/detector_if.h>
 
 bool detector::init(int argc, const char **argv, Callback rc_clb) {
 	return true;

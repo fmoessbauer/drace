@@ -1,5 +1,5 @@
 #include "benchmark/benchmark.h"
-#include <detector_if.h>
+#include <detector/detector_if.h>
 
 #include <iostream>
 
