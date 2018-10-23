@@ -132,6 +132,9 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 ./test/drace-client-Tests.exe --dr <path-to-drrun.exe> --gtest_filter="Dr*"
 ```
 
+**Note:** Before pushing a commit, please run the integration tests.
+Later on bugs are very tricky to find. 
+
 ## Benchmarking with GoogleBenchmark
 
 ### Limitations

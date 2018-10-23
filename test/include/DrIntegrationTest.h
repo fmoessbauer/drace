@@ -13,6 +13,7 @@
 class DrIntegrationTest : public ::testing::Test {
 private:
 	static std::string drrun;
+	static std::string drclient;
 
 	std::string logfile;
 
@@ -28,7 +29,7 @@ public:
 
 	void run(const std::string & client_args, const std::string & exe, int min, int max) {
 		std::stringstream command;
-		command << drrun << " -c drace-client/drace-client.dll "
+		command << drrun << " -c " << drclient << " "
 				<< client_args << " -- " << "test/" << exe
 			    << " > " << logfile << " 2>&1";
 		std::cout << ">> Issue Command: " << command.str() << std::endl;
@@ -69,12 +70,18 @@ protected:
 		}
 
 		std::cout << "> Use DynamoRio in: " << drrun << std::endl;
+		std::cout << "> Use DRace in:     " << drclient << std::endl;
 		// TODO: Check if drrun is present
 		std::string dr_test(drrun + " -h > dr_avail.log");
 		int ret = std::system(dr_test.c_str());
 		if (ret) {
 			throw std::exception("drrun.exe not found");
 		}
+		std::ifstream f(drclient.c_str());
+		if (!f.good()) {
+			throw std::exception("DRace not found");
+		}
+		f.close();
 	}
 
 	static void TearDownTestCase() {

@@ -36,5 +36,11 @@ add_custom_command(TARGET "drace-tests" POST_BUILD
 		"$<TARGET_FILE_DIR:drace-tests>"
 	DEPENDS "drace-detector")
 
+# copy gtest shared lib
+add_custom_command(TARGET "drace-tests" POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"$<TARGET_FILE:gtest>"
+		"$<TARGET_FILE_DIR:drace-tests>")
+
 # Prepare Guinea pigs
 add_subdirectory("mini-apps")

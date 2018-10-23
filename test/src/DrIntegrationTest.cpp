@@ -3,6 +3,7 @@
 #include <string>
 
 std::string DrIntegrationTest::drrun = "drrun.exe";
+std::string DrIntegrationTest::drclient = "drace-client/drace-client.dll";
 
 TEST_F(DrIntegrationTest, DefaultParams) {
 	run("", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
