@@ -93,7 +93,6 @@ bool MSR::request_symbols(const module_data_t * mod)
 	shmdriver->commit();
 
 	MSR::wait_heart_beat();
-	// TODO
 	if (shmdriver->id() == ipc::SMDataID::CONFIRM) {
 		LOG_INFO(0, "Symbols downloaded");
 		return true;

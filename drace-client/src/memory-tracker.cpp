@@ -20,8 +20,6 @@
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
 
-int hits = 0;
-
 MemoryTracker::MemoryTracker()
 	: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
 	_prng_border(_max_value / params.sampling_rate)
@@ -69,8 +67,8 @@ MemoryTracker::~MemoryTracker() {
 
 inline void flush_region(void* drcontext, uint64_t pc) {
 	// Flush this area from the code cache
-	dr_delay_flush_region((app_pc)(pc * MemoryTracker::HIST_PC_RES), MemoryTracker::HIST_PC_RES, 0, NULL);
-	LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc * MemoryTracker::HIST_PC_RES);
+	dr_delay_flush_region((app_pc)(pc << MemoryTracker::HIST_PC_RES), 1 << MemoryTracker::HIST_PC_RES, 0, NULL);
+	LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc << MemoryTracker::HIST_PC_RES);
 }
 
 inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) {
@@ -90,6 +88,7 @@ void MemoryTracker::update_cache(per_thread_t * data) {
 	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
 	LOG_NOTICE(data->tid, "Flush Cache with size %i", new_freq.size());
 	if (params.lossy_flush) {
+		void * drcontext = dr_get_current_drcontext();
 		auto pc_new = get_pcs_from_hist(new_freq);
 		auto pc_old = data->stats->freq_pcs;
 		
@@ -99,23 +98,18 @@ void MemoryTracker::update_cache(per_thread_t * data) {
 		// get difference between both histograms
 		std::set_symmetric_difference(pc_new.begin(), pc_new.end(), pc_old.begin(), pc_old.end(), std::back_inserter(difference));
 		
-		
-		// we track pc's on 64 element boundaries
-		void * drcontext = dr_get_current_drcontext();
 		// Flush new fragments
 		for (const auto pc : difference) {
 			flush_region(drcontext, pc);
 		}
-
 		data->stats->freq_pcs = pc_new;
 	}
-
 	data->stats->freq_pc_hist = new_freq;
 }
 
 bool MemoryTracker::pc_in_freq(per_thread_t * data, void* bb) {
 	const auto & freq_pcs = data->stats->freq_pcs;
-	return std::binary_search(freq_pcs.begin(), freq_pcs.end(), ((uint64_t)bb / MemoryTracker::HIST_PC_RES));
+	return std::binary_search(freq_pcs.begin(), freq_pcs.end(), ((uint64_t)bb >> MemoryTracker::HIST_PC_RES));
 }
 
 void MemoryTracker::analyze_access(per_thread_t * data) {
@@ -131,7 +125,8 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 	}
 
 	// toggle detector on external state change
-	if (data->stats->flushes % 10 == 0) {
+	// avoid expensive mod by comparing with bitmask
+	if ((data->stats->flushes & (0xF-1)) == (0xF-1)) {
 		// lessen impact of expensive SHM accesses
 		memory_tracker->handle_ext_state(data);
 	}
@@ -156,8 +151,10 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 
 			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 			if (params.lossy) {
-				data->stats->pc_hits.processItem((uint64_t)mem_ref->pc / HIST_PC_RES);
-				if (data->stats->flushes % CC_UPDATE_PERIOD == 0) update_cache(data);
+				data->stats->pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
+				if ((data->stats->flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
+					update_cache(data);
+				}
 			}
 
 			for (uint64_t i = 0; i < num_refs; ++i) {
@@ -170,10 +167,6 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 					detector::read(data->tid, stack->data + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
 					//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 				}
-
-				// Lossy count page
-				//data->stats->page_hits.processItem(((uint64_t)mem_ref->addr) / 4096);
-
 				++mem_ref;
 			}
 			stack->entries--;
@@ -222,7 +215,9 @@ void MemoryTracker::event_thread_init(void *drcontext)
 
 	// If threads are started concurrently, assume first thread is correct one
 	bool true_val = true;
-	if (th_start_pending.compare_exchange_weak(true_val, false)) {
+	if (th_start_pending.compare_exchange_weak(true_val, false,
+		std::memory_order_relaxed, std::memory_order_relaxed))
+	{
 		last_th_start = data->tid;
 		data->enabled = false;
 	}
@@ -240,7 +235,6 @@ void MemoryTracker::event_thread_init(void *drcontext)
 	data->th_towait.reserve(TLS_buckets.bucket_count());
 	dr_rwlock_write_unlock(tls_rw_mutex);
 
-	// TODO: investigate why this fails
 	flush_all_threads(data, false, false);
 }
 
@@ -321,26 +315,10 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 			// Module not known
 			LOG_TRACE(0, "Module unknown, probably JIT code (%p)", bb_addr);
 			instrument_bb = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
-			//if (shmdriver && module_tracker->dotnet_rt_ready()) {
-			//	// Lookup IP
-			//	const ipc::SymbolInfo & sym = MSR::lookup_address(bb_addr);
-			//	if (util::common_prefix(sym.function.data(), "System.Threading.Mutex")) {
-			//		LOG_NOTICE(0, "Found %s @ %p", sym.function.data(), bb_addr);
-			//	}
-			//}
 		}
 		module_tracker->unlock_read();
 	}
-	// TODO: This currently breaks symbol resolution on races
-	//if (shmdriver && modptr && (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::SYNC)) {
-	//	// we rely on the assumption that a sync construct
-	//	// uses a call and hence is detectable on the first pc in this bb
-	//	LOG_NOTICE(0, "TEST IP on %s", dr_module_preferred_name(modptr->info));
-	//	const ipc::SymbolInfo & sym = MSR::lookup_address(bb_addr);
-	//	if (util::common_prefix(sym.function.data(), "System.Threading.Mutex")) {
-	//		LOG_NOTICE(0, "Found %s @ %p", sym.function.data(), bb_addr);
-	//	}
-	//}
+
 	// Do not instrument if block is frequent
 	if (for_trace && instrument_bb) {
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -403,7 +381,7 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 	return DR_EMIT_DEFAULT;
 }
 
-/* clean_call dumps the memory reference info to the log file */
+/* clean_call dumps the memory reference info into the analyzer */
 void MemoryTracker::process_buffer(void)
 {
 	void *drcontext = dr_get_current_drcontext();

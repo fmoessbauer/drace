@@ -29,9 +29,9 @@ public:
 	static constexpr int MAX_NUM_MEM_REFS = 128;
 	static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
-	/* aggregate frequent pc's on this granularity (bytes)*/
-	static constexpr unsigned HIST_PC_RES = 8 * 128;
-	/* update code-cache after this number of flushes */
+	/* aggregate frequent pc's on this granularity (2^n bytes)*/
+	static constexpr unsigned HIST_PC_RES = 10;
+	/* update code-cache after this number of flushes (must be power of two) */
 	static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
 	std::atomic<int> flush_active{ false };

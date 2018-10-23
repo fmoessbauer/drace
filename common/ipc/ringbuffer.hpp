@@ -6,6 +6,8 @@
  * \author jnk0le <jnk0le@hotmail.com>
  * \copyright CC0 License
  * \date 22 Jun 2017
+ * 
+ * adapted and modified by fmoessbauer for DRace
  */
 
 #ifndef RINGBUFFER_HPP

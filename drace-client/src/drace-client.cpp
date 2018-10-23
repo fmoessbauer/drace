@@ -45,7 +45,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 		exit(1);
 	}
 
-
 	TLS_buckets.reserve(128);
 
 	th_mutex = dr_mutex_create();
@@ -88,7 +87,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// if we try to access a non-existing SHM,
 	// DR will spuriously fail some time later
 	if (params.extctrl) {
-		MSR::connect();
+		DR_ASSERT(MSR::connect(), "MSR not available");
 	}
 
 	app_start = std::chrono::system_clock::now();
@@ -236,7 +235,6 @@ static void print_config() {
 
 static void generate_summary() {
 	race_collector->resolve_all();
-	const char * app_name = dr_get_application_name();
 
 	if (params.out_file != "") {
 		std::ofstream races_hr_file(params.out_file, std::ofstream::out);

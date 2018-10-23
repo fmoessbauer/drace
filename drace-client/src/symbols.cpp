@@ -33,7 +33,8 @@ SymbolLocation Symbols::get_symbol_info(app_pc pc) {
 	// Not (Jitted PC or PC is in managed module)
 	// OR managed module, but MSR is not attached
 	if (modptr && ((modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::NATIVE) 
-		|| (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::MANAGED && !shmdriver))) {
+		|| (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::MANAGED && !shmdriver)))
+	{
 
 			sloc.mod_base = modptr->base;
 			sloc.mod_end  = modptr->end;

@@ -131,7 +131,7 @@ namespace msr {
 		// as the relevant information is passed from DRace
 		// TODO: It is unclear if the stack-walk also works if the thread is not suspended
 		// 
-		// The stack-walk has to be performend at or shortly after the interesting ip
+		// The stack-walk has to be executed at or shortly after the interesting ip
 		// as otherwise the history gets blurry
 		HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT, FALSE, ctx.threadid);
 		if (hThread == NULL) {
