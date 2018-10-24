@@ -116,7 +116,7 @@ namespace module {
 		}
 		if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
 			// check if debug info is available
-			modptr->debug_info = symbol_table->debug_info_available(mod);
+			modptr->debug_info = _syms->debug_info_available(mod);
 		}
 
 		return modptr;

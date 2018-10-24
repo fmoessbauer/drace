@@ -117,10 +117,6 @@ extern void* th_mutex;
 class MemoryTracker;
 extern std::unique_ptr<MemoryTracker> memory_tracker;
 
-// Global Symbol Table
-class Symbols;
-extern std::shared_ptr<Symbols> symbol_table;
-
 class RaceCollector;
 extern std::unique_ptr<RaceCollector> race_collector;
 

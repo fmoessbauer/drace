@@ -2,6 +2,7 @@
 
 #include "globals.h"
 #include "Metadata.h"
+#include "symbols.h"
 
 #include <dr_api.h>
 #include <map>

@@ -66,7 +66,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Setup Function Wrapper
 	DR_ASSERT(funwrap::init());
 
-	symbol_table = std::make_shared<Symbols>();
+	auto symbol_table = std::make_shared<Symbols>();
 
 	// Setup Module Tracking
 	module_tracker = std::make_unique<module::Tracker>(symbol_table);
@@ -108,7 +108,6 @@ static void event_exit()
 	// Cleanup all drace modules
 	module_tracker.reset();
 	memory_tracker.reset();
-	symbol_table.reset();
 	stats.reset();
 
 	funwrap::finalize();
