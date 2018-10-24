@@ -85,12 +85,12 @@ inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) 
 
 void MemoryTracker::update_cache(per_thread_t * data) {
 	// TODO: optimize this
-	auto new_freq = std::move(data->stats->pc_hits.computeOutput<Statistics::hist_t>());
+	const auto & new_freq = data->stats->pc_hits.computeOutput<Statistics::hist_t>();
 	LOG_NOTICE(data->tid, "Flush Cache with size %i", new_freq.size());
 	if (params.lossy_flush) {
 		void * drcontext = dr_get_current_drcontext();
-		auto pc_new = get_pcs_from_hist(new_freq);
-		auto pc_old = data->stats->freq_pcs;
+		const auto & pc_new = get_pcs_from_hist(new_freq);
+		const auto & pc_old = data->stats->freq_pcs;
 		
 		std::vector<uint64_t> difference;
 		difference.reserve(pc_new.size() + pc_old.size());
