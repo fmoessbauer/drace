@@ -93,12 +93,6 @@ namespace module {
 		std::string mod_name(dr_module_preferred_name(mod));
 		std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
 
-		/* We must ensure that no symbol lookup using MPCR is done until this dll is loaded.
-		*  Otherwise, Jitted IPs are always resolved to unknown */
-		if (util::common_prefix("System.Threading.Thread.dll", mod_name)) {
-			_dotnet_rt_ready = true;
-		}
-
 		for (auto prefix : excluded_path_prefix) {
 			// check if mod path is excluded
 			if (util::common_prefix(prefix, mod_path)) {
