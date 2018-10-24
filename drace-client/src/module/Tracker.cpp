@@ -66,9 +66,9 @@ namespace module {
 	{
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
 		// first check if module is already registered
-		module_tracker->lock_read();
-		auto modptr = module_tracker->get_module_containing(mod->start);
-		module_tracker->unlock_read();
+		lock_read();
+		auto modptr = get_module_containing(mod->start);
+		unlock_read();
 
 		if (modptr) {
 			if (!modptr->loaded && (modptr->info == mod)) {
@@ -81,9 +81,9 @@ namespace module {
 		INSTR_FLAGS def_instr_flags = (INSTR_FLAGS)(
 			INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK | INSTR_FLAGS::SYMBOLS);
 
-		module_tracker->lock_write();
-		modptr = module_tracker->add_emplace(mod->start, mod->end);
-		module_tracker->unlock_write();
+		lock_write();
+		modptr = add_emplace(mod->start, mod->end);
+		unlock_write();
 
 		// Module not already registered
 		modptr->set_info(mod);
@@ -99,7 +99,7 @@ namespace module {
 			_dotnet_rt_ready = true;
 		}
 
-		for (auto prefix : module_tracker->excluded_path_prefix) {
+		for (auto prefix : excluded_path_prefix) {
 			// check if mod path is excluded
 			if (util::common_prefix(prefix, mod_path)) {
 				modptr->instrument = INSTR_FLAGS::STACK;
@@ -110,7 +110,6 @@ namespace module {
 		if (modptr->instrument != INSTR_FLAGS::STACK) {
 			// check if mod name is excluded
 			// in this case, we check for syms but only instrument stack
-			const auto & excluded_mods = module_tracker->excluded_mods;
 			if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
 				modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
 			}

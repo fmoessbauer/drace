@@ -90,10 +90,10 @@ struct per_thread_t {
 	void         *detector_data{ nullptr };
 };
 
-/* Global data structures */
-extern reg_id_t tls_seg;
-extern uint     tls_offs;
+/* Thread local storage */
 extern int      tls_idx;
+extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+extern void* tls_rw_mutex;
 
 // TODO check if global is better
 extern std::atomic<int> num_threads_active;
@@ -110,10 +110,6 @@ namespace module {
 	class Tracker;
 }
 extern std::unique_ptr<module::Tracker> module_tracker;
-
-// TLS
-extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
-extern void* tls_rw_mutex;
 
 // Global mutex to synchronize threads
 extern void* th_mutex;
