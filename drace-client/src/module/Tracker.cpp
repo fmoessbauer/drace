@@ -64,6 +64,7 @@ namespace module {
 
 	Tracker::PMetadata Tracker::register_module(const module_data_t * mod, bool loaded)
 	{
+		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
 		// first check if module is already registered
 		module_tracker->lock_read();
 		auto modptr = module_tracker->get_module_containing(mod->start);
@@ -129,6 +130,8 @@ namespace module {
 	*
 	*/
 	void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
+		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+
 		auto start = std::chrono::system_clock::now();
 
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -220,7 +223,7 @@ namespace module {
 		LOG_INFO(tid,
 			"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
 			mod_name.c_str(), modptr->base, modptr->end,
-			util::instr_flags_to_str(modptr->instrument).c_str(),
+			util::instr_flags_to_str((uint8_t)modptr->instrument).c_str(),
 			modptr->debug_info ? "YES" : " NO",
 			modptr->info->full_path);
 

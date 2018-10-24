@@ -294,7 +294,9 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, in
 	if (translating)
 		return DR_EMIT_DEFAULT;
 
-	INSTR_FLAGS instrument_bb = INSTR_FLAGS::MEMORY;
+	using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+
+	auto instrument_bb = INSTR_FLAGS::MEMORY;
 	app_pc bb_addr = dr_fragment_app_pc(tag);
 
 	// Lookup module from cache, hit is very likely as adiacent bb's 
@@ -339,7 +341,8 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(void *drcontext, void *tag,
 	if (translating)
 		return DR_EMIT_DEFAULT;
 
-	INSTR_FLAGS instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
+	using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+	auto instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
 
 	if (!instr_is_app(instr))
 		return DR_EMIT_DEFAULT;

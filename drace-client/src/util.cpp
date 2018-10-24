@@ -1,5 +1,6 @@
 #include "util.h"
 #include "globals.h"
+#include "module/Metadata.h"
 
 #include <vector>
 #include <string>
@@ -43,18 +44,19 @@ std::string util::to_iso_time(std::chrono::system_clock::time_point tp) {
 	return date::format("%FT%TZ", date::floor<std::chrono::milliseconds>(tp));
 }
 
-std::string util::instr_flags_to_str(INSTR_FLAGS flags) {
+std::string util::instr_flags_to_str(uint8_t flags) {
+	auto _flags = (module::Metadata::INSTR_FLAGS)flags;
 	std::stringstream buffer;
-	if (flags & INSTR_FLAGS::MEMORY) {
+	if (_flags & module::Metadata::INSTR_FLAGS::MEMORY) {
 		buffer << "MEMORY ";
 	}
-	if (flags & INSTR_FLAGS::STACK) {
+	if (_flags & module::Metadata::INSTR_FLAGS::STACK) {
 		buffer << "STACK ";
 	}
-	if (flags & INSTR_FLAGS::SYMBOLS) {
+	if (_flags & module::Metadata::INSTR_FLAGS::SYMBOLS) {
 		buffer << "SYMBOLS ";
 	}
-	if (!flags) {
+	if (!_flags) {
 		buffer << "NONE ";
 	}
 	return buffer.str();

@@ -42,14 +42,6 @@ struct params_t {
 };
 extern params_t params;
 
-/* Instrumentation Level Flags */
-enum INSTR_FLAGS : uint8_t {
-	NONE = 0,
-	SYMBOLS = 1,
-	MEMORY = 2,
-	STACK = 4
-};
-
 class Statistics;
 
 /* Per Thread data (thread-private)

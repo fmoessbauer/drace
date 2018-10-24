@@ -19,6 +19,14 @@ namespace module {
 			SYNC    = 0x4 | MANAGED
 		};
 
+		/* Instrumentation Level Flags */
+		enum INSTR_FLAGS : uint8_t {
+			NONE = 0,
+			SYMBOLS = 1,
+			MEMORY = 2,
+			STACK = 4
+		};
+
 	public:
 		app_pc base;
 		app_pc end;
