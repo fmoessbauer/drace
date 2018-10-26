@@ -291,10 +291,15 @@ dr_emit_flags_t MemoryTracker::event_bb_app2app(void *drcontext, void *tag, inst
 
 dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag, instrlist_t *bb,
 	bool for_trace, bool translating, OUT void **user_data) {
+	using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+
 	if (translating)
 		return DR_EMIT_DEFAULT;
 
-	using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+	if (for_trace && params.excl_traces) {
+		*user_data = (void*)INSTR_FLAGS::STACK;
+		return DR_EMIT_DEFAULT;
+	}
 
 	auto instrument_bb = INSTR_FLAGS::MEMORY;
 	app_pc bb_addr = dr_fragment_app_pc(tag);

@@ -53,6 +53,8 @@ Currently the following parameters are implemented
 --lossy           : do not gather mem-refs from high-traffic application parts after some time
 --lossy-flush     : remove instrumentation from high-traffic application parts after some time
                   : (only in combination with --lossy)
+--excl-traces     : exclude frequent pathes by not addind memory instrumentation
+                  : to DynamoRIO traces (only instrument non-trace BBs)
 --yield-on-evt    : yield active thread after buffer is processed due to an event (e.g. mutex lock / unlock)
                     this might be necessary if more threads than cores are active
 --excl-master     : exclude the runtime thread, useful if loader races

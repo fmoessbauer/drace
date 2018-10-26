@@ -25,6 +25,7 @@ struct params_t {
 	unsigned instr_rate{ 1 };
 	bool     lossy{ false };
 	bool     lossy_flush{ false };
+	bool     excl_traces{ false };
 	bool     exclude_master{ false };
 	bool     delayed_sym_lookup{ false };
 	bool     yield_on_evt{ false };
