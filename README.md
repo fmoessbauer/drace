@@ -78,9 +78,9 @@ DRace can be externally controlled using the external controller `msr.exe`.
 To set the detector state during runtime, the following keys (committed using `enter`) are available:
 
 ```
-e\t enable detector on all threads
-d\t disable detector on all threads
-s\t <rate> set sampling rate to 1/x (similar to `-s` in DRace)
+e        enable detector on all threads
+d        disable detector on all threads
+s <rate> set sampling rate to 1/x (similar to `-s` in DRace)
 ```
 
 ### Symbol Resolving
@@ -118,7 +118,7 @@ and merged with the non-managed ones.
 ### Custom Annotations
 
 Custom synchonisation logic is supported by annotating the corresponding code sections.
-Thereto we provide a header with macros in `annotations/drace_annotation.h`.
+Thereto we provide a header with macros in `drace-client/include/annotations/drace_annotation.h`.
 To enable these macros, define `DRACE_ANNOTATION` prior to including the header.
 
 A example how to use the annotations is given in `test/mini-apps/annotations/`.
@@ -135,7 +135,7 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 ```
 
 **Note:** Before pushing a commit, please run the integration tests.
-Later on bugs are very tricky to find. 
+Later on, bugs are very tricky to find. 
 
 ## Benchmarking with GoogleBenchmark
 
@@ -145,7 +145,6 @@ Later on bugs are very tricky to find.
 - TSAN can only be started once, as the cleanup is not fully working
 - `no_follow_children`: Due to the TSAN limitation, drace can only analyze a single process. This process is the initially started one.
 - If using the SparsePP hashmap, the application might crash if a reallocation occurs which is not detected by DR correctly.
-
 
 ## Build
 
@@ -163,7 +162,7 @@ A sample VisualStudio `CMakeSettings.json` is given here:
   "inheritEnvironments": [ "msvc_x64_x64" ],
   "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
   "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=/Users/z003xucc/opt/DynamoRIO-Windows-7.0.0-RC1/cmake -DDRACE_DETECTOR=tsan",
+  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake -DDRACE_DETECTOR=tsan",
   "buildCommandArgs": "-v",
   "ctestCommandArgs": ""
 }
