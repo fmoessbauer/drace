@@ -40,3 +40,19 @@ if(${DRACE_ENABLE_BENCH})
 	message("Build Benchmarks")
 	add_subdirectory("bench")
 endif()
+
+# Build documentation
+find_package(Doxygen)
+if(${Doxygen_FOUND})
+	message("Build Documentation")
+	set(DOXYGEN_GENERATE_HTML YES)
+	set(DOXYGEN_GENERATE_MAN NO)
+	set(DOXYGEN_OUTPUT_DIRECTORY docs)
+	set(DOXYGEN_EXCLUDE_PATTERNS "*/vendor/*" "*DynamoRIO*")
+	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")
+	
+	doxygen_add_docs(
+	    doc
+	    ${PROJECT_SOURCE_DIR}
+	    COMMENT "Generate Code Documentation")
+endif()

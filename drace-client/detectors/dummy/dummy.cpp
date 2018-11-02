@@ -9,35 +9,30 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
 void detector::finalize() { }
 
 void detector::acquire(
-	tid_t thread_id,
+	tls_t tls,
 	void* mutex,
 	int recursive,
-	bool write,
-	bool try_lock,
-	tls_t tls) { }
+	bool write) { }
 
-/* Release a mutex */
 void detector::release(
-	tid_t thread_id,
+	tls_t tls,
 	void* mutex,
-	int recursive,
-	bool write,
-	tls_t tls) { }
+	bool write) { }
 
 void detector::happens_before(tid_t thread_id, void* identifier) { }
 
 void detector::happens_after(tid_t thread_id, void* identifier) { }
 
-void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) { }
+void detector::read(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size) { }
 
-void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) { }
+void detector::write(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size) { }
 
-void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) { }
+void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) { }
 
-void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) { }
+void detector::deallocate(tls_t tls, void* addr) { }
 
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
-	*tls = (void*)0x42;
+	*tls = (void*)child;
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) { }

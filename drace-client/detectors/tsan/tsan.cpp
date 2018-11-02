@@ -58,7 +58,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 
 		access.thread_id = race_info_ac->user_id;
 		access.write = race_info_ac->write;
-		access.accessed_memory = race_info_ac->accessed_memory;
+		access.accessed_memory = (uint64_t)race_info_ac->accessed_memory;
 		access.access_size = race_info_ac->size;
 		access.access_type = race_info_ac->type;
 
@@ -72,7 +72,7 @@ void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		auto it = allocations.lower_bound(addr);
 		if (it != allocations.end() && (addr < (it->first + it->second))) {
 			access.onheap = true;
-			access.heap_block_begin = (void*)(it->first);
+			access.heap_block_begin = it->first;
 			access.heap_block_size = it->second;
 		}
 		mxspin.unlock();
@@ -173,33 +173,33 @@ std::string detector::version() {
 	return std::string("0.2.0");
 }
 
-void detector::acquire(tid_t thread_id, void* mutex, int rec, bool write, bool trylock, tls_t thr) {
+void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
 	//std::cout << "detector::acquire " << thread_id << " @ " << mutex << std::endl;
 
-	assert(thr != nullptr);
+	assert(nullptr != tls);
 
 	if (write) {
-		__tsan_MutexLock(thr, 0, (void*)addr_32, rec, false);
+		__tsan_MutexLock(tls, 0, (void*)addr_32, rec, false);
 	}
 	else {
-		__tsan_MutexReadLock(thr, 0, (void*)addr_32, false);
+		__tsan_MutexReadLock(tls, 0, (void*)addr_32, false);
 	}
 }
 
-void detector::release(tid_t thread_id, void* mutex, int rec, bool write, tls_t thr) {
+void detector::release(tls_t tls, void* mutex, bool write) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
 	//std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;
 
-	assert(thr != nullptr);
+	assert(nullptr != tls);
 
 	if (write) {
-		__tsan_MutexUnlock(thr, 0, (void*)addr_32, false);
+		__tsan_MutexUnlock(tls, 0, (void*)addr_32, false);
 	}
 	else {
-		__tsan_MutexReadUnlock(thr, 0, (void*)addr_32);
+		__tsan_MutexReadUnlock(tls, 0, (void*)addr_32);
 	}
 }
 
@@ -213,7 +213,8 @@ void detector::happens_after(tid_t thread_id, void* identifier) {
 	__tsan_happens_after_use_user_tid(thread_id, (void*)addr_32);
 }
 
-void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
+void detector::read(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
+{
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
@@ -221,7 +222,8 @@ void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* 
 	}
 }
 
-void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls) {
+void detector::write(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
+{
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
@@ -229,11 +231,8 @@ void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void*
 	}
 }
 
-void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls) {
+void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
-
-	if (tls == nullptr)
-		tls = __tsan_create_thread(thread_id);
 
 	__tsan_malloc(tls, pc, (void*)addr_32, size);
 
@@ -259,7 +258,7 @@ void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_
 
 }
 
-void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
+void detector::deallocate(tls_t tls, void* addr) {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	mxspin.lock();

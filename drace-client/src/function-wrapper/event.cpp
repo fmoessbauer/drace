@@ -58,7 +58,7 @@ namespace funwrap {
 		// we lock externally using a os lock
 		// TODO: optimize tsan wrapper internally
 		dr_mutex_lock(th_mutex);
-		detector::allocate(data->tid, pc, retval, reinterpret_cast<size_t>(user_data), data->detector_data);
+		detector::allocate(data->detector_data, pc, retval, reinterpret_cast<size_t>(user_data));
 		dr_mutex_unlock(th_mutex);
 	}
 
@@ -74,7 +74,7 @@ namespace funwrap {
 
 		// TODO: optimize tsan wrapper internally (see comment in alloc_post)
 		dr_mutex_lock(th_mutex);
-		detector::deallocate(data->tid, addr, data->detector_data);
+		detector::deallocate(data->detector_data, addr);
 		dr_mutex_unlock(th_mutex);
 	}
 
@@ -193,7 +193,7 @@ namespace funwrap {
 
 		MemoryTracker::flush_all_threads(data);
 
-		detector::acquire(data->tid, mutex, cnt, write, false, data->detector_data);
+		detector::acquire(data->detector_data, mutex, cnt, write);
 
 		data->stats->mutex_ops++;
 	}
@@ -226,7 +226,7 @@ namespace funwrap {
 
 		MemoryTracker::flush_all_threads(data);
 		LOG_TRACE(data->tid, "Release %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
-		detector::release(data->tid, mutex, 1, write, data->detector_data);
+		detector::release(data->detector_data, mutex, write);
 	}
 
 	void event::get_arg(void *wrapctx, OUT void **user_data) {
@@ -295,7 +295,7 @@ namespace funwrap {
 
 		uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 		MemoryTracker::flush_all_threads(data);
-		detector::acquire(data->tid, mutex, cnt, 1, false, data->detector_data);
+		detector::acquire(data->detector_data, mutex, cnt, 1);
 		data->stats->mutex_ops++;
 	}
 
@@ -328,7 +328,7 @@ namespace funwrap {
 			for (DWORD i = 0; i < info->ncount; ++i) {
 				HANDLE mutex = info->handles[i];
 				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
+				detector::acquire(data->detector_data, (void*)mutex, cnt, true);
 				data->stats->mutex_ops++;
 			}
 		}
@@ -337,7 +337,7 @@ namespace funwrap {
 				HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 				LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 				uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-				detector::acquire(data->tid, (void*)mutex, cnt, true, false, data->detector_data);
+				detector::acquire(data->detector_data, (void*)mutex, cnt, true);
 				data->stats->mutex_ops++;
 			}
 		}

@@ -160,11 +160,11 @@ void MemoryTracker::analyze_access(per_thread_t * data) {
 			for (uint64_t i = 0; i < num_refs; ++i) {
 				stack->data[stack->entries - 1] = mem_ref->pc;
 				if (mem_ref->write) {
-					detector::write(data->tid, stack->data + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+					detector::write(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
 					//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 				}
 				else {
-					detector::read(data->tid, stack->data + offset, size, mem_ref->addr, mem_ref->size, data->detector_data);
+					detector::read(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
 					//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 				}
 				++mem_ref;

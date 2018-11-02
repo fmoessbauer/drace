@@ -19,6 +19,11 @@ using shm_t = ipc::SharedMemory<ipc::QueueMetadata, true>;
 
 std::unique_ptr<shm_t> shm;
 
+struct tls_data {
+	detector::tid_t thread_id;
+	ipc::queue_t* queue;
+};
+
 bool detector::init(int argc, const char **argv, Callback rc_clb) {
 	shm = std::make_unique<ipc::SharedMemory<ipc::QueueMetadata, true>>("drace-events", false);
 	return true;
@@ -29,19 +34,17 @@ void detector::finalize() {
 }
 
 void detector::acquire(
-	tid_t thread_id,
+	tls_t tls,
 	void* mutex,
 	int recursive,
-	bool write,
-	bool try_lock,
-	tls_t tls)
+	bool write)
 {
 	auto * queue = (ipc::queue_t*)(tls);
 
 	ipc::event::BufferEntry entry;
 	entry.type = ipc::event::Type::ACQUIRE;
 	auto * buf = (ipc::event::Mutex*)(entry.buffer);
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 	buf->acquire = true;
 	buf->addr = (uint64_t)mutex;
 	buf->recursive = recursive;
@@ -53,21 +56,18 @@ void detector::acquire(
 
 /* Release a mutex */
 void detector::release(
-	tid_t thread_id,
+	tls_t tls,
 	void* mutex,
-	int recursive,
-	bool write,
-	tls_t tls)
+	bool write)
 {
 	auto * queue = (ipc::queue_t*)(tls);
 
 	ipc::event::BufferEntry entry;
 	entry.type = ipc::event::Type::RELEASE;
 	auto * buf = (ipc::event::Mutex*)(entry.buffer);
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 	buf->acquire = false;
 	buf->addr = (uint64_t)mutex;
-	buf->recursive = recursive;
 	buf->write = write;
 
 	std::lock_guard<spinlock> lg(queue->mxspin);
@@ -78,7 +78,7 @@ void detector::happens_before(tid_t thread_id, void* identifier) { }
 
 void detector::happens_after(tid_t thread_id, void* identifier) { }
 
-void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls)
+void detector::read(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
 {
 	auto * queue = (ipc::queue_t*)(tls);
 
@@ -92,14 +92,14 @@ void detector::read(tid_t thread_id, void* callstack, unsigned stacksize, void* 
 
 	entry->type = ipc::event::Type::MEMREAD;
 	auto * buf = (ipc::event::MemAccess*)(entry->buffer);
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 	memcpy(buf->callstack.data(), callstack, stacksize * sizeof(void*));
 	buf->stacksize = stacksize;
 	buf->addr = (uint64_t)addr;
 	queue->commit_write();
 }
 
-void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void* addr, size_t size, tls_t tls)
+void detector::write(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
 {
 	auto * queue = (ipc::queue_t*)(tls);
 
@@ -113,14 +113,14 @@ void detector::write(tid_t thread_id, void* callstack, unsigned stacksize, void*
 
 	entry->type = ipc::event::Type::MEMWRITE;
 	auto * buf = (ipc::event::MemAccess*)(entry->buffer);
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 	memcpy(buf->callstack.data(), callstack, stacksize * sizeof(void*));
 	buf->stacksize = stacksize;
 	buf->addr = (uint64_t)addr;
 	queue->commit_write();
 }
 
-void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_t tls)
+void detector::allocate(tls_t tls, void* pc, void* addr, size_t size)
 {
 	auto * queue = (ipc::queue_t*)(tls);
 
@@ -130,20 +130,20 @@ void detector::allocate(tid_t thread_id, void* pc, void* addr, size_t size, tls_
 	buf->pc = (uint64_t)pc;
 	buf->addr = (uint64_t)addr;
 	buf->size = size;
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 
 	std::lock_guard<spinlock> lg(queue->mxspin);
 	queue->insert(&entry);
 }
 
-void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
+void detector::deallocate(tls_t tls, void* addr) {
 	auto * queue = (ipc::queue_t*)(tls);
 
 	ipc::event::BufferEntry entry;
 	entry.type = ipc::event::Type::FREE;
 	auto * buf = (ipc::event::Allocation*)(entry.buffer);
 	buf->addr = (uint64_t)addr;
-	buf->thread_id = thread_id;
+	buf->thread_id = ((tls_data*)&tls)->thread_id;
 
 	std::lock_guard<spinlock> lg(queue->mxspin);
 	queue->insert(&entry);
@@ -152,8 +152,10 @@ void detector::deallocate(tid_t thread_id, void* addr, tls_t tls) {
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
 	ipc::QueueMetadata * qmeta = shm->get();
 	auto & queue = qmeta->queues[++qmeta->next_queue % ipc::QueueMetadata::num_queues];
+	auto tls_ = new tls_data;
 
-	*tls = (tls_t)&queue;
+	tls_->thread_id = child;
+	tls_->queue = &queue;
 
 	ipc::event::BufferEntry entry;
 	entry.type = ipc::event::Type::FORK;
@@ -163,10 +165,11 @@ void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
 
 	std::lock_guard<spinlock> lg(queue.mxspin);
 	queue.insert(entry);
+	*tls = (tls_t)tls_;
 }
 
 void detector::join(tid_t parent, tid_t child, tls_t tls) {
-	auto * queue = (ipc::queue_t*)(tls);
+	auto * queue = ((tls_data*)&tls)->queue;
 
 	ipc::event::BufferEntry entry;
 	entry.type = ipc::event::Type::JOIN;
@@ -176,6 +179,7 @@ void detector::join(tid_t parent, tid_t child, tls_t tls) {
 
 	std::lock_guard<spinlock> lg(queue->mxspin);
 	queue->insert(&entry);
+	delete ((tls_data*)&tls);
 }
 
 std::string detector::name() {
