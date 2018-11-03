@@ -4,9 +4,7 @@
 #include <vector>
 #include <functional>
 
-/**
- * Interface for a drace compatible race detector
- */
+/// Interface for a DRace compatible race detector
 namespace detector {
 	typedef unsigned long tid_t;
 	typedef void*         tls_t;

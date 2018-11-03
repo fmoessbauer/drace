@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 namespace ipc {
-	/*
+	/**
 	* Provides a shared memory abstraction for two participating units
 	* To synchronize accesses, \cnotify() and \cwait() can be used.
 	* Internally this is mapped to two windows events,

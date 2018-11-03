@@ -6,7 +6,9 @@
 #include <dr_api.h>
 
 namespace ipc {
-	/* Provides methods for synchronized access to a SyncSHMDriver */
+	/** Provides methods for synchronized access to a SyncSHMDriver 
+	* An object of this type can be passed into a \c std::lock_guard
+	*/
 	template<bool SENDER, bool NOTHROW = true>
 	class MtSyncSHMDriver : public SyncSHMDriver<SENDER, NOTHROW> {
 		void * _mx;

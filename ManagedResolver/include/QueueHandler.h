@@ -49,7 +49,7 @@ namespace msr {
 		void init_detector();
 		void print_stats();
 
-		/*
+		/**
 		 * split address at 32-bit boundary (zero above)
 		 * TODO: TSAN seems to only support 32 bit addresses!!!
 		 */

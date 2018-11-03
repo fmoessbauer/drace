@@ -1,5 +1,7 @@
 #include "memory-tracker.h"
 
+using namespace drace;
+
 /* insert inline code to add a memory reference info entry into the buffer */
 void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)

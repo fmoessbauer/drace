@@ -1,6 +1,6 @@
 #pragma once
 
-/*
+/**
 * This header provides macros for annotating synchronisation events for DRace.
 * To enable annotations, set the define DRACE_ANNOTATION before including this header.
 * If this define is not set, the macros evaluate to a nop

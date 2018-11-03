@@ -172,7 +172,7 @@ namespace ipc {
 			return true;
 		}
 
-		/* Constructs T at begin of buffer */
+		/*! Constructs T at begin of buffer */
 		template<typename _T, class... Args>
 		bool emplace(Args&&... args) {
 			index_t tmp_head = head;
@@ -197,6 +197,10 @@ namespace ipc {
 			return true;
 		}
 
+		/*!
+		 * \brief Returns a pointer to the next insert location
+		 * \return pointer to the next insert location
+		 */
 		T * get_next_write_slot() {
 			if (wmo_multi_core)
 				std::atomic_thread_fence(std::memory_order_acquire);
@@ -207,6 +211,9 @@ namespace ipc {
 			return &(data_buff[(head+1) & buffer_mask]);
 		}
 
+		/*!
+		 * \brief commit a write which was started using \c get_next_write_slot()
+		 */
 		void commit_write() {
 			if (wmo_multi_core)
 				std::atomic_thread_fence(std::memory_order_release);

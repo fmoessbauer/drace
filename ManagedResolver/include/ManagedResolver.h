@@ -36,7 +36,7 @@ namespace msr {
 		ManagedResolver();
 		~ManagedResolver();
 
-		/*Clean up all open handles and detach debugger*/
+		/** Clean up all open handles and detach debugger*/
 		void Close();
 
 		bool InitSymbolResolver(
@@ -47,7 +47,7 @@ namespace msr {
 		bool GetFileLineInfo(void* ip, CStringA& lineInfo);
 		bool GetModuleName(void* ip, CStringA& modulePath);
 
-		/* Based on a native offset, passed in the first argument this function
+		/** Based on a native offset, passed in the first argument this function
 		 * identifies the corresponding source file name and line number. */
 		bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath);
 		bool GetMethodName(void* ip, CStringA& symbol);

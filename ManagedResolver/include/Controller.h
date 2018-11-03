@@ -4,15 +4,16 @@
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
 
+/// Managed Stack Resolver
 namespace msr {
 
-	/* Controls the runstate of DRace by externally setting DRace' control block */
+	/** Controls the runstate of DRace by externally setting DRace' control block */
 	class Controller {
 	public:
-		// Pointer type of shared memory control block
+		/// Pointer type of shared memory control block
 		using PSHMCB = std::shared_ptr<ipc::SharedMemory<ipc::ClientCB, false>>;
 	private:
-		// Pointer to DRace SHM controlblock
+		/// Pointer to DRace SHM controlblock
 		PSHMCB _pshmcb;
 		bool   _active{ false };
 
@@ -29,17 +30,17 @@ namespace msr {
 		Controller & operator=(const Controller &) = delete;
 		Controller & operator=(Controller &&) = default;
 
-		/* Start the interaction loop */
+		/** Start the interaction loop */
 		void start();
 
-		/* Stop the interaction loop */
+		/** Stop the interaction loop */
 		void stop();
 
-		/* set detector state to enabled */
+		/** set detector state to enabled */
 		void enable_detector();
-		/* set detector state to disabled */
+		/** set detector state to disabled */
 		void disable_detector();
-		/* set sampling rate of DRace */
+		/** set sampling rate of DRace */
 		void set_samplingrate(int s);
 
 	private:

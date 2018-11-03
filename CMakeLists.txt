@@ -48,7 +48,11 @@ if(${Doxygen_FOUND})
 	set(DOXYGEN_GENERATE_HTML YES)
 	set(DOXYGEN_GENERATE_MAN NO)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
-	set(DOXYGEN_EXCLUDE_PATTERNS "*/vendor/*" "*DynamoRIO*")
+	set(DOXYGEN_EXCLUDE_PATTERNS 
+		"*DynamoRIO*" "*/prebuild/*" 
+		"${PROJECT_SOURCE_DIR}/test/*"
+		"${PROJECT_SOURCE_DIR}/bench/*"
+		"${PROJECT_SOURCE_DIR}/vendor/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")
 	
 	doxygen_add_docs(

@@ -9,9 +9,10 @@ constexpr auto DRACE_SMR_NAME = "drace-msr";
 constexpr auto DRACE_SMR_CB_NAME = "drace-cb";
 constexpr auto DRACE_SMR_MAXLEN = 1024;
 
+/// Inter Process Communication
 namespace ipc {
 
-	/* Protocol Message IDs */
+	/** Protocol Message IDs */
 	enum class SMDataID : uint8_t {
 		IP,
 		SYMBOL,
@@ -30,7 +31,7 @@ namespace ipc {
 		EXIT
 	};
 
-	/* Resolved Symbol Information */
+	/** Resolved Symbol Information */
 	struct SymbolInfo {
 		std::array<char, 128> module;
 		std::array<char, 128> function;
@@ -38,7 +39,7 @@ namespace ipc {
 		std::array<char, 128>  line;
 	};
 
-	/* Basic Information for attaching */
+	/** Basic Information for attaching */
 	struct BaseInfo {
 		// process id
 		int pid;
@@ -46,7 +47,7 @@ namespace ipc {
 		std::array<char,256> path;
 	};
 
-	/* Request symbols for this module */
+	/** Request symbols for this module */
 	struct SymbolRequest {
 		uint64_t base;
 		size_t   size;
@@ -70,9 +71,9 @@ namespace ipc {
 	struct SMData {
 		static constexpr unsigned BUFFER_SIZE = DRACE_SMR_MAXLEN - 16;
 
-		// Message IDs
+		/// Message IDs
 		SMDataID id;
-		// Raw data buffer
+		/// Raw data buffer
 		char buffer[BUFFER_SIZE];
 	};
 

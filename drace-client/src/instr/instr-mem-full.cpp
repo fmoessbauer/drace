@@ -1,5 +1,6 @@
 #include "memory-tracker.h"
 
+using namespace drace;
 /*
 * Inserts a jump if a flush is pending
 */

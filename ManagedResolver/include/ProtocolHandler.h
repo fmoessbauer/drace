@@ -8,7 +8,7 @@
 #include "ipc/SyncSHMDriver.h"
 
 namespace msr {
-	/* Handles the communication protocol of Drace and MSR */
+	/** Handles the communication protocol of Drace and MSR */
 	class ProtocolHandler {
 	public:
 		using SyncSHMDriver = std::shared_ptr<ipc::SyncSHMDriver<false, false>>;
@@ -42,25 +42,25 @@ namespace msr {
 		PFN_SymSetOptions symsetopts;
 
 	private:
-		/* Connect with DRace */
+		/** Connect with DRace */
 		void connect();
-		/* Attach to the target process and load correct helper dll */
+		/** Attach to the target process and load correct helper dll */
 		void attachProcess();
-		/* Detach from process */
+		/** Detach from process */
 		void detachProcess();
-		/* TEST: Determin current Stack */
+		/** TEST: Determin current Stack */
 		void getCurrentStack();
-		/* Resolve single instruction pointer */
+		/** Resolve single instruction pointer */
 		void resolveIP();
-		/* Initialize symbol resolver */
+		/** Initialize symbol resolver */
 		void init_symbols();
-		/* Download Symbols from SymServer */
+		/** Download Symbols from SymServer */
 		void loadSymbols();
-		/* Close opened symbols and release resources */
+		/** Close opened symbols and release resources */
 		void unloadSymbols();
-		/* Return adresses of matching symols */
+		/** Return adresses of matching symols */
 		void searchSymbols();
-		/* wait for a long running action to finish and perform a heartbeat in the meantime */
+		/** wait for a long running action to finish and perform a heartbeat in the meantime */
 		template<typename T>
 		void waitHeartbeat(const std::future<T> & fut);
 
@@ -68,9 +68,9 @@ namespace msr {
 		explicit ProtocolHandler(SyncSHMDriver);
 		~ProtocolHandler();
 
-		/* Wait for incoming messages and process them */
+		/** Wait for incoming messages and process them */
 		void process_msgs();
-		/* End Protocol */
+		/** End Protocol */
 		void quit();
 	};
 
