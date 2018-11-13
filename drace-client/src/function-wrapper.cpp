@@ -73,6 +73,7 @@ namespace drace {
 
 	void funwrap::wrap_allocations(const module_data_t *mod) {
 		wrap_functions(mod, config.get_multi("functions", "allocators"), false, Method::EXPORTS, event::alloc_pre, event::alloc_post);
+		wrap_functions(mod, config.get_multi("functions", "reallocators"), false, Method::EXPORTS, event::realloc_pre, event::alloc_post);
 		wrap_functions(mod, config.get_multi("functions", "deallocators"), false, Method::EXPORTS, event::free_pre, nullptr);
 	}
 

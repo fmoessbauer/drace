@@ -48,19 +48,43 @@ namespace drace {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			void * retval = drwrap_get_retval(wrapctx);
 			void * pc = drwrap_get_func(wrapctx);
+			size_t size = reinterpret_cast<size_t>(user_data);
 
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
 			MemoryTracker::flush_all_threads(data);
 
+			// allocations with size 0 are valid if they come from
+			// reallocate (in fact, that's a free)
+			if (size != 0) {
+				// to avoid high pressure on the internal spinlock,
+				// we lock externally using a os lock
+				// TODO: optimize tsan wrapper internally
+				dr_mutex_lock(th_mutex);
+				detector::allocate(data->detector_data, pc, retval, size);
+				dr_mutex_unlock(th_mutex);
+			}
+		}
+
+		void event::realloc_pre(void *wrapctx, void **user_data) {
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+
+			MemoryTracker::flush_all_threads(data);
+
+			// first deallocate, then allocate again
+			void* old_addr = drwrap_get_arg(wrapctx, 2);
 
 			// to avoid high pressure on the internal spinlock,
 			// we lock externally using a os lock
 			// TODO: optimize tsan wrapper internally
 			dr_mutex_lock(th_mutex);
-			detector::allocate(data->detector_data, pc, retval, reinterpret_cast<size_t>(user_data));
+			detector::deallocate(data->detector_data, old_addr);
 			dr_mutex_unlock(th_mutex);
+
+			*user_data = drwrap_get_arg(wrapctx, 3);
+			//LOG_INFO(data->tid, "reallocate, new blocksize %u at %p", (SIZE_T)*user_data, old_addr);
 		}
 
 		// TODO: On Linux addr is arg 0

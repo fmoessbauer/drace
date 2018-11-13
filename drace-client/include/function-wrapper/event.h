@@ -28,11 +28,12 @@ namespace drace {
 			static void beg_excl_region(per_thread_t * data);
 			static void end_excl_region(per_thread_t * data);
 
-			// TODO: On Linux size is arg 0
 			static void alloc_pre(void *wrapctx, void **user_data);
 			static void alloc_post(void *wrapctx, void *user_data);
 
-			// TODO: On Linux addr is arg 0
+			static void realloc_pre(void *wrapctx, void **user_data);
+			// realloc_post = alloc_post
+
 			static void free_pre(void *wrapctx, void **user_data);
 			static void free_post(void *wrapctx, void *user_data);
 
