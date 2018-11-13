@@ -92,6 +92,7 @@ namespace drace {
 					// wait
 				}
 			}
+			MemoryTracker::analyze_access(data);
 
 			if (stack->entries == 0) return;
 
