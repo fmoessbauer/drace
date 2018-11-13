@@ -147,6 +147,7 @@ namespace drace {
 				if (!params.fastmode)
 					dr_mutex_lock(th_mutex);
 
+				DR_ASSERT(stack->entries >= 0);
 				stack->entries++; // We have one spare-element
 				int size = std::min((unsigned)stack->entries, params.stack_size);
 				int offset = stack->entries - size;

@@ -74,7 +74,7 @@ namespace drace {
 		static void process_buffer(void);
 		static void clear_buffer(void);
 		static void analyze_access(per_thread_t * data);
-		static void flush_all_threads(per_thread_t * data, bool self = true, bool flush_external = true);
+		static void flush_all_threads(per_thread_t * data, bool self = true, bool flush_external = false);
 
 		// Events
 		void event_thread_init(void *drcontext);
