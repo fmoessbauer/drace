@@ -186,9 +186,13 @@ namespace drace {
 				p.OpenElement("time");
 				p.PushText(util::to_iso_time(_end_time).c_str());
 				p.CloseElement();
+
+				p.OpenElement("duration"); p.PushAttribute("unit", "ms");
+				p.PushText(std::chrono::duration_cast<std::chrono::milliseconds>(_end_time - _start_time).count());
 				p.CloseElement();
 
-				p.CloseElement();
+				p.CloseElement(); //status
+				p.CloseElement(); // valgrindoutput
 
 				_stream << p.CStr();
 				p.ClearBuffer();
