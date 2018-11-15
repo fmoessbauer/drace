@@ -16,11 +16,13 @@ namespace drace {
 
 			/// RW mutex for access of modules container
 			void *mod_lock;
-			std::shared_ptr<Symbols> _syms;
 			map_t _modules_idx;
 
 		public:
 			using PMetadata = std::shared_ptr<Metadata>;
+
+			/// private symbol table for trace-logging scripts
+			std::shared_ptr<Symbols> _syms;
 
 			std::vector<std::string> excluded_mods;
 			std::vector<std::string> excluded_path_prefix;

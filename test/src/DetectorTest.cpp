@@ -141,3 +141,23 @@ TEST_F(DetectorTest, Barrier) {
 	detector::write(tls72, stack, 1, (void*)0x0071, 8);
 	EXPECT_EQ(num_races, 1);
 }
+
+TEST_F(DetectorTest, ResetRange) {
+	detector::tls_t tls80;
+	detector::tls_t tls81;
+	stack[0] = 0x0080;
+
+	detector::fork(1, 80, &tls80);
+	detector::fork(1, 81, &tls81);
+
+	detector::allocate(tls80, (void*)0x0080, (void*)0x0080, 0xF);
+	detector::write(tls80, stack, 1, (void*)0x0082, 8);
+	detector::deallocate(tls80, (void*)0x0080);
+	detector::happens_before(80, (void*)0x0080);
+
+	detector::happens_after(81, (void*)0x0080);
+	detector::allocate(tls81, (void*)0x0080, (void*)0x0080, 0x2);
+	detector::write(tls81, stack, 1, (void*)0x0082, 8);
+	detector::deallocate(tls81, (void*)0x0080);
+	EXPECT_EQ(num_races, 0);
+}

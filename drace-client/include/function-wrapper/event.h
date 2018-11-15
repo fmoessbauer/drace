@@ -53,7 +53,7 @@ namespace drace {
 			// Mutex Events
 			// ------------
 
-			/** Get addr of mutex */
+			/** Get addr of mutex and flush the mem-ref buffer */
 			static void get_arg(void *wrapctx, OUT void **user_data);
 			static void get_arg_dotnet(void *wrapctx, OUT void **user_data);
 

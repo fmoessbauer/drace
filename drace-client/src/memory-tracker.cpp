@@ -178,7 +178,6 @@ namespace drace {
 				data->stats->num_refs += num_refs;
 			}
 		}
-		data->stats->flushes++;
 		data->buf_ptr = data->mem_buf.data;
 
 		if (!params.fastmode && !data->no_flush.load(std::memory_order_relaxed)) {
@@ -415,6 +414,7 @@ namespace drace {
 
 		DR_ASSERT(!dr_using_app_state(drcontext));
 		analyze_access(data);
+		data->stats->flushes++;
 
 		// block until flush is done
 		unsigned tries = 0;

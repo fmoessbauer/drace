@@ -208,15 +208,13 @@ namespace drace {
 				if (retval != 0)
 					return;
 			}
-			LOG_TRACE(data->tid, "Aquire %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+			LOG_TRACE(data->tid, "Aquire  %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
-
-			MemoryTracker::flush_all_threads(data);
 
 			detector::acquire(data->detector_data, mutex, cnt, write);
 
@@ -237,7 +235,7 @@ namespace drace {
 			void* mutex = drwrap_get_arg(wrapctx, 0);
 
 			if (!data->mutex_book.count((uint64_t)mutex)) {
-				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 				// mutex not in book
 				return;
 			}
@@ -250,12 +248,17 @@ namespace drace {
 			// acquire / release must not occur concurrently
 
 			MemoryTracker::flush_all_threads(data);
-			LOG_TRACE(data->tid, "Release %p : %s", mutex, symbol_table->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+			LOG_TRACE(data->tid, "Release %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 			detector::release(data->detector_data, mutex, write);
 		}
 
 		void event::get_arg(void *wrapctx, OUT void **user_data) {
 			*user_data = drwrap_get_arg(wrapctx, 0);
+
+			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			// we flush here to avoid tracking sync-function itself
+			MemoryTracker::flush_all_threads(data);
 		}
 
 		void event::get_arg_dotnet(void *wrapctx, OUT void **user_data) {
