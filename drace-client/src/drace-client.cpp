@@ -179,6 +179,9 @@ namespace drace {
 			else if (strncmp(argv[processed], "--excl-traces", 16) == 0) {
 				params.excl_traces = true;
 			}
+			else if (strncmp(argv[processed], "--excl-stack", 16) == 0) {
+				params.excl_stack = true;
+			}
 			else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
 				params.exclude_master = true;
 			}
@@ -216,6 +219,7 @@ namespace drace {
 			"< Lossy:\t\t%s\n"
 			"< Lossy-Flush:\t\t%s\n"
 			"< Exclude Traces:\t%s\n"
+			"< Exclude Stack:\t%s\n"
 			"< Yield on Event:\t%s\n"
 			"< Exclude Master:\t%s\n"
 			"< Delayed Sym Lookup:\t%s\n"
@@ -231,6 +235,7 @@ namespace drace {
 			params.lossy ? "ON" : "OFF",
 			params.lossy_flush ? "ON" : "OFF",
 			params.excl_traces ? "ON" : "OFF",
+			params.excl_stack ? "ON" : "OFF",
 			params.yield_on_evt ? "ON" : "OFF",
 			params.exclude_master ? "ON" : "OFF",
 			params.delayed_sym_lookup ? "ON" : "OFF",

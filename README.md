@@ -55,6 +55,7 @@ Currently the following parameters are implemented
                   : (only in combination with --lossy)
 --excl-traces     : exclude frequent pathes by not addind memory instrumentation
                   : to DynamoRIO traces (only instrument non-trace BBs)
+--excl-stack      : exclude addresses inside the stack of the calling thread
 --yield-on-evt    : yield active thread after buffer is processed due to an event (e.g. mutex lock / unlock)
                     this might be necessary if more threads than cores are active
 --excl-master     : exclude the runtime thread, useful if loader races

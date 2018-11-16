@@ -28,6 +28,7 @@ namespace drace {
 		bool     lossy{ false };
 		bool     lossy_flush{ false };
 		bool     excl_traces{ false };
+		bool     excl_stack{ false };
 		bool     exclude_master{ false };
 		bool     delayed_sym_lookup{ false };
 		bool     yield_on_evt{ false };
@@ -76,6 +77,11 @@ namespace drace {
 		/// this flag is used to trigger the enable or disable
 		/// logic on this thread
 		bool enable_external{ true };
+
+		/// begin of this threads stack range
+		ULONG_PTR appstack_beg{ 0x0 };
+		/// end of this threads stack range
+		ULONG_PTR appstack_end{ 0x0 };
 
 		/** book-keeping of active mutexes
 		 * All even indices are mutex addresses

@@ -136,7 +136,6 @@ namespace drace {
 
 			std::string mod_name = dr_module_preferred_name(mod);
 
-			DR_ASSERT(!dr_using_app_state(drcontext));
 			// wrap functions
 			if (util::common_prefix(mod_name, "MSVCP") ||
 				util::common_prefix(mod_name, "KERNELBASE"))

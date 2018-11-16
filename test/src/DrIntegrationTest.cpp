@@ -20,6 +20,11 @@ TEST_F(DrIntegrationTest, FastMode) {
 	run(flags, "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
 }
 
+TEST_F(DrIntegrationTest, ExclStack) {
+	std::string flags = "--fast-mode --excl-stack";
+	run(flags, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+}
+
 TEST_F(DrIntegrationTest, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }

@@ -161,6 +161,14 @@ namespace drace {
 				}
 
 				for (uint64_t i = 0; i < num_refs; ++i) {
+					if (params.excl_stack &&
+						((ULONG_PTR)mem_ref->addr > data->appstack_beg) && 
+						((ULONG_PTR)mem_ref->addr < data->appstack_end))
+					{
+						// this reference points into the stack range, skip
+						continue;
+					}
+
 					stack->data[stack->entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
 						detector::write(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
@@ -238,6 +246,12 @@ namespace drace {
 		dr_rwlock_write_unlock(tls_rw_mutex);
 
 		flush_all_threads(data, false, false);
+
+		// determin stack range of this thread
+		dr_switch_to_app_state(drcontext);
+		// dr does not support this natively, so make syscall in app context
+		GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
+		LOG_INFO(data->tid, "Stack from %p to %p", data->appstack_beg, data->appstack_end);
 	}
 
 	void MemoryTracker::event_thread_exit(void *drcontext)
@@ -245,11 +259,6 @@ namespace drace {
 		per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 		flush_all_threads(data, true, false);
-
-		if (!dr_using_app_state(drcontext)) {
-			// in app-state system calls are not allowed
-			dr_switch_to_dr_state(drcontext);
-		}
 
 		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
 
@@ -374,6 +383,8 @@ namespace drace {
 			opcode == OP_push || opcode == OP_pusha || opcode == OP_pushf) {
 			return DR_EMIT_DEFAULT;
 		}
+		DR_ASSERT_MSG(opcode != OP_lea, "LEA");
+
 		// exclude other modifications of stackptr
 		if (instr_reads_from_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT)||
 			instr_writes_to_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT) ||
