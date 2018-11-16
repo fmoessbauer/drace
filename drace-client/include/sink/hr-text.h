@@ -39,7 +39,7 @@ namespace drace {
 					ResolvedAccess ac = (i == 0) ? race.second.first : race.second.second;
 
 					s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
-					s << (ac.write ? "write" : "read") << " to/from " << ac.accessed_memory
+					s << (ac.write ? "write" : "read") << " to/from " << (void*)ac.accessed_memory
 						<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_size << ")"
 						<< "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
 					if (ac.onheap) {
