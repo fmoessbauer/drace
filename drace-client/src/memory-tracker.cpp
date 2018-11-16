@@ -255,7 +255,7 @@ namespace drace {
 		dr_switch_to_app_state(drcontext);
 		// dr does not support this natively, so make syscall in app context
 		GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
-		LOG_INFO(data->tid, "Stack from %p to %p", data->appstack_beg, data->appstack_end);
+		LOG_NOTICE(data->tid, "stack from %p to %p", data->appstack_beg, data->appstack_end);
 	}
 
 	void MemoryTracker::event_thread_exit(void *drcontext)
@@ -363,6 +363,8 @@ namespace drace {
 
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
 		auto instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
+		// we treat all atomic accesses as reads
+		bool instr_is_atomic{ false };
 
 		if (!instr_is_app(instr))
 			return DR_EMIT_DEFAULT;
@@ -375,9 +377,6 @@ namespace drace {
 		if (!(instrument_instr & INSTR_FLAGS::MEMORY))
 			return DR_EMIT_DEFAULT;
 
-		// Ignore Locked instructions
-		if (instr_get_prefix_flag(instr, PREFIX_LOCK))
-			return DR_EMIT_DEFAULT;
 		if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 			return DR_EMIT_DEFAULT;
 
@@ -387,7 +386,6 @@ namespace drace {
 			opcode == OP_push || opcode == OP_pusha || opcode == OP_pushf) {
 			return DR_EMIT_DEFAULT;
 		}
-		DR_ASSERT_MSG(opcode != OP_lea, "LEA");
 
 		// exclude other modifications of stackptr
 		if (instr_reads_from_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT)||
@@ -397,6 +395,10 @@ namespace drace {
 		{
 			return DR_EMIT_DEFAULT;
 		}
+
+		// atomic instruction
+		if (instr_get_prefix_flag(instr, PREFIX_LOCK))
+			instr_is_atomic = true;
 
 		// Sampling: Only instrument some instructions
 		// This is a racy increment, but we do not rely on exact numbers
@@ -415,7 +417,7 @@ namespace drace {
 		for (int i = 0; i < instr_num_dsts(instr); i++) {
 			opnd_t dst = instr_get_dst(instr, i);
 			if (opnd_is_memory_reference(dst))
-				instrument_mem(drcontext, bb, instr, dst, true);
+				instrument_mem(drcontext, bb, instr, dst, !instr_is_atomic);
 		}
 
 		return DR_EMIT_DEFAULT;
@@ -427,7 +429,6 @@ namespace drace {
 		void *drcontext = dr_get_current_drcontext();
 		per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-		DR_ASSERT(!dr_using_app_state(drcontext));
 		analyze_access(data);
 		data->stats->flushes++;
 

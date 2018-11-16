@@ -10,6 +10,8 @@ TEST_F(DrIntegrationTest, DefaultParams) {
 	run("", "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
 	run("", "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
 	run("", "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
+	run("", "mini-apps/atomics/gp-atomics.exe", 0, 0);
+	run("", "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
 }
 
 TEST_F(DrIntegrationTest, FastMode) {
@@ -18,6 +20,8 @@ TEST_F(DrIntegrationTest, FastMode) {
 	run(flags, "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
 	run(flags, "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
 	run(flags, "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
+	run(flags, "mini-apps/atomics/gp-atomics.exe", 0, 0);
+	run(flags, "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
 }
 
 TEST_F(DrIntegrationTest, ExclStack) {

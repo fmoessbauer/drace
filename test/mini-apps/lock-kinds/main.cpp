@@ -56,9 +56,7 @@ void local_buffer(int * v, CRITICAL_SECTION * cs) {
 	buffer[*v] = *v;
 	EnterCriticalSection(cs);
 	std::cout << "Value " << buffer[*v] << " buffer @ " << buffer2 << std::endl;
-	ULONG_PTR low;
-	ULONG_PTR high;
-
+	ULONG_PTR low, high;
 	GetCurrentThreadStackLimits(&low, &high);
 	std::cout << "Stack from " << (void*)low << " to " << (void*)high << std::endl;
 	LeaveCriticalSection(cs);
