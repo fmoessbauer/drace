@@ -168,6 +168,10 @@ namespace drace {
 						// this reference points into the stack range, skip
 						continue;
 					}
+					if ((uint64_t)mem_ref->addr > PROC_ADDR_LIMIT) {
+						// outside process address space
+						continue;
+					}
 
 					stack->data[stack->entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
