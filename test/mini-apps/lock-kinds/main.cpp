@@ -1,5 +1,6 @@
 #include <thread>
 #include <mutex>
+#include <array>
 #include <vector>
 #include <iostream>
 
@@ -49,20 +50,28 @@ void crit_sect(int * v, CRITICAL_SECTION * cs) {
 	LeaveCriticalSection(cs);
 }
 
+void local_buffer(int * v, CRITICAL_SECTION * cs) {
+	int buffer[16];
+	int * buffer2 = (int*)_alloca(16);
+	buffer[*v] = *v;
+	EnterCriticalSection(cs);
+	std::cout << "Value " << buffer[*v] << " buffer @ " << buffer2 << std::endl;
+	LeaveCriticalSection(cs);
+}
+
 int main() {
-	int var1 = 0;
-	int var2 = 0;
-	int var3 = 0;
+	std::array<int, 4> vars{0};
 	CRITICAL_SECTION _cs;
 	int threads_per_task = 10;
 	std::vector<std::thread> threads;
-	threads.reserve(2 * threads_per_task);
+	threads.reserve(4 * threads_per_task);
 
 	InitializeCriticalSectionAndSpinCount(&_cs, 0);
 	for (int i = 0; i < threads_per_task; ++i) {
-		threads.emplace_back(&lock_recusive, &var1, 3);
-		threads.emplace_back(&try_lock, &var2);
-		threads.emplace_back(&crit_sect, &var3, &_cs);
+		threads.emplace_back(&lock_recusive, &vars[0], 3);
+		threads.emplace_back(&try_lock, &vars[1]);
+		threads.emplace_back(&crit_sect, &vars[2], &_cs);
+		threads.emplace_back(&local_buffer, &vars[3], &_cs);
 	}
 
 	for (auto & th : threads) {
