@@ -250,6 +250,8 @@ void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
 		allocations.emplace(addr_32, size);
 	}
 
+	//std::cout << "alloc: addr: " << (void*)addr_32 << " size " << size << std::endl;
+
 	// this is a bit racy as other allocations might finish first
 	// but this is ok as only approximations are necessary
 
@@ -288,9 +290,14 @@ void detector::deallocate(tls_t tls, void* addr) {
 		mxspin.unlock();
 
 		__tsan_reset_range((unsigned int)addr_32, size);
+		//std::cout << "free: addr:  " << (void*)addr_32 << " size " << size << std::endl;
 	}
 	else {
+		// we expect some errors here, as either dr does not catch all 
+		// alloc events, or they are not fully balanced.
+		// TODO: compare with drmemory
 		mxspin.unlock();
+		//std::cout << "Error on free at " << (void*) addr_32 << std::endl;
 	}
 }
 

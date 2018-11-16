@@ -37,7 +37,9 @@ namespace drace {
 		// TODO: On Linux size is arg 0
 		void event::alloc_pre(void *wrapctx, void **user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
+			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
+			MemoryTracker::flush_all_threads(data);
 			// Save allocate size to user_data
 			// we use the pointer directly to avoid an allocation
 			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
@@ -53,7 +55,7 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			MemoryTracker::flush_all_threads(data);
+			//MemoryTracker::flush_all_threads(data);
 
 			// allocations with size 0 are valid if they come from
 			// reallocate (in fact, that's a free)
@@ -62,6 +64,7 @@ namespace drace {
 				// we lock externally using a os lock
 				// TODO: optimize tsan wrapper internally
 				dr_mutex_lock(th_mutex);
+				//detector::happens_after(data->tid, retval);
 				detector::allocate(data->detector_data, pc, retval, size);
 				dr_mutex_unlock(th_mutex);
 			}
@@ -81,6 +84,7 @@ namespace drace {
 			// TODO: optimize tsan wrapper internally
 			dr_mutex_lock(th_mutex);
 			detector::deallocate(data->detector_data, old_addr);
+			//detector::happens_before(data->tid, old_addr);
 			dr_mutex_unlock(th_mutex);
 
 			*user_data = drwrap_get_arg(wrapctx, 3);
@@ -100,6 +104,7 @@ namespace drace {
 			// TODO: optimize tsan wrapper internally (see comment in alloc_post)
 			dr_mutex_lock(th_mutex);
 			detector::deallocate(data->detector_data, addr);
+			//detector::happens_before(data->tid, addr);
 			dr_mutex_unlock(th_mutex);
 		}
 
@@ -217,6 +222,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
 			detector::acquire(data->detector_data, mutex, cnt, write);
+			//detector::happens_after(data->tid, mutex);
 
 			data->stats->mutex_ops++;
 		}
@@ -233,6 +239,7 @@ namespace drace {
 				return;
 
 			void* mutex = drwrap_get_arg(wrapctx, 0);
+			//detector::happens_before(data->tid, mutex);
 
 			if (!data->mutex_book.count((uint64_t)mutex)) {
 				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
