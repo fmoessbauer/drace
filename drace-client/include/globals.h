@@ -40,6 +40,7 @@ namespace drace {
 		bool     fastmode{ false };
 		/** Use external controller */
 		bool     extctrl{ false };
+		bool     break_on_race{ false };
 		unsigned stack_size{ 10 };
 		std::string  config_file{ "drace.ini" };
 		std::string  out_file;

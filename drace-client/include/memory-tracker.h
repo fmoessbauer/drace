@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include "statistics.h"
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -62,7 +63,13 @@ namespace drace {
 
 		// fast random numbers for sampling
 		std::mt19937 _prng;
-		std::mt19937::result_type _prng_border;
+
+		/// maximum length of period
+		unsigned _min_period = 1;
+		/// minimum length of period
+		unsigned _max_period = 1;
+		/// length of next period
+		unsigned _adapt_period = 1;
 
 		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
@@ -93,8 +100,12 @@ namespace drace {
 			bool translating, void *user_data);
 
 		/** Returns true if this reference should be sampled */
-		static inline bool sample_ref() {
-			return (params.sampling_rate == 1 || (memory_tracker->_prng() < memory_tracker->_prng_border));
+		inline bool sample_ref(per_thread_t * data) {
+			if (params.sampling_rate == 1)
+				return true;
+			if(!(data->stats->total_refs % _adapt_period))
+				return true;
+			return false;
 		}
 
 		/** Update the code cache and remove items where the instrumentation should change.
@@ -135,6 +146,8 @@ namespace drace {
 
 		/** Read data from external CB and modify instrumentation / detection accordingly */
 		void handle_ext_state(per_thread_t * data);
+
+		void update_sampling();
 	};
 
 	extern std::unique_ptr<MemoryTracker> memory_tracker;

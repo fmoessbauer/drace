@@ -23,8 +23,7 @@
 
 namespace drace {
 	MemoryTracker::MemoryTracker()
-		: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
-		_prng_border(_max_value / params.sampling_rate)
+		: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count())
 	{
 		/* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
 		drreg_options_t ops = { sizeof(ops), 4, false };
@@ -48,6 +47,9 @@ namespace drace {
 
 		// Initialize Code Caches
 		code_cache_init();
+
+		// setup sampling
+		update_sampling();
 
 		DR_ASSERT(
 			drmgr_register_bb_app2app_event(instr_event_bb_app2app, NULL) &&
@@ -172,6 +174,11 @@ namespace drace {
 						// outside process address space
 						continue;
 					}
+					// this is a mem-ref candidate
+					++(data->stats->total_refs);
+					if (!memory_tracker->sample_ref(data)) {
+						continue;
+					}
 
 					stack->data[stack->entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
@@ -183,11 +190,19 @@ namespace drace {
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++mem_ref;
+					++(data->stats->proc_refs);
 				}
 				stack->entries--;
+				data->stats->proc_refs += num_refs;
 				if (!params.fastmode)
 					dr_mutex_unlock(th_mutex);
-				data->stats->num_refs += num_refs;
+
+				// update next sampling period: TODO: Location not optimal, better move to
+				// sampling function, but be cautious about the overhead
+				if (params.sampling_rate != 1) {
+					memory_tracker->_adapt_period = std::uniform_int_distribution<unsigned>{ 
+						memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);
+				}
 			}
 		}
 		data->buf_ptr = data->mem_buf.data;
@@ -452,7 +467,7 @@ namespace drace {
 		mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data;
 		uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
-		data->stats->num_refs += num_refs;
+		data->stats->proc_refs += num_refs;
 		data->stats->flushes++;
 		data->buf_ptr = data->mem_buf.data;
 		data->no_flush.store(true, std::memory_order_relaxed);
@@ -585,9 +600,21 @@ namespace drace {
 			if (sampling_rate != params.sampling_rate) {
 				LOG_INFO(0, "externally changed sampling rate to: %i", sampling_rate);
 				params.sampling_rate = sampling_rate;
-				_prng_border = _max_value / sampling_rate;
+				update_sampling();
 			}
 		}
+	}
+
+	void MemoryTracker::update_sampling() {
+		unsigned delta;
+		if (params.sampling_rate < 10)
+			delta = 1;
+		else {
+			delta = 0.1 * params.sampling_rate;
+		}
+		_min_period = std::max(params.sampling_rate - delta, 1u);
+		_max_period = params.sampling_rate + delta;
+		_adapt_period = params.sampling_rate;
 	}
 
 } // namespace drace

@@ -422,6 +422,7 @@ namespace drace {
 			DR_ASSERT(nullptr != data);
 
 			detector::happens_before(data->tid, identifier);
+			LOG_TRACE(data->tid, "happens-before @ %p", identifier);
 		}
 
 		void event::happens_after(void *wrapctx, void *identifier) {
@@ -430,6 +431,7 @@ namespace drace {
 			DR_ASSERT(nullptr != data);
 
 			detector::happens_after(data->tid, identifier);
+			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
 #endif
 	} // namespace funwrap

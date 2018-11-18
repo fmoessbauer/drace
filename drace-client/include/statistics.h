@@ -31,7 +31,8 @@ namespace drace {
 		ms_t time_in_flushes{ 0 };
 		unsigned long module_loads{ 0 };
 		ms_t module_load_duration{ 0 };
-		unsigned long long num_refs{ 0 };
+		unsigned long long proc_refs{ 0 };
+		unsigned long long total_refs{ 0 };
 
 		LossyCountingModel<uint64_t> page_hits;
 		LossyCountingModel<uint64_t> pc_hits;
@@ -63,11 +64,12 @@ namespace drace {
 				<< "all-flushes:\t\t" << std::dec << flush_events << std::endl
 				<< "flushes:\t\t" << std::dec << flushes << std::endl;
 			if (flushes > 0) {
-				s << "avg. buffer size:\t" << std::dec << (num_refs / flushes) << std::endl;
+				s << "avg. buffer size:\t" << std::dec << (total_refs / flushes) << std::endl;
 			}
 			s << "e-flushes:\t\t" << std::dec << external_flushes << std::endl
 				<< "flush-time (total):\t" << std::dec << time_in_flushes.count() << "ms" << std::endl
-				<< "memory-refs:\t\t" << std::dec << num_refs << std::endl
+				<< "analyzed-refs:\t\t" << std::dec << proc_refs << std::endl
+				<< "total-refs:\t\t" << std::dec << total_refs << std::endl
 				<< "module loads:\t\t" << std::dec << module_loads << std::endl
 				<< "mod. load time(total):\t" << std::dec << module_load_duration.count() << "ms" << std::endl;
 			s << "top pages:\t\t";
@@ -94,7 +96,8 @@ namespace drace {
 			time_in_flushes += other.time_in_flushes;
 			module_loads += other.module_loads;
 			module_load_duration += other.module_load_duration;
-			num_refs += other.num_refs;
+			proc_refs += other.proc_refs;
+			total_refs += other.total_refs;
 			return *this;
 		}
 	};

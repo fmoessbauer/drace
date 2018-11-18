@@ -39,7 +39,7 @@ namespace drace {
 	{
 		std::string modname(dr_module_preferred_name(mod));
 		for (const auto & name : syms) {
-			LOG_INFO(-1, "Search for %s", name.c_str());
+			LOG_NOTICE(-1, "Search for %s", name.c_str());
 			if (method == Method::EXTERNAL_MPCR) {
 				std::string symname = (modname + '!') + name;
 				auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
@@ -86,7 +86,7 @@ namespace drace {
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
 		if (ok)
-			LOG_INFO(0, "wrapped thread-start function %s", name);
+			LOG_NOTICE(0, "wrapped thread-start function %s", name);
 		return true;
 	}
 
@@ -99,7 +99,7 @@ namespace drace {
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
 		if (ok)
-			LOG_INFO(0, "wrapped system thread-start function %s", name);
+			LOG_NOTICE(0, "wrapped system thread-start function %s", name);
 		return true;
 	}
 
@@ -134,7 +134,7 @@ namespace drace {
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
 		if (ok)
-			LOG_INFO(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
+			LOG_NOTICE(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
 		return true;
 	}
 
@@ -213,14 +213,14 @@ namespace drace {
 			// [native] JIT_MonExit
 			// We also use MPCR here, as DR syms has problems finding the correct debug
 			// information if multiple versions of a dll are in the cache
-			LOG_INFO(-1, "try to wrap dotnetsync native");
+			LOG_NOTICE(-1, "try to wrap dotnetsync native");
 			wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
 			wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
 		}
 	}
 
 	void funwrap::wrap_annotations(const module_data_t *mod) {
-		LOG_INFO(0, "try to wrap annotations");
+		LOG_NOTICE(0, "try to wrap annotations");
 		// wrap happens before
 		wrap_functions(mod, config.get_multi("sync", "happens_before"), false, Method::EXPORTS, event::get_arg, event::happens_before);
 		wrap_functions(mod, config.get_multi("sync", "happens_after"), false, Method::EXPORTS, event::get_arg, event::happens_after);

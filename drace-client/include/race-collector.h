@@ -165,6 +165,10 @@ namespace drace {
 	*/
 	static void race_collector_add_race(const detector::Race * r) {
 		race_collector->add_race(r);
+		// for benchmarking and testing
+		if (params.break_on_race) {
+			dr_abort();
+		}
 	}
 
 } // namespace drace

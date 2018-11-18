@@ -206,6 +206,10 @@ namespace drace {
 			else if (strncmp(argv[processed], "--extctrl", 16) == 0) {
 				params.extctrl = true;
 			}
+			// for testing reasons only. Abort execution after the first race was detected
+			else if (strncmp(argv[processed], "--brkonrace", 16) == 0) {
+				params.break_on_race = true;
+			}
 			// unknown argument skip as probably for detector
 			++processed;
 		}

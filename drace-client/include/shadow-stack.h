@@ -67,12 +67,12 @@ namespace drace {
 			MemoryTracker::analyze_access(data);
 
 			// Sampling: Possibly disable detector during this function
-			if (!MemoryTracker::sample_ref()) {
-				data->enabled = false;
-			}
-			else if (data->event_cnt == 0) {
-				data->enabled = true;
-			}
+			//if (!MemoryTracker::sample_ref()) {
+			//	data->enabled = false;
+			//}
+			//else if (data->event_cnt == 0) {
+			//	data->enabled = true;
+			//}
 			// if lossy_flush, disable detector instead of changeing the instructions
 			if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
 				data->enabled = false;
