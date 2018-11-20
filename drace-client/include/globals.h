@@ -7,6 +7,7 @@
 
 #include "config.h"
 #include "aligned-stack.h"
+#include "memory-tracker.h"
 
 #include <string>
 #include <unordered_map>
@@ -53,63 +54,11 @@ namespace drace {
 	extern params_t params;
 
 	class Statistics;
-
-	/** Per Thread data (thread-private)
-	* \warning This struct is not default-constructed
-	*          but just allocated as a memory block and casted
-	*          Initialisation is done in the thread-creation event
-	*          in memory_instr.
-	*/
-	struct per_thread_t {
-		using tls_map_t = std::vector<std::pair<thread_id_t, per_thread_t*>>;
-
-		byte         *buf_ptr;
-		ptr_int_t     buf_end;
-		AlignedBuffer<byte, 64> mem_buf;
-
-		void         *cache;
-		thread_id_t   tid;
-		/// use ptrsize type for lea
-		ptr_uint_t    enabled{ true };
-		/// inverse of flush pending, jmpecxz
-		std::atomic<ptr_uint_t> no_flush{ false };
-		/// external flush is currently executed;
-		std::atomic<bool> external_flush{ false };
-		/// Shadow Stack
-		AlignedStack<void*, 64> stack;
-		/// Stack used to track state of detector
-		uint64        event_cnt{ 0 };
-		/// bool external change detected
-		/// this flag is used to trigger the enable or disable
-		/// logic on this thread
-		bool enable_external{ true };
-
-		/// begin of this threads stack range
-		ULONG_PTR appstack_beg{ 0x0 };
-		/// end of this threads stack range
-		ULONG_PTR appstack_end{ 0x0 };
-
-		/** book-keeping of active mutexes
-		 * All even indices are mutex addresses
-		 * while uneven indices denote the number of
-		 * references at the location in index-1.
-		 * This is tuned for maximum cache-locality */
-		std::unordered_map<uint64_t, unsigned> mutex_book;
-		/// Used for event syncronisation procedure
-		tls_map_t     th_towait;
-		/// Statistics
-		std::unique_ptr<Statistics>   stats;
-		/// local sampling state
-		int sampling_pos = 0;
-		/**
-		 * as the detector cannot allocate TLS,
-		 * use this ptr for per-thread data in detector */
-		void         *detector_data{ nullptr };
-	};
+	class ThreadState;
 
 	/** Thread local storage */
 	extern int      tls_idx;
-	extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+	extern std::unordered_map<thread_id_t, ThreadState*> TLS_buckets;
 	extern void* tls_rw_mutex;
 
 	// TODO check if global is better
@@ -131,8 +80,8 @@ namespace drace {
 	// Global mutex to synchronize threads
 	extern void* th_mutex;
 
-	class MemoryTracker;
-	extern std::unique_ptr<MemoryTracker> memory_tracker;
+	class Instrumentator;
+	extern std::unique_ptr<Instrumentator> instrumentator;
 
 	class RaceCollector;
 	extern std::unique_ptr<RaceCollector> race_collector;

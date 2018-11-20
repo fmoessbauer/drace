@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "aligned-stack.h"
 #include "memory-tracker.h"
+#include "ThreadState.h"
 #include <iterator>
 #include <dr_api.h>
 #include <drmgr.h>
@@ -19,16 +20,16 @@ namespace drace {
 	public:
 		/// four cache-lines - one element which contains current mem pc
 		static constexpr int max_size = 31;
-		using stack_t = decltype(per_thread_t::stack);
+		using stack_t = decltype(MemoryTracker::stack);
 
 	private:
 		/** Push a pc on the stack. If the pc is already
 		* on the stack, skip. This avoids ever growing stacks
 		* if the returns are not detected properly
 		*/
-		static inline void push(void *addr, stack_t* stack)
+		static inline void push(void *addr, stack_t & stack)
 		{
-			auto size = stack->entries;
+			auto size = stack.entries;
 			if (size >= max_size) return;
 
 			// TODO: if not all modules get the shadow-stack
@@ -41,14 +42,14 @@ namespace drace {
 				if (stack->data[i] == addr) return;
 #endif
 
-			stack->data[stack->entries++] = addr;
+			stack.data[stack.entries++] = addr;
 		}
 
-		static inline void *pop(stack_t* stack)
+		static inline void *pop(stack_t & stack)
 		{
-			DR_ASSERT(stack->entries > 0);
-			stack->entries--;
-			return stack->data[stack->entries];
+			DR_ASSERT(stack.entries > 0);
+			stack.entries--;
+			return stack.data[stack.entries];
 		}
 
 		/** Call Instrumentation */
@@ -57,14 +58,14 @@ namespace drace {
 			void * drcontext = dr_get_current_drcontext();
 			DR_ASSERT(!dr_using_app_state(drcontext));
 
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			if (!params.fastmode) {
-				while (data->external_flush.load(std::memory_order_relaxed)) {
+				while (data->mtrack.external_flush.load(std::memory_order_relaxed)) {
 					// wait
 				}
 			}
 			// TODO: possibibly racy in non-fast-mode
-			MemoryTracker::analyze_access(data);
+			data->mtrack.analyze_access();
 
 			// Sampling: Possibly disable detector during this function
 			//if (!MemoryTracker::sample_ref()) {
@@ -74,32 +75,33 @@ namespace drace {
 			//	data->enabled = true;
 			//}
 			// if lossy_flush, disable detector instead of changeing the instructions
-			if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
-				data->enabled = false;
-			}
+			// TODO
+			//if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
+			//	data->enabled = false;
+			//}
 
-			push(call_ins, &(data->stack));
+			push(call_ins, data->mtrack.stack);
 		}
 
 		/** Return Instrumentation */
 		static void on_ret(void *ret_ins, void *target_addr)
 		{
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
-			stack_t * stack = &(data->stack);
+			ThreadState * data = (ThreadState*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+			stack_t & stack = data->mtrack.stack;
 
 			if (!params.fastmode) {
-				while (data->external_flush.load(std::memory_order_relaxed)) {
+				while (data->mtrack.external_flush.load(std::memory_order_relaxed)) {
 					// wait
 				}
 			}
-			MemoryTracker::analyze_access(data);
+			data->mtrack.analyze_access();
 
-			if (stack->entries == 0) return;
+			if (stack.entries == 0) return;
 
 			ptrdiff_t diff;
 			while ((diff = (byte*)target_addr - (byte*)pop(stack)), !(0 <= diff && diff <= 8))
 			{
-				if (stack->entries == 0) return;
+				if (stack.entries == 0) return;
 				// skipping a frame
 			}
 		}

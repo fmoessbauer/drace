@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "Module.h"
+#include "ThreadState.h"
 
 #include "function-wrapper.h"
 #include "statistics.h"
@@ -128,7 +129,7 @@ namespace drace {
 
 			auto start = std::chrono::system_clock::now();
 
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 			thread_id_t tid = data->tid;
 
@@ -227,8 +228,8 @@ namespace drace {
 				MSR::unload_symbols(mod->start);
 			}
 
-			data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
-			data->stats->module_loads++;
+			data->stats.module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
+			data->stats.module_loads++;
 		}
 
 		/* Module unload event implementation. As this function is passed

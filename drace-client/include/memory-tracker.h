@@ -1,7 +1,5 @@
 #pragma once
-
-#include "Module.h"
-#include "statistics.h"
+#include "aligned-buffer.h"
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -13,10 +11,13 @@
 #include <memory>
 #include <random>
 
-// DR somewere defines max()
+// windows defines max()
 #undef max
 
 namespace drace {
+	class ThreadState;
+	class Statistics;
+
 	/**
 	* Covers application memory tracing.
 	* Responsible for adding all instrumentation code (except function wrapping).
@@ -44,26 +45,34 @@ namespace drace {
 
 		std::atomic<int> flush_active{ false };
 
+		byte         *buf_ptr;
+		ptr_int_t     buf_end;
+		AlignedBuffer<byte, 64> mem_buf;
+		mem_ref_t mem_ref;
+		void*       detector_data;
+		AlignedStack<void*, 64> stack;
+
+		/// inverse of flush pending, jmpecxz
+		std::atomic<ptr_uint_t> no_flush{ false };
+
+		/// inverse of flush pending, jmpecxz
+		std::atomic<ptr_uint_t> external_flush{ false };
+
 	private:
-		size_t page_size;
+		Statistics & _stats;
+		thread_id_t _tid;
+		bool        _enabled;
+		unsigned long _event_cnt;
 
-		/** Code Caches */
-		app_pc cc_flush;
-
-		/** Number of instrumented calls, used for sampling
-		 * \Warning This number is racily incremented by design.
-		 *          Hence, use the largest native type to avoid partial loads
-		 */
-		unsigned long long instrum_count{ 0 };
-
-		/* XCX registers */
-		drvector_t allowed_xcx;
-
-		module::Cache mc;
+		/// begin of this threads stack range
+		ULONG_PTR _appstack_beg{ 0x0 };
+		/// end of this threads stack range
+		ULONG_PTR _appstack_end{ 0x0 };
 
 		// fast random numbers for sampling
 		std::mt19937 _prng;
 
+		unsigned _sampling_period = 1;
 		/// maximum length of period
 		unsigned _min_period = 1;
 		/// minimum length of period
@@ -75,37 +84,57 @@ namespace drace {
 
 	public:
 
-		MemoryTracker();
+		MemoryTracker(void* drcontext, Statistics & stats);
 		~MemoryTracker();
 
-		static void process_buffer(void);
-		static void clear_buffer(void);
-		static void analyze_access(per_thread_t * data);
-		static void flush_all_threads(per_thread_t * data, bool self = true, bool flush_external = false);
+		void deallocate(void* drcontext);
+
+		void clear_buffer(void);
+		void analyze_access();
+
+		inline void process_buffer() {
+			if (_enabled) clear_buffer();
+			else analyze_access();
+		}
+
+		inline void disable_scope() {
+			_enabled = false;
+			++_event_cnt;
+		}
+
+		inline void enable_scope() {
+			if (_event_cnt <= 1) {
+				//memory_tracker->clear_buffer();
+				_enabled = true;
+				// recover from missed events
+				if (_event_cnt < 0)
+					_event_cnt = 1;
+			}
+			_event_cnt--;
+		}
+
+		/**
+		* static version of process_buffer to be called from code cache
+		*/
+		static void process_buffer_static();
+
+		/* Request a flush of all non-disabled threads.
+		*  \Warning: This function read-locks the TLS mutex
+		*/
+		static void flush_all_threads(MemoryTracker & mtr, bool self = true, bool flush_external = false);
 
 		// Events
 		void event_thread_init(void *drcontext);
 
 		void event_thread_exit(void *drcontext);
 
-		/** We transform string loops into regular loops so we can more easily
-		* monitor every memory reference they make.
-		*/
-		dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
-
-		dr_emit_flags_t event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data);
-		/** Instrument application instructions */
-		dr_emit_flags_t event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
-			instr_t *instr, bool for_trace,
-			bool translating, void *user_data);
-
 		/** Returns true if this reference should be sampled */
-		inline bool sample_ref(per_thread_t * data) {
-			--data->sampling_pos;
-			if (params.sampling_rate == 1)
+		inline bool sample_ref() {
+			--_sample_pos;
+			if (_sampling_period == 1)
 				return true;
-			if (data->sampling_pos < 0) {
-				data->sampling_pos = std::uniform_int_distribution<unsigned>{ memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);;
+			if (_sample_pos < 0) {
+				_sample_pos = std::uniform_int_distribution<unsigned>{ _min_period, _max_period }(_prng);
 				return true;
 			}
 			return false;
@@ -114,62 +143,20 @@ namespace drace {
 		/** Update the code cache and remove items where the instrumentation should change.
 		 * We only consider traces, as other parts are not performance critical
 		 */
-		static void update_cache(per_thread_t * data);
+		static void update_cache(ThreadState * data);
 
-		static bool pc_in_freq(per_thread_t * data, void* bb);
+		static bool pc_in_freq(ThreadState * data, void* bb);
 
 	private:
 
-		void code_cache_init(void);
-		void code_cache_exit(void);
-
-		// Instrumentation
-		/** Inserts a jump to clean call if a flush is pending */
-		void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
-			reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
-
-		/** Instrument all memory accessing instructions */
-		void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
-		/** Instrument all memory accessing instructions (fast-mode)*/
-		void instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
-
-		/**
-		* instrument_mem is called whenever a memory reference is identified.
-		* It inserts code before the memory reference to to fill the memory buffer
-		* and jump to our own code cache to call the clean_call when the buffer is full.
-		*/
-		inline void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write) {
-			if (params.fastmode) {
-				instrument_mem_fast(drcontext, ilist, where, ref, write);
-			}
-			else {
-				instrument_mem_full(drcontext, ilist, where, ref, write);
-			}
-		}
-
 		/** Read data from external CB and modify instrumentation / detection accordingly */
-		void handle_ext_state(per_thread_t * data);
+		void handle_ext_state(ThreadState * data);
 
 		void update_sampling();
+
+		/// needed in instrumentation stage
+		friend class Instrumentator;
 	};
 
 	extern std::unique_ptr<MemoryTracker> memory_tracker;
-
-	static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
-	{
-		return memory_tracker->event_bb_app2app(drcontext, tag, bb, for_trace, translating);
-	}
-
-	static inline dr_emit_flags_t instr_event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data)
-	{
-		return memory_tracker->event_app_analysis(drcontext, tag, bb, for_trace, translating, user_data);
-	}
-
-	static inline dr_emit_flags_t instr_event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
-		instr_t *instr, bool for_trace,
-		bool translating, void *user_data)
-	{
-		return memory_tracker->event_app_instruction(drcontext, tag, bb, instr, for_trace, translating, user_data);
-	}
-
 }

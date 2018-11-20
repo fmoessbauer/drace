@@ -1,10 +1,11 @@
-#include "memory-tracker.h"
+#include "instrumentator.h"
+#include "ThreadState.h"
 
 using namespace drace;
 /*
 * Inserts a jump if a flush is pending
 */
-void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
+void Instrumentator::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
 	reg_id_t regxcx, reg_id_t regtls,
 	instr_t *call_flush)
 {
@@ -16,7 +17,7 @@ void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, ins
 	//
 
 	opnd1 = opnd_create_reg(regxcx);
-	opnd2 = OPND_CREATE_MEMPTR(regtls, offsetof(per_thread_t, no_flush));
+	opnd2 = OPND_CREATE_MEMPTR(regtls, offsetof(ThreadState, mtrack.no_flush));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -26,7 +27,7 @@ void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, ins
 }
 
 /* insert inline code to add a memory reference info entry into the buffer */
-void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where,
+void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
 	/*
@@ -34,13 +35,14 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 	* It inserts code before the memory reference to to fill the memory buffer
 	* and jump to our own code cache to call the clean_call when the buffer is full.
 	*/
+	using mem_ref_t = MemoryTracker::mem_ref_t;
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 	reg_id_t reg1, reg2, reg3;
-	per_thread_t *data;
+	ThreadState *data;
 	app_pc pc;
 
-	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+	data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 
 	/* Steal two scratch registers.
 	* reg2 must be ECX or RCX for jecxz.
@@ -88,7 +90,7 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 	/* Jump if tracing is disabled */
 	/* load enabled flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, enabled));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._enabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -105,7 +107,7 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 
 	/* Load data->buf_ptr into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -147,7 +149,7 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Update the data->buf_ptr */
-	opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
+	opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
 	opnd2 = opnd_create_reg(reg2);
 	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
@@ -158,7 +160,7 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 	*/
 	/* lea [reg2 - buf_end] => reg2 */
 	opnd1 = opnd_create_reg(reg1);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_end));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_end));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	opnd1 = opnd_create_reg(reg2);

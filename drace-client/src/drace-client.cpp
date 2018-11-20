@@ -15,7 +15,7 @@
 #include "globals.h"
 #include "drace-client.h"
 #include "race-collector.h"
-#include "memory-tracker.h"
+#include "instrumentator.h"
 #include "function-wrapper.h"
 #include "Module.h"
 #include "symbols.h"
@@ -73,8 +73,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// Setup Module Tracking
 	module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
 
-	// Setup Memory Tracing
-	memory_tracker = std::make_unique<MemoryTracker>();
+	instrumentator = std::make_unique<Instrumentator>();
 
 	// Setup Race Collector and bind lookup function
 	race_collector = std::make_unique<RaceCollector>(
@@ -89,7 +88,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 	// if we try to access a non-existing SHM,
 	// DR will spuriously fail some time later
 	if (params.extctrl) {
-		DR_ASSERT(MSR::connect(), "MSR not available");
+		DR_ASSERT_MSG(MSR::connect(), "MSR not available");
 	}
 
 	app_start = std::chrono::system_clock::now();
@@ -111,7 +110,7 @@ namespace drace {
 
 		// Cleanup all drace modules
 		module_tracker.reset();
-		memory_tracker.reset();
+		instrumentator.reset();
 		stats.reset();
 
 		funwrap::finalize();
@@ -140,7 +139,7 @@ namespace drace {
 		}
 		num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
-		memory_tracker->event_thread_init(drcontext);
+		instrumentator->event_thread_init(drcontext);
 		LOG_INFO(tid, "Thread started");
 	}
 
@@ -150,7 +149,7 @@ namespace drace {
 		thread_id_t tid = dr_get_thread_id(drcontext);
 		num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
-		memory_tracker->event_thread_exit(drcontext);
+		instrumentator->event_thread_exit(drcontext);
 
 		LOG_INFO(tid, "Thread exited");
 	}
