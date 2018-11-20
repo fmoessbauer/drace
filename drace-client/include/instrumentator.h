@@ -33,6 +33,12 @@ namespace drace {
 		void event_thread_init(void *drcontext);
 		void event_thread_exit(void *drcontext);
 
+		inline void flush_region(void* drcontext, uint64_t pc) {
+			// Flush this area from the code cache
+			dr_delay_flush_region((app_pc)(pc << MemoryTracker::HIST_PC_RES), 1 << MemoryTracker::HIST_PC_RES, 0, NULL);
+			LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc << MemoryTracker::HIST_PC_RES);
+		}
+
 	private:
 		void code_cache_init(void);
 		void code_cache_exit(void);
@@ -66,14 +72,6 @@ namespace drace {
 		 * We only consider traces, as other parts are not performance critical
          */
 		static void update_cache(ThreadState * data);
-
-		static bool pc_in_freq(ThreadState * data, void* bb);
-
-		inline void flush_region(void* drcontext, uint64_t pc) {
-			// Flush this area from the code cache
-			dr_delay_flush_region((app_pc)(pc << MemoryTracker::HIST_PC_RES), 1 << MemoryTracker::HIST_PC_RES, 0, NULL);
-			LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc << MemoryTracker::HIST_PC_RES);
-		}
 
 		/** We transform string loops into regular loops so we can more easily
 		* monitor every memory reference they make.

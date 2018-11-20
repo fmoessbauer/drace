@@ -14,17 +14,17 @@
 namespace drace {
 	namespace funwrap {
 
-		void event::beg_excl_region(ThreadState * data) {
+		void event::beg_excl_region(MemoryTracker & mt) {
 			// We do not flush here, as in disabled state no
 			// refs are recorded
 			//memory_tracker->process_buffer();
-			LOG_TRACE(data->tid, "Begin excluded region");
-			data->mtrack.disable_scope();
+			LOG_TRACE(mt->tid, "Begin excluded region");
+			mt.disable_scope();
 		}
 
-		void event::end_excl_region(ThreadState * data) {
+		void event::end_excl_region(MemoryTracker & mt) {
 			LOG_TRACE(data->tid, "End excluded region");
-			data->mtrack.enable_scope();
+			mt.enable_scope();
 		}
 
 		// TODO: On Linux size is arg 0
@@ -58,7 +58,7 @@ namespace drace {
 				// TODO: optimize tsan wrapper internally
 				dr_mutex_lock(th_mutex);
 				//detector::happens_after(data->tid, retval);
-				detector::allocate(data->detector_data, pc, retval, size);
+				detector::allocate(data->mtrack.detector_data, pc, retval, size);
 				dr_mutex_unlock(th_mutex);
 			}
 		}
@@ -76,7 +76,7 @@ namespace drace {
 			// we lock externally using a os lock
 			// TODO: optimize tsan wrapper internally
 			dr_mutex_lock(th_mutex);
-			detector::deallocate(data->detector_data, old_addr);
+			detector::deallocate(data->mtrack.detector_data, old_addr);
 			//detector::happens_before(data->tid, old_addr);
 			dr_mutex_unlock(th_mutex);
 
@@ -96,7 +96,7 @@ namespace drace {
 
 			// TODO: optimize tsan wrapper internally (see comment in alloc_post)
 			dr_mutex_lock(th_mutex);
-			detector::deallocate(data->detector_data, addr);
+			detector::deallocate(data->mtrack.detector_data, addr);
 			//detector::happens_before(data->tid, addr);
 			dr_mutex_unlock(th_mutex);
 		}
@@ -114,7 +114,7 @@ namespace drace {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			beg_excl_region(data);
+			beg_excl_region(data->mtrack);
 
 			th_start_pending.store(true);
 			LOG_INFO(data->tid, "setup new thread");
@@ -124,7 +124,7 @@ namespace drace {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			end_excl_region(data);
+			end_excl_region(data->mtrack);
 			// Enable recently started thread
 			auto last_th = last_th_start.load(std::memory_order_relaxed);
 			// TLS is already updated, hence read lock is sufficient
@@ -165,7 +165,7 @@ namespace drace {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			beg_excl_region(data);
+			beg_excl_region(data->mtrack);
 		}
 
 		void event::end_excl(void *wrapctx, void *user_data) {
@@ -173,7 +173,7 @@ namespace drace {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			end_excl_region(data);
+			end_excl_region(data->mtrack);
 		}
 
 		void event::dotnet_enter(void *wrapctx, void **user_data) { }
@@ -213,7 +213,7 @@ namespace drace {
 
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
-			detector::acquire(data->detector_data, mutex, cnt, write);
+			detector::acquire(data->mtrack.detector_data, mutex, cnt, write);
 			//detector::happens_after(data->tid, mutex);
 
 			data->stats.mutex_ops++;
@@ -248,7 +248,7 @@ namespace drace {
 
 			MemoryTracker::flush_all_threads(data->mtrack);
 			LOG_TRACE(data->tid, "Release %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
-			detector::release(data->detector_data, mutex, write);
+			detector::release(data->mtrack.detector_data, mutex, write);
 		}
 
 		void event::get_arg(void *wrapctx, OUT void **user_data) {
@@ -322,7 +322,7 @@ namespace drace {
 
 			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 			MemoryTracker::flush_all_threads(data->mtrack);
-			detector::acquire(data->detector_data, mutex, cnt, 1);
+			detector::acquire(data->mtrack.detector_data, mutex, cnt, 1);
 			data->stats.mutex_ops++;
 		}
 
@@ -355,7 +355,7 @@ namespace drace {
 				for (DWORD i = 0; i < info->ncount; ++i) {
 					HANDLE mutex = info->handles[i];
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-					detector::acquire(data->detector_data, (void*)mutex, cnt, true);
+					detector::acquire(data->mtrack.detector_data, (void*)mutex, cnt, true);
 					data->stats.mutex_ops++;
 				}
 			}
@@ -364,7 +364,7 @@ namespace drace {
 					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-					detector::acquire(data->detector_data, (void*)mutex, cnt, true);
+					detector::acquire(data->mtrack.detector_data, (void*)mutex, cnt, true);
 					data->stats.mutex_ops++;
 				}
 			}

@@ -43,13 +43,18 @@ namespace drace {
 		/** update code-cache after this number of flushes (must be power of two) */
 		static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
-		std::atomic<int> flush_active{ false };
+		thread_id_t tid;
 
 		byte         *buf_ptr;
 		ptr_int_t     buf_end;
 		AlignedBuffer<byte, 64> mem_buf;
-		mem_ref_t mem_ref;
-		void*       detector_data;
+
+		std::atomic<int> flush_active{ false };
+
+		/**
+		 * as the detector cannot allocate TLS,
+		 * use this ptr for per-thread data in detector */
+		void*       detector_data{nullptr};
 		AlignedStack<void*, 64> stack;
 
 		/// inverse of flush pending, jmpecxz
@@ -58,11 +63,19 @@ namespace drace {
 		/// inverse of flush pending, jmpecxz
 		std::atomic<ptr_uint_t> external_flush{ false };
 
+		/// Used for event syncronisation procedure
+		using tls_map_t = std::vector<std::pair<thread_id_t, MemoryTracker&>>;
+		tls_map_t     th_towait;
+
 	private:
 		Statistics & _stats;
-		thread_id_t _tid;
-		bool        _enabled;
-		unsigned long _event_cnt;
+		bool        _enabled{true};
+
+		/** bool external change detected
+		* this flag is used to trigger the enable or disable
+		* logic on this thread */
+		bool        _enable_external{ true };
+		unsigned long _event_cnt{0};
 
 		/// begin of this threads stack range
 		ULONG_PTR _appstack_beg{ 0x0 };
@@ -82,9 +95,18 @@ namespace drace {
 
 		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
+		/// used to track deallocation / deconstruction. After deallocation, live==false
+		bool live{ true };
+
 	public:
 
+		/** Setup memory tracking of this thread.
+		* \Note We do not need the prng here, as it crashes dr in 
+		*       thread-init-event. Instead we use the first call
+		*       from the code cache
+		*/
 		MemoryTracker(void* drcontext, Statistics & stats);
+		/// Finalize memory tracking of this thread
 		~MemoryTracker();
 
 		void deallocate(void* drcontext);
@@ -142,21 +164,21 @@ namespace drace {
 
 		/** Update the code cache and remove items where the instrumentation should change.
 		 * We only consider traces, as other parts are not performance critical
+		 * \TODO: Currently this only works well with thread-local code caches
+		 *        We either should use a global state (+sync), or drop this approach
 		 */
-		static void update_cache(ThreadState * data);
+		void update_cache();
 
 		static bool pc_in_freq(ThreadState * data, void* bb);
 
 	private:
 
 		/** Read data from external CB and modify instrumentation / detection accordingly */
-		void handle_ext_state(ThreadState * data);
+		void handle_ext_state();
 
 		void update_sampling();
 
 		/// needed in instrumentation stage
 		friend class Instrumentator;
 	};
-
-	extern std::unique_ptr<MemoryTracker> memory_tracker;
 }

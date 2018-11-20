@@ -4,6 +4,7 @@
 
 namespace drace {
 	class ThreadState;
+	class MemoryTracker;
 
 	namespace funwrap {
 		class event {
@@ -25,8 +26,8 @@ namespace drace {
 
 		public:
 
-			static void beg_excl_region(ThreadState * data);
-			static void end_excl_region(ThreadState * data);
+			static void beg_excl_region(MemoryTracker & mt);
+			static void end_excl_region(MemoryTracker & mt);
 
 			static void alloc_pre(void *wrapctx, void **user_data);
 			static void alloc_post(void *wrapctx, void *user_data);

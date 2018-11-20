@@ -95,15 +95,12 @@ namespace drace {
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		TLS_buckets.emplace(data->tid, data);
-		data->th_towait.reserve(TLS_buckets.bucket_count());
 		dr_rwlock_write_unlock(tls_rw_mutex);
 	}
 
 	void Instrumentator::event_thread_exit(void *drcontext)
 	{
 		ThreadState* data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
-
-		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place
@@ -183,9 +180,9 @@ namespace drace {
 		if (for_trace && instrument_bb) {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			// TODO
-			//if (pc_in_freq(data, bb_addr)) {
-			//	instrument_bb = INSTR_FLAGS::NONE;
-			//}
+			if (MemoryTracker::pc_in_freq(data, bb_addr)) {
+				instrument_bb = INSTR_FLAGS::NONE;
+			}
 		}
 
 		// Avoid temporary allocation by using ptr-value directly
