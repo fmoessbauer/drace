@@ -163,6 +163,8 @@ namespace drace {
 				}
 
 				for (uint64_t i = 0; i < num_refs; ++i) {
+					// todo: better use iterator like access
+					mem_ref = &((mem_ref_t *)data->mem_buf.data)[i];
 					if (params.excl_stack &&
 						((ULONG_PTR)mem_ref->addr > data->appstack_beg) && 
 						((ULONG_PTR)mem_ref->addr < data->appstack_end))
@@ -175,7 +177,6 @@ namespace drace {
 						continue;
 					}
 					// this is a mem-ref candidate
-					++(data->stats->total_refs);
 					if (!memory_tracker->sample_ref(data)) {
 						continue;
 					}
@@ -189,20 +190,12 @@ namespace drace {
 						detector::read(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
-					++mem_ref;
 					++(data->stats->proc_refs);
 				}
 				stack->entries--;
-				data->stats->proc_refs += num_refs;
 				if (!params.fastmode)
 					dr_mutex_unlock(th_mutex);
-
-				// update next sampling period: TODO: Location not optimal, better move to
-				// sampling function, but be cautious about the overhead
-				if (params.sampling_rate != 1) {
-					memory_tracker->_adapt_period = std::uniform_int_distribution<unsigned>{ 
-						memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);
-				}
+				data->stats->total_refs += num_refs;
 			}
 		}
 		data->buf_ptr = data->mem_buf.data;
@@ -614,7 +607,6 @@ namespace drace {
 		}
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
-		_adapt_period = params.sampling_rate;
 	}
 
 } // namespace drace

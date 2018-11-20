@@ -31,8 +31,8 @@ namespace drace {
 		ms_t time_in_flushes{ 0 };
 		unsigned long module_loads{ 0 };
 		ms_t module_load_duration{ 0 };
-		unsigned long long proc_refs{ 0 };
-		unsigned long long total_refs{ 0 };
+		uint64_t proc_refs{ 0 };
+		uint64_t total_refs{ 0 };
 
 		LossyCountingModel<uint64_t> page_hits;
 		LossyCountingModel<uint64_t> pc_hits;

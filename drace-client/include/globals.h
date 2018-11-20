@@ -99,6 +99,8 @@ namespace drace {
 		tls_map_t     th_towait;
 		/// Statistics
 		std::unique_ptr<Statistics>   stats;
+		/// local sampling state
+		int sampling_pos = 0;
 		/**
 		 * as the detector cannot allocate TLS,
 		 * use this ptr for per-thread data in detector */

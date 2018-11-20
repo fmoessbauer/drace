@@ -68,8 +68,8 @@ namespace drace {
 		unsigned _min_period = 1;
 		/// minimum length of period
 		unsigned _max_period = 1;
-		/// length of next period
-		unsigned _adapt_period = 1;
+		/// current pos in period
+		int _sample_pos = 0;
 
 		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
@@ -101,10 +101,13 @@ namespace drace {
 
 		/** Returns true if this reference should be sampled */
 		inline bool sample_ref(per_thread_t * data) {
+			--data->sampling_pos;
 			if (params.sampling_rate == 1)
 				return true;
-			if(!(data->stats->total_refs % _adapt_period))
+			if (data->sampling_pos < 0) {
+				data->sampling_pos = std::uniform_int_distribution<unsigned>{ memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);;
 				return true;
+			}
 			return false;
 		}
 
