@@ -304,6 +304,7 @@ namespace drace {
 		}
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
+		_sampling_period = params.sampling_rate;
 	}
 
 	void MemoryTracker::handle_ext_state() {
