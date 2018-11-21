@@ -115,7 +115,7 @@ namespace drace {
 		void analyze_access();
 
 		inline void process_buffer() {
-			if (_enabled) clear_buffer();
+			if (!_enabled) clear_buffer();
 			else analyze_access();
 		}
 
