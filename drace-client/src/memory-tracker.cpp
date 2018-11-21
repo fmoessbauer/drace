@@ -166,8 +166,11 @@ namespace drace {
 						continue;
 					}
 					// this is a mem-ref candidate
-					if (!sample_ref()) {
-						continue;
+					if (!params.fastmode) {
+						// in fast-mode, sampling is implemented in the instrumentation
+						if (!sample_ref()) {
+							continue;
+						}
 					}
 					stack.data[stack.entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
@@ -305,6 +308,7 @@ namespace drace {
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
 		_sampling_period = params.sampling_rate;
+		_sample_pos = _sampling_period;
 	}
 
 	void MemoryTracker::handle_ext_state() {

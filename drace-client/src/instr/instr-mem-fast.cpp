@@ -24,17 +24,18 @@ namespace drace {
 		/* Steal two scratch registers.
 		* reg2 must be ECX or RCX for jecxz.
 		*/
-		if (drreg_reserve_register(drcontext, ilist, where, &allowed_xcx, &reg2) !=
-			DRREG_SUCCESS ||
+		if (drreg_reserve_register(drcontext, ilist, where, &allowed_xcx, &reg2) != DRREG_SUCCESS ||
 			drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS ||
-			drreg_reserve_register(drcontext, ilist, where, NULL, &reg3) != DRREG_SUCCESS) {
+			drreg_reserve_register(drcontext, ilist, where, NULL, &reg3) != DRREG_SUCCESS)
+		{
 			DR_ASSERT(false); /* cannot recover */
 			return;
 		}
 
 		/* Create ASM lables */
+		instr_t *process = INSTR_CREATE_label(drcontext);
 		instr_t *restore = INSTR_CREATE_label(drcontext);
-		instr_t *call = INSTR_CREATE_label(drcontext);
+		instr_t *call    = INSTR_CREATE_label(drcontext);
 
 		/* use drutil to get mem address */
 		drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
@@ -69,6 +70,52 @@ namespace drace {
 		/* Jump if (E|R)CX is 0 */
 		opnd1 = opnd_create_instr(restore);
 		instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		/* ===========  Sample logic =========== */
+		/* Load the data->_sample_pos */
+		opnd1 = opnd_create_reg(reg2);
+		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
+		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		// increment sampling pos
+		/* Decrement data->_sample_pos by one using lea instruction */
+		opnd1 = opnd_create_reg(reg2);
+		opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
+		instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		/* Store the data->_sample_pos */
+		opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
+		opnd2 = opnd_create_reg(reg2);
+		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		/* if _sample_bound == _sample_pos => sample, jump to process logic */
+		opnd1 = opnd_create_instr(process);
+		instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		opnd1 = opnd_create_instr(restore);
+		instr = INSTR_CREATE_jmp(drcontext, opnd1);
+		instrlist_meta_preinsert(ilist, where, instr);
+		/* End Sample logic */
+
+		/* Put this reference into the buffer */
+		instrlist_meta_preinsert(ilist, where, process);
+
+		/* Get current sampling_period value */
+		opnd1 = opnd_create_reg(reg2);
+		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sampling_period));
+		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		/* Reset sampling period */
+		opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
+		//opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_bound));
+		opnd2 = opnd_create_reg(reg2);
+		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
 		/* Load data->buf_ptr into reg2 */

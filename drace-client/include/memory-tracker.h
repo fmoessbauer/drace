@@ -85,13 +85,13 @@ namespace drace {
 		// fast random numbers for sampling
 		std::mt19937 _prng;
 
-		unsigned _sampling_period = 1;
+		uint64_t _sampling_period = 1;
 		/// maximum length of period
 		unsigned _min_period = 1;
 		/// minimum length of period
 		unsigned _max_period = 1;
 		/// current pos in period
-		int _sample_pos = 0;
+		uint64_t _sample_pos = 1;
 
 		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 

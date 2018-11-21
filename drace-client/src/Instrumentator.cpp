@@ -262,6 +262,7 @@ namespace drace {
 	void Instrumentator::code_cache_init(void) {
 		void         *drcontext;
 		instrlist_t  *ilist;
+		// address to jump back
 		instr_t      *where;
 		byte         *end;
 
