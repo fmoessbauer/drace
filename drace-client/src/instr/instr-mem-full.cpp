@@ -30,7 +30,6 @@ void Instrumentator::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, in
 void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
-#if 0
 	/*
 	* instrument_mem is called whenever a memory reference is identified.
 	* It inserts code before the memory reference to to fill the memory buffer
@@ -62,6 +61,7 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 	instr_t *call = INSTR_CREATE_label(drcontext);
 	instr_t *call_flush = INSTR_CREATE_label(drcontext);
 	instr_t *call_noflush = INSTR_CREATE_label(drcontext);
+	instr_t *before_flush = INSTR_CREATE_label(drcontext);
 	instr_t *after_flush = INSTR_CREATE_label(drcontext);
 
 	/* use drutil to get mem address */
@@ -91,14 +91,21 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 	/* Jump if tracing is disabled */
 	/* load enabled flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._enabled));
-	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+	opnd2 = OPND_CREATE_MEM32(reg3, offsetof(ThreadState, mtrack._sample_pos));
+	instr = INSTR_CREATE_movd(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Jump if (E|R)CX is 0 */
-	opnd1 = opnd_create_instr(restore);
+	opnd1 = opnd_create_instr(before_flush);
 	instr = INSTR_CREATE_jecxz(drcontext, opnd1);
 	instrlist_meta_preinsert(ilist, where, instr);
+
+	opnd1 = opnd_create_instr(restore);
+	instr = INSTR_CREATE_jmp(drcontext, opnd1);
+	instrlist_meta_preinsert(ilist, where, instr);
+
+	/* ==== .before_flush ==== */
+	instrlist_meta_preinsert(ilist, where, before_flush);
 
 	/* Jump if flush is pending, finally return to .after_flush */
 	insert_jmp_on_flush(drcontext, ilist, where, reg2, reg3, call_flush);
@@ -108,7 +115,7 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 
 	/* Load data->buf_ptr into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_ptr));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -150,7 +157,7 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Update the data->buf_ptr */
-	opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
+	opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_ptr));
 	opnd2 = opnd_create_reg(reg2);
 	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
@@ -161,7 +168,7 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 	*/
 	/* lea [reg2 - buf_end] => reg2 */
 	opnd1 = opnd_create_reg(reg1);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_end));
+	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_end));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 	opnd1 = opnd_create_reg(reg2);
@@ -230,5 +237,4 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS || 
 		drreg_unreserve_register(drcontext, ilist, where, reg3) != DRREG_SUCCESS)
 		DR_ASSERT(false);
-#endif
 }

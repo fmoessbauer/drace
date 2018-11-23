@@ -80,6 +80,9 @@ void sync(
 			++tmp;
 		}
 	}
+	DRACE_ENTER_EXCLUDE();
+	std::cout << "Thread " << tid << " finished" << std::endl;
+	DRACE_LEAVE_EXCLUDE();
 }
 
 void watchdog(std::atomic<bool> * running) {

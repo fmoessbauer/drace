@@ -50,6 +50,10 @@ namespace drace {
 		// dr does not support this natively, so make syscall in app context
 		GetCurrentThreadStackLimits(&(_appstack_beg), &(_appstack_end));
 		LOG_NOTICE(tid, "stack from %p to %p", _appstack_beg, _appstack_end);
+
+		update_sampling();
+		enable();
+		DR_ASSERT(_sample_pos != 0);
 	}
 
 	MemoryTracker::~MemoryTracker() {
@@ -128,71 +132,81 @@ namespace drace {
 			// lessen impact of expensive SHM accesses
 			handle_ext_state();
 		}
-		//LOG_INFO(tid, "enabled %i, raw %p", is_enabled(), (void*)_sample_pos);
-		if (is_enabled()) {
-			mem_ref_t * mem_ref = (mem_ref_t *)_mem_buf.data;
-			uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
+		//if (!is_enabled()) {
+			//LOG_INFO(tid, "enabled %i, raw %p, event_cnt %u, sample_pos %u", is_enabled(), (void*)_sample_pos, _event_cnt, get_sample_pos());
+		//}
+		// bit 62 must not be set. If set, it indicates an underflow
+		DR_ASSERT(!(_sample_pos & ((uint64_t)1 << 62)));
+		mem_ref_t * mem_ref = (mem_ref_t *)_mem_buf.data;
+		uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
 
-			if (num_refs > 0) {
-				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
-				DR_ASSERT(detector_data != nullptr);
+		if (num_refs > 0) {
+			//dr_printf("[%i] Process buffer, refs: %i\n", tid, num_refs);
+			DR_ASSERT(detector_data != nullptr);
 
-				// In non-fast-mode we have to protect the stack
-				if (!params.fastmode)
-					dr_mutex_lock(th_mutex);
+			// In non-fast-mode we have to protect the stack
+			if (!params.fastmode)
+				dr_mutex_lock(th_mutex);
 
-				DR_ASSERT(stack.entries >= 0);
-				stack.entries++; // We have one spare-element
-				int size = std::min((unsigned)stack.entries, params.stack_size); // TODO: remove params
-				int offset = stack.entries - size;
+			DR_ASSERT(stack.entries >= 0);
+			stack.entries++; // We have one spare-element
+			int size = std::min((unsigned)stack.entries, params.stack_size); // TODO: remove params
+			int offset = stack.entries - size;
 
-				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
-				if (params.lossy) {
-					_stats.pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
-					if ((_stats.flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
-						update_cache();
-					}
+			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
+			if (params.lossy) {
+				_stats.pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
+				if ((_stats.flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
+					update_cache();
 				}
-
-				for (uint64_t i = 0; i < num_refs; ++i) {
-					// todo: better use iterator like access
-					mem_ref = &((mem_ref_t *)_mem_buf.data)[i];
-					if (params.excl_stack &&
-						((ULONG_PTR)mem_ref->addr > _appstack_beg) && 
-						((ULONG_PTR)mem_ref->addr < _appstack_end))
-					{
-						// this reference points into the stack range, skip
-						continue;
-					}
-					if ((uint64_t)mem_ref->addr > PROC_ADDR_LIMIT) {
-						// outside process address space
-						continue;
-					}
-					// this is a mem-ref candidate
-					if (!params.fastmode) {
-						// in fast-mode, sampling is implemented in the instrumentation
-						if (!sample_ref()) {
-							continue;
-						}
-					}
-					stack.data[stack.entries - 1] = mem_ref->pc;
-					if (mem_ref->write) {
-						//printf("[%i] WRITE %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::write(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
-					}
-					else {
-						//printf("[%i] READ  %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::read(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
-					}
-					++(_stats.proc_refs);
-				}
-				stack.entries--;
-				if (!params.fastmode)
-					dr_mutex_unlock(th_mutex);
-				_stats.total_refs += num_refs;
 			}
+
+			for (uint64_t i = 0; i < num_refs; ++i) {
+				// todo: better use iterator like access
+				mem_ref = &((mem_ref_t *)_mem_buf.data)[i];
+				if (params.excl_stack &&
+					((ULONG_PTR)mem_ref->addr > _appstack_beg) && 
+					((ULONG_PTR)mem_ref->addr < _appstack_end))
+				{
+					// this reference points into the stack range, skip
+					continue;
+				}
+				if ((uint64_t)mem_ref->addr > PROC_ADDR_LIMIT) {
+					// outside process address space
+					continue;
+				}
+				// this is a mem-ref candidate
+				if (!params.fastmode) {
+					// in fast-mode, sampling is implemented in the instrumentation
+					if (!sample_ref()) {
+						continue;
+					}
+				}
+				stack.data[stack.entries - 1] = mem_ref->pc;
+				if (mem_ref->write) {
+					//printf("[%i] WRITE %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
+					detector::write(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
+				}
+				else {
+					//printf("[%i] READ  %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
+					detector::read(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
+				}
+				++(_stats.proc_refs);
+			}
+			stack.entries--;
+			if (!params.fastmode) {
+				dr_mutex_unlock(th_mutex);
+			}
+			else {
+				if ((params.sampling_rate != 1) && (get_sample_pos() == _sampling_period)) {
+					// recalculate sampling period
+					_sampling_period = std::uniform_int_distribution<unsigned>{ _min_period, _max_period }(_prng);
+					//LOG_NOTICE(0, "Recalculated period to %u", _sampling_period);
+				}
+			}
+			_stats.total_refs += num_refs;
+			_buf_ptr = _mem_buf.data;
 		}
-		_buf_ptr = _mem_buf.data;
 
 		if (!params.fastmode && !no_flush.load(std::memory_order_relaxed)) {
 			uint64_t expect = 0;
@@ -209,9 +223,11 @@ namespace drace {
 	{
 		mem_ref_t *mem_ref = (mem_ref_t *)_mem_buf.data;
 		uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
-
-		_stats.proc_refs += num_refs;
-		_buf_ptr = _mem_buf.data;
+		//LOG_NOTICE(0, "clear buffer with %u refs", num_refs);
+		if (num_refs) {
+			_stats.proc_refs += num_refs;
+			_buf_ptr = _mem_buf.data;
+		}
 		no_flush.store(true, std::memory_order_relaxed);
 	}
 
@@ -312,10 +328,9 @@ namespace drace {
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
 		_sampling_period = params.sampling_rate;
-		//_sample_pos = _sampling_period;
-		if (enabled) {
-			enable();
-		}
+		_sample_pos = _sampling_period;
+		DR_ASSERT(_sample_pos != 0);
+		enabled ? enable() : disable();
 	}
 
 	void MemoryTracker::handle_ext_state() {

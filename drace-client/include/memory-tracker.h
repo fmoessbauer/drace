@@ -134,23 +134,29 @@ namespace drace {
 			if (_event_cnt <= 1) {
 				//memory_tracker->clear_buffer();
 				enable();
-				// recover from missed events
-				if (_event_cnt < 0)
-					_event_cnt = 1;
+				_event_cnt = 0;
+				return;
 			}
-			_event_cnt--;
+			--_event_cnt;
 		}
 
 		inline void enable() {
-			_sample_pos &= (uint64_t)0xEFFFFFFF'FFFFFFFF;
+			_sample_pos &= ~((uint64_t)1 << 63);
+			DR_ASSERT(is_enabled());
 		}
 
 		inline void disable() {
 			_sample_pos |= (uint64_t)1 << 63;
+			DR_ASSERT(!is_enabled());
 		}
 
 		constexpr bool is_enabled() {
 			return !(_sample_pos & ((uint64_t)1 << 63));
+		}
+
+		constexpr uint32_t get_sample_pos() {
+			// cast away flags field
+			return static_cast<uint32_t>(_sample_pos);
 		}
 
 		/**
@@ -170,11 +176,14 @@ namespace drace {
 
 		/** Returns true if this reference should be sampled */
 		inline bool sample_ref() {
-			--_sample_pos;
 			if (_sampling_period == 1)
 				return true;
-			if (_sample_pos < 0) {
-				_sample_pos = std::uniform_int_distribution<unsigned>{ _min_period, _max_period }(_prng);
+			// we decrement the lower half only (little endian)
+			uint32_t* pos = ((uint32_t*)&_sample_pos);
+			DR_ASSERT(*pos != 0);
+			--(*pos);
+			if (*pos == 0) {
+				*pos = std::uniform_int_distribution<unsigned>{ _min_period, _max_period }(_prng);
 				return true;
 			}
 			return false;

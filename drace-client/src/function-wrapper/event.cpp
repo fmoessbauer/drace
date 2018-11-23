@@ -124,7 +124,7 @@ namespace drace {
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			end_excl_region(data->mtrack);
+			data->mtrack.enable_scope();
 			// Enable recently started thread
 			auto last_th = last_th_start.load(std::memory_order_relaxed);
 			// TLS is already updated, hence read lock is sufficient
