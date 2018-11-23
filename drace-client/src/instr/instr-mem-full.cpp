@@ -30,6 +30,7 @@ void Instrumentator::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, in
 void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
+#if 0
 	/*
 	* instrument_mem is called whenever a memory reference is identified.
 	* It inserts code before the memory reference to to fill the memory buffer
@@ -229,4 +230,5 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 		drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS || 
 		drreg_unreserve_register(drcontext, ilist, where, reg3) != DRREG_SUCCESS)
 		DR_ASSERT(false);
+#endif
 }

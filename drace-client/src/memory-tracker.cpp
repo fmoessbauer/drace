@@ -30,10 +30,13 @@ namespace drace {
 		: //_prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
 		  _stats(stats)
 	{
-		mem_buf.resize(MEM_BUF_SIZE, drcontext);
-		buf_ptr = mem_buf.data;
+		// Check alignment
+		DR_ASSERT((uint64_t)(this) % 64 == 0);
+
+		_mem_buf.resize(MEM_BUF_SIZE, drcontext);
+		_buf_ptr = _mem_buf.data;
 		/* set buf_end to be negative of address of buffer end for the lea later */
-		buf_end = -(ptr_int_t)(mem_buf.data + MEM_BUF_SIZE);
+		_buf_end = -(ptr_int_t)(_mem_buf.data + MEM_BUF_SIZE);
 		tid = dr_get_thread_id(drcontext);
 		// Init ShadowStack with max_size + 1 Element for PC of access
 		stack.resize(ShadowStack::max_size + 1, drcontext);
@@ -72,7 +75,7 @@ namespace drace {
 		flush_all_threads(*this, true, false);
 		detector::join(runtime_tid.load(std::memory_order_relaxed), tid, detector_data);
 
-		mem_buf.deallocate(drcontext);
+		_mem_buf.deallocate(drcontext);
 		stack.deallocate(drcontext);
 		live = false;
 	}
@@ -125,10 +128,10 @@ namespace drace {
 			// lessen impact of expensive SHM accesses
 			handle_ext_state();
 		}
-
-		if (_enabled) {
-			mem_ref_t * mem_ref = (mem_ref_t *)mem_buf.data;
-			uint64_t num_refs = (uint64_t)((mem_ref_t *)buf_ptr - mem_ref);
+		//LOG_INFO(tid, "enabled %i, raw %p", is_enabled(), (void*)_sample_pos);
+		if (is_enabled()) {
+			mem_ref_t * mem_ref = (mem_ref_t *)_mem_buf.data;
+			uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
 
 			if (num_refs > 0) {
 				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
@@ -153,7 +156,7 @@ namespace drace {
 
 				for (uint64_t i = 0; i < num_refs; ++i) {
 					// todo: better use iterator like access
-					mem_ref = &((mem_ref_t *)mem_buf.data)[i];
+					mem_ref = &((mem_ref_t *)_mem_buf.data)[i];
 					if (params.excl_stack &&
 						((ULONG_PTR)mem_ref->addr > _appstack_beg) && 
 						((ULONG_PTR)mem_ref->addr < _appstack_end))
@@ -189,7 +192,7 @@ namespace drace {
 				_stats.total_refs += num_refs;
 			}
 		}
-		buf_ptr = mem_buf.data;
+		_buf_ptr = _mem_buf.data;
 
 		if (!params.fastmode && !no_flush.load(std::memory_order_relaxed)) {
 			uint64_t expect = 0;
@@ -204,11 +207,11 @@ namespace drace {
 
 	void MemoryTracker::clear_buffer(void)
 	{
-		mem_ref_t *mem_ref = (mem_ref_t *)mem_buf.data;
-		uint64_t num_refs = (uint64_t)((mem_ref_t *)buf_ptr - mem_ref);
+		mem_ref_t *mem_ref = (mem_ref_t *)_mem_buf.data;
+		uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
 
 		_stats.proc_refs += num_refs;
-		buf_ptr = mem_buf.data;
+		_buf_ptr = _mem_buf.data;
 		no_flush.store(true, std::memory_order_relaxed);
 	}
 
@@ -250,9 +253,9 @@ namespace drace {
 
 		// Get threads and notify them
 		for (const auto & td : TLS_buckets) {
-			if (td.first != mtr.tid && td.second->mtrack._enabled && td.second->mtrack.no_flush.load(std::memory_order_relaxed))
+			if (td.first != mtr.tid && td.second->mtrack.is_enabled() && td.second->mtrack.no_flush.load(std::memory_order_relaxed))
 			{
-				uint64_t refs = (td.second->mtrack.buf_ptr - td.second->mtrack.mem_buf.data) / sizeof(mem_ref_t);
+				uint64_t refs = (td.second->mtrack._buf_ptr - td.second->mtrack._mem_buf.data) / sizeof(mem_ref_t);
 				if (refs > 0) {
 					//printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
 					//	data->tid, td.first, refs);
@@ -284,7 +287,7 @@ namespace drace {
 						}
 					}
 					// Here we might loose some refs, clear them
-					td.second.buf_ptr = td.second.mem_buf.data;
+					td.second._buf_ptr = td.second._mem_buf.data;
 					td.second.no_flush.store(true, std::memory_order_relaxed);
 					break;
 				}
@@ -300,6 +303,7 @@ namespace drace {
 
 	void MemoryTracker::update_sampling() {
 		unsigned delta;
+		bool enabled = is_enabled();
 		if (params.sampling_rate < 10)
 			delta = 1;
 		else {
@@ -308,7 +312,10 @@ namespace drace {
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
 		_sampling_period = params.sampling_rate;
-		_sample_pos = _sampling_period;
+		//_sample_pos = _sampling_period;
+		if (enabled) {
+			enable();
+		}
 	}
 
 	void MemoryTracker::handle_ext_state() {

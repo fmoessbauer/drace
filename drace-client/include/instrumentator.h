@@ -64,7 +64,7 @@ namespace drace {
 				instrument_mem_fast(drcontext, ilist, where, ref, write);
 			}
 			else {
-				instrument_mem_full(drcontext, ilist, where, ref, write);
+				//instrument_mem_full(drcontext, ilist, where, ref, write);
 			}
 		}
 

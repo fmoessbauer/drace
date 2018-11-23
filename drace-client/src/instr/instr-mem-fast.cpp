@@ -26,7 +26,8 @@ namespace drace {
 		*/
 		if (drreg_reserve_register(drcontext, ilist, where, &allowed_xcx, &reg2) != DRREG_SUCCESS ||
 			drreg_reserve_register(drcontext, ilist, where, NULL, &reg1) != DRREG_SUCCESS ||
-			drreg_reserve_register(drcontext, ilist, where, NULL, &reg3) != DRREG_SUCCESS)
+			drreg_reserve_register(drcontext, ilist, where, NULL, &reg3) != DRREG_SUCCESS ||
+			drreg_reserve_aflags(drcontext, ilist, where) != DRREG_SUCCESS)
 		{
 			DR_ASSERT(false); /* cannot recover */
 			return;
@@ -36,6 +37,8 @@ namespace drace {
 		instr_t *process = INSTR_CREATE_label(drcontext);
 		instr_t *restore = INSTR_CREATE_label(drcontext);
 		instr_t *call    = INSTR_CREATE_label(drcontext);
+
+		instr_t *nowhere = INSTR_CREATE_label(drcontext);
 
 		/* use drutil to get mem address */
 		drutil_insert_get_mem_addr(drcontext, ilist, where, ref, reg1, reg2);
@@ -63,33 +66,27 @@ namespace drace {
 		/* Jump if tracing is disabled */
 		/* load enabled flag into reg2 */
 		opnd1 = opnd_create_reg(reg2);
-		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._enabled));
+		opnd2 = OPND_CREATE_MEM64(reg3, offsetof(ThreadState, mtrack._sample_pos));
 		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
+		instrlist_meta_preinsert(ilist, where, instr);
+
+		opnd1 = opnd_create_reg(reg2);
+		opnd2 = OPND_CREATE_INT8(62);
+		instr = INSTR_CREATE_bt(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
 		/* Jump if (E|R)CX is 0 */
 		opnd1 = opnd_create_instr(restore);
-		instr = INSTR_CREATE_jecxz(drcontext, opnd1);
+		instr = INSTR_CREATE_jcc(drcontext, OP_jb, opnd1);
 		instrlist_meta_preinsert(ilist, where, instr);
 
 		/* ===========  Sample logic =========== */
-		/* Load the data->_sample_pos */
-		opnd1 = opnd_create_reg(reg2);
-		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
-		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-		instrlist_meta_preinsert(ilist, where, instr);
 
 		// increment sampling pos
 		/* Decrement data->_sample_pos by one using lea instruction */
-		opnd1 = opnd_create_reg(reg2);
-		opnd2 = opnd_create_base_disp(reg2, DR_REG_NULL, 0, -1, OPSZ_lea);
-		instr = INSTR_CREATE_lea(drcontext, opnd1, opnd2);
-		instrlist_meta_preinsert(ilist, where, instr);
-
-		/* Store the data->_sample_pos */
 		opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
-		opnd2 = opnd_create_reg(reg2);
-		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+		opnd2 = OPND_CREATE_INT32(-1);
+		instr = INSTR_CREATE_add(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
 		/* if _sample_bound == _sample_pos => sample, jump to process logic */
@@ -120,7 +117,7 @@ namespace drace {
 
 		/* Load data->buf_ptr into reg2 */
 		opnd1 = opnd_create_reg(reg2);
-		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
+		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_ptr));
 		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
@@ -162,7 +159,7 @@ namespace drace {
 		instrlist_meta_preinsert(ilist, where, instr);
 
 		/* Update the data->buf_ptr */
-		opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_ptr));
+		opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_ptr));
 		opnd2 = opnd_create_reg(reg2);
 		instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
@@ -173,7 +170,7 @@ namespace drace {
 		*/
 		/* lea [reg2 - buf_end] => reg2 */
 		opnd1 = opnd_create_reg(reg1);
-		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack.buf_end));
+		opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._buf_end));
 		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 		opnd1 = opnd_create_reg(reg2);
@@ -208,6 +205,7 @@ namespace drace {
 		instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
+		instrlist_meta_preinsert(ilist, where, nowhere);
 		/* jmp cc_flush */
 		opnd1 = opnd_create_pc(cc_flush);
 		instr = INSTR_CREATE_jmp(drcontext, opnd1);
@@ -220,7 +218,8 @@ namespace drace {
 
 		if (drreg_unreserve_register(drcontext, ilist, where, reg1) != DRREG_SUCCESS ||
 			drreg_unreserve_register(drcontext, ilist, where, reg2) != DRREG_SUCCESS ||
-			drreg_unreserve_register(drcontext, ilist, where, reg3) != DRREG_SUCCESS)
+			drreg_unreserve_register(drcontext, ilist, where, reg3) != DRREG_SUCCESS ||
+			drreg_unreserve_aflags(drcontext, ilist, where) != DRREG_SUCCESS)
 			DR_ASSERT(false);
 	}
 }

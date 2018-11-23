@@ -43,11 +43,21 @@ namespace drace {
 		/** update code-cache after this number of flushes (must be power of two) */
 		static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
-		thread_id_t tid;
+	private:
+		// Control Block used in inline instrumentation,
+		// should fit into one cache line
+		/* current pos in period.
+		* Layout: |-------|---63 bit---|
+		*         |enabled|sampling-pos|
+		*/
+		uint64_t	  _sample_pos = 1;
+		uint64_t	  _sampling_period = 1;
+		byte         *_buf_ptr;
+		ptr_int_t     _buf_end;
+		AlignedBuffer<byte, 1> _mem_buf;
+	public:
 
-		byte         *buf_ptr;
-		ptr_int_t     buf_end;
-		AlignedBuffer<byte, 64> mem_buf;
+		thread_id_t tid;
 
 		std::atomic<int> flush_active{ false };
 
@@ -69,7 +79,6 @@ namespace drace {
 
 	private:
 		Statistics & _stats;
-		bool        _enabled{true};
 
 		/** bool external change detected
 		* this flag is used to trigger the enable or disable
@@ -85,13 +94,10 @@ namespace drace {
 		// fast random numbers for sampling
 		std::mt19937 _prng;
 
-		uint64_t _sampling_period = 1;
 		/// maximum length of period
 		unsigned _min_period = 1;
 		/// minimum length of period
 		unsigned _max_period = 1;
-		/// current pos in period
-		uint64_t _sample_pos = 1;
 
 		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
@@ -115,24 +121,36 @@ namespace drace {
 		void analyze_access();
 
 		inline void process_buffer() {
-			if (!_enabled) clear_buffer();
+			if (!is_enabled()) clear_buffer();
 			else analyze_access();
 		}
 
 		inline void disable_scope() {
-			_enabled = false;
+			disable();
 			++_event_cnt;
 		}
 
 		inline void enable_scope() {
 			if (_event_cnt <= 1) {
 				//memory_tracker->clear_buffer();
-				_enabled = true;
+				enable();
 				// recover from missed events
 				if (_event_cnt < 0)
 					_event_cnt = 1;
 			}
 			_event_cnt--;
+		}
+
+		inline void enable() {
+			_sample_pos &= (uint64_t)0xEFFFFFFF'FFFFFFFF;
+		}
+
+		inline void disable() {
+			_sample_pos |= (uint64_t)1 << 63;
+		}
+
+		constexpr bool is_enabled() {
+			return !(_sample_pos & ((uint64_t)1 << 63));
 		}
 
 		/**

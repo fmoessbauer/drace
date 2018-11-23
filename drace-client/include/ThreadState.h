@@ -11,7 +11,7 @@
 namespace drace {
 
 	/** Per Thread data (thread-private) */
-	class ThreadState {
+	class alignas(64) ThreadState {
 	public:
 		ThreadState(void* drcontext) :
 			stats(dr_get_thread_id(drcontext)),
@@ -30,6 +30,8 @@ namespace drace {
 		}
 
 	public:
+		/// Memory Tracker. This has to be aligned to a cache-line
+		MemoryTracker mtrack;
 
 		thread_id_t   tid;
 
@@ -41,9 +43,7 @@ namespace drace {
 		std::unordered_map<uint64_t, unsigned> mutex_book;
 		/// Statistics
 		Statistics   stats;
-		/// Memory Tracker
-		MemoryTracker mtrack;
-		/// local sampling state
-		int sampling_pos = 0;
+		/// allocation begin of tls (without alignment)
+		void * alloc_begin;
 	};
 }

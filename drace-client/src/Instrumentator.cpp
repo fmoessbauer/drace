@@ -66,12 +66,16 @@ namespace drace {
 	void Instrumentator::event_thread_init(void *drcontext)
 	{
 		/* allocate thread private data */
-		void * tls_buffer = dr_thread_alloc(drcontext, sizeof(ThreadState));
-		drmgr_set_tls_field(drcontext, tls_idx, tls_buffer);
+		size_t space_size = sizeof(ThreadState) + alignof(ThreadState);
+		void * tls_buffer = dr_thread_alloc(drcontext, space_size);
+		void * algn_buffer = std::align(alignof(ThreadState), sizeof(ThreadState), tls_buffer, space_size);
+		drmgr_set_tls_field(drcontext, tls_idx, algn_buffer);
 
 		// Initialize struct at given location (placement new)
 		// As this includes allocation, we have to be in dr state
-		ThreadState * data = new (tls_buffer) ThreadState(drcontext);
+		ThreadState * data = new (algn_buffer) ThreadState(drcontext);
+		data->alloc_begin = tls_buffer;
+
 		data->mtrack.update_sampling();
 
 		data->tid = dr_get_thread_id(drcontext);
@@ -84,12 +88,12 @@ namespace drace {
 			std::memory_order_relaxed, std::memory_order_relaxed))
 		{
 			last_th_start = data->tid;
-			data->mtrack._enabled = false;
+			data->mtrack.disable();
 		}
 
 		// this is the master thread
 		if (params.exclude_master && (data->tid == runtime_tid)) {
-			data->mtrack._enabled = false;
+			data->mtrack.disable();
 			data->mtrack._event_cnt++;
 		}
 
@@ -123,7 +127,7 @@ namespace drace {
 		data->mtrack.deallocate(drcontext);
 		// deconstruct struct
 		data->~ThreadState();
-		dr_thread_free(drcontext, data, sizeof(ThreadState));
+		dr_thread_free(drcontext, data->alloc_begin, sizeof(ThreadState) + alignof(ThreadState));
 	}
 
 
