@@ -93,13 +93,14 @@ namespace drace {
 
 		// this is the master thread
 		if (params.exclude_master && (data->tid == runtime_tid)) {
-			data->mtrack.disable();
-			data->mtrack._event_cnt++;
+			data->mtrack.disable_scope();
 		}
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		TLS_buckets.emplace(data->tid, data);
 		dr_rwlock_write_unlock(tls_rw_mutex);
+
+		MemoryTracker::flush_all_threads(data->mtrack, false, false);
 	}
 
 	void Instrumentator::event_thread_exit(void *drcontext)

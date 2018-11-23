@@ -31,6 +31,7 @@ TEST_F(DrIntegrationTest, ExclStack) {
 
 TEST_F(DrIntegrationTest, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
+	run("-c test/data/drace_excl.ini --fast-mode", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
 
 TEST_F(DrIntegrationTest, Annotations) {

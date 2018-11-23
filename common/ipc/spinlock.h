@@ -21,6 +21,7 @@ namespace ipc {
 				if (++cnt == 100) {
 					// congestion on the lock
 					std::this_thread::yield();
+					cnt = 0;
 #ifdef DEBUG
 					std::cout << "spinlock congestion" << std::endl;
 #endif

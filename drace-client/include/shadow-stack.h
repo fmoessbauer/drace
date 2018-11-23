@@ -59,6 +59,7 @@ namespace drace {
 			DR_ASSERT(!dr_using_app_state(drcontext));
 
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(drcontext, tls_idx);
+
 			if (!params.fastmode) {
 				while (data->mtrack.external_flush.load(std::memory_order_relaxed)) {
 					// wait
@@ -87,6 +88,7 @@ namespace drace {
 		static void on_ret(void *ret_ins, void *target_addr)
 		{
 			ThreadState * data = (ThreadState*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+
 			stack_t & stack = data->mtrack.stack;
 
 			if (!params.fastmode) {

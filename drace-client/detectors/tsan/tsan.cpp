@@ -185,7 +185,7 @@ std::string detector::version() {
 void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
-	//std::cout << "detector::acquire " << thread_id << " @ " << mutex << std::endl;
+	//std::cout << "detector::acquire " << (void*)tls << " @ " << mutex << std::endl;
 
 	assert(nullptr != tls);
 
@@ -200,7 +200,7 @@ void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 void detector::release(tls_t tls, void* mutex, bool write) {
 	uint64_t addr_32 = lower_half((uint64_t)mutex);
 
-	//std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;
+	//std::cout << "detector::release " << (void*)tls << " @ " << mutex << std::endl;
 
 	assert(nullptr != tls);
 
