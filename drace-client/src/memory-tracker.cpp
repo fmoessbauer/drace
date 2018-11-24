@@ -26,17 +26,15 @@
 namespace drace {
 	MemoryTracker::MemoryTracker(
 		void * drcontext,
-		Statistics & stats)
-		: //_prng(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
+		Statistics & stats) :
 		  _stats(stats)
 	{
 		// Check alignment
 		DR_ASSERT((uint64_t)(this) % 64 == 0);
 
-		_mem_buf.resize(MEM_BUF_SIZE, drcontext);
-		_buf_ptr = _mem_buf.data;
+		_buf_ptr = _mem_buf;
 		/* set buf_end to be negative of address of buffer end for the lea later */
-		_buf_end = -(ptr_int_t)(_mem_buf.data + MEM_BUF_SIZE);
+		_buf_end = -(ptr_int_t)(_mem_buf + MAX_NUM_MEM_REFS);
 		tid = dr_get_thread_id(drcontext);
 		// Init ShadowStack with max_size + 1 Element for PC of access
 		stack.resize(ShadowStack::max_size + 1, drcontext);
@@ -50,7 +48,7 @@ namespace drace {
 		// dr does not support this natively, so make syscall in app context
 		GetCurrentThreadStackLimits(&(_appstack_beg), &(_appstack_end));
 		LOG_NOTICE(tid, "stack from %p to %p", _appstack_beg, _appstack_end);
-		DR_ASSERT(_sample_pos != 0);
+		DR_ASSERT(_ctrlblock != 0);
 	}
 
 	MemoryTracker::~MemoryTracker() {
@@ -76,7 +74,6 @@ namespace drace {
 		flush_all_threads(*this, true, false);
 		detector::join(runtime_tid.load(std::memory_order_relaxed), tid, detector_data);
 
-		_mem_buf.deallocate(drcontext);
 		stack.deallocate(drcontext);
 		live = false;
 	}
@@ -130,12 +127,12 @@ namespace drace {
 			handle_ext_state();
 		}
 		//if (is_enabled()) {
-			//LOG_INFO(tid, "enabled %i, raw %p, event_cnt %u, sample_pos %u", is_enabled(), (void*)_sample_pos, _event_cnt, get_sample_pos());
+			//LOG_INFO(tid, "enabled %i, raw %p, event_cnt %u, sample_pos %u", is_enabled(), (void*)_ctrlblock, _event_cnt, get_sample_pos());
 		//}
 		// bit 62 must not be set. If set, it indicates an underflow
-		DR_ASSERT(!(_sample_pos & ((uint64_t)1 << 62)));
-		mem_ref_t * mem_ref = (mem_ref_t *)_mem_buf.data;
-		uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
+		DR_ASSERT(!(_ctrlblock & ((uint64_t)1 << 62)));
+		uint64_t num_refs = std::distance(_mem_buf, _buf_ptr);
+		DR_ASSERT(num_refs <= MAX_NUM_MEM_REFS);
 
 		if(is_enabled()){
 			if (num_refs > 0) {
@@ -153,7 +150,7 @@ namespace drace {
 
 				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 				if (params.lossy) {
-					_stats.pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
+					_stats.pc_hits.processItem((uint64_t)_mem_buf[0].pc >> HIST_PC_RES);
 					if ((_stats.flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
 						update_cache();
 					}
@@ -161,15 +158,15 @@ namespace drace {
 
 				for (uint64_t i = 0; i < num_refs; ++i) {
 					// todo: better use iterator like access
-					mem_ref = &((mem_ref_t *)_mem_buf.data)[i];
+					const auto & mem_ref = _mem_buf[i];
 					if (params.excl_stack &&
-						((ULONG_PTR)mem_ref->addr > _appstack_beg) &&
-						((ULONG_PTR)mem_ref->addr < _appstack_end))
+						((ULONG_PTR)mem_ref.addr > _appstack_beg) &&
+						((ULONG_PTR)mem_ref.addr < _appstack_end))
 					{
 						// this reference points into the stack range, skip
 						continue;
 					}
-					if ((uint64_t)mem_ref->addr > PROC_ADDR_LIMIT) {
+					if ((uint64_t)mem_ref.addr > PROC_ADDR_LIMIT) {
 						// outside process address space
 						continue;
 					}
@@ -180,14 +177,14 @@ namespace drace {
 							continue;
 						}
 					}
-					stack.data[stack.entries - 1] = mem_ref->pc;
-					if (mem_ref->write) {
+					stack.data[stack.entries - 1] = mem_ref.pc;
+					if (mem_ref.write) {
 						//dr_printf("[%i] WRITE %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::write(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
+						detector::write(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
 					}
 					else {
 						//dr_printf("[%i] READ  %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::read(detector_data, stack.data + offset, size, mem_ref->addr, mem_ref->size);
+						detector::read(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
 					}
 					++(_stats.proc_refs);
 				}
@@ -198,7 +195,7 @@ namespace drace {
 			}
 		}
 		_stats.total_refs += num_refs;
-		_buf_ptr = _mem_buf.data;
+		_buf_ptr = _mem_buf;
 #if 0
 		if ((params.sampling_rate != 1) && (get_sample_pos() == 1)) {
 			// recalculate sampling period
@@ -220,12 +217,11 @@ namespace drace {
 
 	void MemoryTracker::clear_buffer(void)
 	{
-		mem_ref_t *mem_ref = (mem_ref_t *)_mem_buf.data;
-		uint64_t num_refs = (uint64_t)((mem_ref_t *)_buf_ptr - mem_ref);
+		uint64_t num_refs = std::distance(_mem_buf, _buf_ptr);
 		if (num_refs > 0) {
-			LOG_NOTICE(0, "clear buffer with %u refs", num_refs);
+			//LOG_NOTICE(0, "clear buffer with %u refs", num_refs);
 			_stats.proc_refs += num_refs;
-			_buf_ptr = _mem_buf.data;
+			_buf_ptr = _mem_buf;
 		}
 		no_flush.store(true, std::memory_order_relaxed);
 	}
@@ -270,7 +266,7 @@ namespace drace {
 		for (const auto & td : TLS_buckets) {
 			if (td.first != mtr.tid && td.second->mtrack.is_enabled() && td.second->mtrack.no_flush.load(std::memory_order_relaxed))
 			{
-				uint64_t refs = (td.second->mtrack._buf_ptr - td.second->mtrack._mem_buf.data) / sizeof(mem_ref_t);
+				uint64_t refs = std::distance(td.second->mtrack._mem_buf, td.second->mtrack._buf_ptr);
 				if (refs > 0) {
 					//printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
 					//	data->tid, td.first, refs);
@@ -302,7 +298,7 @@ namespace drace {
 						}
 					}
 					// Here we might loose some refs, clear them
-					td.second._buf_ptr = td.second._mem_buf.data;
+					td.second._buf_ptr = td.second._mem_buf;
 					td.second.no_flush.store(true, std::memory_order_relaxed);
 					break;
 				}
@@ -328,8 +324,8 @@ namespace drace {
 		_min_period = std::max(params.sampling_rate - delta, 2u);
 		_max_period = params.sampling_rate + delta;
 		_sampling_period = params.sampling_rate;
-		_sample_pos = _sampling_period;
-		DR_ASSERT(_sample_pos != 0);
+		_ctrlblock = _sampling_period;
+		DR_ASSERT(_ctrlblock != 0);
 		DR_ASSERT(get_sample_pos() != 0);
 		enabled ? enable() : disable();
 	}

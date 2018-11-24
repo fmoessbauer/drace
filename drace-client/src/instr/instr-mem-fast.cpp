@@ -63,7 +63,7 @@ namespace drace {
 
 		/* Jump if tracing is disabled, load cb into reg2 */
 		opnd1 = opnd_create_reg(reg2);
-		opnd2 = OPND_CREATE_MEM64(reg3, offsetof(ThreadState, mtrack._sample_pos));
+		opnd2 = OPND_CREATE_MEM64(reg3, offsetof(ThreadState, mtrack._ctrlblock));
 		instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 		instrlist_meta_preinsert(ilist, where, instr);
 
@@ -81,7 +81,7 @@ namespace drace {
 		if (params.sampling_rate != 1) {
 			// increment sampling pos
 			/* Decrement data->_sample_pos by one using lea instruction */
-			opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_pos));
+			opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._ctrlblock));
 			opnd2 = OPND_CREATE_INT32(1);
 			instr = INSTR_CREATE_sub(drcontext, opnd1, opnd2);
 			instrlist_meta_preinsert(ilist, where, instr);
@@ -106,7 +106,7 @@ namespace drace {
 			instrlist_meta_preinsert(ilist, where, instr);
 
 			/* Reset sampling period */
-			opnd1 = OPND_CREATE_MEM64(reg3, offsetof(ThreadState, mtrack._sample_pos));
+			opnd1 = OPND_CREATE_MEM64(reg3, offsetof(ThreadState, mtrack._ctrlblock));
 			//opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ThreadState, mtrack._sample_bound));
 			opnd2 = opnd_create_reg(reg2);
 			instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);

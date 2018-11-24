@@ -91,7 +91,7 @@ void Instrumentator::instrument_mem_full(void *drcontext, instrlist_t *ilist, in
 	/* Jump if tracing is disabled */
 	/* load enabled flag into reg2 */
 	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEM32(reg3, offsetof(ThreadState, mtrack._sample_pos));
+	opnd2 = OPND_CREATE_MEM32(reg3, offsetof(ThreadState, mtrack._ctrlblock));
 	instr = INSTR_CREATE_movd(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 

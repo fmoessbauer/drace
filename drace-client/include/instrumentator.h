@@ -14,7 +14,7 @@ namespace drace {
 
 		size_t page_size;
 
-		/** Code Caches */
+		/** Code cache for buffer flush clean call */
 		app_pc cc_flush;
 
 		/** XCX registers */
@@ -30,9 +30,12 @@ namespace drace {
 		Instrumentator();
 		~Instrumentator();
 
+		/// call this function when a thread is started
 		void event_thread_init(void *drcontext);
+		/// call this function when a thread exits
 		void event_thread_exit(void *drcontext);
 
+		/// flush the region containing pc from the code cache
 		inline void flush_region(void* drcontext, uint64_t pc) {
 			// Flush this area from the code cache
 			dr_delay_flush_region((app_pc)(pc << MemoryTracker::HIST_PC_RES), 1 << MemoryTracker::HIST_PC_RES, 0, NULL);
