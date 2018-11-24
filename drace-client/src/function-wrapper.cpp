@@ -65,7 +65,7 @@ namespace drace {
 			{
 				app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 				if (drwrap_wrap(towrap, pre, post)) {
-					LOG_INFO(0, "Wrapped %s at %p", name.c_str(), towrap);
+					LOG_NOTICE(0, "Wrapped %s at %p", name.c_str(), towrap);
 				}
 			}
 		}

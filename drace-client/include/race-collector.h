@@ -98,14 +98,16 @@ namespace drace {
 					std::move(resolve_symbols(r->first)),
 					std::move(resolve_symbols(r->second)));
 
-				dr_mutex_lock(_race_mx);
+				// TODO: This is race, but otherwise it interferes with the internal spinlock
+				// in drace-tsan
+				//dr_mutex_lock(_race_mx);
 				_races.emplace_back(ttr.count(), dr);
-				dr_mutex_unlock(_race_mx);
+				//dr_mutex_unlock(_race_mx);
 			}
 			else {
-				dr_mutex_lock(_race_mx);
+				//dr_mutex_lock(_race_mx);
 				_races.emplace_back(ttr.count(), *r);
-				dr_mutex_unlock(_race_mx);
+				//dr_mutex_unlock(_race_mx);
 			}
 			print_last_race();
 		}

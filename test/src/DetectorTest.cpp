@@ -161,3 +161,18 @@ TEST_F(DetectorTest, ResetRange) {
 	detector::deallocate(tls81, (void*)0x0080);
 	EXPECT_EQ(num_races, 0);
 }
+
+TEST_F(DetectorTest, MissingLock) {
+	detector::tls_t tls90;
+	detector::tls_t tls91;
+	stack[0] = 0x0090;
+
+	detector::fork(1, 90, &tls90);
+	detector::fork(1, 91, &tls91);
+
+	detector::write(tls90, stack, 1, (void*)0x0092, 8);
+	detector::acquire(tls91, (void*)0x0092, 1, true);
+	detector::write(tls91, stack, 1, (void*)0x0092, 8);
+	detector::release(tls91, (void*)0x0092, true);
+	EXPECT_EQ(num_races, 1);
+}

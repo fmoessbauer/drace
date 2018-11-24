@@ -1,7 +1,5 @@
 #pragma once
-
-#include "Module.h"
-#include "statistics.h"
+#include "aligned-buffer.h"
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -13,10 +11,14 @@
 #include <memory>
 #include <random>
 
-// DR somewere defines max()
+// windows defines max()
 #undef max
 
 namespace drace {
+	class ThreadState;
+	class Statistics;
+	class ShadowStack;
+
 	/**
 	* Covers application memory tracing.
 	* Responsible for adding all instrumentation code (except function wrapping).
@@ -42,70 +44,176 @@ namespace drace {
 		/** update code-cache after this number of flushes (must be power of two) */
 		static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
+	private:
+		/** Control Block used in inline instrumentation,
+		* should fit into one cache line.
+		* Layout:
+		*@code
+		*|-------|---63 bit---|
+		*|enabled|sampling-pos|
+		*@endcode
+		*/
+		uint64_t	  _ctrlblock = 1;
+		/// last calculated sampling period (must not be zero)
+		uint64_t	  _sampling_period = 1;
+
+		/// pointer to the next memory slot
+		mem_ref_t   * _buf_ptr;
+		/// negative value of buffer+size
+		ptr_int_t     _buf_end;
+		/// buffer for memory references
+		mem_ref_t     _mem_buf[MAX_NUM_MEM_REFS];
+
+		/// begin of this threads stack range
+		ULONG_PTR _appstack_beg{ 0x0 };
+		/// end of this threads stack range
+		ULONG_PTR _appstack_end{ 0x0 };
+		/**
+		 * shadow stack. We keep it in a different cache line (it allocates),
+		 * as it is not needed during inline asm memory tracking
+		 */
+		AlignedStack<void*, 64> stack;
+	public:
+		/// dr's id of current thread
+		thread_id_t tid;
+		/// true if an orchestrated flush is currently running (applies only to non fast-mode)
 		std::atomic<int> flush_active{ false };
 
+		/**
+		 * as the detector cannot allocate TLS,
+		 * use this ptr for per-thread data in detector */
+		void*       detector_data{nullptr};
+
+		/// inverse of flush pending, jmpecxz
+		std::atomic<ptr_uint_t> no_flush{ false };
+
+		/// inverse of flush pending, jmpecxz
+		std::atomic<ptr_uint_t> external_flush{ false };
+
+		/// Used for event syncronisation procedure
+		using tls_map_t = std::vector<std::pair<thread_id_t, MemoryTracker&>>;
+		tls_map_t     th_towait;
+
 	private:
-		size_t page_size;
+		/// global statistics collector
+		Statistics & _stats;
 
-		/** Code Caches */
-		app_pc cc_flush;
+		/** bool external change detected
+		* this flag is used to trigger the enable or disable
+		* logic on this thread */
+		bool        _enable_external{ true };
+		/**
+		* Tracks number of nested excluded regions
+		*/
+		unsigned long _event_cnt{0};
 
-		/** Number of instrumented calls, used for sampling
-		 * \Warning This number is racily incremented by design.
-		 *          Hence, use the largest native type to avoid partial loads
-		 */
-		unsigned long long instrum_count{ 0 };
-
-		/* XCX registers */
-		drvector_t allowed_xcx;
-
-		module::Cache mc;
-
-		// fast random numbers for sampling
+		/// fast random numbers to calculate next sampling period length
 		std::mt19937 _prng;
 
 		/// maximum length of period
 		unsigned _min_period = 1;
 		/// minimum length of period
 		unsigned _max_period = 1;
-		/// current pos in period
-		int _sample_pos = 0;
 
-		static const std::mt19937::result_type _max_value = decltype(_prng)::max();
+		static constexpr std::mt19937::result_type _max_value = decltype(_prng)::max();
+
+		/// used to track deallocation / deconstruction. After deallocation, live==false
+		bool live{ true };
 
 	public:
 
-		MemoryTracker();
+		/** Setup memory tracking of this thread.
+		* \Note We do not need the prng here, as it crashes dr in 
+		*       thread-init-event. Instead we use the first call
+		*       from the code cache
+		*/
+		MemoryTracker(void* drcontext, Statistics & stats);
+		/// Finalize memory tracking of this thread
 		~MemoryTracker();
 
-		static void process_buffer(void);
-		static void clear_buffer(void);
-		static void analyze_access(per_thread_t * data);
-		static void flush_all_threads(per_thread_t * data, bool self = true, bool flush_external = false);
+		/**
+		 * deallocate this object using the provided drcontext.
+		 * \note: we cannot rely on RAII here, as memory allocated using
+		 *        dr has to be deallocated with a specific context.
+		 *        In the thread_exit event, this context might differ
+		 *        from \cdr_get_current_drcontext();
+		 */
+		void deallocate(void* drcontext);
 
-		// Events
-		void event_thread_init(void *drcontext);
-
-		void event_thread_exit(void *drcontext);
-
-		/** We transform string loops into regular loops so we can more easily
-		* monitor every memory reference they make.
+		/**
+		* drop all memory references in the current buffer
 		*/
-		dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating);
+		void clear_buffer(void);
+		/**
+		* analyze memory buffer
+		*/
+		void analyze_access();
 
-		dr_emit_flags_t event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data);
-		/** Instrument application instructions */
-		dr_emit_flags_t event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
-			instr_t *instr, bool for_trace,
-			bool translating, void *user_data);
+		/**
+		* process the current memory buffer (analyze / drop) based on the
+		* detector state
+		*/
+		inline void process_buffer() {
+			if (!is_enabled()) clear_buffer();
+			else analyze_access();
+		}
 
-		/** Returns true if this reference should be sampled */
-		inline bool sample_ref(per_thread_t * data) {
-			--data->sampling_pos;
-			if (params.sampling_rate == 1)
+		/**
+		* enter a scope where the detector is disabled.
+		* Nested scopes are supported
+		*/
+		inline void disable_scope() {
+			disable();
+			++_event_cnt;
+		}
+		/**
+		* leave a possibly nested disabled scope.
+		*/
+		inline void enable_scope() {
+			if (_event_cnt <= 1) {
+				//memory_tracker->clear_buffer();
+				enable();
+				_event_cnt = 0;
+				return;
+			}
+			--_event_cnt;
+		}
+
+		/// enable the detector
+		inline void enable() {
+			_ctrlblock &= ~((uint64_t)1 << 63);
+			DR_ASSERT(is_enabled());
+		}
+
+		/// disable the detector
+		inline void disable() {
+			_ctrlblock |= (uint64_t)1 << 63;
+			DR_ASSERT(!is_enabled());
+		}
+
+		/// true if the detector is currently enabled
+		constexpr bool is_enabled() {
+			return !(_ctrlblock & ((uint64_t)1 << 63));
+		}
+
+		/// returns the current position in the sampling period. 
+		constexpr uint32_t get_sample_pos() {
+			// cast away flags field
+			return static_cast<uint32_t>(_ctrlblock);
+		}
+
+		/** Returns true if this reference should be sampled.
+		*   \note only available in non fast-mode
+		*/
+		inline bool sample_ref() {
+			if (_sampling_period == 1)
 				return true;
-			if (data->sampling_pos < 0) {
-				data->sampling_pos = std::uniform_int_distribution<unsigned>{ memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);;
+			// we decrement the lower half only (little endian)
+			uint32_t* pos = ((uint32_t*)&_ctrlblock);
+			DR_ASSERT(*pos != 0);
+			--(*pos);
+			if (*pos == 0) {
+				*pos = std::uniform_int_distribution<unsigned>{ _min_period, _max_period }(_prng);
 				return true;
 			}
 			return false;
@@ -113,63 +221,33 @@ namespace drace {
 
 		/** Update the code cache and remove items where the instrumentation should change.
 		 * We only consider traces, as other parts are not performance critical
+		 * \TODO: Currently this only works well with thread-local code caches
+		 *        We either should use a global state (+sync), or drop this approach
 		 */
-		static void update_cache(per_thread_t * data);
+		void update_cache();
 
-		static bool pc_in_freq(per_thread_t * data, void* bb);
+		/**
+		 * static version of process_buffer to be called from code cache
+		 */
+		static void process_buffer_static();
+
+		/** Request a flush of all non-disabled threads.
+		*  \Warning: This function read-locks the TLS mutex
+		*/
+		static void flush_all_threads(MemoryTracker & mtr, bool self = true, bool flush_external = false);
+
+		/// true if the passed in basic block is frequent
+		static bool pc_in_freq(ThreadState * data, void* bb);
 
 	private:
 
-		void code_cache_init(void);
-		void code_cache_exit(void);
-
-		// Instrumentation
-		/** Inserts a jump to clean call if a flush is pending */
-		void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
-			reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
-
-		/** Instrument all memory accessing instructions */
-		void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
-		/** Instrument all memory accessing instructions (fast-mode)*/
-		void instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
-
-		/**
-		* instrument_mem is called whenever a memory reference is identified.
-		* It inserts code before the memory reference to to fill the memory buffer
-		* and jump to our own code cache to call the clean_call when the buffer is full.
-		*/
-		inline void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write) {
-			if (params.fastmode) {
-				instrument_mem_fast(drcontext, ilist, where, ref, write);
-			}
-			else {
-				instrument_mem_full(drcontext, ilist, where, ref, write);
-			}
-		}
-
 		/** Read data from external CB and modify instrumentation / detection accordingly */
-		void handle_ext_state(per_thread_t * data);
-
+		void handle_ext_state();
+		/** recalculate sampling boundary based on external data */
 		void update_sampling();
+
+		/// needed in instrumentation stage
+		friend class Instrumentator;
+		friend class ShadowStack;
 	};
-
-	extern std::unique_ptr<MemoryTracker> memory_tracker;
-
-	static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace, bool translating)
-	{
-		return memory_tracker->event_bb_app2app(drcontext, tag, bb, for_trace, translating);
-	}
-
-	static inline dr_emit_flags_t instr_event_app_analysis(void * drcontext, void * tag, instrlist_t * bb, bool for_trace, bool translating, OUT void ** user_data)
-	{
-		return memory_tracker->event_app_analysis(drcontext, tag, bb, for_trace, translating, user_data);
-	}
-
-	static inline dr_emit_flags_t instr_event_app_instruction(void *drcontext, void *tag, instrlist_t *bb,
-		instr_t *instr, bool for_trace,
-		bool translating, void *user_data)
-	{
-		return memory_tracker->event_app_instruction(drcontext, tag, bb, instr, for_trace, translating, user_data);
-	}
-
 }

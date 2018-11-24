@@ -1,5 +1,6 @@
 #include "globals.h"
-#include "memory-tracker.h"
+#include "ThreadState.h"
+#include "instrumentator.h"
 #include "Module.h"
 #include "symbols.h"
 #include "race-collector.h"
@@ -12,7 +13,7 @@ namespace drace {
 	* Thread local storage metadata has to be globally accessable
 	*/
 	int      tls_idx;
-	std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
+	std::unordered_map<thread_id_t, ThreadState*> TLS_buckets;
 
 	void *th_mutex;
 	void *tls_rw_mutex;
@@ -28,7 +29,7 @@ namespace drace {
 	std::chrono::system_clock::time_point app_start;
 	std::chrono::system_clock::time_point app_stop;
 
-	std::unique_ptr<MemoryTracker> memory_tracker;
+	std::unique_ptr<Instrumentator> instrumentator;
 	std::unique_ptr<module::Tracker> module_tracker;
 	std::unique_ptr<RaceCollector> race_collector;
 	std::unique_ptr<Statistics> stats;

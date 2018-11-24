@@ -17,7 +17,7 @@ namespace drace {
 				(void*)name,
 				DRWRAP_CALLCONV_FASTCALL);
 			if (ok)
-				LOG_INFO(0, "wrapped function %s at %p", name, info->mod->start + modoffs);
+				LOG_NOTICE(0, "wrapped function %s at %p", name, info->mod->start + modoffs);
 
 			// Exact matches only, hence quit after each symbol
 			return false;

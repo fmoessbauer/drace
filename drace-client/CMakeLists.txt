@@ -4,6 +4,7 @@
 	"src/function-wrapper.cpp"
 	"src/function-wrapper/internal"
 	"src/function-wrapper/event"
+	"src/instrumentator"
 	"src/memory-tracker"
 	"src/instr/instr-mem-fast"
 	"src/instr/instr-mem-full"
