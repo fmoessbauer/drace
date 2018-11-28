@@ -104,11 +104,48 @@ namespace drace {
 			--data->sampling_pos;
 			if (params.sampling_rate == 1)
 				return true;
-			if (data->sampling_pos < 0) {
-				data->sampling_pos = std::uniform_int_distribution<unsigned>{ memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);;
+			if (data->sampling_pos == 0) {
+				data->sampling_pos = std::uniform_int_distribution<unsigned>{ memory_tracker->_min_period, memory_tracker->_max_period }(memory_tracker->_prng);
 				return true;
 			}
 			return false;
+		}
+
+		/** Sets the detector state based on the sampling condition */
+		inline void switch_sampling(per_thread_t * data) {
+			if (!sample_ref(data)) {
+				data->enabled = false;
+				data->event_cnt |= ((uint64_t)1 << 63);
+			}
+			else {
+				data->event_cnt &= ~((uint64_t)1 << 63);
+				if (!data->event_cnt)
+					data->enabled = true;
+			}
+		}
+
+		/** enable the detector (does not affect sampling) */
+		static inline void enable(per_thread_t * data) {
+			// access the lower part of the 64bit uint
+			*((uint32_t*)(&(data->enabled))) = true;
+		}
+
+		/** disable the detector (does not affect sampling) */
+		static inline void disable(per_thread_t * data) {
+			// access the lower part of the 64bit uint
+			*((uint32_t*)(&(data->enabled))) = false;
+		}
+
+		/** enable the detector during this scope */
+		static inline void enable_scope(per_thread_t * data) {
+			if (--data->event_cnt <= 0) {
+				enable(data);
+			}
+		}
+		/** disable the detector during this scope */
+		static inline void disable_scope(per_thread_t * data) {
+			disable(data);
+			data->event_cnt++;
 		}
 
 		/** Update the code cache and remove items where the instrumentation should change.

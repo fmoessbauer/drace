@@ -69,8 +69,16 @@ namespace drace {
 
 		void         *cache;
 		thread_id_t   tid;
-		/// use ptrsize type for lea
-		ptr_uint_t    enabled{ true };
+		/**
+		* Represents the detector state.
+		* If value==0 the detector is disabled.
+		* Layout:
+		* @code
+		* |1 bit |---31 bit---|---32 bit---|
+		* |sample|---unused---|---state----|
+		* @endcode
+		*/
+		uint64_t    enabled{ true };
 		/// inverse of flush pending, jmpecxz
 		std::atomic<ptr_uint_t> no_flush{ false };
 		/// external flush is currently executed;

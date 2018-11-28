@@ -177,9 +177,9 @@ namespace drace {
 						continue;
 					}
 					// this is a mem-ref candidate
-					if (!memory_tracker->sample_ref(data)) {
-						continue;
-					}
+					//if (!memory_tracker->sample_ref(data)) {
+					//	continue;
+					//}
 
 					stack->data[stack->entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
@@ -234,6 +234,8 @@ namespace drace {
 		data->stack.resize(ShadowStack::max_size + 1, drcontext);
 
 		data->mutex_book.reserve(MUTEX_MAP_SIZE);
+		// set first sampling period
+		data->sampling_pos = params.sampling_rate;
 
 		// If threads are started concurrently, assume first thread is correct one
 		bool true_val = true;
@@ -241,13 +243,12 @@ namespace drace {
 			std::memory_order_relaxed, std::memory_order_relaxed))
 		{
 			last_th_start = data->tid;
-			data->enabled = false;
+			disable(data);
 		}
 
 		// this is the master thread
 		if (params.exclude_master && (data->tid == runtime_tid)) {
-			data->enabled = false;
-			data->event_cnt++;
+			disable_scope(data);
 		}
 
 		data->stats = std::make_unique<Statistics>(data->tid);

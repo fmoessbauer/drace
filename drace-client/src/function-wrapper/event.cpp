@@ -18,20 +18,12 @@ namespace drace {
 			// refs are recorded
 			//memory_tracker->process_buffer();
 			LOG_TRACE(data->tid, "Begin excluded region");
-			data->enabled = false;
-			data->event_cnt++;
+			MemoryTracker::disable_scope(data);
 		}
 
 		void event::end_excl_region(per_thread_t * data) {
 			LOG_TRACE(data->tid, "End excluded region");
-			if (data->event_cnt <= 1) {
-				//memory_tracker->clear_buffer();
-				data->enabled = true;
-				// recover from missed events
-				if (data->event_cnt < 0)
-					data->event_cnt = 0;
-			}
-			data->event_cnt--;
+			MemoryTracker::enable_scope(data);
 		}
 
 		// TODO: On Linux size is arg 0
@@ -139,7 +131,7 @@ namespace drace {
 			if (TLS_buckets.count(last_th) == 1) {
 				auto & other_tls = TLS_buckets[last_th];
 				if (other_tls->event_cnt == 0)
-					TLS_buckets[last_th]->enabled = true;
+					MemoryTracker::enable(TLS_buckets[last_th]);
 			}
 			dr_rwlock_read_unlock(tls_rw_mutex);
 			LOG_INFO(data->tid, "new thread created: %i", last_th_start.load());
