@@ -49,7 +49,8 @@ if(${Doxygen_FOUND})
 	set(DOXYGEN_GENERATE_MAN NO)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
 	set(DOXYGEN_EXCLUDE_PATTERNS 
-		"*DynamoRIO*" "*/prebuild/*" 
+		"*DynamoRIO*"
+		"${PROJECT_SOURCE_DIR}/ManagedResolver/include/prebuild/*"
 		"${PROJECT_SOURCE_DIR}/test/*"
 		"${PROJECT_SOURCE_DIR}/bench/*"
 		"${PROJECT_SOURCE_DIR}/vendor/*")
