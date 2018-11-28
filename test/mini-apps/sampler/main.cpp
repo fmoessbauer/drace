@@ -25,7 +25,9 @@ void no_sync(
 	uint64_t rounds,
 	std::atomic<bool> * go)
 {
+	DRACE_ENTER_EXCLUDE();
 	while (!go->load(std::memory_order_relaxed)) { }
+	DRACE_LEAVE_EXCLUDE();
 	uint64_t tmp = 0;
 	uint64_t boundary = period / (tid + 1) - 1;
 	for (uint64_t i = 0; i < period * rounds; ++i) {
@@ -53,7 +55,10 @@ void sync(
 	std::atomic<bool> * go)
 {
 	static ipc::spinlock mx;
+	DRACE_ENTER_EXCLUDE();
 	while (!go->load(std::memory_order_relaxed)) {}
+	DRACE_LEAVE_EXCLUDE();
+
 	uint64_t tmp = 0;
 	uint64_t boundary = period / (tid + 1) - 1;
 	for (uint64_t i = 0; i < period * rounds; ++i) {
