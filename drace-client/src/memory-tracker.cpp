@@ -134,64 +134,63 @@ namespace drace {
 		uint64_t num_refs = std::distance(_mem_buf, _buf_ptr);
 		DR_ASSERT(num_refs <= MAX_NUM_MEM_REFS);
 
-		if(is_enabled()){
-			if (num_refs > 0) {
-				//dr_printf("[%i] Process buffer, refs: %i\n", tid, num_refs);
-				DR_ASSERT(detector_data != nullptr);
+		if (num_refs > 0) {
+			DR_ASSERT(is_enabled());
+			//dr_printf("[%i] Process buffer, refs: %i\n", tid, num_refs);
+			DR_ASSERT(detector_data != nullptr);
 
-				// In non-fast-mode we have to protect the stack
-				if (!params.fastmode)
-					dr_mutex_lock(th_mutex);
+			// In non-fast-mode we have to protect the stack
+			if (!params.fastmode)
+				dr_mutex_lock(th_mutex);
 
-				DR_ASSERT(stack.entries >= 0);
-				stack.entries++; // We have one spare-element
-				int size = std::min((unsigned)stack.entries, params.stack_size); // TODO: remove params
-				int offset = stack.entries - size;
+			DR_ASSERT(stack.entries >= 0);
+			stack.entries++; // We have one spare-element
+			int size = std::min((unsigned)stack.entries, params.stack_size); // TODO: remove params
+			int offset = stack.entries - size;
 
-				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
-				if (params.lossy) {
-					_stats.pc_hits.processItem((uint64_t)_mem_buf[0].pc >> HIST_PC_RES);
-					if ((_stats.flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
-						update_cache();
-					}
+			// Lossy count first mem-ref (all are adiacent as after each call is flushed)
+			if (params.lossy) {
+				_stats.pc_hits.processItem((uint64_t)_mem_buf[0].pc >> HIST_PC_RES);
+				if ((_stats.flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
+					update_cache();
 				}
+			}
 
-				for (uint64_t i = 0; i < num_refs; ++i) {
-					// todo: better use iterator like access
-					const auto & mem_ref = _mem_buf[i];
-					if (params.excl_stack &&
-						((ULONG_PTR)mem_ref.addr > _appstack_beg) &&
-						((ULONG_PTR)mem_ref.addr < _appstack_end))
-					{
-						// this reference points into the stack range, skip
-						continue;
-					}
-					if ((uint64_t)mem_ref.addr > PROC_ADDR_LIMIT) {
-						// outside process address space
-						continue;
-					}
-					// this is a mem-ref candidate
-					if (!params.fastmode) {
-						// in fast-mode, sampling is implemented in the instrumentation
-						if (!sample_ref()) {
-							continue;
-						}
-					}
-					stack.data[stack.entries - 1] = mem_ref.pc;
-					if (mem_ref.write) {
-						//dr_printf("[%i] WRITE %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::write(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
-					}
-					else {
-						//dr_printf("[%i] READ  %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
-						detector::read(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
-					}
-					++(_stats.proc_refs);
+			for (uint64_t i = 0; i < num_refs; ++i) {
+				// todo: better use iterator like access
+				const auto & mem_ref = _mem_buf[i];
+				if (params.excl_stack &&
+					((ULONG_PTR)mem_ref.addr > _appstack_beg) &&
+					((ULONG_PTR)mem_ref.addr < _appstack_end))
+				{
+					// this reference points into the stack range, skip
+					continue;
 				}
-				stack.entries--;
+				if ((uint64_t)mem_ref.addr > PROC_ADDR_LIMIT) {
+					// outside process address space
+					continue;
+				}
+				// this is a mem-ref candidate
 				if (!params.fastmode) {
-					dr_mutex_unlock(th_mutex);
+					// in fast-mode, sampling is implemented in the instrumentation
+					if (!sample_ref()) {
+						continue;
+					}
 				}
+				stack.data[stack.entries - 1] = mem_ref.pc;
+				if (mem_ref.write) {
+					//dr_printf("[%i] WRITE %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
+					detector::write(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
+				}
+				else {
+					//dr_printf("[%i] READ  %p, PC: %p\n", tid, mem_ref->addr, mem_ref->pc);
+					detector::read(detector_data, stack.data + offset, size, mem_ref.addr, mem_ref.size);
+				}
+				++(_stats.proc_refs);
+			}
+			stack.entries--;
+			if (!params.fastmode) {
+				dr_mutex_unlock(th_mutex);
 			}
 		}
 		_stats.total_refs += num_refs;

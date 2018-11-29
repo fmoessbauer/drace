@@ -25,19 +25,25 @@ void no_sync(
 	uint64_t rounds,
 	std::atomic<bool> * go)
 {
-	while (!go->load(std::memory_order_relaxed)) { }
+	DRACE_ENTER_EXCLUDE();
+	while (!go->load(std::memory_order_relaxed)) {}
+	DRACE_LEAVE_EXCLUDE();
+
+	int * mem = new int[period];
 	uint64_t tmp = 0;
 	uint64_t boundary = period / (tid + 1) - 1;
 	for (uint64_t i = 0; i < period * rounds; ++i) {
-		if (i % period == boundary) {
+		unsigned remainder = i % period;
+		if (remainder == boundary) {
 			// racy write
 			*racy = tmp;
 			cntr.fetch_add(period, std::memory_order_relaxed);
 		}
 		else {
-			++tmp;
+			++(mem[remainder >> 3]);
 		}
 	}
+	delete mem;
 }
 
 /**
@@ -53,16 +59,21 @@ void sync(
 	std::atomic<bool> * go)
 {
 	static ipc::spinlock mx;
+	DRACE_ENTER_EXCLUDE();
 	while (!go->load(std::memory_order_relaxed)) {}
+	DRACE_LEAVE_EXCLUDE();
+
+	int * mem = new int[period];
 	uint64_t tmp = 0;
 	uint64_t boundary = period / (tid + 1) - 1;
 	for (uint64_t i = 0; i < period * rounds; ++i) {
-		if (i % period == tid) {
+		unsigned remainder = i % period;
+		if (remainder == tid) {
 			// racy write
 			*racy = tmp;
 			cntr.fetch_add(period, std::memory_order_relaxed);
 		}
-		else if (i % period == boundary) {
+		else if (remainder == boundary) {
 			// for performance reasons, we exclude the mutex call itself
 			DRACE_ENTER_EXCLUDE();
 			mx.lock();
@@ -77,9 +88,10 @@ void sync(
 			DRACE_LEAVE_EXCLUDE();
 		}
 		else {
-			++tmp;
+			++(mem[remainder >> 3]);
 		}
 	}
+	delete mem;
 	DRACE_ENTER_EXCLUDE();
 	std::cout << "Thread " << tid << " finished" << std::endl;
 	DRACE_LEAVE_EXCLUDE();
