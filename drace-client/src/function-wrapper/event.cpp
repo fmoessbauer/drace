@@ -2,6 +2,9 @@
 #include "util.h"
 #include "function-wrapper.h"
 #include "memory-tracker.h"
+#if LOGLEVEL > 4
+#include "module/Tracker.h"
+#endif
 #include "symbols.h"
 #include "statistics.h"
 #include "ThreadState.h"
@@ -18,12 +21,12 @@ namespace drace {
 			// We do not flush here, as in disabled state no
 			// refs are recorded
 			//memory_tracker->process_buffer();
-			LOG_TRACE(mt->tid, "Begin excluded region");
+			LOG_TRACE(mt.tid, "Begin excluded region");
 			mt.disable_scope();
 		}
 
 		void event::end_excl_region(MemoryTracker & mt) {
-			LOG_TRACE(data->tid, "End excluded region");
+			LOG_TRACE(mt.tid, "End excluded region");
 			mt.enable_scope();
 		}
 
@@ -205,13 +208,13 @@ namespace drace {
 				if (retval != 0)
 					return;
 			}
-			LOG_TRACE(data->tid, "Aquire  %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+			LOG_TRACE(data->mtrack.tid, "Aquire  %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 
-			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
+			LOG_TRACE(data->mtrack.tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
 			detector::acquire(data->mtrack.detector_data, mutex, cnt, write);
 			//detector::happens_after(data->tid, mutex);
@@ -234,7 +237,7 @@ namespace drace {
 			//detector::happens_before(data->tid, mutex);
 
 			if (!data->mutex_book.count((uint64_t)mutex)) {
-				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+				LOG_TRACE(data->mtrack.tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 				// mutex not in book
 				return;
 			}
@@ -247,7 +250,7 @@ namespace drace {
 			// acquire / release must not occur concurrently
 
 			MemoryTracker::flush_all_threads(data->mtrack);
-			LOG_TRACE(data->tid, "Release %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
+			LOG_TRACE(data->mtrack.tid, "Release %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 			detector::release(data->mtrack.detector_data, mutex, write);
 		}
 
