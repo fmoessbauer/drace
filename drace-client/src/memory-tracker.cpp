@@ -389,20 +389,22 @@ namespace drace {
 		if (!instr_reads_memory(instr) && !instr_writes_memory(instr))
 			return DR_EMIT_DEFAULT;
 
-		// exclude pop and push
-		int opcode = instr_get_opcode(instr);
-		if (opcode == OP_pop || opcode == OP_popa || opcode == OP_popf ||
-			opcode == OP_push || opcode == OP_pusha || opcode == OP_pushf) {
-			return DR_EMIT_DEFAULT;
-		}
+		if (params.excl_stack) {
+			// exclude pop and push
+			int opcode = instr_get_opcode(instr);
+			if (opcode == OP_pop || opcode == OP_popa || opcode == OP_popf ||
+				opcode == OP_push || opcode == OP_pusha || opcode == OP_pushf) {
+				return DR_EMIT_DEFAULT;
+			}
 
-		// exclude other modifications of stackptr
-		if (instr_reads_from_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT)||
-			instr_writes_to_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT) ||
-			instr_reads_from_reg(instr, DR_REG_XBP, DR_QUERY_DEFAULT) ||
-			instr_writes_to_reg(instr, DR_REG_XBP, DR_QUERY_DEFAULT))
-		{
-			return DR_EMIT_DEFAULT;
+			// exclude other modifications of stackptr
+			if (instr_reads_from_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT) ||
+				instr_writes_to_reg(instr, DR_REG_XSP, DR_QUERY_DEFAULT) ||
+				instr_reads_from_reg(instr, DR_REG_XBP, DR_QUERY_DEFAULT) ||
+				instr_writes_to_reg(instr, DR_REG_XBP, DR_QUERY_DEFAULT))
+			{
+				return DR_EMIT_DEFAULT;
+			}
 		}
 
 		// atomic instruction
