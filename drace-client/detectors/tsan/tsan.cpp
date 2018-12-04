@@ -169,9 +169,10 @@ void detector::finalize() {
 			detector::finish(t.first, t.second.tsan);
 	}
 	__tsan_fini();
-	std::cout << "> ----- SUMMARY -----" << std::endl;
-	std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
-	std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
+	// do not perform IO here, as it crashes / interfers with dotnet
+	//std::cout << "> ----- SUMMARY -----" << std::endl;
+	//std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
+	//std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
 }
 
 std::string detector::name() {

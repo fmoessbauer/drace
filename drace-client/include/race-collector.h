@@ -80,6 +80,7 @@ namespace drace {
 
 		~RaceCollector() {
 			dr_mutex_destroy(_race_mx);
+			LOG_INFO(-1, "found %i possible data-races", _races.size());
 		}
 
 		/** Adds a race and updates histogram
