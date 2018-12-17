@@ -41,7 +41,7 @@ public:
 		file_content << filestream.rdbuf();
 		std::string output(file_content.str());
 
-		std::regex expr("Found (\\d+) possible data-races");
+		std::regex expr("found (\\d+) possible data-races");
 		std::smatch races_match;
 		if (std::regex_search(output, races_match, expr)) {
 			std::string num_races_str;

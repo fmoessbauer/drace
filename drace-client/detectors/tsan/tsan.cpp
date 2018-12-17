@@ -118,7 +118,8 @@ namespace tsan {
 	}
 	static void print_config() {
 		std::cout << "> Detector Configuration:\n"
-			<< "> heap-only: " << (params.heap_only ? "ON" : "OFF") << std::endl;
+			<< "> heap-only: " << (params.heap_only ? "ON" : "OFF") << std::endl
+		    << "> version:   " << detector::version() << std::endl;
 	}
 
 	/* precisely decide if (cropped to 32 bit) addr is on the heap */
@@ -168,7 +169,8 @@ void detector::finalize() {
 		if (t.second.active)
 			detector::finish(t.first, t.second.tsan);
 	}
-	__tsan_fini();
+	// TODO: this calls exit which we cannot do here
+	//__tsan_fini();
 	// do not perform IO here, as it crashes / interfers with dotnet
 	//std::cout << "> ----- SUMMARY -----" << std::endl;
 	//std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
@@ -190,12 +192,7 @@ void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 
 	assert(nullptr != tls);
 
-	if (write) {
-		__tsan_MutexLock(tls, 0, (void*)addr_32, rec, false);
-	}
-	else {
-		__tsan_MutexReadLock(tls, 0, (void*)addr_32, false);
-	}
+	__tsan_mutex_after_lock(tls, (void*)addr_32, (void*)write);
 }
 
 void detector::release(tls_t tls, void* mutex, bool write) {
@@ -205,12 +202,7 @@ void detector::release(tls_t tls, void* mutex, bool write) {
 
 	assert(nullptr != tls);
 
-	if (write) {
-		__tsan_MutexUnlock(tls, 0, (void*)addr_32, false);
-	}
-	else {
-		__tsan_MutexReadUnlock(tls, 0, (void*)addr_32);
-	}
+	__tsan_mutex_before_unlock(tls, (void*)addr_32, (void*)write);
 }
 
 void detector::happens_before(tid_t thread_id, void* identifier) {
@@ -228,7 +220,7 @@ void detector::read(tls_t tls, void* callstack, unsigned stacksize, void* addr, 
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-		__tsan_read(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
+		__tsan_read(tls, (void*)addr_32, callstack, callstack, stacksize);
 	}
 }
 
@@ -237,7 +229,7 @@ void detector::write(tls_t tls, void* callstack, unsigned stacksize, void* addr,
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-		__tsan_write(tls, (void*)addr_32, kSizeLog1, callstack, stacksize);
+		__tsan_write(tls, (void*)addr_32, callstack, callstack, stacksize);
 	}
 }
 
@@ -290,7 +282,7 @@ void detector::deallocate(tls_t tls, void* addr) {
 		}
 		mxspin.unlock();
 
-		__tsan_reset_range((unsigned int)addr_32, size);
+		__tsan_free((void*)addr_32, size);
 		//std::cout << "free: addr:  " << (void*)addr_32 << " size " << size << std::endl;
 	}
 	else {
