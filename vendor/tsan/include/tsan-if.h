@@ -31,8 +31,6 @@ extern "C" {
 	void __tsan_init_simple(void(*r_cb)(__tsan_race_info* raceInfo, void* callback_parameter), void* callback_parameter);
 	void __tsan_fini();
 
-	uint32_t __tsan_create_thread_if_not_existent(uint64_t user_tid);
-
 	void __tsan_map_shadow(void *addr, unsigned long size);
 	void __tsan_go_start(void *thr, void **chthr, void *pc);
 	void __tsan_go_end(void *thr);
@@ -41,20 +39,16 @@ extern "C" {
 	void __tsan_proc_wire(void *proc, void *thr);
 	void __tsan_proc_unwire(void *proc, void *thr);
 	void __tsan_reset_range(unsigned int p, unsigned int sz);
-	void __tsan_read(void *thr, void *addr, void *pc, void *stack_trace, int stack_trace_size);
 
-	void __tsan_write(void *thr, void *addr, void *pc, void *stack_trace, int stack_trace_size);
-	void __tsan_write_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
-	void __tsan_read_use_user_tid(unsigned long user_tid, void* addr, int size, void *stack_trace, int stack_trace_size, bool atomic, int access_type, bool cli);
-	void __tsan_malloc_use_user_tid(unsigned long user_tid, unsigned long pc, unsigned long p, unsigned long sz);
+	void __tsan_read(void *thr, void *addr, void *pc);
+	void __tsan_write(void *thr, void *addr, void *pc);
 
-	void __tsan_acquire_use_user_tid(unsigned long user_tid, void* addr);
-	void __tsan_release_use_user_tid(unsigned long user_tid, void* addr);
-	void __tsan_mutex_after_lock_use_user_tid(unsigned long user_tid, void* addr);
-	void __tsan_mutex_before_unlock_use_user_tid(unsigned long user_tid, void* addr);
-
+	// TODO: replace with go version
 	void __tsan_happens_before_use_user_tid(unsigned long user_tid, void* addr);
 	void __tsan_happens_after_use_user_tid(unsigned long user_tid, void* addr);
+
+	void __tsan_happens_before(void* thr, void* addr);
+	void __tsan_happens_after(void* thr, void* addr);
 
 	void __tsan_func_enter(void *thr, void *pc);
 	void __tsan_func_exit(void *thr);

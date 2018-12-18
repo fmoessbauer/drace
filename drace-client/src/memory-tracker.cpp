@@ -150,10 +150,7 @@ namespace drace {
 					dr_mutex_lock(th_mutex);
 
 				DR_ASSERT(stack->entries >= 0);
-				stack->entries++; // We have one spare-element
-				int size = std::min((unsigned)stack->entries, params.stack_size);
-				int offset = stack->entries - size;
-
+				
 				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 				if (params.lossy) {
 					data->stats->pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
@@ -181,18 +178,16 @@ namespace drace {
 					//	continue;
 					//}
 
-					stack->data[stack->entries - 1] = mem_ref->pc;
 					if (mem_ref->write) {
-						detector::write(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
+						detector::write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					else {
-						detector::read(data->detector_data, stack->data + offset, size, mem_ref->addr, mem_ref->size);
+						detector::read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++(data->stats->proc_refs);
 				}
-				stack->entries--;
 				if (!params.fastmode)
 					dr_mutex_unlock(th_mutex);
 				data->stats->total_refs += num_refs;
@@ -273,7 +268,7 @@ namespace drace {
 
 		flush_all_threads(data, true, false);
 
-		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
+		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid);
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place

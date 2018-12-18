@@ -379,7 +379,7 @@ namespace drace {
 			*addr = drwrap_get_arg(wrapctx, 0);
 			LOG_TRACE(data->tid, "barrier enter %p", *addr);
 			// each thread enters the barrier individually
-			detector::happens_before(data->tid, *addr);
+			detector::happens_before(data->detector_data, *addr);
 		}
 
 		void event::barrier_leave(void *wrapctx, void *addr) {
@@ -390,7 +390,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "barrier passed");
 
 			// each thread leaves individually, but only after all barrier_enters have been called
-			detector::happens_after(data->tid, addr);
+			detector::happens_after(data->detector_data, addr);
 		}
 
 		void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
@@ -404,7 +404,7 @@ namespace drace {
 			// TODO: Validate cancellation path, where happens_before will be called again
 			if (passed) {
 				// each thread leaves individually, but only after all barrier_enters have been called
-				detector::happens_after(data->tid, addr);
+				detector::happens_after(data->detector_data, addr);
 			}
 		}
 
@@ -413,7 +413,7 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			detector::happens_before(data->tid, identifier);
+			detector::happens_before(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-before @ %p", identifier);
 		}
 
@@ -422,7 +422,7 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			detector::happens_after(data->tid, identifier);
+			detector::happens_after(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
 #endif
