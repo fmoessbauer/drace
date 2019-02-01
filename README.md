@@ -199,3 +199,34 @@ Each queue is then processed and analyzed by it's own thread.
 
 This detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
 
+## Licensing
+
+DRace is primarily licensed under the terms of the MIT license.
+
+Each of its source code files contains a license declaration in its header. Whenever a file is provided under an additional or different license than MIT, this is stated in the file header.
+Any file that may lack such a header has to be considered licensed under MIT (default license).
+
+If two licenses are specified in a file header, you are free to pick the one that suits best your particular use case.
+You can also continue to use the file under the dual license.
+When choosing only one, remove the reference to the other from the file header.
+
+### External Ressources
+
+Most external ressources are located in the `vendor` directory.
+For licensing information regarding these components, we refer to the information bundled with the individual ressource.
+
+### License Header Format
+
+```
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright (c) <COPYRIGHT HOLDER>, <YEAR>
+ *
+ * Authors:
+ *  Your Name <your.email@host.dom>
+ *
+ * This work is licensed under the terms of the MIT license.  See
+ * the LICENSE file in the top-level directory.
+ */
+```
