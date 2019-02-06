@@ -8,17 +8,28 @@ target_include_directories("drace-common"
 	INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tsan/include>)
 
 
+# inih is mandatory
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih/INIReader.h")
+	message(FATAL_ERROR "inih submodule not available")
+endif()
 add_library("jtilly-inih" INTERFACE)
 target_include_directories("jtilly-inih" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih>)
 
 # TinyXML2 library for Valkyrie output
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build static version of TinyXML2" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "disable tests" FORCE)
-add_subdirectory("leethomason/tinyxml2")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
+	set(BUILD_SHARED_LIBS ON CACHE BOOL "Build static version of TinyXML2" FORCE)
+	set(BUILD_TESTING OFF CACHE BOOL "disable tests" FORCE)
+	add_subdirectory("leethomason/tinyxml2")
+else()
+	set(DRACE_XML_EXPORTER OFF CACHE BOOL "Build with Valkyrie compatible XML exporter" FORCE)
+endif()
 
 # HowardHinnant Date
 # shipped CMake script does not work, include as header-only
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HowardHinnant/date/include")
+	message(FATAL_ERROR "HowardHinnant Date submodule not available")
+endif()
 add_library("hh-date" INTERFACE)
 target_include_directories("hh-date" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/HowardHinnant/date/include>)
@@ -33,14 +44,18 @@ add_library("spdlog" INTERFACE)
 target_include_directories("spdlog" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gabime/spdlog/include>)
 
-if(${DRACE_ENABLE_TESTING})
+if(${DRACE_ENABLE_TESTING} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib
 	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
 	add_subdirectory("google/googletest/googletest")
+else()
+	set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Enable Testing" FORCE)
 endif()
 
-if(${DRACE_ENABLE_BENCH})
+if(${DRACE_ENABLE_BENCH} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/benchmark/CMakeLists.txt")
 	# force gtest to build static lib
 	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
 	add_subdirectory("google/benchmark")
+else()
+	set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Enable benchmark" FORCE)
 endif()
