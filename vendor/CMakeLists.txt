@@ -3,10 +3,8 @@
 # tsan + wrapper
 find_library(TSAN_LIB NAMES "race_windows_amd64" HINTS "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/" NO_DEFAULT_PATH)
 add_library("tsan-common" INTERFACE)
+target_include_directories("tsan-common" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tsan/include)
 target_link_libraries("tsan-common" INTERFACE ${TSAN_LIB})
-target_include_directories("drace-common"
-	INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tsan/include>)
-
 
 # inih is mandatory
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih/INIReader.h")
