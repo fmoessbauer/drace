@@ -21,9 +21,3 @@ if(${DRACE_DETECTOR} STREQUAL "extsan")
 		"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
 		"$<TARGET_FILE_DIR:msr>")
 endif()
-
-
-add_custom_command(TARGET "msr" POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		"${PROJECT_SOURCE_DIR}/vendor/debug"
-		"$<TARGET_FILE_DIR:msr>")
