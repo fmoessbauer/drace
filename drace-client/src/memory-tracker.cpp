@@ -221,8 +221,6 @@ namespace drace {
 		drmgr_set_tls_field(drcontext, tls_idx, tls_buffer);
 
 		// Initialize struct at given location (placement new)
-		// As this includes allocation, we have to be in dr state
-		DR_ASSERT(!dr_using_app_state(drcontext));
 		per_thread_t * data = new (tls_buffer) per_thread_t;
 
 		data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
