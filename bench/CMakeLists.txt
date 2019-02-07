@@ -13,9 +13,4 @@ endif()
 
 target_link_libraries("${PROJECT_NAME}-bench" benchmark	"drace-detector" "drace-common")
 
-add_custom_command(TARGET "${PROJECT_NAME}-bench" POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_BINARY_DIR}/vendor/google/benchmark/src/benchmark.dll"
-		"${PROJECT_BINARY_DIR}/bench/benchmark.dll")
-
 add_subdirectory(apps)
