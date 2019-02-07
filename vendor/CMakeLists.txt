@@ -5,6 +5,7 @@ find_library(TSAN_LIB NAMES "race_windows_amd64" HINTS "${PROJECT_SOURCE_DIR}/ve
 add_library("tsan-common" INTERFACE)
 target_include_directories("tsan-common" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tsan/include)
 target_link_libraries("tsan-common" INTERFACE ${TSAN_LIB})
+install(FILES "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll" DESTINATION bin)
 
 # inih is mandatory
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih/INIReader.h")
@@ -16,9 +17,9 @@ target_include_directories("jtilly-inih" INTERFACE
 
 # TinyXML2 library for Valkyrie output
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
-	set(BUILD_SHARED_LIBS ON CACHE BOOL "Build static version of TinyXML2" FORCE)
-	set(BUILD_TESTING OFF CACHE BOOL "disable tests" FORCE)
-	add_subdirectory("leethomason/tinyxml2")
+	add_library("tinyxml2" SHARED "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
+	target_include_directories("tinyxml2" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/)
+	install(TARGETS "tinyxml2" DESTINATION bin)
 else()
 	set(DRACE_XML_EXPORTER OFF CACHE BOOL "Build with Valkyrie compatible XML exporter" FORCE)
 endif()
@@ -53,6 +54,7 @@ endif()
 if(${DRACE_ENABLE_BENCH} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/benchmark/CMakeLists.txt")
 	# force gtest to build static lib
 	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
+	set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Do not install benchmark" FORCE)
 	add_subdirectory("google/benchmark")
 else()
 	set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Enable benchmark" FORCE)

@@ -21,3 +21,5 @@ if(${DRACE_DETECTOR} STREQUAL "extsan")
 		"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
 		"$<TARGET_FILE_DIR:msr>")
 endif()
+
+install(TARGETS "msr" DESTINATION bin)

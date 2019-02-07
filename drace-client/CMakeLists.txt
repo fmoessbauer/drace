@@ -74,3 +74,5 @@ if("${DRACE_DETECTOR}" STREQUAL "tsan")
 			"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
 			"$<TARGET_FILE_DIR:drace-client>")
 endif()
+
+install(TARGETS "drace-client" DESTINATION bin)

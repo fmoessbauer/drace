@@ -56,8 +56,13 @@ if(${Doxygen_FOUND})
 		"${PROJECT_SOURCE_DIR}/vendor/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")
 	
+	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
+	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)
+
 	doxygen_add_docs(
 	    doc
 	    ${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
 endif()
+
+install(FILES "drace.ini" DESTINATION bin)

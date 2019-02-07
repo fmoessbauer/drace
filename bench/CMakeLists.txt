@@ -11,7 +11,7 @@ else()
   set_target_properties("${PROJECT_NAME}-bench" PROPERTIES COMPILE_FLAGS "${RELEASE_COMPILE_FLAGS}")
 endif()
 
-target_link_libraries("${PROJECT_NAME}-bench" benchmark "drace-detector" "drace-common")
+target_link_libraries("${PROJECT_NAME}-bench" benchmark	"drace-detector" "drace-common")
 
 add_custom_command(TARGET "${PROJECT_NAME}-bench" POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
