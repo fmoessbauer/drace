@@ -37,6 +37,7 @@ target_link_libraries(
 	"jtilly-inih"    # ini parser
 	"drace-detector" # race-detector
 	"hh-date"        # C++ date lib
+	"clipp"          # option parser
 )
 
 # TinyXML2

@@ -20,6 +20,7 @@ cannot be detected correctly.
 - [jtilly/inih](https://github.com/jtilly/inih)
 - [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
 - [HowardHinnant/date](https://github.com/HowardHinnant/date)
+- [muellan/clipp](https://github.com/muellan/clipp)
 
 **Optional:**
 
@@ -42,29 +43,58 @@ drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- applic
 # see limitations for -no_follow_children option
 ```
 
-Currently the following parameters are implemented
-
-*Instrumentation Parameters:*
+**Command Line Options**
 
 ```
--c <filename>     : path to config file. If not set `drace.ini` is used
--s <sampling-rate>: from all observed memory-references, analyze 1/n
--i <instr-rate>   : from the considered instructions, 1/n are actually instrumented
---lossy           : do not gather mem-refs from high-traffic application parts after some time
---lossy-flush     : remove instrumentation from high-traffic application parts after some time
-                  : (only in combination with --lossy)
---excl-traces     : exclude frequent pathes by not addind memory instrumentation
-                  : to DynamoRIO traces (only instrument non-trace BBs)
---excl-stack      : exclude addresses inside the stack of the calling thread
---yield-on-evt    : yield active thread after buffer is processed due to an event (e.g. mutex lock / unlock)
-                    this might be necessary if more threads than cores are active
---excl-master     : exclude the runtime thread, useful if loader races
---delayed-syms    : do not lookup symbols on each race
---fast-mode       : only flush local buffers on sync-event (all buffers otherwise)
---stacksz         : size of callstack used for race-detection (must be in [1,16])
---xml-file <file> : log races in valkyries xml format in this file
---out-file <file> : log races in human readable format in this file
---extctrl         : Use second process for symbol lookup and state-controlling (required for Dotnet)
+SYNOPSIS
+        drace-client.dll [-c <config>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
+                         [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
+                         <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--xml-file ]
+                         [--out-file ] [--extctrl] [--brkonrace] [-h]
+
+OPTIONS
+        -c, --config <config>
+                    config file (default: drace.ini)
+
+        sampling options
+            -s, --sample-rate <sample-rate>
+                    sample each nth instruction (default: no sampling)
+
+            -i, --instr-rate <instr-rate>
+                    instrument each nth instruction (default: no sampling)
+
+        analysis scope
+            --lossy dynamically exclude fragments using lossy counting
+            --lossy-flush
+                    de-instrument flushed segments (only with --lossy)
+
+            --excl-traces
+                    exclude dynamorio traces
+
+            --excl-stack
+                    exclude stack accesses
+
+            --excl-master
+                    exclude first thread
+
+        --stacksz <stacksz>
+                    size of callstack used for race-detection (must be in [1,16], default: 10)
+
+        --delay-syms
+                    perform symbol lookup after application shutdown
+
+        --sync-mode flush all buffers on a sync event (instead of participating only)
+        --fast-mode DEPRECATED: inverse of sync-mode
+
+        data race reporting
+            --xml-file
+                    log races in valkyries xml format in this file
+
+            --out-file
+                    log races in human readable format in this file
+
+        --extctrl   use second process for symbol lookup and state-controlling (required for Dotnet)
+        --brkonrace abort execution after first race is found (for testing purpose only)
 ```
 
 *Detector Parameters:*

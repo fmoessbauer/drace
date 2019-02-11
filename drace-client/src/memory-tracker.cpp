@@ -202,12 +202,7 @@ namespace drace {
 
 		if (!params.fastmode && !data->no_flush.load(std::memory_order_relaxed)) {
 			uint64_t expect = 0;
-			if (data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed)) {
-				if (params.yield_on_evt) {
-					LOG_INFO(data->tid, "yield on event");
-					dr_thread_yield();
-				}
-			}
+			data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed);
 		}
 	}
 

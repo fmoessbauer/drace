@@ -33,6 +33,14 @@ add_library("hh-date" INTERFACE)
 target_include_directories("hh-date" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/HowardHinnant/date/include>)
 
+# muellan clipp
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/muellan/clipp/include")
+	message(FATAL_ERROR "HowardHinnant Date submodule not available")
+endif()
+add_library("clipp" INTERFACE)
+target_include_directories("clipp" INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/muellan/clipp/include>)
+
 # greg7mdp sparsepp
 add_library("sparsepp" INTERFACE)
 target_include_directories("sparsepp" INTERFACE

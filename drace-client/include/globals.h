@@ -47,8 +47,7 @@ namespace drace {
 		bool     excl_stack{ false };
 		bool     exclude_master{ false };
 		bool     delayed_sym_lookup{ false };
-		bool     yield_on_evt{ false };
-		bool     fastmode{ false };
+		bool     fastmode{ true };
 		/** Use external controller */
 		bool     extctrl{ false };
 		bool     break_on_race{ false };

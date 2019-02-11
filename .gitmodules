@@ -19,3 +19,6 @@
 [submodule "vendor/gabime/spdlog"]
 	path = vendor/gabime/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "vendor/muellan/clipp"]
+	path = vendor/muellan/clipp
+	url = https://github.com/muellan/clipp.git

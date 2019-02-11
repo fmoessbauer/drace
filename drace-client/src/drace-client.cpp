@@ -25,6 +25,7 @@
 #include "sink/valkyrie.h"
 #endif
 
+#include <clipp.h>
 #include <detector/detector_if.h>
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
@@ -159,59 +160,39 @@ namespace drace {
 		params.argc = argc;
 		params.argv = argv;
 
-		int processed = 1;
-		while (processed < argc) {
-			if (strncmp(argv[processed], "-s", 16) == 0) {
-				params.sampling_rate = std::stoi(argv[++processed]);
-			}
-			else if (strncmp(argv[processed], "-i", 16) == 0) {
-				params.instr_rate = std::stoi(argv[++processed]);
-			}
-			else if (strncmp(argv[processed], "-c", 16) == 0) {
-				params.config_file = argv[++processed];
-			}
-			else if (strncmp(argv[processed], "--lossy", 16) == 0) {
-				params.lossy = true;
-			}
-			else if (strncmp(argv[processed], "--lossy-flush", 16) == 0) {
-				params.lossy_flush = true;
-			}
-			else if (strncmp(argv[processed], "--excl-traces", 16) == 0) {
-				params.excl_traces = true;
-			}
-			else if (strncmp(argv[processed], "--excl-stack", 16) == 0) {
-				params.excl_stack = true;
-			}
-			else if (strncmp(argv[processed], "--excl-master", 16) == 0) {
-				params.exclude_master = true;
-			}
-			else if (strncmp(argv[processed], "--yield-on-evt", 16) == 0) {
-				params.yield_on_evt = true;
-			}
-			else if (strncmp(argv[processed], "--delayed-syms", 16) == 0) {
-				params.delayed_sym_lookup = true;
-			}
-			else if (strncmp(argv[processed], "--fast-mode", 16) == 0) {
-				params.fastmode = true;
-			}
-			else if (strncmp(argv[processed], "--xml-file", 16) == 0) {
-				params.xml_file = argv[++processed];
-			}
-			else if (strncmp(argv[processed], "--out-file", 16) == 0) {
-				params.out_file = argv[++processed];
-			}
-			else if (strncmp(argv[processed], "--stacksz", 16) == 0) {
-				params.stack_size = std::stoi(argv[++processed]);
-			}
-			else if (strncmp(argv[processed], "--extctrl", 16) == 0) {
-				params.extctrl = true;
-			}
+		bool display_help = false;
+		auto cli = (
+			(clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file +")"),
+			(
+				(clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
+				(clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate))     % "instrument each nth instruction (default: no sampling)"
+			) % "sampling options",
+			(
+				(clipp::option("--lossy").set(params.lossy)               % "dynamically exclude fragments using lossy counting") &
+				(clipp::option("--lossy-flush").set(params.lossy_flush)   % "de-instrument flushed segments (only with --lossy)"),
+				clipp::option("--excl-traces").set(params.excl_traces)    % "exclude dynamorio traces",
+				clipp::option("--excl-stack").set(params.excl_stack)      % "exclude stack accesses",
+				clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
+			) % "analysis scope",
+			(clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) % 
+				("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
+
+			clipp::option("--delay-syms").set(params.delayed_sym_lookup)  % "perform symbol lookup after application shutdown",
+			clipp::option("--sync-mode").set(params.fastmode, false)      % "flush all buffers on a sync event (instead of participating only)",
+			clipp::option("--fast-mode").set(params.fastmode)             % "DEPRECATED: inverse of sync-mode",
+			(
+				(clipp::option("--xml-file") & clipp::value(params.xml_file)) % "log races in valkyries xml format in this file",
+				(clipp::option("--out-file") & clipp::value(params.out_file)) % "log races in human readable format in this file"
+			) % "data race reporting",
+			clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
 			// for testing reasons only. Abort execution after the first race was detected
-			else if (strncmp(argv[processed], "--brkonrace", 16) == 0) {
-				params.break_on_race = true;
-			}
-			// unknown argument skip as probably for detector
-			++processed;
+			clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
+			clipp::option("-h", "--usage")
+		);
+
+		if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
+			std::cout << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
+			dr_abort();
 		}
 	}
 
@@ -224,7 +205,6 @@ namespace drace {
 			"< Lossy-Flush:\t\t%s\n"
 			"< Exclude Traces:\t%s\n"
 			"< Exclude Stack:\t%s\n"
-			"< Yield on Event:\t%s\n"
 			"< Exclude Master:\t%s\n"
 			"< Delayed Sym Lookup:\t%s\n"
 			"< Fast Mode:\t\t%s\n"
@@ -240,7 +220,6 @@ namespace drace {
 			params.lossy_flush ? "ON" : "OFF",
 			params.excl_traces ? "ON" : "OFF",
 			params.excl_stack ? "ON" : "OFF",
-			params.yield_on_evt ? "ON" : "OFF",
 			params.exclude_master ? "ON" : "OFF",
 			params.delayed_sym_lookup ? "ON" : "OFF",
 			params.fastmode ? "ON" : "OFF",
