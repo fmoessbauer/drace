@@ -6,6 +6,7 @@ set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
+set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -63,8 +63,8 @@ namespace drace {
 			thread_ids.push_back(tid);
 		}
 
-		template<typename Stream>
-		void print_summary(Stream & s = std::cout) {
+		void print_summary(FILE * target) {
+			std::stringstream s;
 			s << std::string(20, '-') << std::endl
 				<< "Cumulative Stats for:" << std::endl
 				<< "thread-ids:\t\t" << std::dec;
@@ -96,6 +96,7 @@ namespace drace {
 					<< std::dec << std::setprecision(3) << std::setw(2) << share << "%),";
 			}
 			s << std::endl << std::string(20, '-') << std::endl;
+			dr_fprintf(target, s.str().c_str());
 		}
 
 		inline Statistics & operator|= (const Statistics & other) {

@@ -99,7 +99,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 namespace drace {
 	static void event_exit()
 	{
-
 		app_stop = std::chrono::system_clock::now();
 
 		if (!drmgr_unregister_thread_init_event(event_thread_init) ||
@@ -108,7 +107,7 @@ namespace drace {
 
 		// Generate summary while information is still present
 		generate_summary();
-		stats->print_summary(std::cout);
+		stats->print_summary(drace::log_target);
 
 		// Cleanup all drace modules
 		module_tracker.reset();
@@ -126,6 +125,9 @@ namespace drace {
 
 		dr_mutex_destroy(th_mutex);
 		dr_rwlock_destroy(tls_rw_mutex);
+
+		if (drace::log_requires_close)
+			dr_close_file(drace::log_target);
 
 		LOG_INFO(-1, "DR exit");
 	}
@@ -161,7 +163,7 @@ namespace drace {
 		params.argv = argv;
 
 		bool display_help = false;
-		auto cli = (
+		auto drace_cli = clipp::group(
 			(clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file +")"),
 			(
 				(clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
@@ -181,23 +183,47 @@ namespace drace {
 			clipp::option("--sync-mode").set(params.fastmode, false)      % "flush all buffers on a sync event (instead of participating only)",
 			clipp::option("--fast-mode").set(params.fastmode)             % "DEPRECATED: inverse of sync-mode",
 			(
-				(clipp::option("--xml-file") & clipp::value(params.xml_file)) % "log races in valkyries xml format in this file",
-				(clipp::option("--out-file") & clipp::value(params.out_file)) % "log races in human readable format in this file"
+				(clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
+				(clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
 			) % "data race reporting",
+			(clipp::option("--logfile", "-l") & clipp::value("filename", params.logfile)) % "write all logs to this file (can be null, stdout, stderr, or filename)",
 			clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
 			// for testing reasons only. Abort execution after the first race was detected
 			clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
 			clipp::option("-h", "--usage")
+		);
+		auto detector_cli = clipp::group(
+			// we just name the options here to provide a well-defined cli.
+			// The detector parses the argv itself
+			clipp::option("--heap-only") % "only analyze heap memory"
+		);
+		auto cli = (
+			(drace_cli % "DRace Options"),
+			(detector_cli % ("Detector (" + detector::name() + ") Options"))
 		);
 
 		if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
 			std::cout << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
 			dr_abort();
 		}
+
+		// setup logging target
+		if (params.logfile == "null")
+			drace::log_target = nullptr;
+		else if (params.logfile == "stdout")
+			drace::log_target = (FILE*)dr_get_stdout_file();
+		else if (params.logfile == "stderr")
+			drace::log_target = (FILE*)dr_get_stderr_file();
+		else if (params.logfile != "") { // filename
+			if ((drace::log_target = (FILE*)dr_open_file(params.logfile.c_str(), DR_FILE_WRITE_OVERWRITE)) != INVALID_FILE)
+				drace::log_requires_close = true;
+		}
+		else
+			drace::log_target = nullptr;
 	}
 
 	static void print_config() {
-		dr_printf(
+		dr_fprintf(drace::log_target,
 			"< Runtime Configuration:\n"
 			"< Sampling Rate:\t%i\n"
 			"< Instr. Rate:\t\t%i\n"
@@ -213,6 +239,7 @@ namespace drace {
 			"< XML File:\t\t%s\n"
 			"< Stack-Size:\t\t%i\n"
 			"< External Ctrl:\t%s\n"
+			"< Log Target:\t\t%s\n"
 			"< Private Caches:\t%s\n",
 			params.sampling_rate,
 			params.instr_rate,
@@ -228,6 +255,7 @@ namespace drace {
 			params.xml_file != "" ? params.xml_file.c_str() : "OFF",
 			params.stack_size,
 			params.extctrl ? "ON" : "OFF",
+			params.logfile,
 			dr_using_all_private_caches() ? "ON" : "OFF");
 	}
 

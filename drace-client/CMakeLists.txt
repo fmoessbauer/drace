@@ -40,6 +40,9 @@ target_link_libraries(
 	"clipp"          # option parser
 )
 
+# Set loglevel
+target_compile_definitions("drace-client" PRIVATE -DLOGLEVEL=${DRACE_LOGLEVEL})
+
 # TinyXML2
 if(${DRACE_XML_EXPORTER})
 	target_link_libraries("drace-client" "tinyxml2")

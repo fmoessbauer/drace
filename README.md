@@ -50,58 +50,69 @@ drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- applic
 SYNOPSIS
         drace-client.dll [-c <config>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
-                         <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--xml-file ]
-                         [--out-file ] [--extctrl] [--brkonrace] [-h]
+                         <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--xml-file
+                         <filename>] [--out-file <filename>] [--logfile <filename>] [--extctrl]
+                         [--brkonrace] [-h] [--heap-only]
 
 OPTIONS
-        -c, --config <config>
+        DRace Options
+            -c, --config <config>
                     config file (default: drace.ini)
 
-        sampling options
-            -s, --sample-rate <sample-rate>
+            sampling options
+                -s, --sample-rate <sample-rate>
                     sample each nth instruction (default: no sampling)
 
-            -i, --instr-rate <instr-rate>
+                -i, --instr-rate <instr-rate>
                     instrument each nth instruction (default: no sampling)
 
-        analysis scope
-            --lossy dynamically exclude fragments using lossy counting
-            --lossy-flush
+            analysis scope
+                --lossy
+                    dynamically exclude fragments using lossy counting
+
+                --lossy-flush
                     de-instrument flushed segments (only with --lossy)
 
-            --excl-traces
+                --excl-traces
                     exclude dynamorio traces
 
-            --excl-stack
+                --excl-stack
                     exclude stack accesses
 
-            --excl-master
+                --excl-master
                     exclude first thread
 
-        --stacksz <stacksz>
+            --stacksz <stacksz>
                     size of callstack used for race-detection (must be in [1,16], default: 10)
 
-        --delay-syms
+            --delay-syms
                     perform symbol lookup after application shutdown
 
-        --sync-mode flush all buffers on a sync event (instead of participating only)
-        --fast-mode DEPRECATED: inverse of sync-mode
+            --sync-mode
+                    flush all buffers on a sync event (instead of participating only)
 
-        data race reporting
-            --xml-file
+            --fast-mode
+                    DEPRECATED: inverse of sync-mode
+
+            data race reporting
+                --xml-file, -x <filename>
                     log races in valkyries xml format in this file
 
-            --out-file
+                --out-file, -o <filename>
                     log races in human readable format in this file
 
-        --extctrl   use second process for symbol lookup and state-controlling (required for Dotnet)
-        --brkonrace abort execution after first race is found (for testing purpose only)
-```
+            --logfile, -l <filename>
+                    write all logs to this file (can be null, stdout, stderr, or filename)
 
-*Detector Parameters:*
+            --extctrl
+                    use second process for symbol lookup and state-controlling (required for Dotnet)
 
-```
---heap-only       : only detect races on heap-memory (exclude static memory)
+            --brkonrace
+                    abort execution after first race is found (for testing purpose only)
+
+        Detector (TSAN) Options
+            --heap-only
+                    only analyze heap memory
 ```
 
 ### External Controlling DRace

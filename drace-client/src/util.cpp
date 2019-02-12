@@ -11,6 +11,9 @@
 
 namespace drace {
 
+	FILE * log_target = nullptr;
+	bool   log_requires_close = false;
+
 	bool util::common_prefix(const std::string& a, const std::string& b)
 	{
 		if (!a.size() || !b.size()) {

@@ -11,7 +11,7 @@
  * the LICENSE file in the top-level directory.
  */
 
-// Log up to notice
+// Log up to notice (this parameter can be controlled using CMake)
 #ifndef LOGLEVEL
 #define LOGLEVEL 3
 #endif
@@ -28,7 +28,7 @@
 #include <dr_api.h>
 
 /// max number of individual mutexes per thread
-#define MUTEX_MAP_SIZE 128
+constexpr int MUTEX_MAP_SIZE = 128;
 
 /** Upper limit of process address space according to
 *   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
@@ -55,6 +55,7 @@ namespace drace {
 		std::string  config_file{ "drace.ini" };
 		std::string  out_file;
 		std::string  xml_file;
+		std::string  logfile{ "stderr" };
 
 		// Raw arguments
 		int          argc;

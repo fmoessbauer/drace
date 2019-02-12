@@ -16,6 +16,11 @@
 #include <chrono>
 
 namespace drace {
+	/** Target to which all logs are written. Can be any file handle */
+	extern FILE * log_target;
+	/** true if log target is a file that has to be closed on exit */
+	extern bool   log_requires_close;
+
 	/** Utility functions for all modules */
 	struct util {
 		/** Returns true if a starts with prefix b */
@@ -37,7 +42,7 @@ namespace drace {
 
 // Logging
 
-#define LOG_HELPER(tid, level, msg, ...) do {dr_printf("[drace][%.5i][%s] " msg "\n", tid, level, __VA_ARGS__);} while (0)
+#define LOG_HELPER(tid, level, msg, ...) do {if(nullptr != drace::log_target) dr_fprintf(drace::log_target, "[drace][%.5i][%s] " msg "\n", tid, level, __VA_ARGS__);} while (0)
 
 #define LOG(tid, level, msg, ...) do {\
 	if(tid == 0){LOG_HELPER(dr_get_thread_id(dr_get_current_drcontext()), level, msg, __VA_ARGS__);}\

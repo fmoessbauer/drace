@@ -124,7 +124,7 @@ namespace drace {
 			// We missed a fork
 			// 1. Flush all threads (except this thread)
 			// 2. Fork thread
-			LOG_INFO(data->tid, "Missed a fork, do it now");
+			LOG_TRACE(data->tid, "Missed a fork, do it now");
 			detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
 		}
 
@@ -282,7 +282,7 @@ namespace drace {
 		TLS_buckets.erase(data->tid);
 		dr_rwlock_write_unlock(tls_rw_mutex);
 
-		data->stats->print_summary(std::cout);
+		data->stats->print_summary(drace::log_target);
 
 		// Cleanup TLS
 		// As we cannot rely on current drcontext here, use provided one
