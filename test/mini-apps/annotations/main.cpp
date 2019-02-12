@@ -1,6 +1,9 @@
 #include <thread>
 
-#define DRACE_ANNOTATION
+// Set this define to enable annotations.
+// we do that using CMake to cross test in
+// integration tests
+//#define DRACE_ANNOTATION
 #include "../../../drace-client/include/annotations/drace_annotation.h"
 
 // This code serves as a test for client annotations

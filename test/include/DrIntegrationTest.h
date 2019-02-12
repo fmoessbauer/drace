@@ -21,20 +21,22 @@
 
 #include "globals.h"
 
-class DrIntegrationTest : public ::testing::Test {
+class DrIntegration : public ::testing::Test {
 private:
 	static std::string drrun;
 	static std::string drclient;
+	static bool verbose;
 
 	std::string logfile;
 
 public:
-	DrIntegrationTest() {
+	DrIntegration() {
 		logfile = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+		std::replace(logfile.begin(), logfile.end(), '/', '_');
 		logfile += ".log";
 	}
 
-	~DrIntegrationTest() {
+	~DrIntegration() {
 		std::remove(logfile.c_str());
 	}
 
@@ -43,7 +45,9 @@ public:
 		command << drrun << " -c " << drclient << " "
 				<< client_args << " -- " << "test/" << exe
 			    << " > " << logfile << " 2>&1";
-		std::cout << ">> Issue Command: " << command.str() << std::endl;
+		if(verbose)
+			std::cout << ">> Issue Command: " << command.str() << std::endl;
+
 		std::system(command.str().c_str());
 
 		// TODO: parse output
@@ -58,7 +62,9 @@ public:
 			std::string num_races_str;
 			std::copy(races_match[1].first, races_match[1].second, std::back_inserter(num_races_str));
 			
-			std::cout << ">>> Detected Races: " << num_races_str << std::endl;
+			if(verbose)
+				std::cout << ">>> Detected Races: " << num_races_str << std::endl;
+
 			int num_races = std::stoi(num_races_str);
 			if (num_races < min || num_races > max) {
 				ADD_FAILURE() << "Expected [" << min << "," << max << "] Races, found " << num_races
@@ -70,18 +76,21 @@ public:
 		}
 	}
 
-protected:
 	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
 		for (int i = 1; i < t_argc; ++i) {
 			if (strncmp(t_argv[i], "--dr", 8) == 0 && i<(t_argc-1)) {
 				drrun = t_argv[i + 1];
-				break;
+			}
+			else if (strncmp(t_argv[i], "-v", 4) == 0) {
+				verbose = true;
 			}
 		}
 
-		std::cout << "> Use DynamoRio in: " << drrun << std::endl;
-		std::cout << "> Use DRace in:     " << drclient << std::endl;
+		if (verbose) {
+			std::cout << "> Use DynamoRio in: " << drrun << std::endl;
+			std::cout << "> Use DRace in:     " << drclient << std::endl;
+		}
 		// TODO: Check if drrun is present
 		std::string dr_test(drrun + " -h > dr_avail.log");
 		int ret = std::system(dr_test.c_str());
@@ -98,4 +107,8 @@ protected:
 	static void TearDownTestCase() {
 		std::remove("dr_avail.log");
 	}
+};
+
+class FlagMode : public DrIntegration, public ::testing::WithParamInterface<const char*> {
+
 };

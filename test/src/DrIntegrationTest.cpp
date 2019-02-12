@@ -2,37 +2,48 @@
 
 #include <string>
 
-std::string DrIntegrationTest::drrun = "drrun.exe";
-std::string DrIntegrationTest::drclient = "drace-client/drace-client.dll";
+std::string DrIntegration::drrun = "drrun.exe";
+std::string DrIntegration::drclient = "drace-client/drace-client.dll";
+bool DrIntegration::verbose = false;
 
-TEST_F(DrIntegrationTest, DefaultParams) {
-	run("", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
-	run("", "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
-	run("", "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
-	run("", "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
-	run("", "mini-apps/atomics/gp-atomics.exe", 0, 0);
-	run("", "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
+// Test cases
+
+TEST_P(FlagMode, ConcurrentInc) {
+	run(GetParam(), "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+}
+TEST_P(FlagMode, IncMutex) {
+	run(GetParam(), "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
+}
+TEST_P(FlagMode, LockKinds) {
+	run(GetParam(), "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
+}
+TEST_P(FlagMode, EmptyMain) {
+	run(GetParam(), "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
+}
+TEST_P(FlagMode, Atomics) {
+	run(GetParam(), "mini-apps/atomics/gp-atomics.exe", 0, 0);
+}
+TEST_P(FlagMode, RacyAtomics) {
+	run(GetParam(), "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
+}
+TEST_P(FlagMode, Annotations) {
+	run(GetParam(), "mini-apps/annotations/gp-annotations.exe", 0, 0);
+}
+TEST_P(FlagMode, DisabledAnnotations) {
+	run(GetParam(), "mini-apps/annotations/gp-annotations-racy.exe", 1, 5);
 }
 
-TEST_F(DrIntegrationTest, FastMode) {
-	std::string flags = "--fast-mode";
-	run(flags, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
-	run(flags, "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
-	run(flags, "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
-	run(flags, "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
-	run(flags, "mini-apps/atomics/gp-atomics.exe", 0, 0);
-	run(flags, "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
+// Individual tests
+
+TEST_F(DrIntegration, ExclStack) {
+	run("--excl-stack", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
 }
 
-TEST_F(DrIntegrationTest, ExclStack) {
-	std::string flags = "--fast-mode --excl-stack";
-	run(flags, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
-}
-
-TEST_F(DrIntegrationTest, ExcludeRaces) {
+TEST_F(DrIntegration, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
 
-TEST_F(DrIntegrationTest, Annotations) {
-	run("", "mini-apps/annotations/gp-annotations.exe", 0, 0);
-}
+// Setup value-parameterized tests
+INSTANTIATE_TEST_CASE_P(DrIntegration,
+	FlagMode,
+	::testing::Values("--sync-mode", ""));
