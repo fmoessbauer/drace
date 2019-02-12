@@ -33,6 +33,7 @@ cannot be detected correctly.
 **Mandatory:**
 
 - [gabime/spdlog](https://github.com/gabime/spdlog)
+- [muellan/clipp](https://github.com/muellan/clipp)
 
 ## Using the DRace Race Detector
 

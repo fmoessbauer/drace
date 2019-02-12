@@ -6,7 +6,7 @@
 
 add_executable("msr" ${SOURCES})
 target_include_directories("msr" PRIVATE "include")
-target_link_libraries("msr" "drace-common" "spdlog")
+target_link_libraries("msr" "drace-common" "spdlog" "clipp")
 
 # Link with tsan if detector is Extsan
 if(${DRACE_DETECTOR} STREQUAL "extsan")

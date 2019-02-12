@@ -10,6 +10,8 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_sinks.h"
 
+#include "clipp.h"
+
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -58,11 +60,43 @@ int main(int argc, char** argv) {
 	logger->set_pattern("[%Y-%m-%d %T][%l] %v");
 	logger->set_level(spdlog::level::info);
 
-	logger->info("Starting Managed Stack Resolver, waiting for Drace");
-	if (argc == 2 && !strncmp(argv[1], "-v", 2)) {
-		logger->set_level(spdlog::level::debug);
-		logger->debug("Debug mode enabled");
+	int loglevel = 1;
+	bool display_help = false;
+	auto cli = (
+		clipp::repeatable(clipp::option("-v", "--verbose")(clipp::increment(loglevel))) % "verbose, use multiple times to increase log-level (e.g. -v -v)",
+		clipp::option("-h", "--usage").set(display_help)
+	);
+
+	if (!clipp::parse(argc, argv, cli) || display_help) {
+		std::cout << clipp::make_man_page(cli, "msr.exe") << std::endl;
+		printhelp();
+		std::exit(display_help ? 0 : 1);
 	}
+
+	logger->info("Starting Managed Stack Resolver, waiting for Drace");
+
+	auto level = spdlog::level::trace;
+	std::string level_str = "trace";
+	switch (loglevel) {
+	case 0:
+		level = spdlog::level::critical;
+		level_str = "critical";
+		break;
+	case 1:
+		level = spdlog::level::warn;
+		level_str = "warning";
+		break;
+	case 2:
+		level = spdlog::level::info;
+		level_str = "info";
+		break;
+	case 3:
+		level = spdlog::level::debug;
+		level_str = "debug";
+		break;
+	}
+	logger->info("Set loglevel to {}", level_str);
+	logger->set_level(level);
 
 	// We need this event handler for cleanup of shm
 	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
