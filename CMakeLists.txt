@@ -67,3 +67,5 @@ if(${Doxygen_FOUND})
 endif()
 
 install(FILES "drace.ini" DESTINATION bin)
+install(FILES "LICENSE" DESTINATION doc)
+install(FILES "README.md" DESTINATION doc)

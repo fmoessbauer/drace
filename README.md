@@ -1,14 +1,22 @@
 # DRace
 
-The drace-client is a race detector for windows build on top of DynamoRIO.
-It does not require any perparations like instrumentation of the binary to check.
-However if debug information is not available, header-only C++11 constructs
-cannot be detected correctly.
+DRace is a data-race detector for windows applications which uses DynamoRIO
+to dynamically instrument a binary at runtime.
+It does not require any preparations like instrumentation of the binary to check.
+While the detector should work with all binaries that use the POSIX synchronization API,
+we focus on applications written in C and C++.
+Experimental support for hybrid applications containing native and Dotnet CoreCLR parts
+is implemented as well.
+
+For best results, we recommend to provide debug symbols of the
+application under test along with the binary.
+Without this information, callstacks cannot be fully symbolized (exported functions only)
+and user-level synchronization cannot be detected.
 
 ## Dependencies
 
 - CMake > 3.8
-- DynamoRIO 7.0.x
+- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.0.x (use weekly releases)
 - C++11 / C99 Compiler
 
 ### External Libraries
@@ -21,6 +29,7 @@ cannot be detected correctly.
 - [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
 - [HowardHinnant/date](https://github.com/HowardHinnant/date)
 - [muellan/clipp](https://github.com/muellan/clipp)
+- LLVM-Tsan (a customized version is included in binary format)
 
 **Optional:**
 
@@ -28,12 +37,11 @@ cannot be detected correctly.
 - [google/benchmark](https://github.com/google/benchmark)
 - [greq7mdp/sparsepp](https://github.com/greq7mdp/sparsepp)
 
-#### MSR
+#### Managed Symbol Resolver (MSR)
 
 **Mandatory:**
 
 - [gabime/spdlog](https://github.com/gabime/spdlog)
-- [muellan/clipp](https://github.com/muellan/clipp)
 
 ## Using the DRace Race Detector
 
@@ -115,9 +123,9 @@ OPTIONS
                     only analyze heap memory
 ```
 
-### External Controlling DRace
+### Externally Controlling DRace
 
-DRace can be externally controlled using the external controller `msr.exe`.
+DRace can be externally controlled from a controller (`msr.exe`) running in a second process.
 To set the detector state during runtime, the following keys (committed using `enter`) are available:
 
 ```
@@ -135,7 +143,7 @@ However for additional and more precise race-detection (e.g. C++11, QT), debug i
 The application searches for this information in the path of the module and in `_NT_SYMBOL_PATH`.
 However, only local symbols are searched (non `SRV` parts).
 
-If symbols for system libs are necessary (e.g. for .Net), download them first from a symbol server.
+If symbols for system libraries are necessary (e.g. for Dotnet), they have to be downloaded from a symbol server.
 Thereto it is useful to set the variable as follows:
 
 ```
@@ -144,19 +152,19 @@ set _NT_SYMBOL_PATH="c:\\symbolcache\\;SRV*c:\\symbolcache\\*https://msdl.micros
 
 ### Dotnet
 
-For .Net managed code, a second process (called MSR) is needed for symbol resolution.
-This can be started as follows:
+For .Net managed code, a second process (MSR) is needed for symbol resolution.
+The MSR is started as follows:
 
 ```
 ManagedResolver\msr.exe [-v for verbose]
 ```
 
 After it is started, DRace connects to MSR using shared memory.
-MSR then tries to locate the correct [DAC](https://github.com/dotnet/coreclr/blob/master/Documentation/botr/dac-notes.md)
-dll to resolve managed program counters and symbols.
+The MSR then tries to locate the correct [DAC](https://github.com/dotnet/coreclr/blob/master/Documentation/botr/dac-notes.md)
+DLL to resolve managed program counters and symbols.
 
-The output (logs) of MSR are just for debugging reasons. The resolved symbols are passed back to drace
-and merged with the non-managed ones.
+The output (logs) of the MSR are just for debugging reasons.
+The resolved symbols are passed back to drace and merged with the non-managed ones.
 
 ### Custom Annotations
 
@@ -164,7 +172,7 @@ Custom synchonisation logic is supported by annotating the corresponding code se
 Thereto we provide a header with macros in `drace-client/include/annotations/drace_annotation.h`.
 To enable these macros, define `DRACE_ANNOTATION` prior to including the header.
 
-A example how to use the annotations is given in `test/mini-apps/annotations/`.
+A example on how to use the annotations is provided in `test/mini-apps/annotations/`.
 
 ## Testing with GoogleTest
 
@@ -180,9 +188,7 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 **Note:** Before pushing a commit, please run the integration tests.
 Later on, bugs are very tricky to find. 
 
-## Benchmarking with GoogleBenchmark
-
-### Limitations
+## Limitations
 
 - CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)
 - TSAN can only be started once, as the cleanup is not fully working
@@ -229,7 +235,7 @@ DRace is shipped with the following detector backends:
 - extsan (external ThreadSanitizer, WIP)
 - dummy (no detection at all)
 
-To select which detector is build, set `-DDRACE_DETECTOR=<value>` CMake flag.
+To select which detector is build, set the `-DDRACE_DETECTOR=<value>` CMake flag.
 
 **tsan**
 
