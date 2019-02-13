@@ -79,4 +79,8 @@ if("${DRACE_DETECTOR}" STREQUAL "tsan")
 			"$<TARGET_FILE_DIR:drace-client>")
 endif()
 
+# Add licensing information on LCM
+file(READ "include/lcm/LICENSE" LIC_FILE_LCM)
+file(APPEND ${LIC_FILE} "${LIC_SEP}fmoessbauer/LossyCountingModel\n\n${LIC_FILE_LCM}")
+
 install(TARGETS "drace-client" DESTINATION bin)
