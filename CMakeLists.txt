@@ -23,6 +23,16 @@ endif()
 
 find_package(Threads REQUIRED)
 
+# prepare license
+# whenever a external library is added, append its license to this file
+set(LIC_FILE "${CMAKE_CURRENT_BINARY_DIR}/LICENSE.txt")
+set(LIC_SEP "\n\n===========================================================================\n")
+
+# generate and install license of DRace itself
+file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
+file(READ "LICENSE" LIC_FILE_DRACE)
+file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
+
 # Common Files
 add_subdirectory("common")
 # external vendor targets
@@ -64,8 +74,10 @@ if(${Doxygen_FOUND})
 	    doc
 	    ${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
+	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc)
 endif()
 
+# install config readme
 install(FILES "drace.ini" DESTINATION bin)
-install(FILES "LICENSE" DESTINATION doc)
 install(FILES "README.md" DESTINATION doc)
+install(FILES ${LIC_FILE} DESTINATION doc)

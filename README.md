@@ -26,22 +26,22 @@ and user-level synchronization cannot be detected.
 **Mandatory:**
 
 - [jtilly/inih](https://github.com/jtilly/inih)
-- [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
 - [HowardHinnant/date](https://github.com/HowardHinnant/date)
 - [muellan/clipp](https://github.com/muellan/clipp)
 - LLVM-Tsan (a customized version is included in binary format)
 
 **Optional:**
 
+- [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
 - [google/googletest](https://github.com/google/googletest)
 - [google/benchmark](https://github.com/google/benchmark)
-- [greq7mdp/sparsepp](https://github.com/greq7mdp/sparsepp)
 
 #### Managed Symbol Resolver (MSR)
 
 **Mandatory:**
 
 - [gabime/spdlog](https://github.com/gabime/spdlog)
+- [greq7mdp/sparsepp](https://github.com/greg7mdp/sparsepp)
 
 ## Using the DRace Race Detector
 
