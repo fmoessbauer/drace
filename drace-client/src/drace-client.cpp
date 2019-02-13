@@ -27,6 +27,7 @@
 
 #include <clipp.h>
 #include <detector/detector_if.h>
+#include <version/version.h>
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
@@ -190,7 +191,11 @@ namespace drace {
 			clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
 			// for testing reasons only. Abort execution after the first race was detected
 			clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
-			clipp::option("-h", "--usage")
+			(clipp::option("--version")([]() {
+			std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
+				<< "Hash:    " << DRACE_BUILD_HASH << std::endl;
+			dr_abort(); })) % "display version information",
+			clipp::option("-h", "--usage").set(display_help)
 		);
 		auto detector_cli = clipp::group(
 			// we just name the options here to provide a well-defined cli.

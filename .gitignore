@@ -8,6 +8,8 @@
 *.sln.docstates
 
 CMakeSettings.json
+CppProperties.json
+common/version/version.h
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

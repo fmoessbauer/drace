@@ -3,6 +3,7 @@
 project ("drace-client" LANGUAGES "C" "CXX")
 
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
+set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")

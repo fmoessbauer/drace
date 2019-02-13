@@ -6,6 +6,7 @@
 #endif
 #include "ipc/SyncSHMDriver.h"
 #include "ipc/ExtsanData.h"
+#include "version/version.h"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_sinks.h"
@@ -64,6 +65,11 @@ int main(int argc, char** argv) {
 	bool display_help = false;
 	auto cli = (
 		clipp::repeatable(clipp::option("-v", "--verbose")(clipp::increment(loglevel))) % "verbose, use multiple times to increase log-level (e.g. -v -v)",
+		(clipp::option("--version")([]() {
+		std::cout << "Managed Symbol Resolver (MSR)\n" 
+			      << "Version: " << DRACE_BUILD_VERSION << "\n"
+			      << "Hash:    " << DRACE_BUILD_HASH << std::endl;
+		std::exit(0); })) % "display version information",
 		clipp::option("-h", "--usage").set(display_help)
 	);
 
