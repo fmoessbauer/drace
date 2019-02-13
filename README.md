@@ -60,7 +60,7 @@ SYNOPSIS
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
                          <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--xml-file
                          <filename>] [--out-file <filename>] [--logfile <filename>] [--extctrl]
-                         [--brkonrace] [-h] [--heap-only]
+                         [--brkonrace] [--version] [-h] [--heap-only]
 
 OPTIONS
         DRace Options
@@ -118,9 +118,16 @@ OPTIONS
             --brkonrace
                     abort execution after first race is found (for testing purpose only)
 
+            --version
+                    display version information
+
+            -h, --usage
+                    display help
+
         Detector (TSAN) Options
             --heap-only
                     only analyze heap memory
+
 ```
 
 ### Externally Controlling DRace

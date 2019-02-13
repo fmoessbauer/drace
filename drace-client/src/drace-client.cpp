@@ -1,4 +1,18 @@
-﻿// DynamoRIO client for Race-Detection
+﻿/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright (c) Siemens AG, 2018
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * This work is licensed under the terms of the MIT license.  See
+ * the LICENSE file in the top-level directory.
+ */
+
+/**
+ \brief DynamoRIO client for Race-Detection
+ */
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -194,8 +208,8 @@ namespace drace {
 			(clipp::option("--version")([]() {
 			std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
 				<< "Hash:    " << DRACE_BUILD_HASH << std::endl;
-			dr_abort(); })) % "display version information",
-			clipp::option("-h", "--usage").set(display_help)
+			dr_abort(); }) % "display version information"),
+			clipp::option("-h", "--usage").set(display_help) % "display help"
 		);
 		auto detector_cli = clipp::group(
 			// we just name the options here to provide a well-defined cli.

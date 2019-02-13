@@ -1,3 +1,15 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright (c) Siemens AG, 2018
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * This work is licensed under the terms of the MIT license.  See
+ * the LICENSE file in the top-level directory.
+ */
+
 #include <thread>
 
 // Set this define to enable annotations.
@@ -6,7 +18,9 @@
 //#define DRACE_ANNOTATION
 #include "../../../drace-client/include/annotations/drace_annotation.h"
 
-// This code serves as a test for client annotations
+/**
+\brief This code serves as a test for client annotations
+*/
 
 void inc(int * v) {
 	for (int i = 0; i < 1000; ++i) {

@@ -1,6 +1,5 @@
 set(SOURCES 
 	"src/main.cpp"
-	"src/algorithms.cpp"
 	"src/DetectorTest.cpp"
 	"src/DrIntegrationTest.cpp"
 	"src/ShmDriver.cpp")

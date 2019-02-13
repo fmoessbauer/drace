@@ -1,3 +1,15 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright (c) Siemens AG, 2018
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * This work is licensed under the terms of the MIT license.  See
+ * the LICENSE file in the top-level directory.
+ */
+
 #include <thread>
 #include <mutex>
 #include <array>
@@ -6,8 +18,9 @@
 
 #include <windows.h>
 
-// This code serves as a test for mutex detection
-// in the drace client
+/**
+\brief This code serves as a test for mutex detection in the drace client
+*/
 
 static std::mutex mx;
 static std::recursive_mutex rmx;

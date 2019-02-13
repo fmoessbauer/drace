@@ -1,4 +1,16 @@
-#pragma once
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright (c) Siemens AG, 2018
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * This work is licensed under the terms of the MIT license.  See
+ * the LICENSE file in the top-level directory.
+ *
+ * Based on https://stackoverflow.com/questions/34733155/resolve-managed-and-native-stack-trace-which-api-to-use
+ */
 
 #include "ManagedResolver.h"
 #include "LoggerTypes.h"
