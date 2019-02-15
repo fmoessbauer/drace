@@ -19,6 +19,8 @@ and user-level synchronization cannot be detected.
 - [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.0.x (use weekly releases)
 - C++11 / C99 Compiler
 
+For detailed information on all dependencies, see `DEPENDENCIES.md`.
+
 ### External Libraries
 
 #### DRace
