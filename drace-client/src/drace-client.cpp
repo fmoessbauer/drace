@@ -1,4 +1,4 @@
-﻿/*
+/*
  * DRace, a dynamic data race detector
  *
  * Copyright (c) Siemens AG, 2018
@@ -10,9 +10,9 @@
  * the LICENSE file in the top-level directory.
  */
 
-/**
- \brief DynamoRIO client for Race-Detection
- */
+ /**
+  \brief DynamoRIO client for Race-Detection
+  */
 
 #include <dr_api.h>
 #include <drmgr.h>
@@ -45,260 +45,260 @@
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
-	using namespace drace;
+    using namespace drace;
 
-	dr_set_client_name("Race-Detection Client 'drace'",
-		"https://code.siemens.com/felix.moessbauer.ext/drace/issues");
+    dr_set_client_name("Race-Detection Client 'drace'",
+        "https://code.siemens.com/felix.moessbauer.ext/drace/issues");
 
-	dr_enable_console_printing();
+    dr_enable_console_printing();
 
-	// Parse runtime arguments and print generated configuration
-	drace::parse_args(argc, argv);
-	drace::print_config();
+    // Parse runtime arguments and print generated configuration
+    drace::parse_args(argc, argv);
+    drace::print_config();
 
-	bool success = config.loadfile(params.config_file);
-	if (!success) {
-		LOG_ERROR(-1, "error loading config file");
-		dr_flush_file(stdout);
-		exit(1);
-	}
+    bool success = config.loadfile(params.config_file);
+    if (!success) {
+        LOG_ERROR(-1, "error loading config file");
+        dr_flush_file(stdout);
+        exit(1);
+    }
 
-	TLS_buckets.reserve(128);
+    TLS_buckets.reserve(128);
 
-	th_mutex = dr_mutex_create();
-	tls_rw_mutex = dr_rwlock_create();
+    th_mutex = dr_mutex_create();
+    tls_rw_mutex = dr_rwlock_create();
 
-	// Init DRMGR, Reserve registers
-	if (!drmgr_init() ||
-		!drutil_init())
-		DR_ASSERT(false);
+    // Init DRMGR, Reserve registers
+    if (!drmgr_init() ||
+        !drutil_init())
+        DR_ASSERT(false);
 
-	// Register Events
-	dr_register_exit_event(event_exit);
-	drmgr_register_thread_init_event(event_thread_init);
-	drmgr_register_thread_exit_event(event_thread_exit);
+    // Register Events
+    dr_register_exit_event(event_exit);
+    drmgr_register_thread_init_event(event_thread_init);
+    drmgr_register_thread_exit_event(event_thread_exit);
 
-	// Setup Statistics Collector
-	stats = std::make_unique<Statistics>(0);
+    // Setup Statistics Collector
+    stats = std::make_unique<Statistics>(0);
 
-	// Setup Function Wrapper
-	DR_ASSERT(funwrap::init());
+    // Setup Function Wrapper
+    DR_ASSERT(funwrap::init());
 
-	auto symbol_table = std::make_shared<Symbols>();
+    auto symbol_table = std::make_shared<Symbols>();
 
-	// Setup Module Tracking
-	module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
+    // Setup Module Tracking
+    module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
 
-	// Setup Memory Tracing
-	memory_tracker = std::make_unique<MemoryTracker>();
+    // Setup Memory Tracing
+    memory_tracker = std::make_unique<MemoryTracker>();
 
-	// Setup Race Collector and bind lookup function
-	race_collector = std::make_unique<RaceCollector>(
-		params.delayed_sym_lookup,
-		symbol_table);
+    // Setup Race Collector and bind lookup function
+    race_collector = std::make_unique<RaceCollector>(
+        params.delayed_sym_lookup,
+        symbol_table);
 
-	// Initialize Detector
-	detector::init(argc, argv, race_collector_add_race);
+    // Initialize Detector
+    detector::init(argc, argv, race_collector_add_race);
 
-	LOG_INFO(-1, "application pid: %i", dr_get_process_id());
-	
-	// if we try to access a non-existing SHM,
-	// DR will spuriously fail some time later
-	if (params.extctrl) {
-		DR_ASSERT(MSR::connect(), "MSR not available");
-	}
+    LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
-	app_start = std::chrono::system_clock::now();
+    // if we try to access a non-existing SHM,
+    // DR will spuriously fail some time later
+    if (params.extctrl) {
+        DR_ASSERT(MSR::connect(), "MSR not available");
+    }
+
+    app_start = std::chrono::system_clock::now();
 }
 
 namespace drace {
-	static void event_exit()
-	{
-		app_stop = std::chrono::system_clock::now();
+    static void event_exit()
+    {
+        app_stop = std::chrono::system_clock::now();
 
-		if (!drmgr_unregister_thread_init_event(event_thread_init) ||
-			!drmgr_unregister_thread_exit_event(event_thread_exit))
-			DR_ASSERT(false);
+        if (!drmgr_unregister_thread_init_event(event_thread_init) ||
+            !drmgr_unregister_thread_exit_event(event_thread_exit))
+            DR_ASSERT(false);
 
-		// Generate summary while information is still present
-		generate_summary();
-		stats->print_summary(drace::log_target);
+        // Generate summary while information is still present
+        generate_summary();
+        stats->print_summary(drace::log_target);
 
-		// Cleanup all drace modules
-		module_tracker.reset();
-		memory_tracker.reset();
-		stats.reset();
+        // Cleanup all drace modules
+        module_tracker.reset();
+        memory_tracker.reset();
+        stats.reset();
 
-		funwrap::finalize();
+        funwrap::finalize();
 
-		// Cleanup DR extensions
-		drutil_exit();
-		drmgr_exit();
+        // Cleanup DR extensions
+        drutil_exit();
+        drmgr_exit();
 
-		// Finalize Detector
-		detector::finalize();
+        // Finalize Detector
+        detector::finalize();
 
-		dr_mutex_destroy(th_mutex);
-		dr_rwlock_destroy(tls_rw_mutex);
+        dr_mutex_destroy(th_mutex);
+        dr_rwlock_destroy(tls_rw_mutex);
 
-		if (drace::log_requires_close)
-			dr_close_file(drace::log_target);
+        if (drace::log_requires_close)
+            dr_close_file(drace::log_target);
 
-		LOG_INFO(-1, "DR exit");
-	}
+        LOG_INFO(-1, "DR exit");
+    }
 
-	static void event_thread_init(void *drcontext)
-	{
-		using namespace drace;
-		thread_id_t tid = dr_get_thread_id(drcontext);
-		// assume that the first event comes from the runtime thread
-		unsigned empty_tid = 0;
-		if (runtime_tid.compare_exchange_weak(empty_tid, tid, std::memory_order_relaxed)) {
-			LOG_INFO(tid, "Runtime Thread tagged");
-		}
-		num_threads_active.fetch_add(1, std::memory_order_relaxed);
+    static void event_thread_init(void *drcontext)
+    {
+        using namespace drace;
+        thread_id_t tid = dr_get_thread_id(drcontext);
+        // assume that the first event comes from the runtime thread
+        unsigned empty_tid = 0;
+        if (runtime_tid.compare_exchange_weak(empty_tid, tid, std::memory_order_relaxed)) {
+            LOG_INFO(tid, "Runtime Thread tagged");
+        }
+        num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
-		memory_tracker->event_thread_init(drcontext);
-		LOG_INFO(tid, "Thread started");
-	}
+        memory_tracker->event_thread_init(drcontext);
+        LOG_INFO(tid, "Thread started");
+    }
 
-	static void event_thread_exit(void *drcontext)
-	{
-		using namespace drace;
-		thread_id_t tid = dr_get_thread_id(drcontext);
-		num_threads_active.fetch_sub(1, std::memory_order_relaxed);
+    static void event_thread_exit(void *drcontext)
+    {
+        using namespace drace;
+        thread_id_t tid = dr_get_thread_id(drcontext);
+        num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
-		memory_tracker->event_thread_exit(drcontext);
+        memory_tracker->event_thread_exit(drcontext);
 
-		LOG_INFO(tid, "Thread exited");
-	}
+        LOG_INFO(tid, "Thread exited");
+    }
 
-	static void parse_args(int argc, const char ** argv) {
-		params.argc = argc;
-		params.argv = argv;
+    static void parse_args(int argc, const char ** argv) {
+        params.argc = argc;
+        params.argv = argv;
 
-		bool display_help = false;
-		auto drace_cli = clipp::group(
-			(clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file +")"),
-			(
-				(clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
-				(clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate))     % "instrument each nth instruction (default: no sampling)"
-			) % "sampling options",
-			(
-				(clipp::option("--lossy").set(params.lossy)               % "dynamically exclude fragments using lossy counting") &
-				(clipp::option("--lossy-flush").set(params.lossy_flush)   % "de-instrument flushed segments (only with --lossy)"),
-				clipp::option("--excl-traces").set(params.excl_traces)    % "exclude dynamorio traces",
-				clipp::option("--excl-stack").set(params.excl_stack)      % "exclude stack accesses",
-				clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
-			) % "analysis scope",
-			(clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) % 
-				("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
+        bool display_help = false;
+        auto drace_cli = clipp::group(
+            (clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file + ")"),
+            (
+            (clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
+                (clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate)) % "instrument each nth instruction (default: no sampling)"
+                ) % "sampling options",
+                (
+            (clipp::option("--lossy").set(params.lossy) % "dynamically exclude fragments using lossy counting") &
+                    (clipp::option("--lossy-flush").set(params.lossy_flush) % "de-instrument flushed segments (only with --lossy)"),
+                    clipp::option("--excl-traces").set(params.excl_traces) % "exclude dynamorio traces",
+                    clipp::option("--excl-stack").set(params.excl_stack) % "exclude stack accesses",
+                    clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
+                    ) % "analysis scope",
+                    (clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) %
+            ("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
 
-			clipp::option("--delay-syms").set(params.delayed_sym_lookup)  % "perform symbol lookup after application shutdown",
-			clipp::option("--sync-mode").set(params.fastmode, false)      % "flush all buffers on a sync event (instead of participating only)",
-			clipp::option("--fast-mode").set(params.fastmode)             % "DEPRECATED: inverse of sync-mode",
-			(
-				(clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
-				(clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
-			) % "data race reporting",
-			(clipp::option("--logfile", "-l") & clipp::value("filename", params.logfile)) % "write all logs to this file (can be null, stdout, stderr, or filename)",
-			clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
-			// for testing reasons only. Abort execution after the first race was detected
-			clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
-			(clipp::option("--version")([]() {
-			std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
-				<< "Hash:    " << DRACE_BUILD_HASH << std::endl;
-			dr_abort(); }) % "display version information"),
-			clipp::option("-h", "--usage").set(display_help) % "display help"
-		);
-		auto detector_cli = clipp::group(
-			// we just name the options here to provide a well-defined cli.
-			// The detector parses the argv itself
-			clipp::option("--heap-only") % "only analyze heap memory"
-		);
-		auto cli = (
-			(drace_cli % "DRace Options"),
-			(detector_cli % ("Detector (" + detector::name() + ") Options"))
-		);
+            clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
+            clipp::option("--sync-mode").set(params.fastmode, false) % "flush all buffers on a sync event (instead of participating only)",
+            clipp::option("--fast-mode").set(params.fastmode) % "DEPRECATED: inverse of sync-mode",
+            (
+            (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
+                (clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
+                ) % "data race reporting",
+                (clipp::option("--logfile", "-l") & clipp::value("filename", params.logfile)) % "write all logs to this file (can be null, stdout, stderr, or filename)",
+            clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
+            // for testing reasons only. Abort execution after the first race was detected
+            clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
+            (clipp::option("--version")([]() {
+            std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
+                << "Hash:    " << DRACE_BUILD_HASH << std::endl;
+            dr_abort(); }) % "display version information"),
+            clipp::option("-h", "--usage").set(display_help) % "display help"
+                );
+        auto detector_cli = clipp::group(
+            // we just name the options here to provide a well-defined cli.
+            // The detector parses the argv itself
+            clipp::option("--heap-only") % "only analyze heap memory"
+        );
+        auto cli = (
+            (drace_cli % "DRace Options"),
+            (detector_cli % ("Detector (" + detector::name() + ") Options"))
+            );
 
-		if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
-			std::cout << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
-			dr_abort();
-		}
+        if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
+            std::cout << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
+            dr_abort();
+        }
 
-		// setup logging target
-		if (params.logfile == "null")
-			drace::log_target = nullptr;
-		else if (params.logfile == "stdout")
-			drace::log_target = (FILE*)dr_get_stdout_file();
-		else if (params.logfile == "stderr")
-			drace::log_target = (FILE*)dr_get_stderr_file();
-		else if (params.logfile != "") { // filename
-			if ((drace::log_target = (FILE*)dr_open_file(params.logfile.c_str(), DR_FILE_WRITE_OVERWRITE)) != INVALID_FILE)
-				drace::log_requires_close = true;
-		}
-		else
-			drace::log_target = nullptr;
-	}
+        // setup logging target
+        if (params.logfile == "null")
+            drace::log_target = nullptr;
+        else if (params.logfile == "stdout")
+            drace::log_target = (FILE*)dr_get_stdout_file();
+        else if (params.logfile == "stderr")
+            drace::log_target = (FILE*)dr_get_stderr_file();
+        else if (params.logfile != "") { // filename
+            if ((drace::log_target = (FILE*)dr_open_file(params.logfile.c_str(), DR_FILE_WRITE_OVERWRITE)) != INVALID_FILE)
+                drace::log_requires_close = true;
+        }
+        else
+            drace::log_target = nullptr;
+    }
 
-	static void print_config() {
-		dr_fprintf(drace::log_target,
-			"< Runtime Configuration:\n"
-			"< Sampling Rate:\t%i\n"
-			"< Instr. Rate:\t\t%i\n"
-			"< Lossy:\t\t%s\n"
-			"< Lossy-Flush:\t\t%s\n"
-			"< Exclude Traces:\t%s\n"
-			"< Exclude Stack:\t%s\n"
-			"< Exclude Master:\t%s\n"
-			"< Delayed Sym Lookup:\t%s\n"
-			"< Fast Mode:\t\t%s\n"
-			"< Config File:\t\t%s\n"
-			"< Output File:\t\t%s\n"
-			"< XML File:\t\t%s\n"
-			"< Stack-Size:\t\t%i\n"
-			"< External Ctrl:\t%s\n"
-			"< Log Target:\t\t%s\n"
-			"< Private Caches:\t%s\n",
-			params.sampling_rate,
-			params.instr_rate,
-			params.lossy ? "ON" : "OFF",
-			params.lossy_flush ? "ON" : "OFF",
-			params.excl_traces ? "ON" : "OFF",
-			params.excl_stack ? "ON" : "OFF",
-			params.exclude_master ? "ON" : "OFF",
-			params.delayed_sym_lookup ? "ON" : "OFF",
-			params.fastmode ? "ON" : "OFF",
-			params.config_file.c_str(),
-			params.out_file != "" ? params.out_file.c_str() : "OFF",
-			params.xml_file != "" ? params.xml_file.c_str() : "OFF",
-			params.stack_size,
-			params.extctrl ? "ON" : "OFF",
-			params.logfile,
-			dr_using_all_private_caches() ? "ON" : "OFF");
-	}
+    static void print_config() {
+        dr_fprintf(drace::log_target,
+            "< Runtime Configuration:\n"
+            "< Sampling Rate:\t%i\n"
+            "< Instr. Rate:\t\t%i\n"
+            "< Lossy:\t\t%s\n"
+            "< Lossy-Flush:\t\t%s\n"
+            "< Exclude Traces:\t%s\n"
+            "< Exclude Stack:\t%s\n"
+            "< Exclude Master:\t%s\n"
+            "< Delayed Sym Lookup:\t%s\n"
+            "< Fast Mode:\t\t%s\n"
+            "< Config File:\t\t%s\n"
+            "< Output File:\t\t%s\n"
+            "< XML File:\t\t%s\n"
+            "< Stack-Size:\t\t%i\n"
+            "< External Ctrl:\t%s\n"
+            "< Log Target:\t\t%s\n"
+            "< Private Caches:\t%s\n",
+            params.sampling_rate,
+            params.instr_rate,
+            params.lossy ? "ON" : "OFF",
+            params.lossy_flush ? "ON" : "OFF",
+            params.excl_traces ? "ON" : "OFF",
+            params.excl_stack ? "ON" : "OFF",
+            params.exclude_master ? "ON" : "OFF",
+            params.delayed_sym_lookup ? "ON" : "OFF",
+            params.fastmode ? "ON" : "OFF",
+            params.config_file.c_str(),
+            params.out_file != "" ? params.out_file.c_str() : "OFF",
+            params.xml_file != "" ? params.xml_file.c_str() : "OFF",
+            params.stack_size,
+            params.extctrl ? "ON" : "OFF",
+            params.logfile,
+            dr_using_all_private_caches() ? "ON" : "OFF");
+    }
 
-	static void generate_summary() {
-		using namespace drace;
-		race_collector->resolve_all();
+    static void generate_summary() {
+        using namespace drace;
+        race_collector->resolve_all();
 
-		if (params.out_file != "") {
-			std::ofstream races_hr_file(params.out_file, std::ofstream::out);
-			sink::HRText<std::ofstream> hr_sink(races_hr_file);
-			hr_sink.process_all(race_collector->get_races());
-			races_hr_file.close();
-		}
+        if (params.out_file != "") {
+            std::ofstream races_hr_file(params.out_file, std::ofstream::out);
+            sink::HRText<std::ofstream> hr_sink(races_hr_file);
+            hr_sink.process_all(race_collector->get_races());
+            races_hr_file.close();
+        }
 
 #ifdef XML_EXPORTER
-		// Write XML output
-		if (params.xml_file != "") {
-			std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
-			sink::Valkyrie<std::ofstream> v_sink(races_xml_file,
-				params.argc, params.argv, dr_get_application_name(),
-				app_start, app_stop);
-			v_sink.process_all(race_collector->get_races());
-		}
+        // Write XML output
+        if (params.xml_file != "") {
+            std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
+            sink::Valkyrie<std::ofstream> v_sink(races_xml_file,
+                params.argc, params.argv, dr_get_application_name(),
+                app_start, app_stop);
+            v_sink.process_all(race_collector->get_races());
+        }
 #endif
-	}
+    }
 
 } // namespace drace
