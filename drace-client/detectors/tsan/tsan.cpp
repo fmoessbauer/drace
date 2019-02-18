@@ -1,13 +1,12 @@
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright (c) Siemens AG, 2018
+ * Copyright 2018 Siemens AG
  *
  * Authors:
  *   Felix Moessbauer <felix.moessbauer@siemens.com>
  *
- * This work is licensed under the terms of the MIT license.  See
- * the LICENSE file in the top-level directory.
+ * SPDX-License-Identifier: MIT
  */
 
 #include <map>
