@@ -20,6 +20,11 @@ To make the investigation as simple as possible, please include the following in
 
 If possible, try to run DynamoRIO + DRace + <App> in Windbg and provide callstacks.
 
+### Code Contributions
+
+Since version 1.0.4 we follow the [Conventional Changelog](https://www.conventionalcommits.org/en/) strategy.
+Please write your commit message according to this standard.
+
 ## Doxygen Style
 
 We use the
