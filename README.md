@@ -1,5 +1,7 @@
 # DRace
 
+[![reuse compliant](https://reuse.software/badge/reuse-compliant.svg)](https://reuse.software/)
+
 DRace is a data-race detector for windows applications which uses DynamoRIO
 to dynamically instrument a binary at runtime.
 It does not require any preparations like instrumentation of the binary to check.
@@ -280,17 +282,15 @@ For licensing information regarding these components, we refer to the informatio
 
 ### License Header Format
 
+We use the [REUSE](https://reuse.software/practices/) format for license and copyright information.
+
 ```
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright (c) <COPYRIGHT HOLDER>, <YEAR>
+ * Copyright <YEAR> <COPYRIGHT HOLDER>
  *
- * Authors:
- *  Your Name <your.email@host.dom>
- *
- * This work is licensed under the terms of the MIT license.  See
- * the LICENSE file in the top-level directory.
+ * SPDX-License-Identifier: MIT 
  */
 ```
 
