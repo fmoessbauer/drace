@@ -293,3 +293,28 @@ For licensing information regarding these components, we refer to the informatio
  * the LICENSE file in the top-level directory.
  */
 ```
+
+## Citing DRace
+
+A publicly available fulltext of the master's thesis can be found here: [High Performance Dynamic Threading Analysis for Hybrid Applications](https://epub.ub.uni-muenchen.de/60621/)
+
+To cite DRace, please reference:
+
+```
+F. Mößbauer. "High Performance Dynamic Threading Analysis for Hybrid Applications", Master Thesis, Faculty of Mathematics, Computer Science and Statistics, Ludwig-Maximilians-Universität München (2019).
+```
+
+**BibTex**
+```
+@misc{moes19,
+           title = {High Performance Dynamic Threading Analysis for Hybrid Applications},
+         keyword = {Concurrency Bugs; Race Condition; Program Analysis; Binary Instrumentation; Sampling; Managed Applications},
+        abstract = {Verifying the correctness of multithreaded programs is a challenging task due to errors that occur sporadically. Testing, the most important verification method for decades, has proven to be ineffective in this context. On the other hand, data race detectors are very successful in finding concurrency bugs that occur due to missing synchronization. However, those tools introduce a huge runtime overhead and therefore are not applicable to the analysis of real-time applications. Additionally, hybrid binaries consisting of Dotnet and native components are beyond the scope of many data race detectors.
+In this thesis, we present a novel approach for a dynamic low-overhead data race detector. We contribute a set of fine-grained tuning techniques based on sampling and scoping. These are evaluated on real-world applications, demonstrating that the runtime overhead is reduced while still maintaining a good detection accuracy. Further, we present a proof of concept for hybrid applications and show that data races in managed Dotnet code are detectable by analyzing the 
+application on the binary layer. The approaches presented in this thesis are implemented in the open-source tool DRace.},
+            year = {2019},
+          author = {Felix M\"o\ssbauer},
+             url = {http://nbn-resolving.de/urn/resolver.pl?urn=nbn:de:bvb:19-epub-60621-8}
+}
+```
+
