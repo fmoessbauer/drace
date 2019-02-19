@@ -1,0 +1,7 @@
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+Creator: Organization: Siemens AG
+PackageName: drace
+PackageHomePage: https://github.com/siemens/drace
+PackageLicenseDeclared: MIT
+
