@@ -6,6 +6,17 @@ guidelines described in the following.
 
 ## Developer Notes
 
+### Versioning
+
+We follow the [semantic versioning](https://semver.org/) stategy. In short, the version numbers denote the following:
+
+```
+<major>.<minor>.<patch>
+   |       |       |------ backwards-compatible (no new feature)
+   |       |-------------- backwards-compatible (new features or deprecations)
+   |---------------------- breaking change
+```
+
 ### Issues
 
 Before opening an issue, check if the following conditions are met:
