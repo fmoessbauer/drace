@@ -27,7 +27,7 @@
     stage: test
     script:
     - echo "starting tests"
-    - cd build; .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' -gtest_output="xml:test-results.xml"
+    - cd build; .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
     artifacts:
       paths:
         - build\test-results.xml
