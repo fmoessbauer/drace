@@ -1,5 +1,7 @@
 # git_watcher.cmake
 #
+# SPDX-License-Identifier: MIT
+#
 # License: MIT
 # Source: https://raw.githubusercontent.com/andrew-hardin/cmake-git-version-tracking/master/git_watcher.cmake
 # Copyright (c) 2019 Andrew Hardin

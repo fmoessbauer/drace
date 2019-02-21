@@ -46,8 +46,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 {
     using namespace drace;
 
-    dr_set_client_name("Race-Detection Client 'drace'",
-        "https://code.siemens.com/felix.moessbauer.ext/drace/issues");
+    dr_set_client_name("Race-Detection Tool 'DRace'",
+        "https://github.com/siemens/drace/issues");
 
     dr_enable_console_printing();
 
