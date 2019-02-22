@@ -140,10 +140,10 @@ namespace drace {
         dr_mutex_destroy(th_mutex);
         dr_rwlock_destroy(tls_rw_mutex);
 
+        LOG_INFO(-1, "DRace exit");
+
         if (drace::log_requires_close)
             dr_close_file(drace::log_target);
-
-        LOG_INFO(-1, "DR exit");
     }
 
     static void event_thread_init(void *drcontext)
