@@ -34,3 +34,15 @@
     dependencies:
     - build
 
+  sanitize:
+    tags:
+      - windows
+      - dynamorio
+    stage: test
+    script:
+    - cd build; 'C:\Program Files\Cppcheck\cppcheck.exe' --project=compile_commands.json --enable=all --suppressions-list=suppressions.txt --output-file=cppcheck-results.log --xml
+    artifacts:
+      paths:
+        - build\cppcheck-results.xml
+    dependencies:
+    - build
