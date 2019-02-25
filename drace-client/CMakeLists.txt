@@ -82,6 +82,11 @@ if("${DRACE_DETECTOR}" STREQUAL "tsan")
 			"$<TARGET_FILE_DIR:drace-client>")
 endif()
 
+if(${DRACE_ENABLE_CPPCHECK})
+    set_target_properties("drace-client" PROPERTIES
+        CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
+endif()
+
 # Add licensing information on LCM
 file(READ "include/lcm/LICENSE" LIC_FILE_LCM)
 file(APPEND ${LIC_FILE} "${LIC_SEP}fmoessbauer/LossyCountingModel\n\n${LIC_FILE_LCM}")

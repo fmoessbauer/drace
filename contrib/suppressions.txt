@@ -1,0 +1,13 @@
+// DRace, a dynamic data race detector
+// 
+// Copyright (c) Siemens AG, 2018
+// 
+// Authors:
+//   Felix Moessbauer <felix.moessbauer@siemens.com>
+// 
+// SPDX-License-Identifier: MIT
+//
+// Supressions for CPPCheck
+// exclude all external
+*:*/vendor/*
+*:*/ManagedResolver/include/prebuild/*
