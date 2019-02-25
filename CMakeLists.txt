@@ -1,4 +1,4 @@
-﻿# DRace, a dynamic data race detector
+# DRace, a dynamic data race detector
 #
 # Copyright (c) Siemens AG, 2018
 #

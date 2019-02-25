@@ -36,6 +36,11 @@ namespace drace {
 		static std::string to_iso_time(std::chrono::system_clock::time_point tp);
 
 		static std::string instr_flags_to_str(uint8_t flags);
+        template<typename T>
+        static T unsafe_ptr_cast(void* ptr) {
+            #pragma warning(suppress: 4302 4311)
+            return reinterpret_cast<T>(ptr);
+        }
 	};
 } // namespace drace
 

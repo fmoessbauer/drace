@@ -16,6 +16,7 @@ endif()
 add_library("jtilly-inih" INTERFACE)
 target_include_directories("jtilly-inih" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih>)
+target_compile_definitions("jtilly-inih" INTERFACE "-D_CRT_SECURE_NO_WARNINGS")
 file(READ "jtilly/inih/LICENSE.txt" LIC_FILE_INIH)
 file(APPEND ${LIC_FILE} "${LIC_SEP}jtilly/inih\n\n${LIC_FILE_INIH}")
 

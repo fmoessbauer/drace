@@ -96,8 +96,9 @@ namespace drace {
 			funwrap::event::thread_handover,
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
-		if (ok)
-			LOG_NOTICE(0, "wrapped thread-start function %s", name);
+        if (ok) {
+            LOG_NOTICE(0, "wrapped thread-start function %s", name);
+        }
 		return true;
 	}
 
@@ -109,8 +110,9 @@ namespace drace {
 			funwrap::event::thread_post_sys,
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
-		if (ok)
-			LOG_NOTICE(0, "wrapped system thread-start function %s", name);
+        if (ok) {
+            LOG_NOTICE(0, "wrapped system thread-start function %s", name);
+        }
 		return true;
 	}
 
@@ -144,8 +146,9 @@ namespace drace {
 			funwrap::event::end_excl,
 			(void*)name,
 			DRWRAP_CALLCONV_FASTCALL);
-		if (ok)
-			LOG_NOTICE(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
+        if (ok) {
+            LOG_NOTICE(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
+        }
 		return true;
 	}
 

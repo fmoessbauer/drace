@@ -143,12 +143,12 @@ namespace drace {
 		ContainerT computeOutput() const noexcept {
 			ContainerT result;
 
-			const int threshold = (_frequency * _total_processed_elements) -
-				(_error * _total_processed_elements);
+			const int threshold = static_cast<int>((_frequency * _total_processed_elements) -
+				(_error * _total_processed_elements));
 
 			std::copy_if(_histogram.begin(), _histogram.end(),
 				std::back_inserter(result),
-				[&](const std::pair<T, int> & el) {
+				[&](const std::pair<T, size_t> & el) {
 				return el.second >= threshold;
 			});
 			return result;

@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 #include <unordered_map>
 #include <random>
@@ -41,7 +41,7 @@ static void StdUMapMutexLoad(benchmark::State& state) {
 			map.erase(key);
 		}
 	}
-	state.counters["size"] = map.size();
+	state.counters["size"] = static_cast<double>(map.size());
 }
 
 static void LinearSearchMutexLoad(benchmark::State& state) {
@@ -78,7 +78,7 @@ static void LinearSearchMutexLoad(benchmark::State& state) {
 			}
 		}
 	}
-	state.counters["size"] = size/2;
+	state.counters["size"] = static_cast<double>(size/2);
 
 	delete[] buf;
 }

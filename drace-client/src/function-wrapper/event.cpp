@@ -208,7 +208,7 @@ namespace drace {
 				return;
 
 			if (trylock) {
-				int retval = (int)drwrap_get_retval(wrapctx);
+				int retval = util::unsafe_ptr_cast<int>(drwrap_get_retval(wrapctx));
 				LOG_TRACE(data->tid, "Try Aquire %p, res: %i", mutex, retval);
 				//dr_printf("[%.5i] Try Aquire %p, ret %i\n", data->tid, mutex, retval);
 				// If retval == 0, mtx acquired
@@ -224,7 +224,7 @@ namespace drace {
 
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
-			detector::acquire(data->detector_data, mutex, cnt, write);
+			detector::acquire(data->detector_data, mutex, (int)cnt, write);
 			//detector::happens_after(data->tid, mutex);
 
 			data->stats->mutex_ops++;
@@ -326,14 +326,14 @@ namespace drace {
 			if (params.exclude_master && data->tid == runtime_tid)
 				return;
 
-			DWORD retval = (DWORD)drwrap_get_retval(wrapctx);
+			DWORD retval = util::unsafe_ptr_cast<DWORD>(drwrap_get_retval(wrapctx));
 			if (retval != WAIT_OBJECT_0) return;
 
 			LOG_TRACE(data->tid, "waitForSingleObject: %p (Success)", mutex);
 
 			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 			MemoryTracker::flush_all_threads(data);
-			detector::acquire(data->detector_data, mutex, cnt, 1);
+			detector::acquire(data->detector_data, mutex, (int)cnt, 1);
 			data->stats->mutex_ops++;
 		}
 
@@ -344,9 +344,9 @@ namespace drace {
 
 			wfmo_args_t * args = (wfmo_args_t*)dr_thread_alloc(drcontext, sizeof(wfmo_args_t));
 
-			args->ncount = (DWORD)drwrap_get_arg(wrapctx, 0);
-			args->handles = (const HANDLE*)drwrap_get_arg(wrapctx, 1);
-			args->waitall = (BOOL)drwrap_get_arg(wrapctx, 2);
+			args->ncount = util::unsafe_ptr_cast<DWORD>(drwrap_get_arg(wrapctx, 0));
+			args->handles = util::unsafe_ptr_cast<const HANDLE*>(drwrap_get_arg(wrapctx, 1));
+			args->waitall = util::unsafe_ptr_cast<BOOL>(drwrap_get_arg(wrapctx, 2));
 
 			LOG_TRACE(data->tid, "waitForMultipleObjects: %u, %i", args->ncount, args->waitall);
 
@@ -356,7 +356,7 @@ namespace drace {
 		void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DWORD retval = (DWORD)drwrap_get_retval(wrapctx);
+			DWORD retval = util::unsafe_ptr_cast<DWORD>(drwrap_get_retval(wrapctx));
 
 			wfmo_args_t * info = (wfmo_args_t*)user_data;
 
@@ -366,7 +366,7 @@ namespace drace {
 				for (DWORD i = 0; i < info->ncount; ++i) {
 					HANDLE mutex = info->handles[i];
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-					detector::acquire(data->detector_data, (void*)mutex, cnt, true);
+					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}
 			}
@@ -375,7 +375,7 @@ namespace drace {
 					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
-					detector::acquire(data->detector_data, (void*)mutex, cnt, true);
+					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}
 			}
@@ -388,9 +388,9 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 			*addr = drwrap_get_arg(wrapctx, 0);
-			LOG_TRACE(data->tid, "barrier enter %p", *addr);
+			LOG_TRACE(static_cast<detector::tid_t>(data->tid), "barrier enter %p", *addr);
 			// each thread enters the barrier individually
-			detector::happens_before(data->tid, *addr);
+			detector::happens_before(static_cast<detector::tid_t>(data->tid), *addr);
 		}
 
 		void event::barrier_leave(void *wrapctx, void *addr) {
@@ -401,7 +401,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "barrier passed");
 
 			// each thread leaves individually, but only after all barrier_enters have been called
-			detector::happens_after(data->tid, addr);
+			detector::happens_after(static_cast<detector::tid_t>(data->tid), addr);
 		}
 
 		void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
@@ -415,7 +415,7 @@ namespace drace {
 			// TODO: Validate cancellation path, where happens_before will be called again
 			if (passed) {
 				// each thread leaves individually, but only after all barrier_enters have been called
-				detector::happens_after(data->tid, addr);
+				detector::happens_after(static_cast<detector::tid_t>(data->tid), addr);
 			}
 		}
 
@@ -424,7 +424,7 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			detector::happens_before(data->tid, identifier);
+			detector::happens_before(static_cast<detector::tid_t>(data->tid), identifier);
 			LOG_TRACE(data->tid, "happens-before @ %p", identifier);
 		}
 
@@ -433,7 +433,7 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			detector::happens_after(data->tid, identifier);
+			detector::happens_after(static_cast<detector::tid_t>(data->tid), identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
 #endif
