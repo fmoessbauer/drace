@@ -8,3 +8,4 @@ add_library("drace-common" INTERFACE)
 target_include_directories("drace-common" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_compile_options("drace-common" INTERFACE -EHsc)
+add_dependencies("drace-common" check_git_repository)
