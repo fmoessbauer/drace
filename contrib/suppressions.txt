@@ -10,4 +10,3 @@
 // Supressions for CPPCheck
 // exclude all external
 *:*/vendor/*
-*:*/ManagedResolver/include/prebuild/*

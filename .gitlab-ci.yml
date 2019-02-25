@@ -4,10 +4,23 @@
   before_script:
     - echo "starting build for %PROJECT_NAME%"
   stages:
+    - generate
+    - validate
     - build
     - test
 
-  build:
+  cmake:
+    tags:
+      - windows
+      - dynamorio
+    stage: generate
+    script:
+    - echo "Release build..."
+    - .\contrib\generate-ci.bat
+    artifacts:
+      paths:
+        - build/
+  compile:
     tags:
       - windows
       - dynamorio
@@ -20,6 +33,9 @@
     artifacts:
       paths:
         - build/
+    dependencies:
+    - cmake
+
   test:
     tags:
       - windows
@@ -32,17 +48,17 @@
       paths:
         - build\test-results.xml
     dependencies:
-    - build
+    - compile
 
-  sanitize:
+  cppcheck:
     tags:
       - windows
       - dynamorio
-    stage: test
+    stage: validate
     script:
-    - cd build; 'C:\Program Files\Cppcheck\cppcheck.exe' --project=compile_commands.json --enable=all --suppressions-list=suppressions.txt --output-file=cppcheck-results.log --xml
+    - cd build; C:\opt\Cppcheck\cppcheck.exe --project=compile_commands.json --enable=all --suppressions-list=suppressions.txt --output-file=cppcheck-results.xml --xml
     artifacts:
       paths:
         - build\cppcheck-results.xml
     dependencies:
-    - build
+    - cmake
