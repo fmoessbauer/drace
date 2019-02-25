@@ -76,7 +76,7 @@ namespace msr {
 		HRESULT hr = pCLRCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
 
 		if (hr != S_OK) {
-			lastError.Format(_T("failed to initialize Dotnet debugging instance: Err (Error code: 0x%08X)", HRESULT_FROM_WIN32(GetLastError())));
+			lastError.Format(_T("failed to initialize Dotnet debugging instance: Err (Error code: 0x%08X)"), HRESULT_FROM_WIN32(GetLastError()));
 			Close();
 			return false;
 		}
