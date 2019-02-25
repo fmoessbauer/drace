@@ -1,3 +1,4 @@
+#pragma once
 /*
  * DRace, a dynamic data race detector
  *
