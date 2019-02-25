@@ -9,7 +9,7 @@
 
 CMakeSettings.json
 CppProperties.json
-common/version/version.h
+common/version/version.cpp
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

@@ -11,10 +11,5 @@
  * the LICENSE file in the top-level directory.
  */
 
-/**
-* This template is processed by cmake and adds the current
-* git tag and commit hash to the binary.
-*/
-
-const char * DRACE_BUILD_VERSION = "1.0.x (git)";
-const char * DRACE_BUILD_HASH = "@GIT_HEAD_SHA1@";
+const char * DRACE_BUILD_VERSION;
+const char * DRACE_BUILD_HASH;
