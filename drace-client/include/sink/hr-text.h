@@ -61,7 +61,7 @@ namespace drace {
 
 					if (race.second.is_resolved) {
 						// stack is stored in reverse order, hence print inverted
-						int ssize = ac.resolved_stack.size();
+						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
 							s << "#" << p << " " << ac.resolved_stack[ssize - 1 - p].get_pretty() << std::endl;
 						}

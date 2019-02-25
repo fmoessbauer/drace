@@ -76,7 +76,7 @@ namespace drace {
 
 			void print_stack(tinyxml2::XMLPrinter & p, const std::vector<SymbolLocation> & stack) const {
 				p.OpenElement("stack");
-				int ssize = stack.size();
+				int ssize = static_cast<int>(stack.size());
 				for (int i = 0; i < ssize; ++i) {
 					const auto & f = stack[ssize - 1 - i];
 					p.OpenElement("frame");

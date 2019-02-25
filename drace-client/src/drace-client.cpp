@@ -104,7 +104,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
-        DR_ASSERT(MSR::connect(), "MSR not available");
+        DR_ASSERT_MSG(MSR::connect(), "MSR not available");
     }
 
     app_start = std::chrono::system_clock::now();
@@ -140,10 +140,10 @@ namespace drace {
         dr_mutex_destroy(th_mutex);
         dr_rwlock_destroy(tls_rw_mutex);
 
+        LOG_INFO(-1, "DRace exit");
+
         if (drace::log_requires_close)
             dr_close_file(drace::log_target);
-
-        LOG_INFO(-1, "DR exit");
     }
 
     static void event_thread_init(void *drcontext)
@@ -152,7 +152,7 @@ namespace drace {
         thread_id_t tid = dr_get_thread_id(drcontext);
         // assume that the first event comes from the runtime thread
         unsigned empty_tid = 0;
-        if (runtime_tid.compare_exchange_weak(empty_tid, tid, std::memory_order_relaxed)) {
+        if (runtime_tid.compare_exchange_weak(empty_tid, (unsigned)tid, std::memory_order_relaxed)) {
             LOG_INFO(tid, "Runtime Thread tagged");
         }
         num_threads_active.fetch_add(1, std::memory_order_relaxed);

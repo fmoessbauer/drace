@@ -1,4 +1,4 @@
-﻿set(SOURCES
+set(SOURCES
 	"src/globals"
 	"src/drace-client"
 	"src/function-wrapper.cpp"
@@ -42,6 +42,9 @@ target_link_libraries(
 
 # Set loglevel
 target_compile_definitions("drace-client" PRIVATE -DLOGLEVEL=${DRACE_LOGLEVEL})
+# we need a specific base addr, hence disable this warning
+target_link_libraries("drace-client" -ignore:4281)
+target_compile_options("drace-client" PRIVATE -EHsc)
 
 # TinyXML2
 if(${DRACE_XML_EXPORTER})

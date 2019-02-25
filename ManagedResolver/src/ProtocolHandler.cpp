@@ -173,7 +173,7 @@ namespace msr {
 				sizeof(CONTEXT),
 				&filled);
 			if (hr == S_OK){
-				for (int i = 0; i < filled; ++i) {
+				for (unsigned i = 0; i < filled; ++i) {
 					ATL::CString symbol;
 					ATL::CString line;
 					_resolver.GetMethodName((void*)contexts[i].Rip, symbol);
@@ -208,19 +208,19 @@ namespace msr {
 		// Get Module Name
 		_resolver.GetModuleName(ip, buffer);
 		bs = sym.module.size();
-		strncpy_s(sym.module.data(), bs, buffer.GetBuffer(bs), bs);
+		strncpy_s(sym.module.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
 
 		// Get Function Name
 		buffer = "";
 		_resolver.GetMethodName(ip, buffer);
 		bs = sym.function.size();
-		strncpy_s(sym.function.data(), bs, buffer.GetBuffer(bs), bs);
+		strncpy_s(sym.function.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
 
 		// Get Line Info
 		buffer = "";
 		_resolver.GetFileLineInfo(ip, buffer);
 		bs = sym.path.size();
-		strncpy_s(sym.path.data(), bs, buffer.GetBuffer(bs), bs);
+		strncpy_s(sym.path.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
 		logger->debug("+ resolve IP to: {}", sym.function.data());
 		_shmdriver->commit();
 	}

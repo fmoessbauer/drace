@@ -159,10 +159,10 @@ int main(int argc, char ** argv) {
 	std::thread wd_thread(&watchdog, &wd_running);
 	for (int i = 0; i < threads_per_task; ++i) {
 		if (mode_sync) {
-			threads.emplace_back(&sync, i, &racy, period, std::pow(2, rounds), &trigger);
+			threads.emplace_back(&sync, i, &racy, period, static_cast<uint64_t>(std::pow(2, rounds)), &trigger);
 		}
 		else {
-			threads.emplace_back(&no_sync, i, &racy, period, std::pow(2, rounds), &trigger);
+			threads.emplace_back(&no_sync, i, &racy, period, static_cast<uint64_t>(std::pow(2, rounds)), &trigger);
 		}
 	}
 	trigger.store(true, std::memory_order_relaxed);

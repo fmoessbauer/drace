@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 #include <detector/detector_if.h>
 
 #include <iostream>

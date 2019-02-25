@@ -54,7 +54,7 @@ namespace drace {
 			sloc.mod_name = dr_module_preferred_name(modptr->info);
 
 			// Reverse search from pc until symbol can be decoded
-			int offset = pc - modptr->base;
+			uint64_t offset = pc - modptr->base;
 			auto limit = std::max((uint64_t)0, offset - (uint64_t)max_distance);
 			for (; offset >= limit; --offset) {
 				drsym_error_t err = drsym_lookup_address(modptr->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);

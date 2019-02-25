@@ -151,7 +151,7 @@ namespace drace {
 		sr.size = mod->module_internal_size;
 		sr.full = full_search;
 		strncpy(sr.path.data(), mod->full_path, sr.path.size());
-		DR_ASSERT(match.size() <= sr.match.size(), "Matchstr larger than buffer");
+		DR_ASSERT_MSG(match.size() <= sr.match.size(), "Matchstr larger than buffer");
 		std::copy(match.begin(), match.end(), sr.match.begin());
 		shmdriver->commit();
 		if (shmdriver->wait_receive(std::chrono::seconds(100))) {

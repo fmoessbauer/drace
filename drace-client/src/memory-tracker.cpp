@@ -32,7 +32,8 @@
 
 namespace drace {
 	MemoryTracker::MemoryTracker()
-		: _prng(std::chrono::high_resolution_clock::now().time_since_epoch().count())
+		: _prng(static_cast<unsigned>(
+                    std::chrono::high_resolution_clock::now().time_since_epoch().count()))
 	{
 		/* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
 		drreg_options_t ops = { sizeof(ops), 4, false };
@@ -134,7 +135,10 @@ namespace drace {
 			// 1. Flush all threads (except this thread)
 			// 2. Fork thread
 			LOG_TRACE(data->tid, "Missed a fork, do it now");
-			detector::fork(runtime_tid.load(std::memory_order_relaxed), data->tid, &(data->detector_data));
+			detector::fork(
+                runtime_tid.load(std::memory_order_relaxed),
+                static_cast<detector::tid_t>(data->tid),
+                &(data->detector_data));
 		}
 
 		// toggle detector on external state change
@@ -275,7 +279,10 @@ namespace drace {
 
 		flush_all_threads(data, true, false);
 
-		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid, data->detector_data);
+		detector::join(
+            runtime_tid.load(std::memory_order_relaxed),
+            static_cast<detector::tid_t>(data->tid),
+            data->detector_data);
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place
@@ -373,7 +380,7 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
-		auto instrument_instr = (INSTR_FLAGS)(uint8_t)user_data;
+		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint8_t>(user_data));
 		// we treat all atomic accesses as reads
 		bool instr_is_atomic{ false };
 
@@ -608,7 +615,7 @@ namespace drace {
 		if (params.sampling_rate < 10)
 			delta = 1;
 		else {
-			delta = 0.1 * params.sampling_rate;
+			delta = static_cast<unsigned>(0.1 * params.sampling_rate);
 		}
 		_min_period = std::max(params.sampling_rate - delta, 1u);
 		_max_period = params.sampling_rate + delta;
