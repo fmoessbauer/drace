@@ -32,8 +32,9 @@ void inc(int * v) {
 		DRACE_LEAVE_EXCLUDE();
 	}
 
+    // TODO: This is invalid, we have to enforce the order
 	DRACE_HAPPENS_BEFORE(v);
-	*v++;
+	(*v)++;
 	DRACE_HAPPENS_AFTER(v);
 
 }

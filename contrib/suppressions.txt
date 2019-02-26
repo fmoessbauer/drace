@@ -10,3 +10,6 @@
 // Supressions for CPPCheck
 // exclude all external
 *:*/vendor/*
+variableScope:*/bench/apps/stream/*
+unmatchedSuppression:*/bench/apps/stream/*
+unusedFunction:*/drace-client/src/drace-client.cpp

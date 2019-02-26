@@ -23,10 +23,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	reg_id_t reg1, reg3;
 	// reg2 is XCX
 	reg_id_t reg2;
-	per_thread_t *data;
 	app_pc pc;
-
-	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 	/* Steal two scratch registers.
 	* reg2 must be ECX or RCX for jecxz.

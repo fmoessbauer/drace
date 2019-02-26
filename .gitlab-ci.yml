@@ -56,8 +56,9 @@
       - dynamorio
     stage: validate
     script:
-    - cd build; C:\opt\Cppcheck\cppcheck.exe --project=compile_commands.json --enable=all --suppressions-list=suppressions.txt --output-file=cppcheck-results.xml --xml
+    - cd build; C:\opt\Cppcheck\cppcheck.exe --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --output-file=cppcheck-results.xml --xml --error-exitcode=1
     artifacts:
+      when: on_failure
       paths:
         - build\cppcheck-results.xml
     dependencies:

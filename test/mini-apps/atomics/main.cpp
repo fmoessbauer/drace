@@ -49,7 +49,7 @@ int main(int argc, char ** argv) {
 	std::atomic<int> var1{ 0 };
 	std::atomic<int> var2{ 0 };
 
-	int threads_per_task = 2;
+	constexpr int threads_per_task = 2;
 	std::vector<std::thread> threads;
 	threads.reserve(2 * threads_per_task);
 

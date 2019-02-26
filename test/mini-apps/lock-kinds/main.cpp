@@ -77,7 +77,7 @@ void local_buffer(int * v, CRITICAL_SECTION * cs) {
 int main() {
 	std::array<int, 4> vars{0};
 	CRITICAL_SECTION _cs;
-	int threads_per_task = 10;
+	constexpr int threads_per_task = 10;
 	std::vector<std::thread> threads;
 	threads.reserve(4 * threads_per_task);
 

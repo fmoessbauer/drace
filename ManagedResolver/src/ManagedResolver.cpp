@@ -81,6 +81,7 @@ namespace msr {
 			return false;
 		}
 
+        // TODO: fix this memory leak
 		HMODULE dbgeng_dll = LoadLibrary("dbgeng.dll");
 		using PFN_DebugCreate = decltype(DebugCreate);
 		PFN_DebugCreate* pDebugCreate = (PFN_DebugCreate*)GetProcAddress(dbgeng_dll, "DebugCreate");

@@ -154,7 +154,7 @@ namespace drace {
 		/* Deprecated as this did never really work */
 		void event::thread_post_sys(void *wrapctx, void *user_data) {
 			return; // TODO: Fix or remove this code
-
+#if 0
 			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			dr_rwlock_read_lock(tls_rw_mutex);
@@ -169,6 +169,7 @@ namespace drace {
 				//detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
 			}
 			dr_rwlock_read_unlock(tls_rw_mutex);
+#endif
 		}
 
 		void event::begin_excl(void *wrapctx, void **user_data) {

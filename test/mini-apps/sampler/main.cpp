@@ -106,15 +106,13 @@ void watchdog(std::atomic<bool> * running) {
 
 	DRACE_ENTER_EXCLUDE();
 	uint64_t lastval = 0;
-	uint64_t curval = 0;
 	auto start    = system_clock::now();
 	auto lasttime = start;
 	decltype(lasttime) curtime;
-	uint64_t sum_time_ms = 0;
 
 	while (running->load(std::memory_order_relaxed)) {
 		std::this_thread::sleep_for(seconds(1));
-		curval = cntr.load(std::memory_order_relaxed);
+		uint64_t curval = cntr.load(std::memory_order_relaxed);
 		curtime = system_clock::now();
 		auto valdiff = curval - lastval;
 		auto timediff = duration_cast<milliseconds>(curtime - lasttime).count();

@@ -334,7 +334,7 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 		}
 
-		auto instrument_bb = INSTR_FLAGS::MEMORY;
+        INSTR_FLAGS instrument_bb;
 		app_pc bb_addr = dr_fragment_app_pc(tag);
 
 		// Lookup module from cache, hit is very likely as adiacent bb's 
@@ -453,8 +453,8 @@ namespace drace {
 		data->stats->flushes++;
 
 		// block until flush is done
-		unsigned tries = 0;
 		if (!params.fastmode) {
+            unsigned tries = 0;
 			while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
 				++tries;
 				if (tries > 100) {
@@ -537,8 +537,8 @@ namespace drace {
 					// avoid busy-waiting and blocking CPU if other thread did not flush
 					// within given period
 					if (flush_external) {
-						bool expect = false;
-						if (td.second->external_flush.compare_exchange_weak(expect, true, std::memory_order_release)) {
+						bool expect_bool = false;
+						if (td.second->external_flush.compare_exchange_weak(expect_bool, true, std::memory_order_release)) {
 							//	//dr_printf("<< Thread %i took to long to flush, flush externaly\n", td.first);
 							analyze_access(td.second);
 							td.second->stats->external_flushes++;
