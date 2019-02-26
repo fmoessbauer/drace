@@ -21,6 +21,7 @@ namespace msr {
 	class ManagedResolver {
 	private:
 		HMODULE _mscordacwks_dll;
+        HMODULE _dbgeng_dll;
 		HANDLE  _hProcess{ nullptr };
 
 		CComPtr<IDebugClient>       debugClient;

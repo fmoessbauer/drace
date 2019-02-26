@@ -10,6 +10,9 @@
 // Supressions for CPPCheck
 // exclude all external
 *:*/vendor/*
+// supress if suppression is not found
+unmatchedSuppression:*
+// specific suppressions
 variableScope:*/bench/apps/stream/*
-unmatchedSuppression:*/bench/apps/stream/*
 unusedFunction:*/drace-client/src/drace-client.cpp
+cstyleCast:*/ManagedResolver/src/ManagedResolver.cpp

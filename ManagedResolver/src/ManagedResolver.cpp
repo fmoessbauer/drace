@@ -44,6 +44,11 @@ namespace msr {
 			FreeLibrary(_mscordacwks_dll);
 			_mscordacwks_dll = nullptr;
 		}
+        if (nullptr != _dbgeng_dll)
+        {
+            FreeLibrary(_dbgeng_dll);
+            _dbgeng_dll = nullptr;
+        }
 	}
 
 	bool ManagedResolver::InitSymbolResolver(
@@ -51,8 +56,6 @@ namespace msr {
 		const char * mscordaccore_path,
 		CString& lastError) {
 		_hProcess = hProcess;
-
-		std::string path;
 
 		_mscordacwks_dll = LoadLibrary(_T(mscordaccore_path));
 
@@ -82,9 +85,9 @@ namespace msr {
 		}
 
         // TODO: fix this memory leak
-		HMODULE dbgeng_dll = LoadLibrary("dbgeng.dll");
+		_dbgeng_dll = LoadLibrary("dbgeng.dll");
 		using PFN_DebugCreate = decltype(DebugCreate);
-		PFN_DebugCreate* pDebugCreate = (PFN_DebugCreate*)GetProcAddress(dbgeng_dll, "DebugCreate");
+		PFN_DebugCreate* pDebugCreate = (PFN_DebugCreate*)GetProcAddress(_dbgeng_dll, "DebugCreate");
 
 		hr = pDebugCreate(__uuidof(IDebugClient), (void**)&debugClient);
 		if (FAILED(hr))
@@ -108,7 +111,7 @@ namespace msr {
 
 		debugControl = debugClient;
 
-		hr = debugControl->SetExecutionStatus(DEBUG_STATUS_GO);
+		debugControl->SetExecutionStatus(DEBUG_STATUS_GO);
 		if ((hr = debugControl->WaitForEvent(DEBUG_WAIT_DEFAULT, INFINITE)) != S_OK)
 		{
 			Close();
