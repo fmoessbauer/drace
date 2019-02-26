@@ -138,20 +138,6 @@ namespace drace {
 		}
 	}
 
-	bool exclude_wrap_callback(const char *name, size_t modoffs, void *data) {
-		module_data_t * mod = (module_data_t*)data;
-		bool ok = drwrap_wrap_ex(
-			mod->start + modoffs,
-			funwrap::event::begin_excl,
-			funwrap::event::end_excl,
-			(void*)name,
-			DRWRAP_CALLCONV_FASTCALL);
-        if (ok) {
-            LOG_NOTICE(0, "wrapped excluded function %s @ %p", name, mod->start + modoffs);
-        }
-		return true;
-	}
-
 	void funwrap::wrap_excludes(const module_data_t *mod, std::string section) {
 		wrap_functions(mod, config.get_multi(section, "exclude"), false, Method::DBGSYMS, event::begin_excl, event::end_excl);
 	}
@@ -205,7 +191,7 @@ namespace drace {
 	void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 		using namespace internal;
 
-		std::string modname = util::basename(dr_module_preferred_name(mod));
+		//std::string modname = util::basename(dr_module_preferred_name(mod));
 		// Managed IPs
 		if (!native) {
 			wrap_functions(mod, config.get_multi("dotnetsync_rwlock", "acquire_excl"), true, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);

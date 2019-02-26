@@ -20,15 +20,6 @@
 #undef min
 #undef max
 
-BOOL PsymEnumeratesymbolsCallback(
-	PSYMBOL_INFO pSymInfo,
-	ULONG SymbolSize,
-	PVOID UserContext)
-{
-	logger->debug("called {} @ {}", pSymInfo->Name, (void*)pSymInfo->Address);
-	return true;
-}
-
 BOOL SymbolMatchCallback(
 	PSYMBOL_INFO pSymInfo,
 	ULONG SymbolSize,
@@ -293,21 +284,22 @@ namespace msr {
 	}
 
 	void ProtocolHandler::searchSymbols() {
-		const auto & sr = _shmdriver->get<ipc::SymbolRequest>();
+		const auto & symreq = _shmdriver->get<ipc::SymbolRequest>();
 		std::vector<uint64_t> symbol_addrs;
-		std::string strpath(sr.path.data());
+		std::string strpath(symreq.path.data());
 		std::wstring wstrpath(strpath.begin(), strpath.end());
 
-		logger->debug("search symobls matching {} at {}", sr.match.data(), (void*)sr.base);
-		if (symsearch(_phandle, sr.base, 0, 0, sr.match.data(), 0, SymbolMatchCallback,
-			(void*)&symbol_addrs, sr.full ? SYMSEARCH_ALLITEMS : NULL))
+		logger->debug("search symobls matching {} at {}", symreq.match.data(), (void*)symreq.base);
+		if (symsearch(_phandle, symreq.base, 0, 0, symreq.match.data(), 0, SymbolMatchCallback,
+			(void*)&symbol_addrs, symreq.full ? SYMSEARCH_ALLITEMS : NULL))
 		{
-			auto & sr = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
-			sr.size = std::min(symbol_addrs.size(), sr.adresses.size());
+			auto & symresp = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
+			symresp.size = std::min(symbol_addrs.size(), symresp.adresses.size());
 			logger->debug("found {} matching symbols", symbol_addrs.size());
 			// Do not copy more symbols than buffersize
-			auto cpy_range_end = sr.size <= sr.adresses.size() ? symbol_addrs.end() : (symbol_addrs.begin() + sr.adresses.size());
-			std::copy(symbol_addrs.begin(), cpy_range_end, sr.adresses.begin());
+			auto cpy_range_end = symresp.size <= symresp.adresses.size()
+                ? symbol_addrs.end() : (symbol_addrs.begin() + symresp.adresses.size());
+			std::copy(symbol_addrs.begin(), cpy_range_end, symresp.adresses.begin());
 			_shmdriver->commit();
 		}
 	}

@@ -32,7 +32,6 @@ static void StdUMapMutexLoad(benchmark::State& state) {
 	std::unordered_map<uint64_t, int> map;
 	std::uniform_int_distribution<uint64_t> dist(0, state.range(0));
 
-	uint64_t i = 0;
 	for (auto _ : state) {
 		auto key = generate_key(dist);
 		map[key]++;
@@ -48,9 +47,9 @@ static void LinearSearchMutexLoad(benchmark::State& state) {
 	uint64_t * buf = new uint64_t[state.range(0)*2];
 	std::uniform_int_distribution<uint64_t> dist(0, state.range(0));
 
-	uint64_t i = 0;
 	size_t size = 0;
 	for (auto _ : state) {
+        size_t i;
 		auto key = generate_key(dist);
 		// increment key or add
 		for (i = 0; i < size; i+=2) {

@@ -418,9 +418,8 @@ clock timer on most UNIX-like systems.  */
 double mysecond()
 {
 	struct timeval tp;
-	int i;
 
-	i = gettimeofday(&tp, NULL);
+	gettimeofday(&tp, NULL);
 	return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
 }
 

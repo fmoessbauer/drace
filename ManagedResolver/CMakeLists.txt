@@ -1,4 +1,4 @@
-﻿set(SOURCES
+set(SOURCES
 	"src/main.cpp"
 	"src/Controller.cpp"
 	"src/ManagedResolver.cpp"
@@ -7,6 +7,11 @@
 add_executable("msr" ${SOURCES})
 target_include_directories("msr" PRIVATE "include")
 target_link_libraries("msr" "drace-common" "spdlog" "clipp")
+
+if(${DRACE_ENABLE_CPPCHECK})
+    set_target_properties("msr" PROPERTIES
+        CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
+endif()
 
 # Link with tsan if detector is Extsan
 if(${DRACE_DETECTOR} STREQUAL "extsan")

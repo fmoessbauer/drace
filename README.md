@@ -1,6 +1,7 @@
 # DRace
 
 [![reuse compliant](https://reuse.software/badge/reuse-compliant.svg)](https://reuse.software/)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2553/badge)](https://bestpractices.coreinfrastructure.org/projects/2553)
 
 DRace is a data-race detector for windows applications which uses DynamoRIO
 to dynamically instrument a binary at runtime.

@@ -34,6 +34,7 @@ extern "C" {
 
 #pragma optimize("", off)
 	__declspec(dllexport) void __drace_happens_before(void* identifier) {
+        // cppcheck-suppress unreadVariable
 		volatile void* noopt = identifier;
 	}
 #pragma optimize("", on)
@@ -41,6 +42,7 @@ extern "C" {
 
 #pragma optimize("", off)
 	__declspec(dllexport) void __drace_happens_after(void* identifier) {
+        // cppcheck-suppress unreadVariable
 		volatile void* noopt = identifier;
 	}
 #pragma optimize("", on)
@@ -49,6 +51,7 @@ extern "C" {
 #pragma optimize("", off)
 	__declspec(dllexport) void __drace_enter_exclude() {
 		int var;
+        // cppcheck-suppress unreadVariable
 		volatile void* noopt = &var;
 	}
 #pragma optimize("", on)
@@ -57,6 +60,7 @@ extern "C" {
 #pragma optimize("", off)
 	__declspec(dllexport) void __drace_leave_exclude() {
 		int var;
+        // cppcheck-suppress unreadVariable
 		volatile void* noopt = &var;
 	}
 #pragma optimize("", on)

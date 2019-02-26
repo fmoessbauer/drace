@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
 		phandler = std::make_unique<ProtocolHandler>(msrdriver);
 		phandler->process_msgs();
 	}
-	catch (std::runtime_error e) {
+	catch (const std::runtime_error & e) {
 		logger->error("Error initialising shared memory or during protocol: {}", e.what());
 		return 1;
 	}

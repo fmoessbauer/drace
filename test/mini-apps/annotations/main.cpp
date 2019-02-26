@@ -10,6 +10,10 @@
  */
 
 #include <thread>
+#include <vector>
+#include <mutex> // for lock_guard
+#include <iostream>
+#include <ipc/spinlock.h>
 
 // Set this define to enable annotations.
 // we do that using CMake to cross test in
@@ -21,8 +25,17 @@
 \brief This code serves as a test for client annotations
 */
 
+/// number of increment repetitions
+constexpr int NUM_INCREMENTS = 100;
+
+/**
+* Racy-increment a value but exclude this section
+* from analysis
+*/
 void inc(int * v) {
-	for (int i = 0; i < 1000; ++i) {
+    ipc::spinlock mx;
+
+	for (int i = 0; i < NUM_INCREMENTS; ++i) {
 		DRACE_ENTER_EXCLUDE();
 		// This is racy, but we whitelist it
 		int val = *v;
@@ -31,21 +44,43 @@ void inc(int * v) {
 		*v = val;
 		DRACE_LEAVE_EXCLUDE();
 	}
+}
 
-	DRACE_HAPPENS_BEFORE(v);
-	*v++;
-	DRACE_HAPPENS_AFTER(v);
+/**
+* Correctly increment a value by using a spinlock
+* for mutual exclusion. This behaves in user-mode
+* and hence cannot be detected by DRace without annotation.
+*/
+void spinlock(int * v) {
+    static ipc::spinlock mx;
 
+    for (int i = 0; i < NUM_INCREMENTS; ++i) {
+        std::lock_guard<ipc::spinlock> lg(mx);
+        DRACE_HAPPENS_AFTER(&mx);
+        int val = *v;
+        ++val;
+        std::this_thread::yield();
+        *v = val;
+        DRACE_HAPPENS_BEFORE(&mx);
+    }
 }
 
 int main() {
-	int var = 0;
+	int vara = 0;
+    int varb = 0;
 
-	auto ta = std::thread(&inc, &var);
-	auto tb = std::thread(&inc, &var);
+    std::vector<std::thread> threads;
 
-	ta.join();
-	tb.join();
+    threads.emplace_back(&inc, &vara);
+    threads.emplace_back(&inc, &vara);
 
-	return var;
+    threads.emplace_back(&spinlock, &varb);
+    threads.emplace_back(&spinlock, &varb);
+
+    for (auto & t : threads) {
+        t.join();
+    }
+
+    std::cout << "data-race happened: " << ((vara == NUM_INCREMENTS) ? "NO" : "YES") << std::endl;
+	return vara+varb;
 }

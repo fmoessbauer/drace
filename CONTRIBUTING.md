@@ -78,3 +78,24 @@ bool foo(
   // Any comment here is ignored, no matter how it is formatted.
 }
 ```
+
+## Unit Tests
+
+When fixing a bug, please add a unit test that failes until the bug is resolved.
+When adding features, a unit test is mandatory.
+
+## Static Code Analysis
+
+We use [cppcheck](http://cppcheck.sourceforge.net/) to statically analyze the codebase.
+This analysis is automatically performed in the CI where we require a error-free report to pass.
+However, we do not enforce the developer to follow all rule-recommendations.
+If there is some good reason to decice against a rule, annotate this by either adding a cppcheck inline annotation, or adding a suppression in `contrib/suppressions.txt`.
+
+To run cppcheck locally, execute this command in the build directory:
+
+```
+cppcheck.exe --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --quiet --error-exitcode=1
+```
+
+A note regarding missing headers is ok and is not treated as an error.
+

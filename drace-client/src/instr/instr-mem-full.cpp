@@ -48,10 +48,7 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist, ins
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 	reg_id_t reg1, reg2, reg3;
-	per_thread_t *data;
 	app_pc pc;
-
-	data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
 	/* Steal two scratch registers.
 	* reg2 must be ECX or RCX for jecxz.
