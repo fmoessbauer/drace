@@ -27,9 +27,13 @@ namespace detector {
 /// tsan detector based on LLVM ThreadSanitizer
 namespace tsan {
 
+	struct tsan_params_t {
+		bool heap_only{ false };
+	} params;
+
 	struct ThreadState {
-		void* tsan;
-		bool active{ true };
+		detector::tls_t tsan;
+		bool active;
 	};
 
 	/**
@@ -47,10 +51,6 @@ namespace tsan {
 	static ipc::spinlock            mxspin;
 	static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
 	static std::unordered_map<detector::tid_t, ThreadState> thread_states;
-
-	struct tsan_params_t {
-		bool heap_only{ false };
-	} params;
 
 	void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
 		// Fixes erronous thread exit handling by ignoring races where at least one tid is 0
@@ -113,6 +113,14 @@ namespace tsan {
 	/* Fast trivial hash function using a prime. We expect tids in [1,10^5] */
 	constexpr uint64_t get_event_id(detector::tid_t parent, detector::tid_t child) {
 		return parent * 65521 + child;
+	}
+
+	constexpr uint64_t get_event_id(detector::tls_t parent, detector::tid_t child) {
+		return (uint64_t)(parent) + child;
+	}
+	constexpr uint64_t get_event_id(detector::tls_t parent, detector::tls_t child) {
+		// not ideal as symmetric
+		return (uint64_t)(parent) ^ (uint64_t)(child);
 	}
 
 	static void parse_args(int argc, const char ** argv) {
@@ -178,7 +186,7 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
 void detector::finalize() {
 	for (auto & t : thread_states) {
 		if (t.second.active)
-			detector::finish(t.first, t.second.tsan);
+			detector::finish(t.second.tsan, t.first);
 	}
 	// TODO: this calls exit which we cannot do here
 	//__tsan_fini();
@@ -194,6 +202,14 @@ std::string detector::name() {
 
 std::string detector::version() {
 	return std::string("0.2.0");
+}
+
+void detector::func_enter(tls_t tls, void* pc) {
+	__tsan_func_enter(tls, pc);
+}
+
+void detector::func_exit(tls_t tls) {
+	__tsan_func_exit(tls);
 }
 
 void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
@@ -216,31 +232,30 @@ void detector::release(tls_t tls, void* mutex, bool write) {
 	__tsan_mutex_before_unlock(tls, (void*)addr_32, (void*)write);
 }
 
-void detector::happens_before(tid_t thread_id, void* identifier) {
+void detector::happens_before(tls_t tls, void* identifier) {
 	uint64_t addr_32 = lower_half((uint64_t)identifier);
-	__tsan_happens_before_use_user_tid(thread_id, (void*)addr_32);
+	__tsan_happens_before(tls, (void*)addr_32);
 }
 
-void detector::happens_after(tid_t thread_id, void* identifier) {
+void detector::happens_after(tls_t tls, void* identifier) {
 	uint64_t addr_32 = lower_half((uint64_t)identifier);
-	__tsan_happens_after_use_user_tid(thread_id, (void*)addr_32);
+	__tsan_happens_after(tls, (void*)addr_32);
 }
 
-void detector::read(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
+void detector::read(tls_t tls, void* pc, void* addr, size_t size)
 {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
-
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-		__tsan_read(tls, (void*)addr_32, callstack, callstack, stacksize);
+		__tsan_read(tls, (void*)addr_32, (void*)pc);
 	}
 }
 
-void detector::write(tls_t tls, void* callstack, unsigned stacksize, void* addr, size_t size)
+void detector::write(tls_t tls, void* pc, void* addr, size_t size)
 {
 	uint64_t addr_32 = lower_half((uint64_t)addr);
 
 	if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-		__tsan_write(tls, (void*)addr_32, callstack, callstack, stacksize);
+		__tsan_write(tls, (void*)addr_32, (void*)pc);
 	}
 }
 
@@ -320,34 +335,33 @@ void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
 	thread_states[child] = ThreadState{ *tls, true };
 }
 
-void detector::join(tid_t parent, tid_t child, tls_t tls) {
+void detector::join(tid_t parent, tid_t child) {
 	const uint64_t event_id = get_event_id(parent, child);
 	__tsan_happens_before_use_user_tid(child, (void*)(event_id));
-
+	
 	std::lock_guard<ipc::spinlock> lg(mxspin);
 	thread_states[child].active = false;
 	for (auto & t : thread_states) {
 		if (t.second.active) {
 			__tsan_happens_after_use_user_tid(t.first, (void*)(event_id));
+			
 		}
 	}
 
-	if (tls != nullptr) {
-		// we cannot use __tsan_ThreadJoin here, as local tid is not tracked
-		// hence use thread finish and draw edge between exited thread
-		// and all other threads
-		__tsan_ThreadFinish(tls);
-	}
+	// we cannot use __tsan_ThreadJoin here, as local tid is not tracked
+	// hence use thread finish and draw edge between exited thread
+	// and all other threads
+	__tsan_ThreadFinish(thread_states[child].tsan);
 }
 
-void detector::detach(tid_t thread_id, tls_t tls) {
+void detector::detach(tls_t tls, tid_t thread_id) {
 	if (tls == nullptr)
 		tls = __tsan_create_thread(thread_id);
 
 	__tsan_ThreadDetach(tls, 0, thread_id);
 }
 
-void detector::finish(tid_t thread_id, tls_t tls) {
+void detector::finish(tls_t tls, tid_t thread_id) {
 	if (tls != nullptr) {
 		__tsan_ThreadFinish(tls);
 	}

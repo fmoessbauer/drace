@@ -74,19 +74,23 @@ namespace detector {
 		bool  write
 	);
 
+	/** Enter a function (push stack entry) */
+	void func_enter(tls_t tls, void* pc);
+
+	/** Leave a function (pop stack entry) */
+	void func_exit(tls_t tls);
+
 	/** Draw a happens-before edge between thread and identifier (optional) */
-	void happens_before(tid_t thread_id, void* identifier);
+	void happens_before(tls_t tls, void* identifier);
 	/** Draw a happens-after edge between thread and identifier (optional) */
-	void happens_after(tid_t thread_id, void* identifier);
+	void happens_after(tls_t tls, void* identifier);
 
 	/** Log a read access */
 	void read(
 		/// ptr to thread-local storage of calling thread
 		tls_t    tls,
-		/// array of stack pointers, bottom is current ip
-		void*    callstack,
-		/// size of callstack
-		unsigned stacksize,
+		/// current program counter
+		void*    pc,
 		/// memory location
 		void*    addr,
 		/// access size log2 (bytes)
@@ -97,10 +101,8 @@ namespace detector {
 	void write(
 		/// ptr to thread-local storage of calling thread
 		tls_t    tls,
-		/// array of stack pointers, bottom is current ip
-		void*    callstack,
-		/// size of callstack
-		unsigned stacksize,
+		/// current program counter
+		void*    pc,
 		/// memory location
 		void*    addr,
 		/// access size log2 (bytes)
@@ -142,15 +144,13 @@ namespace detector {
 		/// id of parent thread
 		tid_t parent,
 		/// id of child thread
-		tid_t child,
-		/// tls of child thread
-		tls_t tls
+		tid_t child
 	);
 
 	/** Log a thread detach event */
-	void detach(tid_t thread_id, tls_t tls);
+	void detach(tls_t tls, tid_t thread_id);
 	/** Log a thread exit event (detached thread) */
-	void finish(tid_t thread_id, tls_t tls);
+	void finish(tls_t tls, tid_t thread_id);
 
 	/** Return name of detector */
 	std::string name();
