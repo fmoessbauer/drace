@@ -105,17 +105,18 @@ namespace tsan {
 	/*
 	 * split address at 32-bit boundary (zero above)
 	 * TODO: TSAN seems to only support 32 bit addresses!!!
+     *       this issue only appears when running under DR
 	 */
 	constexpr uint64_t lower_half(uint64_t addr) {
-		return (addr & 0x00000000FFFFFFFF);
+        return (addr & 0x00000000FFFFFFFF);
 	}
 
-	/* Fast trivial hash function using a prime. We expect tids in [1,10^5] */
+	/** Fast trivial hash function using a prime. We expect tids in [1,10^5] */
 	constexpr uint64_t get_event_id(detector::tid_t parent, detector::tid_t child) {
 		return parent * 65521 + child;
 	}
-
 	constexpr uint64_t get_event_id(detector::tls_t parent, detector::tid_t child) {
+        // not ideal as symmetric
 		return (uint64_t)(parent) + child;
 	}
 	constexpr uint64_t get_event_id(detector::tls_t parent, detector::tls_t child) {

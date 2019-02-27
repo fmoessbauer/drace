@@ -78,7 +78,7 @@ if("${DRACE_DETECTOR}" STREQUAL "tsan")
 	# Copy tsan-common
 	add_custom_command(TARGET "drace-client" POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
+			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
 			"$<TARGET_FILE_DIR:drace-client>")
 endif()
 
