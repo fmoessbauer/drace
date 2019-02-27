@@ -10,11 +10,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "globals.h"
 #include "symbols.h"
 #include "sink/hr-text.h"
-
-#include "MSR.h"
 
 #include <detector/detector_if.h>
 #include <sstream>
@@ -70,6 +67,7 @@ namespace drace {
 		bool   _delayed_lookup{ false };
 		std::shared_ptr<Symbols> _syms;
 		tp_t   _start_time;
+        std::set<uint64_t> _racy_stacks;
 
 		sink::HRText<decltype(std::cout)> _console;
 
@@ -93,6 +91,24 @@ namespace drace {
 			LOG_INFO(-1, "found %i possible data-races", _races.size());
 		}
 
+        /**
+        * suppress this race if similar race is already reported
+        * \return: true if race is suppressed
+        */
+        bool filter_duplicates(const detector::Race * r) {
+            // TODO: add more precise control over suppressions
+            if (params.suppression_level == 0)
+                return false;
+
+            uint64_t hash = r->first.stack_trace[0] ^ (r->second.stack_trace[0] << 1);
+            if (_racy_stacks.count(hash) == 0) {
+                // suppress this race
+                _racy_stacks.insert(hash);
+                return false;
+            }
+            return true;
+        }
+
 		/** Adds a race and updates histogram
 		* TODO: The locking has to be removed completely as this callback
 		* heavily interferes with application locks. Use lockfree queue for
@@ -103,6 +119,9 @@ namespace drace {
 				return;
 
 			auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
+
+            if (filter_duplicates(r))
+                return;
 
 			if (!_delayed_lookup) {
 				DecoratedRace dr(
