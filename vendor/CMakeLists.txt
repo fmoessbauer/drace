@@ -1,11 +1,19 @@
 # External CMake vendor targets
 
 # tsan + wrapper
-find_library(TSAN_LIB NAMES "race_windows_amd64" HINTS "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/" NO_DEFAULT_PATH)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Use debug version of TSAN backend")
+    set(TSAN_BINARY_DIR "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/debug" CACHE INTERNAL "path to tsan binary")
+else()
+    message(STATUS "Use release version of TSAN backend")
+    set(TSAN_BINARY_DIR "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/release" CACHE INTERNAL "path to tsan binary")
+endif()
+
+find_library(TSAN_LIB NAMES "race_windows_amd64" HINTS "${TSAN_BINARY_DIR}" NO_DEFAULT_PATH)
 add_library("tsan-common" INTERFACE)
 target_include_directories("tsan-common" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tsan/include)
 target_link_libraries("tsan-common" INTERFACE ${TSAN_LIB})
-install(FILES "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll" DESTINATION bin)
+install(FILES "${TSAN_BINARY_DIR}/race_windows_amd64.dll" DESTINATION bin)
 file(READ "tsan/LICENSE.txt" LIC_FILE_TSAN)
 file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
 

@@ -36,9 +36,10 @@ namespace drace {
 		* on the stack, skip. This avoids ever growing stacks
 		* if the returns are not detected properly
 		*/
-		static inline void push(void *addr, stack_t* stack)
+		static inline void push(void *addr, per_thread_t* data)
 		{
-			auto size = stack->entries;
+			auto & stack = data->stack;
+			auto size = stack.entries;
 			if (size >= max_size) return;
 
 			// TODO: if not all modules get the shadow-stack
@@ -50,15 +51,18 @@ namespace drace {
 			for (unsigned i = 0; i < size; ++i)
 				if (stack->data[i] == addr) return;
 #endif
-
-			stack->data[stack->entries++] = addr;
+			detector::func_enter(data->detector_data, addr);
+			stack.data[stack.entries++] = addr;
 		}
 
-		static inline void *pop(stack_t* stack)
+		static inline void *pop(per_thread_t* data)
 		{
-			DR_ASSERT(stack->entries > 0);
-			stack->entries--;
-			return stack->data[stack->entries];
+			auto & stack = data->stack;
+			DR_ASSERT(stack.entries > 0);
+			stack.entries--;
+
+			detector::func_exit(data->detector_data);
+			return stack.data[stack.entries];
 		}
 
 		/** Call Instrumentation */
@@ -84,7 +88,7 @@ namespace drace {
 				data->enabled = false;
 			}
 
-			push(call_ins, &(data->stack));
+			push(call_ins, data);
 		}
 
 		/** Return Instrumentation */
@@ -103,10 +107,11 @@ namespace drace {
 			if (stack->entries == 0) return;
 
 			ptrdiff_t diff;
-			while ((diff = (byte*)target_addr - (byte*)pop(stack)), !(0 <= diff && diff <= 8))
+			// leave this scope / call
+			while ((diff = (byte*)target_addr - (byte*)pop(data)), !(0 <= diff && diff <= 8))
 			{
-				if (stack->entries == 0) return;
 				// skipping a frame
+				if (stack->entries == 0) return;
 			}
 		}
 

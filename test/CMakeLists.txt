@@ -13,6 +13,8 @@ add_executable(${TEST_TARGET} ${SOURCES})
 target_include_directories(${TEST_TARGET} PRIVATE "include")
 
 target_link_libraries(${TEST_TARGET} gtest "drace-detector" "drace-common")
+# enable dr mocks
+target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
 
 add_custom_command(TARGET ${TEST_TARGET} POST_BUILD
@@ -24,7 +26,7 @@ if("${DRACE_DETECTOR}" STREQUAL "tsan")
 	# Copy tsan-common
 	add_custom_command(TARGET "drace-tests" POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
+			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
 			"$<TARGET_FILE_DIR:drace-tests>")
 endif()
 

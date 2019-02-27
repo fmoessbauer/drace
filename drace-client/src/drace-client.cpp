@@ -37,6 +37,7 @@
 #ifdef XML_EXPORTER
 #include "sink/valkyrie.h"
 #endif
+#include "MSR.h"
 
 #include <clipp.h>
 #include <detector/detector_if.h>
@@ -196,6 +197,7 @@ namespace drace {
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             clipp::option("--sync-mode").set(params.fastmode, false) % "flush all buffers on a sync event (instead of participating only)",
             clipp::option("--fast-mode").set(params.fastmode) % "DEPRECATED: inverse of sync-mode",
+            (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
             (
             (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
                 (clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
