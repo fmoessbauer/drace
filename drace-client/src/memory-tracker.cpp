@@ -274,7 +274,7 @@ namespace drace {
 
 		flush_all_threads(data, true, false);
 
-		detector::join(runtime_tid.load(std::memory_order_relaxed), data->tid);
+		detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place

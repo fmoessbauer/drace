@@ -103,9 +103,17 @@ namespace tsan {
 	}
 
 	/*
-	 * split address at 32-bit boundary (zero above)
-	 * TODO: TSAN seems to only support 32 bit addresses!!!
-     *       this issue only appears when running under DR
+	 * \brief split address at 32-bit boundary (zero above)
+     *
+     * TSAN internally uses a shadow memory block to track all
+     * accesses. Here, we use a fixed 32-bit block and map
+     * our accesses to this block by just considering the lower
+     * half. This leads to false positives, if the mapping is not
+     * unique. However even with extensive tests on Windows, we
+     * never discovered such a situation.
+     *
+     * TODO: Find a solution to reliably detect all stack and heap
+     *       regions to finally work with full 64-bit addresses
 	 */
 	constexpr uint64_t lower_half(uint64_t addr) {
         return (addr & 0x00000000FFFFFFFF);
@@ -181,6 +189,7 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
 	thread_states.reserve(128);
 
 	__tsan_init_simple(reportRaceCallBack, (void*)rc_clb);
+    __tsan_map_shadow((void*)4096, (size_t)(0xFFFFFFFF - 4096));
 	return true;
 }
 
