@@ -50,12 +50,12 @@ TEST_F(DetectorTest, ThreadExit) {
 	detector::tls_t tls30;
 	detector::tls_t tls31;
 
-	detector::fork(1, 30, &tls30);
+	detector::fork(1, 30u, &tls30);
 	detector::write(tls30, (void*)0x0031, (void*)0x00320000, 8);
 
-	detector::fork(1, 31, &tls31);
+	detector::fork(1, 31u, &tls31);
 	detector::write(tls31, (void*)0x0032, (void*)0x00320000, 8);
-	detector::join(1, 31);
+	detector::join(30u, 31u);
 
 	detector::read(tls30, (void*)0x0031, (void*)0x00320000, 8);
 
