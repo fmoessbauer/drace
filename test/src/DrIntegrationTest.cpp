@@ -34,10 +34,9 @@ TEST_P(FlagMode, EmptyMain) {
 TEST_P(FlagMode, Atomics) {
 	run(GetParam(), "mini-apps/atomics/gp-atomics.exe", 0, 0);
 }
-//TODO: check why this test hangs/deadlocks sometimes
-//TEST_P(FlagMode, RacyAtomics) {
-//	run(GetParam(), "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
-//}
+TEST_P(FlagMode, RacyAtomics) {
+	run(GetParam(), "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
+}
 TEST_P(FlagMode, Annotations) {
 	run(GetParam(), "mini-apps/annotations/gp-annotations.exe", 0, 0);
 }
