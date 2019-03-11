@@ -333,33 +333,36 @@ void detector::deallocate(tls_t tls, void* addr) {
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
-    *tls = __tsan_create_thread(child);
-
     const uint64_t event_id = get_event_id(parent, child);
+    *tls = __tsan_create_thread(child);
+   
     std::lock_guard<ipc::spinlock> lg(mxspin);
 
-    for (auto & t : thread_states) {
+    for (const auto & t : thread_states) {
         if (t.second.active) {
-            __tsan_happens_before_use_user_tid(t.first, (void*)(event_id));
+            assert(nullptr != t.second.tsan);
+            __tsan_happens_before(t.second.tsan, (void*)(event_id));
         }
     }
-    __tsan_happens_after_use_user_tid(child, (void*)(event_id));
+    __tsan_happens_after(*tls, (void*)(event_id));
     thread_states[child] = ThreadState{ *tls, true };
 }
 
 void detector::join(tid_t parent, tid_t child) {
     const uint64_t event_id = get_event_id(parent, child);
-    __tsan_happens_before_use_user_tid(child, (void*)(event_id));
 
     std::lock_guard<ipc::spinlock> lg(mxspin);
     thread_states[child].active = false;
-    for (auto & t : thread_states) {
-        if (t.second.active) {
-            __tsan_happens_after_use_user_tid(t.first, (void*)(event_id));
 
+    const auto thr = thread_states[child].tsan;
+    assert(nullptr != thr);
+    __tsan_happens_before(thr, (void*)(event_id));
+    for (const auto & t : thread_states) {
+        if (t.second.active) {
+            assert(nullptr != t.second.tsan);
+            __tsan_happens_after(t.second.tsan, (void*)(event_id));
         }
     }
-
     // we cannot use __tsan_ThreadJoin here, as local tid is not tracked
     // hence use thread finish and draw edge between exited thread
     // and all other threads
@@ -367,15 +370,13 @@ void detector::join(tid_t parent, tid_t child) {
 }
 
 void detector::detach(tls_t tls, tid_t thread_id) {
-    if (tls == nullptr)
-        tls = __tsan_create_thread(thread_id);
-
-    __tsan_ThreadDetach(tls, 0, thread_id);
+    // TODO: This is currently not supported
+    return;
 }
 
 void detector::finish(tls_t tls, tid_t thread_id) {
     if (tls != nullptr) {
-        __tsan_ThreadFinish(tls);
+        __tsan_go_end(tls);
     }
     std::lock_guard<ipc::spinlock> lg(mxspin);
     thread_states[thread_id].active = false;
