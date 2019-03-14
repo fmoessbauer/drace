@@ -26,21 +26,28 @@
 */
 
 /// number of increment repetitions
-constexpr int NUM_INCREMENTS = 100;
+constexpr int NUM_INCREMENTS = 1000;
+/// wait n microseconds between read and write
+constexpr int WAIT_US = 200;
+
+/**
+* Wait a configurable time to enforce a data-race
+*/
+inline void wait() {
+    std::this_thread::sleep_for(std::chrono::microseconds(WAIT_US));
+}
 
 /**
 * Racy-increment a value but exclude this section
 * from analysis
 */
 void inc(int * v) {
-    ipc::spinlock mx;
-
 	for (int i = 0; i < NUM_INCREMENTS; ++i) {
 		DRACE_ENTER_EXCLUDE();
 		// This is racy, but we whitelist it
 		int val = *v;
 		++val;
-		std::this_thread::yield();
+        wait();
 		*v = val;
 		DRACE_LEAVE_EXCLUDE();
 	}
@@ -59,7 +66,7 @@ void spinlock(int * v) {
         DRACE_HAPPENS_AFTER(&mx);
         int val = *v;
         ++val;
-        std::this_thread::yield();
+        wait();
         *v = val;
         DRACE_HAPPENS_BEFORE(&mx);
     }
@@ -81,6 +88,7 @@ int main() {
         t.join();
     }
 
-    std::cout << "data-race happened: " << ((vara == NUM_INCREMENTS) ? "NO" : "YES") << std::endl;
+    std::cout << "data-race happened A: " << ((vara == NUM_INCREMENTS*2) ? "NO" : "YES") << std::endl;
+    std::cout << "data-race happened B: " << ((varb == NUM_INCREMENTS*2) ? "NO" : "YES") << std::endl;
 	return vara+varb;
 }

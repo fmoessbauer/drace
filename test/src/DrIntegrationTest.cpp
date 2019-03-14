@@ -34,7 +34,9 @@ TEST_P(FlagMode, EmptyMain) {
 TEST_P(FlagMode, Atomics) {
 	run(GetParam(), "mini-apps/atomics/gp-atomics.exe", 0, 0);
 }
-//TODO: check why this test hangs/deadlocks sometimes
+// TODO: Redesign test:
+//       Currently, many runs miss the race as the race often
+//       does not occur.
 //TEST_P(FlagMode, RacyAtomics) {
 //	run(GetParam(), "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
 //}

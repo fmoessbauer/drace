@@ -53,13 +53,19 @@ if(${DRACE_XML_EXPORTER})
 endif()
 
 # Copy settings ini to root dir
-add_custom_command(TARGET "drace-client" POST_BUILD
+add_custom_target(copy_files ALL
+    DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
+    DEPENDS "$<TARGET_FILE:tinyxml2>"
+    DEPENDS "$<TARGET_FILE:drace-detector>"
+)
+
+add_custom_command(TARGET copy_files POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${PROJECT_SOURCE_DIR}/drace.ini"
 		"${PROJECT_BINARY_DIR}/drace.ini")
 
 if(${DRACE_XML_EXPORTER})
-	add_custom_command(TARGET "drace-client" POST_BUILD
+	add_custom_command(TARGET copy_files POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"$<TARGET_FILE:tinyxml2>"
 			"$<TARGET_FILE_DIR:drace-client>"
@@ -67,7 +73,7 @@ if(${DRACE_XML_EXPORTER})
 endif()
 
 # copy detector dlls to drace-client binary dir
-add_custom_command(TARGET "drace-client" POST_BUILD
+add_custom_command(TARGET copy_files POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"$<TARGET_FILE:drace-detector>"
 		"$<TARGET_FILE_DIR:drace-client>"
@@ -76,7 +82,7 @@ add_custom_command(TARGET "drace-client" POST_BUILD
 # copy transitive depends for tsan detector
 if("${DRACE_DETECTOR}" STREQUAL "tsan")
 	# Copy tsan-common
-	add_custom_command(TARGET "drace-client" POST_BUILD
+	add_custom_command(TARGET copy_files POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
 			"$<TARGET_FILE_DIR:drace-client>")

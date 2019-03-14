@@ -14,20 +14,22 @@
 #include <string>
 #include <iostream>
 
-static unsigned num_races = 0;
+static unsigned        num_races = 0;
+static detector::Race  last_race;
 
 class DetectorTest : public ::testing::Test {
-public:
-	uint64_t stack[1];
 
 public:
 	// each callback-call increases num_races by two
-	static void callback(const detector::Race*) {
+	static void callback(const detector::Race* race) {
+        // copy race to let testing code inspect it later
+        last_race = *race;
 		++num_races;
 	}
 
 	DetectorTest() {
 		num_races = 0;
+        last_race = {};
 		if (detector::name() != "TSAN") {
 			const char * _argv = "drace-tests.exe";
 			detector::init(1, &_argv, callback);

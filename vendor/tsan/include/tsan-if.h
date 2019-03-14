@@ -17,15 +17,12 @@ extern "C" {
 		void* stack_trace;
 		int stack_trace_size;
 		int type;
-		bool cli;
 	} __tsan_race_info_access;
 
 	typedef struct {
 		__tsan_race_info_access* access1;
 		__tsan_race_info_access* access2;
 	} __tsan_race_info;
-
-
 
 	void __tsan_init(void **thr, void **proc, void(*cb)(long, void*), void(*r_cb)(__tsan_race_info* raceInfo, void* callback_parameter), void* callback_parameter);
 	void __tsan_init_simple(void(*r_cb)(__tsan_race_info* raceInfo, void* callback_parameter), void* callback_parameter);
@@ -42,10 +39,6 @@ extern "C" {
 
 	void __tsan_read(void *thr, void *addr, void *pc);
 	void __tsan_write(void *thr, void *addr, void *pc);
-
-	// TODO: replace with go version
-	void __tsan_happens_before_use_user_tid(unsigned long user_tid, void* addr);
-	void __tsan_happens_after_use_user_tid(unsigned long user_tid, void* addr);
 
 	void __tsan_happens_before(void* thr, void* addr);
 	void __tsan_happens_after(void* thr, void* addr);

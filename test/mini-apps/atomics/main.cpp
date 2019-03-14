@@ -29,14 +29,14 @@ void increment_mixed(std::atomic<int> * x) {
 	// hacky cast to simulate misusage
 	int * nonatomic = (int*)x;
 
-	for (int i = 0; i < 10000; ++i) {
+	for (int i = 0; i < 1000; ++i) {
 		if (i % 2 == 0) {
 			x->fetch_add(1, std::memory_order_relaxed);
 		}
 		else {
 			int tmp = *nonatomic;
 			++tmp;
-			std::this_thread::yield();
+			std::this_thread::sleep_for(std::chrono::microseconds(200));
 			*nonatomic = tmp;
 		}
 	}

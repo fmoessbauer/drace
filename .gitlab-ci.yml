@@ -19,7 +19,8 @@
     - .\contrib\generate-ci.bat
     artifacts:
       paths:
-        - build/
+        - build-tsan
+        - build-dummy
   compile:
     tags:
       - windows
@@ -32,7 +33,8 @@
     - .\contrib\build-ci.bat
     artifacts:
       paths:
-        - build/
+        - build-tsan
+        - build-dummy
     dependencies:
     - cmake
 
@@ -43,10 +45,10 @@
     stage: test
     script:
     - echo "starting tests"
-    - cd build; .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+    - cd build-tsan; .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
     artifacts:
       paths:
-        - build\test-results.xml
+        - build-tsan\test-results.xml
     dependencies:
     - compile
 
@@ -56,6 +58,7 @@
       - dynamorio
     stage: validate
     script:
-    - cd build; C:\opt\Cppcheck\cppcheck.exe --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+    - cd build-tsan;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+    - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
     dependencies:
     - cmake
