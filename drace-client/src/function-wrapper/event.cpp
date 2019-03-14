@@ -315,14 +315,13 @@ namespace drace {
 		}
 
 #ifdef WINDOWS
-		void event::wait_for_single_obj(void *wrapctx, void *handle) {
+		void event::wait_for_single_obj(void *wrapctx, void *mutex) {
 			// https://docs.microsoft.com/en-us/windows/desktop/api/synchapi/nf-synchapi-waitforsingleobject
 
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-            void* mutex = (void*)((uint64_t)handle + 4096);
 			LOG_TRACE(data->tid, "waitForSingleObject: %p\n", mutex);
 
 			if (params.exclude_master && data->tid == runtime_tid)
@@ -366,8 +365,7 @@ namespace drace {
 			if (info->waitall && (retval == WAIT_OBJECT_0)) {
 				LOG_TRACE(data->tid, "waitForMultipleObjects:finished all");
 				for (DWORD i = 0; i < info->ncount; ++i) {
-					HANDLE handle = info->handles[i];
-                    void* mutex = (void*)((uint64_t)handle + 4096);
+					HANDLE mutex = info->handles[i];
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
@@ -375,8 +373,7 @@ namespace drace {
 			}
 			if (!info->waitall) {
 				if (retval <= (WAIT_OBJECT_0 + info->ncount - 1)) {
-					HANDLE handle = info->handles[retval - WAIT_OBJECT_0];
-                    void* mutex = (void*)((uint64_t)handle + 4096);
+					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
 					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);

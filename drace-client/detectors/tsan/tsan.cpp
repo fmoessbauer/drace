@@ -36,6 +36,9 @@ namespace detector {
             bool active;
         };
 
+        /// reserved area at begin of shadow memory addr range;
+        constexpr int MEMSTART = 4096;
+
         /**
          * To avoid false-positives track races only if they are on the heap
          * invert order to get range using lower_bound
@@ -191,7 +194,7 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
     __tsan_init_simple(reportRaceCallBack, (void*)rc_clb);
     // we create a shadow memory of nearly the whole 32-bit address range
     // all memory accesses have to be inside this region
-    __tsan_map_shadow((void*)4096, (size_t)(0xFFFFFFFF - 4096));
+    __tsan_map_shadow((void*)MEMSTART, (size_t)(0xFFFFFFFF - MEMSTART));
     return true;
 }
 
@@ -226,6 +229,9 @@ void detector::func_exit(tls_t tls) {
 
 void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
     uint64_t addr_32 = lower_half((uint64_t)mutex);
+    // if the mutex is a handle, the ID might be too small
+    if (addr_32 < MEMSTART)
+        addr_32 += MEMSTART;
 
     //std::cout << "detector::acquire " << thread_id << " @ " << mutex << std::endl;
 
@@ -236,6 +242,9 @@ void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 
 void detector::release(tls_t tls, void* mutex, bool write) {
     uint64_t addr_32 = lower_half((uint64_t)mutex);
+    // if the mutex is a handle, the ID might be too small
+    if (addr_32 < MEMSTART)
+        addr_32 += MEMSTART;
 
     //std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;
 
