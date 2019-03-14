@@ -156,3 +156,51 @@ TEST_F(DetectorTest, ResetRange) {
 	detector::deallocate(tls81, (void*)0x00800000);
 	EXPECT_EQ(num_races, 0);
 }
+
+void callstack_funA() {};
+void callstack_funB() {};
+
+TEST_F(DetectorTest, RaceInspection) {
+    detector::tls_t tls90, tls91;
+
+    detector::fork(1, 90, &tls90);
+    detector::fork(1, 91, &tls91);
+
+    // Thread A
+    detector::func_enter(tls90, &callstack_funA);
+    detector::func_enter(tls90, &callstack_funB);
+
+    detector::write(tls90, (void*)0x0090, (void*)0x00920000, 8);
+
+    detector::func_exit(tls90);
+    detector::func_exit(tls90);
+
+    // Thread B
+    detector::func_enter(tls91, &callstack_funB);
+    detector::read(tls91, (void*)0x0091, (void*)0x00920000, 8);
+    detector::func_exit(tls91);
+
+    EXPECT_EQ(num_races, 1);
+
+    // races are not ordered, but we need an order for
+    // the assertions. Hence, order by tid.
+    auto a1 = last_race.first.thread_id == 90 ? last_race.first : last_race.second;
+    auto a2 = last_race.first.thread_id == 91 ? last_race.second : last_race.first;
+    EXPECT_NE(a1.thread_id, a2.thread_id);
+
+    EXPECT_EQ(a1.accessed_memory, 0x00920000ull);
+    EXPECT_EQ(a2.accessed_memory, 0x00920000ull);
+
+    EXPECT_EQ(a1.write, true);
+    EXPECT_EQ(a2.write, false);
+
+    ASSERT_EQ(a1.stack_size, 3);
+    ASSERT_EQ(a2.stack_size, 2);
+
+    EXPECT_EQ(a1.stack_trace[0], (uint64_t)&callstack_funA);
+    EXPECT_EQ(a1.stack_trace[1], (uint64_t)&callstack_funB);
+    EXPECT_EQ(a1.stack_trace[2], 0x0090ull);
+
+    EXPECT_EQ(a2.stack_trace[0], (uint64_t)&callstack_funB);
+    EXPECT_EQ(a2.stack_trace[1], 0x0091ull);
+}
