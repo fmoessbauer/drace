@@ -37,7 +37,7 @@ namespace detector {
         };
 
         /// reserved area at begin of shadow memory addr range;
-        constexpr int MEMSTART = 4096;
+        constexpr uint64_t MEMSTART = 4096;
 
         /**
          * To avoid false-positives track races only if they are on the heap
