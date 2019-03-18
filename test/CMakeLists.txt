@@ -11,8 +11,8 @@ file(WRITE "${CMAKE_BINARY_DIR}/test/${TEST_TARGET}.exe.is_google_test" "")
 
 add_executable(${TEST_TARGET} ${SOURCES})
 target_include_directories(${TEST_TARGET} PRIVATE "include")
-
 target_link_libraries(${TEST_TARGET} gtest "drace-detector" "drace-common")
+
 # enable dr mocks
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
@@ -21,6 +21,15 @@ add_custom_target(copy_files_testing ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
     DEPENDS "$<TARGET_FILE:drace-detector>"
 )
+
+if(${DRACE_XML_EXPORTER})
+    target_compile_definitions(${TEST_TARGET} PRIVATE -DXML_EXPORTER)
+    target_link_libraries(${TEST_TARGET} "tinyxml2")
+	add_custom_command(TARGET copy_files_testing POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"$<TARGET_FILE:tinyxml2>"
+			"$<TARGET_FILE_DIR:drace-tests>")
+endif()
 
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different

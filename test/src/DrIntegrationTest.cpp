@@ -11,7 +11,13 @@
 
 #include "DrIntegrationTest.h"
 
+#include <iostream>
 #include <string>
+
+#ifdef XML_EXPORTER
+#include <tinyxml2.h>
+#include <cstdio>
+#endif
 
 std::string DrIntegration::drrun = "drrun.exe";
 std::string DrIntegration::drclient = "drace-client/drace-client.dll";
@@ -56,6 +62,21 @@ TEST_F(DrIntegration, ExclStack) {
 TEST_F(DrIntegration, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
+
+#ifdef XML_EXPORTER
+TEST_F(DrIntegration, XmlOutput) {
+    std::string xmlfile("xmlOutput.xml");
+    run("--xml-file " + xmlfile, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+    {
+        tinyxml2::XMLDocument doc;
+        ASSERT_EQ(doc.LoadFile(xmlfile.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
+        const auto errornode = doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
+        EXPECT_GT(errornode->FirstChildElement("tid")->IntText(), 0);
+        EXPECT_STREQ(errornode->FirstChildElement("kind")->GetText(), "Race");
+    }
+    std::remove(xmlfile.c_str());
+}
+#endif
 
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(DrIntegration,
