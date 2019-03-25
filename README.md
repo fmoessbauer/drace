@@ -19,7 +19,9 @@ and user-level synchronization cannot be detected.
 ## Dependencies
 
 - CMake > 3.8
-- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) > 7.0.x (use weekly releases)
+- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.0.x || 7.1.x (use weekly releases)
+    - Prebuild releases require DynamoRIO > 7.1.x
+    - DRace source releases work with 7.0.x and 7.1.x
 - C++11 / C99 Compiler
 
 For detailed information on all dependencies, see `DEPENDENCIES.md`.
