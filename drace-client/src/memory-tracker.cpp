@@ -261,11 +261,14 @@ namespace drace {
 
 		flush_all_threads(data, false, false);
 
+#ifndef DRACE_USE_LEGACY_API
+        // TODO: emulate this for windows 7
 		// determin stack range of this thread
 		dr_switch_to_app_state(drcontext);
 		// dr does not support this natively, so make syscall in app context
 		GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
 		LOG_NOTICE(data->tid, "stack from %p to %p", data->appstack_beg, data->appstack_end);
+#endif
 	}
 
 	void MemoryTracker::event_thread_exit(void *drcontext)

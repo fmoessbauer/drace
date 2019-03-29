@@ -29,7 +29,7 @@ file(READ "jtilly/inih/LICENSE.txt" LIC_FILE_INIH)
 file(APPEND ${LIC_FILE} "${LIC_SEP}jtilly/inih\n\n${LIC_FILE_INIH}")
 
 # TinyXML2 library for Valkyrie output
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
+if(${DRACE_XML_EXPORTER} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
 	add_library("tinyxml2" SHARED "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
 	target_include_directories("tinyxml2" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/)
 	install(TARGETS "tinyxml2" RUNTIME DESTINATION bin COMPONENT Runtime)
