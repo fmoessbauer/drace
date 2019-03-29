@@ -97,4 +97,4 @@ endif()
 file(READ "include/lcm/LICENSE" LIC_FILE_LCM)
 file(APPEND ${LIC_FILE} "${LIC_SEP}fmoessbauer/LossyCountingModel\n\n${LIC_FILE_LCM}")
 
-install(TARGETS "drace-client" DESTINATION bin)
+install(TARGETS "drace-client" RUNTIME DESTINATION bin COMPONENT Runtime)

@@ -101,7 +101,7 @@ if(${Doxygen_FOUND})
 	    doc
 	    ${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
-	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc)
+	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
 endif()
 
 # install config readme
