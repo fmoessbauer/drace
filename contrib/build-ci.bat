@@ -12,6 +12,11 @@ cd build-tsan-dr71
 cmake --build .
 cd ..
 
+echo "=== Build drace-LEGACY-TSAN DR 7.1.x ==="
+cd build-legacy-tsan-dr71
+cmake --build .
+cd ..
+
 echo "=== Build drace-Dummy ==="
 cd build-dummy
 cmake --build .

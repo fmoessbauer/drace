@@ -21,6 +21,7 @@
       paths:
         - build-tsan-dr70
         - build-tsan-dr71
+        - build-legacy-tsan-dr71
         - build-dummy
   compile:
     tags:
@@ -36,6 +37,7 @@
       paths:
         - build-tsan-dr70
         - build-tsan-dr71
+        - build-legacy-tsan-dr71
         - build-dummy
     dependencies:
     - cmake
@@ -53,11 +55,15 @@
     - cd ..\build-tsan-dr71
     - echo "Use DR 7.1.x"
     - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.1.xml"
+    - cd ..\build-legacy-tsan-dr71
+    - echo "Use DR 7.1.x (LEGACY build)"
+    - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-leg-dr7.1.xml"
     artifacts:
       reports:
         junit:
           - build-tsan-dr70\test-results-dr7.0.xml
           - build-tsan-dr71\test-results-dr7.1.xml
+          - build-tsan-dr71\test-results-leg-dr7.1.xml
     dependencies:
     - compile
 
@@ -69,6 +75,7 @@
     script:
     - cd build-tsan-dr70;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
     - cd ../build-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+    - cd ../build-legacy-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
     - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
     dependencies:
     - cmake

@@ -199,7 +199,9 @@ namespace drace {
             clipp::option("--fast-mode").set(params.fastmode) % "DEPRECATED: inverse of sync-mode",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
             (
+#ifndef DRACE_USE_LEGACY_API
             (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
+#endif
                 (clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
                 ) % "data race reporting",
                 (clipp::option("--logfile", "-l") & clipp::value("filename", params.logfile)) % "write all logs to this file (can be null, stdout, stderr, or filename)",
@@ -209,6 +211,9 @@ namespace drace {
             (clipp::option("--version")([]() {
             std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
                 << "Hash:    " << DRACE_BUILD_HASH << std::endl;
+#ifdef DRACE_USE_LEGACY_API
+            std::cout << "Note:    Windows 7 compatible build with limited feature set" << std::endl;
+#endif
             dr_abort(); }) % "display version information"),
             clipp::option("-h", "--usage").set(display_help) % "display help"
                 );
@@ -272,7 +277,11 @@ namespace drace {
             params.fastmode ? "ON" : "OFF",
             params.config_file.c_str(),
             params.out_file != "" ? params.out_file.c_str() : "OFF",
+#ifdef DRACE_USE_LEGACY_API
+            "Unsupported (legacy build)",
+#else
             params.xml_file != "" ? params.xml_file.c_str() : "OFF",
+#endif
             params.stack_size,
             params.extctrl ? "ON" : "OFF",
             params.logfile,

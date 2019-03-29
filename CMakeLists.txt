@@ -20,9 +20,14 @@ set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
+set(DRACE_USE_LEGACY_API OFF CACHE BOOL "Build a Windows 7 compatible version")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(${DRACE_USE_LEGACY_API})
+    set(DRACE_XML_EXPORTER OFF CACHE BOOL "Build with Valkyrie compatible XML exporter" FORCE)
+endif()
 
 if(${DRACE_ENABLE_CPPCHECK})
     if(CMAKE_VERSION VERSION_GREATER 3.10.0)

@@ -52,10 +52,13 @@ if(${DRACE_XML_EXPORTER})
 	target_compile_definitions("drace-client" PRIVATE -DXML_EXPORTER)
 endif()
 
+if(${DRACE_USE_LEGACY_API})
+    target_compile_definitions("drace-client" PRIVATE -DDRACE_USE_LEGACY_API)
+endif()
+
 # Copy settings ini to root dir
 add_custom_target(copy_files ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
-    DEPENDS "$<TARGET_FILE:tinyxml2>"
     DEPENDS "$<TARGET_FILE:drace-detector>"
 )
 
@@ -65,6 +68,7 @@ add_custom_command(TARGET copy_files POST_BUILD
 		"${PROJECT_BINARY_DIR}/drace.ini")
 
 if(${DRACE_XML_EXPORTER})
+    add_dependencies(copy_files tinyxml2)
 	add_custom_command(TARGET copy_files POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"$<TARGET_FILE:tinyxml2>"
