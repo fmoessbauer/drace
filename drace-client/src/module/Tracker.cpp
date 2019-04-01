@@ -101,6 +101,10 @@ namespace drace {
 			modptr->set_info(mod);
 			modptr->instrument = def_instr_flags;
 
+            if (modptr->modtype == Metadata::MANAGED && !shmdriver) {
+                LOG_WARN(0, "managed module detected, but MSR not available");
+            }
+
 			std::string mod_path(mod->full_path);
 			std::string mod_name(dr_module_preferred_name(mod));
 			std::transform(mod_path.begin(), mod_path.end(), mod_path.begin(), ::tolower);
@@ -161,12 +165,14 @@ namespace drace {
 			else if (util::common_prefix(mod_name, "clr.dll") ||
 				util::common_prefix(mod_name, "coreclr.dll"))
 			{
-				bool m_ok = MSR::attach(mod);
+                if (shmdriver) {
+                    bool m_ok = MSR::attach(mod);
 
-				if (m_ok) {
-					MSR::request_symbols(mod);
-					funwrap::wrap_sync_dotnet(mod, true);
-				}
+                    if (m_ok) {
+                        MSR::request_symbols(mod);
+                        funwrap::wrap_sync_dotnet(mod, true);
+                    }
+                }
 			}
 			else if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED)
 			{

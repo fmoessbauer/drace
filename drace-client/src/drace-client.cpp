@@ -105,7 +105,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
-        DR_ASSERT_MSG(MSR::connect(), "MSR not available");
+        if (!MSR::connect()) {
+            LOG_ERROR(-1, "MSR not available (required for --extctrl)");
+            dr_abort();
+        }
     }
 
     app_start = std::chrono::system_clock::now();

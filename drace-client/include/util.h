@@ -50,6 +50,7 @@ namespace drace {
 
 #define LOG(tid, level, msg, ...) do {\
 	if(tid == 0){LOG_HELPER(dr_get_thread_id(dr_get_current_drcontext()), level, msg, __VA_ARGS__);}\
+    else if(tid == -1){LOG_HELPER(0, level, msg, __VA_ARGS__);}\
     else {LOG_HELPER(tid, level, msg, __VA_ARGS__);}} while (0)
 
 
