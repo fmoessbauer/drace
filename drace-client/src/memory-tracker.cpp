@@ -277,7 +277,7 @@ namespace drace {
 
 		flush_all_threads(data, true, false);
 
-		detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
+        detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
 
 		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place
@@ -293,7 +293,8 @@ namespace drace {
 		TLS_buckets.erase(data->tid);
 		dr_rwlock_write_unlock(tls_rw_mutex);
 
-		data->stats->print_summary(drace::log_target);
+        /* #i2, temporary disable the statistics */
+        //data->stats->print_summary(drace::log_target);
 
 		// Cleanup TLS
 		// As we cannot rely on current drcontext here, use provided one

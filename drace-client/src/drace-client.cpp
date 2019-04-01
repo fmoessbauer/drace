@@ -165,12 +165,11 @@ namespace drace {
     static void event_thread_exit(void *drcontext)
     {
         using namespace drace;
-        thread_id_t tid = dr_get_thread_id(drcontext);
         num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
         memory_tracker->event_thread_exit(drcontext);
 
-        LOG_INFO(tid, "Thread exited");
+        LOG_INFO(-1, "Thread exited");
     }
 
     static void parse_args(int argc, const char ** argv) {
