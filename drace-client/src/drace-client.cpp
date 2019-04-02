@@ -105,7 +105,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
-        DR_ASSERT_MSG(MSR::connect(), "MSR not available");
+        if (!MSR::connect()) {
+            LOG_ERROR(-1, "MSR not available (required for --extctrl)");
+            dr_abort();
+        }
     }
 
     app_start = std::chrono::system_clock::now();
@@ -165,12 +168,11 @@ namespace drace {
     static void event_thread_exit(void *drcontext)
     {
         using namespace drace;
-        thread_id_t tid = dr_get_thread_id(drcontext);
         num_threads_active.fetch_sub(1, std::memory_order_relaxed);
 
         memory_tracker->event_thread_exit(drcontext);
 
-        LOG_INFO(tid, "Thread exited");
+        LOG_INFO(-1, "Thread exited");
     }
 
     static void parse_args(int argc, const char ** argv) {
