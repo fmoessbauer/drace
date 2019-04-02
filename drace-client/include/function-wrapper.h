@@ -38,7 +38,7 @@ namespace drace {
 		bool init();
 		void finalize();
 
-		void wrap_functions(
+		bool wrap_functions(
 			/** Module to inspect for symbols */
 			const module_data_t *mod,
 			/** Vector of symbol names or patterns */
