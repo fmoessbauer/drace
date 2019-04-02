@@ -23,6 +23,7 @@ and user-level synchronization cannot be detected.
 When using the pre-build releases, only DynamoRIO is required:
 
 - [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.1.x (use weekly releases)
+- [Debugging Tools for Windows](https://docs.microsoft.com/de-de/windows-hardware/drivers/debugger/debugger-download-tools) for symbol lookup in .Net runtime libraries (only required for .Net)
 
 ### Development
 
@@ -173,6 +174,10 @@ Thereto it is useful to set the variable as follows:
 set _NT_SYMBOL_PATH="c:\\symbolcache\\;SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 ```
 
+**Note:**
+Downloading symbols is only supported if the [Debugging Tools for Windows](https://docs.microsoft.com/de-de/windows-hardware/drivers/debugger/debugger-download-tools) are installed.
+If not, DRace uses the default `dbghelp.dll` which is not bundled with `symsrv.dll` and hence is not able to download symbols.
+
 ### Dotnet
 
 For .Net managed code, a second process (MSR) is needed for symbol resolution.
@@ -213,10 +218,8 @@ Later on, bugs are very tricky to find.
 
 ## Limitations
 
-- CSharp applications do not run on Windows 10 [#3046](https://github.com/DynamoRIO/dynamorio/issues/3046)
 - TSAN can only be started once, as the cleanup is not fully working
 - `no_follow_children`: Due to the TSAN limitation, drace can only analyze a single process. This process is the initially started one.
-- If using the SparsePP hashmap, the application might crash if a reallocation occurs which is not detected by DR correctly.
 
 ## Build
 

@@ -40,7 +40,7 @@ namespace drace {
 		drwrap_exit();
 	}
 
-	void funwrap::wrap_functions(
+	bool funwrap::wrap_functions(
 		const module_data_t *mod,
 		const std::vector<std::string> & syms,
 		bool full_search,
@@ -48,12 +48,15 @@ namespace drace {
 		wrapcb_pre_t pre,
 		wrapcb_post_t post)
 	{
+        // set to true if at least one function is wrapped
+        bool wrapped_some = false;
 		std::string modname(dr_module_preferred_name(mod));
 		for (const auto & name : syms) {
 			LOG_NOTICE(-1, "Search for %s", name.c_str());
 			if (method == Method::EXTERNAL_MPCR) {
 				std::string symname = (modname + '!') + name;
 				auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
+                wrapped_some |= sr.size > 0;
 				for (int i = 0; i < sr.size; ++i) {
 					wrap_info_t info{ mod, pre, post };
 					internal::wrap_function_clbck(
@@ -71,15 +74,18 @@ namespace drace {
 					false,
 					(drsym_enumerate_cb)internal::wrap_function_clbck,
 					(void*)&info);
+                wrapped_some |= (err == DRSYM_SUCCESS);
 			}
 			else if (method == Method::EXPORTS)
 			{
 				app_pc towrap = (app_pc)dr_get_proc_address(mod->handle, name.c_str());
 				if (drwrap_wrap(towrap, pre, post)) {
 					LOG_INFO(0, "Wrapped %s at %p", name.c_str(), towrap);
+                    wrapped_some = true;
 				}
 			}
 		}
+        return wrapped_some;
 	}
 
 	void funwrap::wrap_allocations(const module_data_t *mod) {
@@ -214,8 +220,13 @@ namespace drace {
 			// We also use MPCR here, as DR syms has problems finding the correct debug
 			// information if multiple versions of a dll are in the cache
 			LOG_NOTICE(-1, "try to wrap dotnetsync native");
-			wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
-			wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
+            bool wrapped_dotnet = true;
+			wrapped_dotnet &= wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_enter"), false, Method::EXTERNAL_MPCR, event::get_arg, event::mutex_lock);
+            wrapped_dotnet &= wrap_functions(mod, config.get_multi("dotnetsync_monitor", "monitor_exit"), false, Method::EXTERNAL_MPCR, event::mutex_unlock, NULL);
+            if (!wrapped_dotnet) {
+                LOG_WARN(0, "no dotnet sync functions found, expect false-positives in dotnet code");
+                LOG_WARN(0, "make sure symbol lookup in MSR is working correctly");
+            }
 		}
 	}
 
