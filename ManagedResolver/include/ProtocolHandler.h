@@ -42,6 +42,7 @@ namespace msr {
 		using PFN_SymSearch = decltype(SymSearch)*;
 		using PFN_SymGetOptions = decltype(SymGetOptions)*;
 		using PFN_SymSetOptions = decltype(SymSetOptions)*;
+        using PFN_SymGetSearchPath = decltype(SymGetSearchPath)*;
 
 		PFN_SymInitialize syminit;
 		PFN_SymCleanup symcleanup;
@@ -51,6 +52,7 @@ namespace msr {
 		PFN_SymSearch symsearch;
 		PFN_SymGetOptions symgetopts;
 		PFN_SymSetOptions symsetopts;
+        PFN_SymGetSearchPath symgetsearchpath;
 
 	private:
 		/** Connect with DRace */

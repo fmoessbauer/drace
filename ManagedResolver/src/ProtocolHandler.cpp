@@ -38,8 +38,11 @@ namespace msr {
 		SyncSHMDriver shmdriver)
 		: _shmdriver(shmdriver)
 	{
-		// Load external libs
+        // try to load library from Windows Debugging Tools directory
+        // to get symsrv support i#3
+        SetDllDirectoryA("C:\\Program Files (x86)\\Windows Kits\\10\\Debuggers\\x64");
 		_dbghelp_dll = LoadLibrary("dbghelp.dll");
+
 		syminit = (PFN_SymInitialize)GetProcAddress(_dbghelp_dll, "SymInitialize");
 		symloadmod = (PFN_SymLoadModuleExW)GetProcAddress(_dbghelp_dll, "SymLoadModuleExW");
 		symunloadmod = (PFN_SymUnloadModule)GetProcAddress(_dbghelp_dll, "SymUnloadModule");
@@ -47,6 +50,7 @@ namespace msr {
 		symsearch = (PFN_SymSearch)GetProcAddress(_dbghelp_dll, "SymSearch");
 		symgetopts = (PFN_SymGetOptions)GetProcAddress(_dbghelp_dll, "SymGetOptions");
 		symsetopts = (PFN_SymSetOptions)GetProcAddress(_dbghelp_dll, "SymSetOptions");
+        symgetsearchpath = (PFN_SymGetSearchPath)GetProcAddress(_dbghelp_dll, "SymGetSearchPath");
 
 		_shmdriver->id(SMDataID::READY);
 		_shmdriver->commit();
@@ -217,9 +221,16 @@ namespace msr {
 	}
 
 	void ProtocolHandler::init_symbols() {
+        char str[128];
 		syminit(_phandle, NULL, false);
+        if (symgetsearchpath(_phandle, str, 128)) {
+            logger->debug("symbol search path: {}", str);
+        }
+        else {
+            logger->warn("could not obtain symbol search path");
+        }
 
-		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEBUG;
+		DWORD symopts = symgetopts() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_EXACT_SYMBOLS;
 		symopts &= ~(SYMOPT_DEFERRED_LOADS); // remove this flag
 		symsetopts(symopts);
 	}
@@ -233,7 +244,7 @@ namespace msr {
 		logger->info("download symbols for {}", sr.path.data());
 		logger->debug("base: {}, size: {}", (void*)sr.base, sr.size);
 		auto symload = std::async([&]() {
-			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, SYMSEARCH_ALLITEMS);
+			return symloadmod(_phandle, NULL, wstrpath.c_str(), NULL, sr.base, (DWORD)sr.size, NULL, 0);
 		});
 		// wait for download to become ready
 		waitHeartbeat(symload);
