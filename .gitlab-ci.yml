@@ -1,7 +1,7 @@
 .globals: &globals
   tags:
-    - windows
-    - dynamorio
+  - windows
+  - dynamorio
 
 variables:
   PROJECT_NAME: "DRace"
@@ -22,10 +22,10 @@ cmake:
   - .\contrib\generate-ci.bat
   artifacts:
     paths:
-      - build-tsan-dr70
-      - build-tsan-dr71
-      - build-legacy-tsan-dr71
-      - build-dummy
+    - build-tsan-dr70
+    - build-tsan-dr71
+    - build-legacy-tsan-dr71
+    - build-dummy
         
 compile:
   <<: *globals
@@ -37,35 +37,12 @@ compile:
   - .\contrib\build-ci.bat
   artifacts:
     paths:
-      - build-tsan-dr70
-      - build-tsan-dr71
-      - build-legacy-tsan-dr71
-      - build-dummy
+    - build-tsan-dr70
+    - build-tsan-dr71
+    - build-legacy-tsan-dr71
+    - build-dummy
   dependencies:
   - cmake
-
-test:
-  <<: *globals
-  stage: test
-  script:
-  - echo "starting tests"
-  - cd build-tsan-dr70
-  - echo "Use DR 7.0.x"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.0.xml"
-  - cd ..\build-tsan-dr71
-  - echo "Use DR 7.1.x"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.1.xml"
-  - cd ..\build-legacy-tsan-dr71
-  - echo "Use DR 7.1.x (LEGACY build)"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-leg-dr7.1.xml"
-  artifacts:
-    reports:
-      junit:
-        - build-tsan-dr70\test-results-dr7.0.xml
-        - build-tsan-dr71\test-results-dr7.1.xml
-        - build-tsan-dr71\test-results-leg-dr7.1.xml
-  dependencies:
-  - compile
 
 cppcheck:
   <<: *globals
@@ -77,3 +54,50 @@ cppcheck:
   - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
   - cmake
+
+#
+# Test all builds
+#
+
+test-tsan-dr70:
+  <<: *globals
+  stage: test
+  script:
+  - cd build-tsan-dr70
+  - echo "Use DR 7.0.x"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  artifacts:
+    reports:
+      junit:
+      - build-tsan-dr70\test-results.xml
+  dependencies:
+  - compile
+
+test-tsan-dr71:
+  <<: *globals
+  stage: test
+  script:
+  - cd build-tsan-dr71
+  - echo "Use DR 7.1.x"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  artifacts:
+    reports:
+      junit:
+      - build-tsan-dr71\test-results.xml
+  dependencies:
+  - compile
+
+test-tsan-dr71-legacy:
+  <<: *globals
+  stage: test
+  script:
+  - cd build-legacy-tsan-dr71
+  - echo "Use DR 7.1.x (LEGACY build)"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  artifacts:
+    reports:
+      junit:
+      - build-legacy-tsan-dr71\test-results.xml
+  dependencies:
+  - compile
+
