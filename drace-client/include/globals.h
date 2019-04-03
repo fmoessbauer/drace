@@ -51,7 +51,7 @@ namespace drace {
 		/** Use external controller */
 		bool     extctrl{ false };
 		bool     break_on_race{ false };
-		unsigned stack_size{ 10 };
+		unsigned stack_size{ 31 };
 		std::string  config_file{ "drace.ini" };
 		std::string  out_file;
 		std::string  xml_file;
@@ -95,7 +95,7 @@ namespace drace {
 		/// external flush is currently executed;
 		std::atomic<bool> external_flush{ false };
 		/// Shadow Stack
-		AlignedStack<void*, 64> stack;
+		AlignedStack<void*, 32> stack;
 		/// Stack used to track state of detector
 		uint64        event_cnt{ 0 };
 		/// bool external change detected
