@@ -1,81 +1,79 @@
-  variables:
-    PROJECT_NAME: "DRace"
-    GIT_SUBMODULE_STRATEGY: "normal"
-  before_script:
-    - echo "starting build for %PROJECT_NAME%"
-  stages:
-    - generate
-    - validate
-    - build
-    - test
+.globals: &globals
+  tags:
+    - windows
+    - dynamorio
 
-  cmake:
-    tags:
-      - windows
-      - dynamorio
-    stage: generate
-    script:
-    - echo "Release build..."
-    - .\contrib\generate-ci.bat
-    artifacts:
-      paths:
-        - build-tsan-dr70
-        - build-tsan-dr71
-        - build-legacy-tsan-dr71
-        - build-dummy
-  compile:
-    tags:
-      - windows
-      - dynamorio
-    stage: build
-    except:
-      - doc-*
-    script:
-    - echo "Release build..."
-    - .\contrib\build-ci.bat
-    artifacts:
-      paths:
-        - build-tsan-dr70
-        - build-tsan-dr71
-        - build-legacy-tsan-dr71
-        - build-dummy
-    dependencies:
-    - cmake
+variables:
+  PROJECT_NAME: "DRace"
+  GIT_SUBMODULE_STRATEGY: "normal"
+before_script:
+  - echo "starting build for %PROJECT_NAME%"
+stages:
+  - generate
+  - validate
+  - build
+  - test
 
-  test:
-    tags:
-      - windows
-      - dynamorio
-    stage: test
-    script:
-    - echo "starting tests"
-    - cd build-tsan-dr70
-    - echo "Use DR 7.0.x"
-    - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.0.xml"
-    - cd ..\build-tsan-dr71
-    - echo "Use DR 7.1.x"
-    - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.1.xml"
-    - cd ..\build-legacy-tsan-dr71
-    - echo "Use DR 7.1.x (LEGACY build)"
-    - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-leg-dr7.1.xml"
-    artifacts:
-      reports:
-        junit:
-          - build-tsan-dr70\test-results-dr7.0.xml
-          - build-tsan-dr71\test-results-dr7.1.xml
-          - build-tsan-dr71\test-results-leg-dr7.1.xml
-    dependencies:
-    - compile
+cmake:
+  <<: *globals
+  stage: generate
+  script:
+  - echo "Release build..."
+  - .\contrib\generate-ci.bat
+  artifacts:
+    paths:
+      - build-tsan-dr70
+      - build-tsan-dr71
+      - build-legacy-tsan-dr71
+      - build-dummy
+        
+compile:
+  <<: *globals
+  stage: build
+  except:
+    - doc-*
+  script:
+  - echo "Release build..."
+  - .\contrib\build-ci.bat
+  artifacts:
+    paths:
+      - build-tsan-dr70
+      - build-tsan-dr71
+      - build-legacy-tsan-dr71
+      - build-dummy
+  dependencies:
+  - cmake
 
-  cppcheck:
-    tags:
-      - windows
-      - dynamorio
-    stage: validate
-    script:
-    - cd build-tsan-dr70;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-    - cd ../build-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-    - cd ../build-legacy-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-    - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-    dependencies:
-    - cmake
+test:
+  <<: *globals
+  stage: test
+  script:
+  - echo "starting tests"
+  - cd build-tsan-dr70
+  - echo "Use DR 7.0.x"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.0.xml"
+  - cd ..\build-tsan-dr71
+  - echo "Use DR 7.1.x"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-dr7.1.xml"
+  - cd ..\build-legacy-tsan-dr71
+  - echo "Use DR 7.1.x (LEGACY build)"
+  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results-leg-dr7.1.xml"
+  artifacts:
+    reports:
+      junit:
+        - build-tsan-dr70\test-results-dr7.0.xml
+        - build-tsan-dr71\test-results-dr7.1.xml
+        - build-tsan-dr71\test-results-leg-dr7.1.xml
+  dependencies:
+  - compile
+
+cppcheck:
+  <<: *globals
+  stage: validate
+  script:
+  - cd build-tsan-dr70;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd ../build-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd ../build-legacy-tsan-dr71;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  dependencies:
+  - cmake
