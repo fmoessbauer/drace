@@ -65,6 +65,8 @@ test-tsan-dr70:
   <<: *globals
   <<: *testing
   stage: test
+  only:
+  - master
   script:
   - cd build-tsan-dr70
   - echo "Use DR 7.0.x"
@@ -95,6 +97,8 @@ test-tsan-dr71-legacy:
   <<: *globals
   <<: *testing
   stage: test
+  only:
+  - master
   script:
   - cd build-legacy-tsan-dr71
   - echo "Use DR 7.1.x (LEGACY build)"
