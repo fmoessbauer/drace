@@ -3,11 +3,13 @@
   - windows
   - dynamorio
 
+.testing: &testing
+  variables:
+    GIT_STRATEGY: "none"
+
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
-before_script:
-  - echo "starting build for %PROJECT_NAME%"
 stages:
   - generate
   - validate
@@ -61,6 +63,7 @@ cppcheck:
 
 test-tsan-dr70:
   <<: *globals
+  <<: *testing
   stage: test
   script:
   - cd build-tsan-dr70
@@ -75,6 +78,7 @@ test-tsan-dr70:
 
 test-tsan-dr71:
   <<: *globals
+  <<: *testing
   stage: test
   script:
   - cd build-tsan-dr71
@@ -89,6 +93,7 @@ test-tsan-dr71:
 
 test-tsan-dr71-legacy:
   <<: *globals
+  <<: *testing
   stage: test
   script:
   - cd build-legacy-tsan-dr71
