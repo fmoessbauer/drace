@@ -50,8 +50,7 @@ namespace drace {
 
 					s << "Access " << i << " tid: " << std::dec << ac.thread_id << " ";
 					s << (ac.write ? "write" : "read") << " to/from " << (void*)ac.accessed_memory
-						<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_size << ")"
-						<< "Type: " << std::dec << ac.access_type << " :" << ::std::endl;
+						<< " with size " << ac.access_size << ". Stack(Size " << ac.stack_size << ")" << std::endl;
 					if (ac.onheap) {
 						s << "Block begin at " << std::hex << ac.heap_block_begin << ", size " << std::dec << ac.heap_block_size << std::endl;
 					}
@@ -63,7 +62,7 @@ namespace drace {
 						// stack is stored in reverse order, hence print inverted
 						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
-							s << "#" << p << " " << ac.resolved_stack[ssize - 1 - p].get_pretty() << std::endl;
+							s << "#" << p << " " << ac.resolved_stack[ssize - 1 - p].get_pretty();
 						}
 					}
 					else {
