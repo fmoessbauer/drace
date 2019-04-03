@@ -187,6 +187,7 @@ TEST_F(DetectorTest, RaceInspection) {
     auto a1 = last_race.first.thread_id == 90 ? last_race.first : last_race.second;
     auto a2 = last_race.first.thread_id == 91 ? last_race.second : last_race.first;
     EXPECT_NE(a1.thread_id, a2.thread_id);
+    EXPECT_EQ(a1.thread_id + a2.thread_id, 90 + 91);
 
     EXPECT_EQ(a1.accessed_memory, 0x00920000ull);
     EXPECT_EQ(a2.accessed_memory, 0x00920000ull);
