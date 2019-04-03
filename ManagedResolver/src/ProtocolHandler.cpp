@@ -301,9 +301,12 @@ namespace msr {
         std::string strpath(symreq.path.data());
         std::wstring wstrpath(strpath.begin(), strpath.end());
 
-        logger->debug("search symobls matching {} at {}", symreq.match.data(), (void*)symreq.base);
+        logger->debug("search symbols matching {} at {} - full: {}",
+            symreq.match.data(),
+            (void*)symreq.base,
+            symreq.full ? "no" : "yes");
         if (symsearch(_phandle, symreq.base, 0, 0, symreq.match.data(), 0, SymbolMatchCallback,
-            (void*)&symbol_addrs, symreq.full ? SYMSEARCH_ALLITEMS : NULL))
+            (void*)&symbol_addrs, symreq.full ? SYMSEARCH_ALLITEMS : SYMSEARCH_GLOBALSONLY))
         {
             auto & symresp = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
             symresp.size = std::min(symbol_addrs.size(), symresp.adresses.size());

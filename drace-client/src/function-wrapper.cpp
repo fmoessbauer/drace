@@ -51,6 +51,8 @@ namespace drace {
         // set to true if at least one function is wrapped
         bool wrapped_some = false;
 		std::string modname(dr_module_preferred_name(mod));
+        // remove ".dll / .exe" part
+        modname.erase(modname.size() - 4);
 		for (const auto & name : syms) {
 			LOG_NOTICE(-1, "Search for %s", name.c_str());
 			if (method == Method::EXTERNAL_MPCR) {
