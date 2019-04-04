@@ -17,6 +17,14 @@ target_link_libraries(${TEST_TARGET} gtest "drace-detector" "drace-common")
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
 
+# manually build C# tests as CMake support is not available in ninja
+find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
+if(CSC)
+    target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
+else()
+    message(STATUS "csc not found: .NET Windows tests will be disabled")
+endif()
+
 add_custom_target(copy_files_testing ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
     DEPENDS "$<TARGET_FILE:drace-detector>"

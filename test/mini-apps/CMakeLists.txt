@@ -8,7 +8,5 @@ add_subdirectory("annotations")
 add_subdirectory("atomics")
 add_subdirectory("sampler")
 
-if(${BUILD_CSHARP_EXAMPLES})
-	# CSharp examples
-	add_subdirectory("cs-lock")
-endif()
+# CSharp examples
+add_subdirectory("cs-sync")
