@@ -22,6 +22,11 @@ namespace msr {
 	}
 
 	void Controller::start() {
+        std::cout << "Change detector state using the following keys:" << std::endl
+                  << "e\tenable detector" << std::endl
+                  << "d\tdisable detector" << std::endl
+                  << "s\tset sampling rate" << std::endl;
+
 		logger->info("started interactive controller");
 		std::string valstr;
 

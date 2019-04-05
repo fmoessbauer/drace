@@ -35,8 +35,9 @@ namespace msr {
     using namespace ipc;
 
     ProtocolHandler::ProtocolHandler(
-        SyncSHMDriver shmdriver)
-        : _shmdriver(shmdriver)
+        SyncSHMDriver shmdriver, bool once)
+        : _shmdriver(shmdriver),
+          _exec_once(once)
     {
         // try to load library from Windows Debugging Tools directory
         // to get symsrv support i#3
@@ -127,6 +128,10 @@ namespace msr {
 
         _shmdriver->id(SMDataID::READY);
         _shmdriver->commit();
+
+        if (_exec_once) {
+            _keep_running = false;
+        }
     }
 
     void ProtocolHandler::getCurrentStack() {
