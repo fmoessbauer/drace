@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <string>
+#include <future>
 
 #ifdef XML_EXPORTER
 #include <tinyxml2.h>
@@ -61,6 +62,28 @@ TEST_F(DrIntegration, ExclStack) {
 
 TEST_F(DrIntegration, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
+}
+
+// Dotnet Tests
+TEST_F(DrIntegration, DotnetClrRacy) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
+    msr_task.join();
+}
+
+TEST_F(DrIntegration, DotnetClrMonitor) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe monitor", 0, 0);
+    msr_task.join();
+}
+
+TEST_F(DrIntegration, DotnetClrMutex) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
+    msr_task.join();
 }
 
 #ifdef XML_EXPORTER

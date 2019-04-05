@@ -27,6 +27,8 @@ namespace msr {
         ManagedResolver _resolver;
         SyncSHMDriver   _shmdriver;
         bool _keep_running{ true };
+        /// quit msr after DRace exits
+        bool _exec_once{ false };
 
         HMODULE _dbghelp_dll;
         int    _pid;
@@ -78,7 +80,7 @@ namespace msr {
         void waitHeartbeat(const std::future<T> & fut);
 
     public:
-        explicit ProtocolHandler(SyncSHMDriver);
+        explicit ProtocolHandler(SyncSHMDriver, bool once = false);
         ~ProtocolHandler();
 
         /** Wait for incoming messages and process them */

@@ -28,29 +28,38 @@ namespace drace {
 	}
 
 	bool MSR::connect() {
-		LOG_INFO(0, "wait 10s for MPCR to connect");
-		shmdriver = std::make_unique<ipc::MtSyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
-		if (shmdriver->valid()) {
-			shmdriver->wait_receive(std::chrono::seconds(10));
-			if (shmdriver->id() == ipc::SMDataID::READY) {
-				shmdriver->id(ipc::SMDataID::CONNECT);
-				shmdriver->commit();
-				// Got stable connection, attach to CB
-				extcb = std::make_unique<ipc::SharedMemory<ipc::ClientCB, true>>(DRACE_SMR_CB_NAME, false);
-				DR_ASSERT(extcb->get() != nullptr);
-				// TODO: Error handling (rarely necessary)
-				// Initialize extcb
-				extcb->get()->sampling_rate.store(params.sampling_rate, std::memory_order_relaxed);
-			}
-			else {
-				LOG_WARN(0, "MSR is not ready to connect");
-				shmdriver.reset();
-			}
-		}
-		else {
-			LOG_WARN(0, "could not create SHM");
-			shmdriver.reset();
-		}
+        using namespace std::chrono;
+        constexpr seconds timeout(10);
+		LOG_INFO(0, "wait %is for MPCR to connect", timeout.count());
+
+        auto time_start = system_clock::now();
+        while (system_clock::now() - time_start < timeout) {
+            shmdriver = std::make_unique<ipc::MtSyncSHMDriver<true, true>>(DRACE_SMR_NAME, false);
+            if (shmdriver->valid()) {
+                shmdriver->wait_receive(seconds(10));
+                if (shmdriver->id() == ipc::SMDataID::READY) {
+                    shmdriver->id(ipc::SMDataID::CONNECT);
+                    shmdriver->commit();
+                    // Got stable connection, attach to CB
+                    extcb = std::make_unique<ipc::SharedMemory<ipc::ClientCB, true>>(DRACE_SMR_CB_NAME, false);
+                    DR_ASSERT(extcb->get() != nullptr);
+                    // TODO: Error handling (rarely necessary)
+                    // Initialize extcb
+                    extcb->get()->sampling_rate.store(params.sampling_rate, std::memory_order_relaxed);
+                    break;
+                }
+                else {
+                    LOG_WARN(0, "MSR is not ready to connect");
+                    shmdriver.reset();
+                }
+            }
+            else {
+                LOG_NOTICE(0, "could not create SHM");
+                shmdriver.reset();
+            }
+            LOG_NOTICE(0, "MPCR not started yet, try again in %is", 1);
+            dr_sleep(1000); // in ms
+        }
 		return static_cast<bool>(shmdriver);
 	}
 

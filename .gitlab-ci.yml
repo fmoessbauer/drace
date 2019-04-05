@@ -10,6 +10,8 @@
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
+  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.1.17984-0\\bin64\\drrun.exe"
+  _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 stages:
   - generate
   - validate
@@ -70,7 +72,7 @@ test-tsan-dr70:
   script:
   - cd build-tsan-dr70
   - echo "Use DR 7.0.x"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.0.17837-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
   artifacts:
     reports:
       junit:
@@ -85,7 +87,7 @@ test-tsan-dr71:
   script:
   - cd build-tsan-dr71
   - echo "Use DR 7.1.x"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
   artifacts:
     reports:
       junit:
@@ -102,7 +104,7 @@ test-tsan-dr71-legacy:
   script:
   - cd build-legacy-tsan-dr71
   - echo "Use DR 7.1.x (LEGACY build)"
-  - .\test\drace-tests.exe --dr 'C:\opt\DynamoRIO-Windows-7.1.17963-0\bin64\drrun.exe' --gtest_output="xml:test-results.xml"
+  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
   artifacts:
     reports:
       junit:

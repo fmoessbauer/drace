@@ -62,13 +62,6 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
 	return false;
 }
 
-void printhelp() {
-	std::cout << "Change detector state using the following keys:" << std::endl
-		<< "e\tenable detector" << std::endl
-		<< "d\tdisable detector" << std::endl
-		<< "s\tset sampling rate" << std::endl;
-}
-
 int main(int argc, char** argv) {
 	using namespace msr;
 
@@ -78,8 +71,10 @@ int main(int argc, char** argv) {
 
 	int loglevel = 1;
 	bool display_help = false;
+    bool exec_once = false;
 	auto cli = (
 		clipp::repeatable(clipp::option("-v", "--verbose")(clipp::increment(loglevel))) % "verbose, use multiple times to increase log-level (e.g. -v -v)",
+        (clipp::option("--once").set(exec_once) % "exit after DRace finishes"),
 		(clipp::option("--version")([]() {
 		std::cout << "Managed Symbol Resolver (MSR)\n" 
 			      << "Version: " << DRACE_BUILD_VERSION << "\n"
@@ -90,7 +85,6 @@ int main(int argc, char** argv) {
 
 	if (!clipp::parse(argc, argv, cli) || display_help) {
 		std::cout << clipp::make_man_page(cli, "msr.exe") << std::endl;
-		printhelp();
 		std::exit(display_help ? 0 : 1);
 	}
 
@@ -124,8 +118,6 @@ int main(int argc, char** argv) {
 		logger->warn("Could not register exit handler");
 	}
 
-	printhelp();
-
 	/*
 	* The general idea here is to wait until DRACE
 	* sets the pid in the shared memory.
@@ -134,8 +126,10 @@ int main(int argc, char** argv) {
 	try {
 		// create memory for DRace controlblock
 		auto drace_cb = std::make_shared<ipc::SharedMemory<ipc::ClientCB, false>>(DRACE_SMR_CB_NAME, true);
-		controller = std::make_shared<Controller>(drace_cb);
-		ctl_fut = std::async(std::launch::async, [=]() {controller->start();});
+        if (!exec_once) {
+            controller = std::make_shared<Controller>(drace_cb);
+            ctl_fut = std::async(std::launch::async, [=]() {controller->start(); });
+        }
 
 #ifdef EXTSAN
 		// Event message queue
@@ -147,7 +141,7 @@ int main(int argc, char** argv) {
 
 		// create driver + block for message passing
 		auto msrdriver = std::make_shared<ipc::SyncSHMDriver<false, false>>(DRACE_SMR_NAME, true);
-		phandler = std::make_unique<ProtocolHandler>(msrdriver);
+		phandler = std::make_unique<ProtocolHandler>(msrdriver, exec_once);
 		phandler->process_msgs();
 	}
 	catch (const std::runtime_error & e) {

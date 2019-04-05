@@ -68,6 +68,9 @@ public:
 			if (num_races < min || num_races > max) {
 				ADD_FAILURE() << "Expected [" << min << "," << max << "] Races, found " << num_races
 					<< " in " << exe;
+                if (verbose) {
+                    std::cout << output << std::endl;
+                }
 			}
 		}
 		else {
