@@ -18,6 +18,7 @@ stages:
   - validate
   - build
   - test
+  - package
 
 cmake:
   <<: *globals
@@ -108,4 +109,25 @@ test-tsan-dr71-legacy:
       - build-legacy-tsan-dr71\test-results.xml
   dependencies:
   - compile
+
+# Package
+
+bundle:
+  <<: *globals
+  stage: package
+  script:
+  - Copy-Item "contrib/package.json" -Destination "."
+  - Copy-Item "contrib/package-lock.json" -Destination "."
+  - echo "Generate Changelog"
+  - npx generate-changelog
+  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr70/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr71/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-legacy-tsan-dr71/package/doc/"
+  dependencies:
+  - compile
+  artifacts:
+    paths:
+    - build-tsan-dr70/package
+    - build-tsan-dr71/package
+    - build-legacy-tsan-dr71/package
 
