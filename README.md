@@ -8,7 +8,7 @@ to dynamically instrument a binary at runtime.
 It does not require any preparations like instrumentation of the binary to check.
 While the detector should work with all binaries that use the POSIX synchronization API,
 we focus on applications written in C and C++.
-Experimental support for hybrid applications containing native and Dotnet CoreCLR parts
+Experimental support for hybrid applications containing native and Dotnet parts
 is implemented as well.
 
 For best results, we recommend to provide debug symbols of the
@@ -193,6 +193,12 @@ DLL to resolve managed program counters and symbols.
 
 The output (logs) of the MSR are just for debugging reasons.
 The resolved symbols are passed back to drace and merged with the non-managed ones.
+
+**Note:**
+To properly detect dotnet synchronization, pdb symbol information is required.
+The pdb files have to perfectly match the used dotnet libraries.
+Hence, it is (almost always) mandatory to let the MSR download the symbols.
+Thereto, point the `_NT_SYMBOL_PATH` variable to a MS symbol server, as shown one section above.
 
 ### Custom Annotations
 
