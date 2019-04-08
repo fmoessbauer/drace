@@ -62,6 +62,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
         dr_flush_file(stdout);
         exit(1);
     }
+    LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
 
     TLS_buckets.reserve(128);
 

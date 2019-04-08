@@ -37,10 +37,10 @@ namespace drace {
 	public:
 		/** Single memory reference */
 		struct mem_ref_t {
-			bool  write;
-			void *addr;
-			size_t size;
-			app_pc pc;
+			void    *addr;
+            app_pc   pc;
+			uint32_t size;
+            bool     write;
 		};
 
 		/** Maximum number of references between clean calls */

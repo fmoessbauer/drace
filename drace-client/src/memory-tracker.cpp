@@ -209,8 +209,8 @@ namespace drace {
 		data->buf_ptr = data->mem_buf.data;
 
 		if (!params.fastmode && !data->no_flush.load(std::memory_order_relaxed)) {
-			uint64_t expect = 0;
-			data->no_flush.compare_exchange_weak(expect, 1, std::memory_order_relaxed);
+			byte expect = 0;
+			data->no_flush.compare_exchange_weak(expect, (byte)1, std::memory_order_relaxed);
 		}
 	}
 
@@ -533,8 +533,8 @@ namespace drace {
 					// avoid busy-waiting and blocking CPU if other thread did not flush
 					// within given period
 					if (flush_external) {
-						bool expect_bool = false;
-						if (td.second->external_flush.compare_exchange_weak(expect_bool, true, std::memory_order_release)) {
+						byte expect_bool = false;
+						if (td.second->external_flush.compare_exchange_weak(expect_bool, (byte)true, std::memory_order_release)) {
 							//	//dr_printf("<< Thread %i took to long to flush, flush externaly\n", td.first);
 							analyze_access(td.second);
 							td.second->stats->external_flushes++;
@@ -584,7 +584,7 @@ namespace drace {
 	void MemoryTracker::handle_ext_state(per_thread_t * data) {
 		if (shmdriver) {
 			bool external_state = extcb->get()->enabled.load(std::memory_order_relaxed);
-			if (data->enable_external != external_state) {
+			if (bool (data->enable_external) != external_state) {
 				{
 					LOG_INFO(0, "externally switched state: %s", external_state ? "ON" : "OFF");
 					data->enable_external = external_state;

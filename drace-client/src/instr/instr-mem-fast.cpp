@@ -17,6 +17,13 @@ using namespace drace;
 void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where,
 	opnd_t ref, bool write)
 {
+    // The instrumentation relies on exact type sizes
+    static_assert(sizeof(mem_ref_t::addr) == 8, "type size not correct");
+    static_assert(sizeof(mem_ref_t::pc) == 8, "type size not correct");
+    static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
+    static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
+    static_assert(sizeof(per_thread_t::enabled) == 1, "type size not correct");
+
 	instr_t *instr;
 	opnd_t   opnd1, opnd2;
 	// reg1,reg3 is any GP register
@@ -65,8 +72,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 
 	/* Jump if tracing is disabled */
 	/* load enabled flag into reg2 */
-	opnd1 = opnd_create_reg(reg2);
-	opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, enabled));
+	opnd1 = opnd_create_reg(reg_resize_to_opsz(reg2, OPSZ_1));
+	opnd2 = OPND_CREATE_MEM8(reg3, offsetof(per_thread_t, enabled));
 	instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -82,8 +89,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Move write/read to write field */
-	opnd1 = OPND_CREATE_MEM32(reg2, offsetof(mem_ref_t, write));
-	opnd2 = OPND_CREATE_INT32(write);
+	opnd1 = OPND_CREATE_MEM8(reg2, offsetof(mem_ref_t, write));
+	opnd2 = OPND_CREATE_INT8(write);
 	instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
 	instrlist_meta_preinsert(ilist, where, instr);
 
@@ -94,7 +101,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	instrlist_meta_preinsert(ilist, where, instr);
 
 	/* Store size in memory ref */
-	opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, size));
+	opnd1 = OPND_CREATE_MEM32(reg2, offsetof(mem_ref_t, size));
 	/* drutil_opnd_mem_size_in_bytes handles OP_enter */
 	opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where));
 	instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
