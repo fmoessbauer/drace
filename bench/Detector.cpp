@@ -26,23 +26,22 @@ static void DetectorRW(benchmark::State& state) {
 		std::vector<detector::tls_t> tls(num_threads);
 		// generate threads
 		for (int i = 0; i < num_threads; ++i) {
-			detector::fork(0, i, tls[i]);
+			detector::fork(1, i+2, &(tls[i]));
 		}
 		state.ResumeTiming();
 
 		for (int i = 0; i < 10000; ++i) {
-			int tid = i % num_threads + 1;
-			detector::write(tid, (void*)i, (void*)i, 1, tls[tid]);
+			int tid = i % num_threads;
+			detector::write(tls[tid], (void*)i, (void*)i, 1);
 		}
 
 		// cleanup threads
-		for (int i = 0; i < num_threads; ++i) {
-			detector::join(0, i, tls[i]);
+		for (int i = 1; i < num_threads; ++i) {
+			detector::join(1, i+1);
 		}
 	}
 	detector::finalize();
 }
 // Register the function as a benchmark
 BENCHMARK(DetectorRW);
-
 #endif
