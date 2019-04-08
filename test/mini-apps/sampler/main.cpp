@@ -140,6 +140,12 @@ int main(int argc, char ** argv) {
 	std::vector<std::thread> threads;
 	threads.reserve(threads_per_task);
 
+    if (argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <period> <rounds> [s (sync)]"
+            << std::endl;
+        return 1;
+    }
+
 	unsigned period = std::atoi(argv[1]);
 	unsigned rounds = std::atoi(argv[2]);
 	bool mode_sync = (argc == 4) && (*argv[3] = 's');
