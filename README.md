@@ -107,6 +107,9 @@ OPTIONS
             --stacksz <stacksz>
                     size of callstack used for race-detection (must be in [1,16], default: 10)
 
+            --no-annotations
+                    disable code annotation support
+
             --delay-syms
                     perform symbol lookup after application shutdown
 

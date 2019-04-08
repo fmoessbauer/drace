@@ -47,6 +47,8 @@ namespace drace {
 		bool     exclude_master{ false };
 		bool     delayed_sym_lookup{ false };
 		bool     fastmode{ true };
+        /// search for annotations in modules of target application
+        bool     annotations{ true };
         unsigned suppression_level{ 1 };
 		/** Use external controller */
 		bool     extctrl{ false };
@@ -108,11 +110,7 @@ namespace drace {
 		/// end of this threads stack range
 		ULONG_PTR appstack_end{ 0x0 };
 
-		/** book-keeping of active mutexes
-		 * All even indices are mutex addresses
-		 * while uneven indices denote the number of
-		 * references at the location in index-1.
-		 * This is tuned for maximum cache-locality */
+		/// book-keeping of active mutexes
 		std::unordered_map<uint64_t, unsigned> mutex_book;
 		/// Used for event syncronisation procedure
 		tls_map_t     th_towait;
