@@ -62,6 +62,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
         dr_flush_file(stdout);
         exit(1);
     }
+    LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
 
     TLS_buckets.reserve(128);
 
@@ -195,7 +196,7 @@ namespace drace {
                     ) % "analysis scope",
                     (clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) %
             ("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
-
+            clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             clipp::option("--sync-mode").set(params.fastmode, false) % "flush all buffers on a sync event (instead of participating only)",
             clipp::option("--fast-mode").set(params.fastmode) % "DEPRECATED: inverse of sync-mode",
@@ -259,6 +260,7 @@ namespace drace {
             "< Exclude Traces:\t%s\n"
             "< Exclude Stack:\t%s\n"
             "< Exclude Master:\t%s\n"
+            "< Annotation Sup.:\t%s\n"
             "< Delayed Sym Lookup:\t%s\n"
             "< Fast Mode:\t\t%s\n"
             "< Config File:\t\t%s\n"
@@ -275,6 +277,7 @@ namespace drace {
             params.excl_traces ? "ON" : "OFF",
             params.excl_stack ? "ON" : "OFF",
             params.exclude_master ? "ON" : "OFF",
+            params.annotations ? "ON" : "OFF",
             params.delayed_sym_lookup ? "ON" : "OFF",
             params.fastmode ? "ON" : "OFF",
             params.config_file.c_str(),
