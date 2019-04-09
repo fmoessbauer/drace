@@ -1,0 +1,18 @@
+{
+  "name": "drace",
+  "version": "1.1.1",
+  "description": "Data-race detector for windows applications build on top of DynamoRIO",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "generate-changelog": "^1.7.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:siemens/drace.git"
+  },
+  "author": "Felix Moessbauer <felix.moessbauer@siemens.com>",
+  "license": "MIT"
+}
