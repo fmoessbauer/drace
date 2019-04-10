@@ -69,7 +69,7 @@ namespace drace {
 		tp_t   _start_time;
         std::set<uint64_t> _racy_stacks;
 
-		sink::HRText<decltype(std::cout)> _console;
+		sink::HRText _console;
 
 		void *_race_mx;
 
@@ -80,7 +80,7 @@ namespace drace {
 			: _delayed_lookup(delayed_lookup),
 			_syms(symbols),
 			_start_time(clock_t::now()),
-			_console(std::cout)
+			_console(drace::log_target)
 		{
 			_races.reserve(1000);
 			_race_mx = dr_mutex_create();
@@ -181,11 +181,6 @@ namespace drace {
 
 		unsigned long num_races() const {
 			return static_cast<unsigned long>(_races.size());
-		}
-
-		template<typename Stream>
-		void print_summary(Stream & s) const {
-			s << "Found " << _races.size() << " possible data-races" << std::endl;
 		}
 	};
 
