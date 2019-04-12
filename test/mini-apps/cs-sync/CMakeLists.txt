@@ -1,4 +1,4 @@
-SET(EXAMPLE "gp-cs-sync")
+SET(EXAMPLE "gp-cs-sync-clr")
 
 macro(build_csharp outfile source)
   if(CSC)
@@ -20,7 +20,11 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
 else()
     # native c# integration not available in ninja
     # If we up our cmake minimum to 3.8.2 we can use enable_language(CSharp).
-    build_csharp(gp-cs-sync-clr "main.cs")
+    build_csharp(${EXAMPLE} "main.cs")
 
     # TODO: Implement same for CoreCLR
+endif()
+
+if(${DRACE_INSTALL_TESTS})
+    install(FILES ${EXAMPLE}.exe ${EXAMPLE}.pdb DESTINATION bin OPTIONAL)
 endif()

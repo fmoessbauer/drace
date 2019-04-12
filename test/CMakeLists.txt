@@ -67,3 +67,8 @@ add_custom_command(TARGET copy_files_testing POST_BUILD
 
 # Prepare Guinea pigs
 add_subdirectory("mini-apps")
+
+if(${DRACE_INSTALL_TESTS})
+    install(TARGETS ${TEST_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
+    install(FILES ${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini DESTINATION bin)
+endif()
