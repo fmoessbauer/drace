@@ -10,6 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include "sink.h"
 #include "../race-collector.h"
 
 #include <sstream>
@@ -18,7 +19,7 @@ namespace drace {
 	/// data-race exporter
 	namespace sink {
 		/** A Race exporter which creates human readable output */
-		class HRText {
+		class HRText : public Sink {
 		public:
 			using self_t = HRText;
 
@@ -34,21 +35,17 @@ namespace drace {
 				: _target(target)
 			{ }
 
-			//self_t & operator=(const self_t & other) = delete;
-			//self_t & operator=(self_t && other) = default;
-
-			template<typename RaceEntry>
-			void process_single_race(const RaceEntry & race) const {
+			virtual void process_single_race(const race::DecoratedRace & race) {
                 LOG_ERROR(0, "process single %u", _target);
 				std::stringstream ss;
-				ss << "----- DATA Race at " << std::dec << race.first << "ms runtime -----";
+				ss << "----- DATA Race at " << std::dec << race.elapsed.count() << "ms runtime -----";
 				std::string header(ss.str());
                 ss.clear();
 
                 dr_fprintf(_target, "%s\n", header.c_str());
 
 				for (int i = 0; i != 2; ++i) {
-					ResolvedAccess ac = (i == 0) ? race.second.first : race.second.second;
+					race::ResolvedAccess ac = (i == 0) ? race.first : race.second;
 
                     dr_fprintf(_target, "Access %i tid: %i %s to/from %p with size %i. Stack (size %i)\n",
                         i, ac.thread_id, (ac.write ? "write" : "read"), (void*)ac.accessed_memory,
@@ -61,7 +58,7 @@ namespace drace {
                         dr_fprintf(_target, "Block not on heap (anymore)\n");
 					}
 
-					if (race.second.is_resolved) {
+					if (race.is_resolved) {
 						// stack is stored in reverse order, hence print inverted
 						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
@@ -76,8 +73,7 @@ namespace drace {
                 dr_flush_file(_target);
             }
 
-			template<typename RaceEntry>
-			void process_all(const RaceEntry & races) {
+			virtual void process_all(const std::vector<race::DecoratedRace> & races) {
 				for (auto & r : races) {
 					process_single_race(r);
 				}

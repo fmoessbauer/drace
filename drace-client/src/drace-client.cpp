@@ -97,6 +97,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     race_collector = std::make_unique<RaceCollector>(
         params.delayed_sym_lookup,
         symbol_table);
+    // register the console printer
+    race_collector->register_sink(
+        std::make_shared<sink::HRText>(drace::log_target)
+    );
 
     // Initialize Detector
     detector::init(argc, argv, race_collector_add_race);
@@ -317,7 +321,6 @@ namespace drace {
                 LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
             }
         }
-
 #ifdef XML_EXPORTER
         // Write XML output
         if (params.xml_file != "") {

@@ -11,6 +11,7 @@
  */
 
 #include "util.h"
+#include "sink.h"
 
 #include <dr_api.h>
 #include <drutil.h>
@@ -19,8 +20,8 @@
 namespace drace {
 	namespace sink {
 		/** A race exporter which creates a valgrind valkyrie compatible xml output */
-		template<typename Stream>
-		class Valkyrie {
+        template<typename Stream>
+		class Valkyrie : public Sink {
 		public:
 			using TimePoint = std::chrono::system_clock::time_point;
 
@@ -31,6 +32,7 @@ namespace drace {
 			const char*  _app;
 			TimePoint    _start_time;
 			TimePoint    _end_time;
+            unsigned     _num_processed{ 0 };
 
 
 		private:
@@ -100,53 +102,57 @@ namespace drace {
 				p.CloseElement();
 			}
 
-			void print_races(tinyxml2::XMLPrinter & p, const RaceCollector::RaceCollectionT & races) const {
-				for (unsigned i = 0; i < races.size(); ++i) {
-					const ResolvedAccess & r = races[i].second.first;
-					const ResolvedAccess & r2 = races[i].second.second;
+            void print_race(tinyxml2::XMLPrinter & p, const race::DecoratedRace & race) {
+                const race::ResolvedAccess & r = race.first;
+                const race::ResolvedAccess & r2 = race.second;
 
-					p.OpenElement("error");
-					std::stringstream unique;
-					unique << "0x" << std::hex << i;
-					p.OpenElement("unique"); p.PushText(unique.str().c_str()); p.CloseElement();
-					p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
-					p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
-					p.OpenElement("kind"); p.PushText("Race"); p.CloseElement();
+                p.OpenElement("error");
+                std::stringstream unique;
+                unique << "0x" << std::hex << _num_processed++;
+                p.OpenElement("unique"); p.PushText(unique.str().c_str()); p.CloseElement();
+                p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
+                p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
+                p.OpenElement("kind"); p.PushText("Race"); p.CloseElement();
 
-					{
-						p.OpenElement("xwhat");
-						p.OpenElement("text");
-						std::stringstream text;
-						text << "Possible data race during ";
-						text << (r2.write ? "write" : "read") << " of size "
-							<< r2.access_size << " at 0x" << std::hex << r2.accessed_memory
-							<< " by thread #" << std::dec << r2.thread_id;
-						p.PushText(text.str().c_str());
-						p.CloseElement();
-						p.OpenElement("hthreadid"); p.PushText(r2.thread_id); p.CloseElement();
-						p.CloseElement();
-						print_stack(p, r2.resolved_stack);
-					}
-					{
-						p.OpenElement("xwhat");
-						p.OpenElement("text");
-						std::stringstream text;
-						text << "This conflicts with a previous ";
-						text << (r.write ? "write" : "read") << " of size "
-							<< r.access_size << " at 0x" << std::hex << r.accessed_memory
-							<< " by thread #" << std::dec << r.thread_id;
-						p.PushText(text.str().c_str());
-						p.CloseElement();
-						p.OpenElement("hthreadid"); p.PushText(r.thread_id); p.CloseElement();
-						p.CloseElement();
-						print_stack(p, r.resolved_stack);
-					}
+                {
+                    p.OpenElement("xwhat");
+                    p.OpenElement("text");
+                    std::stringstream text;
+                    text << "Possible data race during ";
+                    text << (r2.write ? "write" : "read") << " of size "
+                        << r2.access_size << " at 0x" << std::hex << r2.accessed_memory
+                        << " by thread #" << std::dec << r2.thread_id;
+                    p.PushText(text.str().c_str());
+                    p.CloseElement();
+                    p.OpenElement("hthreadid"); p.PushText(r2.thread_id); p.CloseElement();
+                    p.CloseElement();
+                    print_stack(p, r2.resolved_stack);
+                }
+                {
+                    p.OpenElement("xwhat");
+                    p.OpenElement("text");
+                    std::stringstream text;
+                    text << "This conflicts with a previous ";
+                    text << (r.write ? "write" : "read") << " of size "
+                        << r.access_size << " at 0x" << std::hex << r.accessed_memory
+                        << " by thread #" << std::dec << r.thread_id;
+                    p.PushText(text.str().c_str());
+                    p.CloseElement();
+                    p.OpenElement("hthreadid"); p.PushText(r.thread_id); p.CloseElement();
+                    p.CloseElement();
+                    print_stack(p, r.resolved_stack);
+                }
 
-					p.CloseElement();
+                p.CloseElement();
 
-					// Flush buffer to reduce memory usage
-					_stream << p.CStr() << std::endl;
-					p.ClearBuffer();
+                // Flush buffer to reduce memory usage
+                _stream << p.CStr() << std::endl;
+                p.ClearBuffer();
+            }
+
+			void print_races(tinyxml2::XMLPrinter & p, const std::vector<race::DecoratedRace> & races) {
+				for (const auto & r : races) {
+                    print_race(p, r);
 				}
 			}
 
@@ -171,8 +177,18 @@ namespace drace {
 			Valkyrie & operator= (const Valkyrie &) = delete;
 			Valkyrie & operator= (Valkyrie &&) = default;
 
-			template<typename RaceEntry>
-			void process_all(const RaceEntry & races) const {
+            /**
+            * Process / stream a single data race
+            */
+            virtual void process_single_race(const race::DecoratedRace & race) {
+                // TODO: implement
+            }
+
+            /**
+            * open new document, process all data-races provided in the vector
+            * and close it.
+            */
+            virtual void process_all(const std::vector<race::DecoratedRace> & races) {
 				tinyxml2::XMLPrinter p(0, true);
 				p.PushHeader(false, true);
 				p.OpenElement("valgrindoutput");
