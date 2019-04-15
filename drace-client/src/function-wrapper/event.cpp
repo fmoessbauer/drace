@@ -21,6 +21,17 @@
 #include <drmgr.h>
 #include <drwrap.h>
 
+// on CLR applications we sometimes get no wrapctx
+// this issue can be reproduced using the cs-lock application with sync = mutex.
+// this happens if an abnormal stack unwind, such as longjmp or
+// a Windows exception, occurs
+#define SKIP_ON_EXCEPTION(wrapctx) do { \
+    if (wrapctx == NULL) { \
+        LOG_NOTICE(0, "exception occured in wrapped allocation"); \
+        return; \
+    } \
+} while(0)
+
 namespace drace {
 	namespace funwrap {
 
@@ -50,6 +61,8 @@ namespace drace {
 		}
 
 		void event::alloc_post(void *wrapctx, void *user_data) {
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			void * retval = drwrap_get_retval(wrapctx);
 			void * pc = drwrap_get_func(wrapctx);
@@ -57,8 +70,6 @@ namespace drace {
 
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
-
-			//MemoryTracker::flush_all_threads(data);
 
 			// allocations with size 0 are valid if they come from
 			// reallocate (in fact, that's a free)
@@ -130,6 +141,7 @@ namespace drace {
 			LOG_INFO(data->tid, "setup new thread");
 		}
 		void event::thread_handover(void *wrapctx, void *user_data) {
+            SKIP_ON_EXCEPTION(wrapctx);
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -181,6 +193,7 @@ namespace drace {
 		}
 
 		void event::end_excl(void *wrapctx, void *user_data) {
+            SKIP_ON_EXCEPTION(wrapctx);
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -201,6 +214,7 @@ namespace drace {
 			bool write,
 			bool trylock)
 		{
+            SKIP_ON_EXCEPTION(wrapctx);
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -235,6 +249,7 @@ namespace drace {
 			void* wrapctx,
 			bool write)
 		{
+            SKIP_ON_EXCEPTION(wrapctx);
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -318,6 +333,8 @@ namespace drace {
 		void event::wait_for_single_obj(void *wrapctx, void *mutex) {
 			// https://docs.microsoft.com/en-us/windows/desktop/api/synchapi/nf-synchapi-waitforsingleobject
 
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -355,6 +372,8 @@ namespace drace {
 		}
 
 		void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DWORD retval = util::unsafe_ptr_cast<DWORD>(drwrap_get_retval(wrapctx));
@@ -396,6 +415,8 @@ namespace drace {
         }
 
 		void event::barrier_leave(void *wrapctx, void *addr) {
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -407,6 +428,7 @@ namespace drace {
 		}
 
 		void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
+            SKIP_ON_EXCEPTION(wrapctx);
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -422,6 +444,8 @@ namespace drace {
 		}
 
 		void event::happens_before(void *wrapctx, void *identifier) {
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
@@ -430,6 +454,8 @@ namespace drace {
 		}
 
 		void event::happens_after(void *wrapctx, void *identifier) {
+            SKIP_ON_EXCEPTION(wrapctx);
+
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);

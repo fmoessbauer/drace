@@ -10,7 +10,7 @@
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
-  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.1.17984-0\\bin64\\drrun.exe"
+  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.1.17990-0\\bin64\\drrun.exe"
   DRRUN70_EXE: "C:\\opt\\DynamoRIO-Windows-7.0.17837-0\\bin64\\drrun.exe"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 stages:

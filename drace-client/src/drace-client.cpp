@@ -231,7 +231,16 @@ namespace drace {
             );
 
         if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
-            std::cout << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
+            std::stringstream out;
+            out << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
+            std::string outstr = out.str();
+            // dr_fprintf does not print anything if input buffer
+            // is too large hence, chunk it
+            const auto chunks = util::split(outstr, "\n");
+            for (const auto & chunk : chunks) {
+                dr_write_file(STDERR, chunk.c_str(), chunk.size());
+                dr_write_file(STDERR, "\n", 1);
+            }
             dr_abort();
         }
 
@@ -298,10 +307,15 @@ namespace drace {
         race_collector->resolve_all();
 
         if (params.out_file != "") {
-            std::ofstream races_hr_file(params.out_file, std::ofstream::out);
-            sink::HRText<std::ofstream> hr_sink(races_hr_file);
-            hr_sink.process_all(race_collector->get_races());
-            races_hr_file.close();
+            FILE * racereport = (FILE*)dr_open_file(params.out_file.c_str(), DR_FILE_WRITE_OVERWRITE);
+            if (racereport != INVALID_FILE) {
+                sink::HRText hr_sink(racereport);
+                hr_sink.process_all(race_collector->get_races());
+                dr_close_file(racereport);
+            }
+            else {
+                LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
+            }
         }
 
 #ifdef XML_EXPORTER
