@@ -23,8 +23,8 @@
 namespace drace {
 	class RaceCollector {
     public:
-		/** Maximum number of races to collect */
-		static constexpr int MAX = 1000;
+		/** Maximum number of races to collect in delayed mode */
+		static constexpr int MAX = 200;
 	private:
         using RaceCollectionT = std::vector<race::DecoratedRace>;
 		using entry_t         = race::DecoratedRace;
@@ -32,16 +32,17 @@ namespace drace {
 		using tp_t            = decltype(clock_t::now());
 
 		RaceCollectionT _races;
+        unsigned long   _race_count{0};
 		// TODO: histogram
 
-		bool   _delayed_lookup{ false };
+		bool                     _delayed_lookup{ false };
 		std::shared_ptr<Symbols> _syms;
-		tp_t   _start_time;
-        std::set<uint64_t> _racy_stacks;
+		tp_t                     _start_time;
+        std::set<uint64_t>       _racy_stacks;
 
 		std::vector<std::shared_ptr<sink::Sink>> _sinks;
 
-		void *_race_mx;
+		void *                   _race_mx;
 
 	public:
 		RaceCollector(
@@ -51,25 +52,25 @@ namespace drace {
 			_syms(symbols),
 			_start_time(clock_t::now())
 		{
-			_races.reserve(1000);
+			_races.reserve(10);
 			_race_mx = dr_mutex_create();
 		}
 
 		~RaceCollector() {
 			dr_mutex_destroy(_race_mx);
-			LOG_INFO(-1, "found %i possible data-races", _races.size());
 		}
 
         /**
         * register a sink that is notified on each race
         */
-        void register_sink(const std::shared_ptr<sink::Sink> sink) {
+        void register_sink(const std::shared_ptr<sink::Sink> & sink) {
             _sinks.push_back(sink);
         }
 
         /**
         * suppress this race if similar race is already reported
-        * \return: true if race is suppressed
+        * \return true if race is suppressed
+        * \note   not-threadsafe
         */
         bool filter_duplicates(const detector::Race * r) {
             // TODO: add more precise control over suppressions
@@ -89,6 +90,8 @@ namespace drace {
 		* TODO: The locking has to be removed completely as this callback
 		* heavily interferes with application locks. Use lockfree queue for
 		* storing the races
+        *
+        * \note not-threadsafe
 		*/
 		void add_race(const detector::Race * r) {
 			if (num_races() > MAX)
@@ -114,7 +117,12 @@ namespace drace {
 				_races.emplace_back(*r, ttr); // TODO, validate ttr value
 				//dr_mutex_unlock(_race_mx);
 			}
+            ++_race_count;
+            // notify sinks about this race
 			forward_last_race();
+            // in non-delayed mode, we can drop the race
+            if (!_delayed_lookup)
+                _races.pop_back();
 		}
 
 		/** Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
@@ -147,18 +155,32 @@ namespace drace {
 			}
 		}
 
+        /**
+        * forward last observed race to sinks
+        */
         inline void forward_last_race() const {
             for (const auto & s : _sinks) {
                 s->process_single_race(_races.back());
             }
         }
 
+        /**
+        * In delayed mode, return data-races.
+        * Otherwise return empty container
+        *
+        * \note not threadsafe.
+        *       If a new race arrives during inspection of this container,
+        *       the iterators might get invalidated
+        */
 		const RaceCollectionT & get_races() const {
-			return _races;
+            return _races;
 		}
 
+        /**
+        * return the number of observed races
+        */
 		unsigned long num_races() const {
-			return static_cast<unsigned long>(_races.size());
+			return static_cast<unsigned long>(_race_count);
 		}
 	};
 

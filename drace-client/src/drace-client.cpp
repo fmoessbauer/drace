@@ -173,6 +173,8 @@ namespace drace {
         generate_summary();
         stats->print_summary(drace::log_target);
 
+        LOG_INFO(-1, "found %i possible data-races", race_collector->num_races());
+
         // Cleanup all drace modules
         module_tracker.reset();
         memory_tracker.reset();
