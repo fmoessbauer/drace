@@ -166,6 +166,8 @@ TEST_F(DetectorTest, RaceInspection) {
     detector::fork(1, 90, &tls90);
     detector::fork(1, 91, &tls91);
 
+    EXPECT_NE(tls90, tls91);
+
     // Thread A
     detector::func_enter(tls90, &callstack_funA);
     detector::func_enter(tls90, &callstack_funB);
@@ -184,9 +186,12 @@ TEST_F(DetectorTest, RaceInspection) {
 
     // races are not ordered, but we need an order for
     // the assertions. Hence, order by tid.
-    auto a1 = last_race.first.thread_id == 90 ? last_race.first : last_race.second;
-    auto a2 = last_race.first.thread_id == 91 ? last_race.second : last_race.first;
+    auto a1 = last_race.first.thread_id < last_race.second.thread_id ? last_race.first : last_race.second;
+    auto a2 = last_race.first.thread_id < last_race.second.thread_id ? last_race.second : last_race.first;
+
     EXPECT_NE(a1.thread_id, a2.thread_id);
+    EXPECT_EQ(a1.thread_id, 90);
+    EXPECT_EQ(a2.thread_id, 91);
 
     EXPECT_EQ(a1.accessed_memory, 0x00920000ull);
     EXPECT_EQ(a2.accessed_memory, 0x00920000ull);

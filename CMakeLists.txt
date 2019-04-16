@@ -22,6 +22,11 @@ set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporte
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
 set(DRACE_USE_LEGACY_API OFF CACHE BOOL "Build a Windows 7 compatible version")
 
+# install targets
+set(DRACE_INSTALL_TESTS OFF CACHE BOOL "Install test target")
+set(DRACE_INSTALL_BENCH OFF CACHE BOOL "Install benchmarks")
+set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -106,7 +111,10 @@ if(${Doxygen_FOUND})
 	    doc
 	    ${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
-	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+
+    if(${DRACE_INSTALL_DOCS})
+	    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+    endif()
 endif()
 
 # install config readme
