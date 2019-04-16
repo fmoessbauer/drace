@@ -96,6 +96,10 @@ TEST_F(DrIntegration, ReportXML) {
         const auto errornode = doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
         EXPECT_GT(errornode->FirstChildElement("tid")->UnsignedText(), 0);
         EXPECT_STREQ(errornode->FirstChildElement("kind")->GetText(), "Race");
+
+        const auto status = doc.FirstChildElement("valgrindoutput")->LastChildElement("status");
+        EXPECT_STREQ(status->FirstChildElement("state")->GetText(), "FINISHED");
+        EXPECT_GT(status->FirstChildElement("duration")->UnsignedText(), 0);
     }
     std::remove(filename.c_str());
 }
