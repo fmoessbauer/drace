@@ -94,8 +94,7 @@ TEST_F(DrIntegration, ReportXML) {
         tinyxml2::XMLDocument doc;
         ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
         const auto errornode = doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
-        // TODO: i#4, hence only require != 0
-        EXPECT_NE(errornode->FirstChildElement("tid")->IntText(), 0);
+        EXPECT_GT(errornode->FirstChildElement("tid")->UnsignedText(), 0);
         EXPECT_STREQ(errornode->FirstChildElement("kind")->GetText(), "Race");
     }
     std::remove(filename.c_str());
