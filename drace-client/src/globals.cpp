@@ -14,6 +14,7 @@
 #include "Module.h"
 #include "symbols.h"
 #include "race-collector.h"
+#include "DrFile.h"
 #include "statistics.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/MtSyncSHMDriver.h"
@@ -42,6 +43,7 @@ namespace drace {
 	std::unique_ptr<MemoryTracker> memory_tracker;
 	std::unique_ptr<module::Tracker> module_tracker;
 	std::unique_ptr<RaceCollector> race_collector;
+    std::shared_ptr<DrFile> log_file;
 	std::unique_ptr<Statistics> stats;
 	std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
 	std::unique_ptr<ipc::SharedMemory<ipc::ClientCB, true>> extcb;

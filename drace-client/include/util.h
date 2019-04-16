@@ -17,8 +17,6 @@
 namespace drace {
 	/** Target to which all logs are written. Can be any file handle */
 	extern FILE * log_target;
-	/** true if log target is a file that has to be closed on exit */
-	extern bool   log_requires_close;
 
 	/** Utility functions for all modules */
 	struct util {

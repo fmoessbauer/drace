@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 /*
  * DRace, a dynamic data race detector
  *
@@ -12,13 +12,22 @@
 
 namespace drace {
 	// Events
+    /// callback on DynamoRio exit
 	static void event_exit(void);
+    /// global callback for thread init in target application
 	static void event_thread_init(void *drcontext);
+    /// global callback for thread exit in target application
 	static void event_thread_exit(void *drcontext);
 
 	// Runtime Configuration
-	static void parse_args(int argc, const char **argv);
+
+    /// parse CLI arguments
+    static void parse_args(int argc, const char **argv);
+    /// register sinks for race reporting
+    static void register_report_sinks();
+    /// output current runtime configuration
 	static void print_config();
 
+    /// generate data-race summary
 	static void generate_summary();
 }

@@ -152,6 +152,10 @@ namespace drace {
 	class RaceCollector;
 	extern std::unique_ptr<RaceCollector> race_collector;
 
+    class DrFile;
+    /// global logging destination
+    extern std::shared_ptr<DrFile> log_file;
+
 	// Global Configuration
 	extern drace::Config config;
 
