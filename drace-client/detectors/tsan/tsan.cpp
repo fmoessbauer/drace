@@ -74,7 +74,7 @@ namespace detector {
                     race_info_ac = raceInfo->access2;
                 }
 
-                access.thread_id = race_info_ac->user_id;
+                access.thread_id = (unsigned) race_info_ac->user_id;
                 access.write = race_info_ac->write;
                 access.accessed_memory = (uint64_t)race_info_ac->accessed_memory;
                 access.access_size = race_info_ac->size;

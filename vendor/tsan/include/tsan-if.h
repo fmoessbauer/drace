@@ -17,6 +17,7 @@ extern "C" {
 		void* stack_trace;
 		int stack_trace_size;
 		int type;
+        bool cli;
 	} __tsan_race_info_access;
 
 	typedef struct {
