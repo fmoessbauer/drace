@@ -44,13 +44,16 @@ namespace drace {
 				if (sym_name != "") {
 					result << " - " << sym_name << "\n";
 				}
+#if 0
+                // this information is not very interesting for the end-user
 				if (mod_base != mod_end) {
 					result << "\tfrom " << (void*)mod_base
-						<< " to " << (void*)mod_end;
+						<< " to " << (void*)mod_end << "\n";
 				}
+#endif
 				if (file != "") {
-					result << "\n\tFile " << file << ":" << std::dec
-						<< line << " + " << line_offs;
+					result << "\tFile " << file << ":" << std::dec
+						<< line << " + " << line_offs << "\n";
 				}
 			}
 			return result.str();

@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <string>
+#include <future>
 
 #ifdef XML_EXPORTER
 #include <tinyxml2.h>
@@ -63,20 +64,58 @@ TEST_F(DrIntegration, ExcludeRaces) {
 	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
 
+// Dotnet Tests
+TEST_F(DrIntegration, DotnetClrRacy) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
+    msr_task.join();
+}
+
+TEST_F(DrIntegration, DotnetClrMonitor) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe monitor", 0, 0);
+    msr_task.join();
+}
+
+TEST_F(DrIntegration, DotnetClrMutex) {
+    // TODO: start msr
+    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
+    msr_task.join();
+}
+
 #ifdef XML_EXPORTER
-TEST_F(DrIntegration, XmlOutput) {
-    std::string xmlfile("xmlOutput.xml");
-    run("--xml-file " + xmlfile, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+TEST_F(DrIntegration, ReportXML) {
+    std::string filename("reportXML.xml");
+    run("--xml-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
     {
         tinyxml2::XMLDocument doc;
-        ASSERT_EQ(doc.LoadFile(xmlfile.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
+        ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
         const auto errornode = doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
-        EXPECT_GT(errornode->FirstChildElement("tid")->IntText(), 0);
+        EXPECT_GT(errornode->FirstChildElement("tid")->UnsignedText(), 0);
         EXPECT_STREQ(errornode->FirstChildElement("kind")->GetText(), "Race");
     }
-    std::remove(xmlfile.c_str());
+    std::remove(filename.c_str());
 }
 #endif
+
+TEST_F(DrIntegration, ReportText) {
+    std::string filename("reportText.txt");
+    run("--out-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+    {
+        std::ifstream fstr(filename);
+        if (fstr.good()) {
+            std::string data((std::istreambuf_iterator<char>(fstr)), (std::istreambuf_iterator<char>()));
+            EXPECT_FALSE(data.find("Access 1 tid") == std::string::npos) << "race not found in report";
+        }
+        else {
+            ADD_FAILURE() << "file not found";
+        }
+    }
+    std::remove(filename.c_str());
+}
 
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(DrIntegration,

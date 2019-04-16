@@ -177,6 +177,7 @@ namespace drace {
 			else if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED)
 			{
 				if (shmdriver) {
+                    // TODO: can we delay this until the first race happens in this module?
 					MSR::request_symbols(mod);
 				}
 				// Name of .Net modules often contains a full path
@@ -217,17 +218,16 @@ namespace drace {
 					modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
 				}
 			}
-			else if (modptr->instrument != INSTR_FLAGS::NONE) {
+			else if (modptr->instrument != INSTR_FLAGS::NONE && params.annotations) {
 				// no special handling of this module
-
-				funwrap::wrap_excludes(mod);
-				funwrap::wrap_annotations(mod);
-				// This requires debug symbols, but avoids false positives during
-				// C++11 thread construction and startup
-				if (modptr->debug_info) {
-					//funwrap::wrap_thread_start(mod);
-					funwrap::wrap_mutexes(mod, false);
-				}
+                funwrap::wrap_excludes(mod);
+                funwrap::wrap_annotations(mod);
+                // This requires debug symbols, but avoids false positives during
+                // C++11 thread construction and startup
+                if (modptr->debug_info) {
+                    //funwrap::wrap_thread_start(mod);
+                    funwrap::wrap_mutexes(mod, false);
+                }
 			}
 
 			LOG_INFO(tid,

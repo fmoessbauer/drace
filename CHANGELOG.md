@@ -1,4 +1,48 @@
-# Changelog
+#### 1.1.1 (2019-04-05)
+
+##### Chores
+
+*  install target in CI ([f5431bc1](https://github.com/siemens/drace/commit/f5431bc1ac78a884c3d66d2d20dde1128deaa86c))
+*  build using vs professional in CI ([40c01cb1](https://github.com/siemens/drace/commit/40c01cb1c9d360ee0cda24801f8d411612d94cb4))
+*  install runtime (dll) only ([3c014434](https://github.com/siemens/drace/commit/3c014434e92307f0b8598a23ec5700f7055015d2))
+
+##### Documentation Changes
+
+*  add note on symbol search path [ci skip] ([87c1f54c](https://github.com/siemens/drace/commit/87c1f54c6edb605d0c9b8476e067b5c9a7cc372d))
+
+##### New Features
+
+*  issue warning if sym search path does not contain sym server ([acf9a507](https://github.com/siemens/drace/commit/acf9a507dd820d4166b3a7ae7e36a1efc080206e))
+*  wait some time for msr to become ready ([3e865546](https://github.com/siemens/drace/commit/3e865546af0512a941977ce213492998c9f12a57))
+*  add flag to run msr just once ([9a0b63cd](https://github.com/siemens/drace/commit/9a0b63cd417606285250fe932da8bbbffcf32f54))
+*  reduce redundancy in ci scripts ([5b0cd7d3](https://github.com/siemens/drace/commit/5b0cd7d33ac11634b04f756cdf5035240811ca45))
+*  improve data-race report format ([b2bf9957](https://github.com/siemens/drace/commit/b2bf99573e08929e93dbce9b6fd57693e6ecde18))
+*  unify size of shadow stack ([306a8ac7](https://github.com/siemens/drace/commit/306a8ac7cb52daa22c905bab58475d89a8a39ecb))
+*  issue a warning if no dotnet sync functions are wrapped ([36438d32](https://github.com/siemens/drace/commit/36438d3209443162bba8a2f110c777d9780a113b))
+*  improve loading of dbghelp.dll to get ms symbol server support ([085a8af7](https://github.com/siemens/drace/commit/085a8af770a0ba02b3a16cd68fb9ee0d682a7b79))
+*  run managed application even if msr is not running ([583060f6](https://github.com/siemens/drace/commit/583060f65cdad7f932343efd8c27e66fbc65c22f))
+*  add limited support for windows 7 ([0ed77b97](https://github.com/siemens/drace/commit/0ed77b9747eda22eb9eb591ccccf10a7cfb4266d))
+
+##### Bug Fixes
+
+*  correctly use SymSearch function ([63ee8547](https://github.com/siemens/drace/commit/63ee854771583613f75cd7e73c33a67cdceb8e4c))
+*  do not print statistics on thread exit [#2](https://github.com/siemens/drace/pull/2) ([e9fb9532](https://github.com/siemens/drace/commit/e9fb953223c8dec4d65676b0b17b7d47e4934cec))
+
+##### Code Style Changes
+
+*  re-format document ([7028aba3](https://github.com/siemens/drace/commit/7028aba35ae04a1775021320f20ac099f4241856))
+
+##### Tests
+
+*  skip dotnet tests in dr7.0 CI runs as not supported by dr7.0.x ([1f2b4ad5](https://github.com/siemens/drace/commit/1f2b4ad50895bff6e88ddae3759c92fb5296f770))
+*  set sym search path in CI ([4e850c67](https://github.com/siemens/drace/commit/4e850c67dc766ed2badf91b6775b64c627aea56d))
+*  print drrun output on failure in verbose mode ([b47b9aa3](https://github.com/siemens/drace/commit/b47b9aa3c0cbf1a60cd10f4729b717868ecc7598))
+*  bump dr version to support clr ([c9a2ce93](https://github.com/siemens/drace/commit/c9a2ce93df0bb31fb7bdd115010b0169b080f38c))
+*  add CLR tests in CI suite ([cbba289c](https://github.com/siemens/drace/commit/cbba289c75c357f701bfd89abbce50e2657b126d))
+*  improve dotnet testing and infrastructure ([8fe44a41](https://github.com/siemens/drace/commit/8fe44a418a78b4529098345b8a83cc1b93d4d433))
+*  run some tests only on master to improve CI time ([cbc0d2b6](https://github.com/siemens/drace/commit/cbc0d2b643f0126e2acfb293d3139c841654edcb))
+*  improve ci time ([504b4032](https://github.com/siemens/drace/commit/504b4032976fc5fe8956b4fe4173d8ab81b99045))
+*  split testing into separate steps ([a63a2733](https://github.com/siemens/drace/commit/a63a273341151c0c235e4b8379aede40c49a7344))
 
 #### 1.1.0 (2019-03-25)
 

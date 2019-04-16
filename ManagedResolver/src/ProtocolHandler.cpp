@@ -35,8 +35,9 @@ namespace msr {
     using namespace ipc;
 
     ProtocolHandler::ProtocolHandler(
-        SyncSHMDriver shmdriver)
-        : _shmdriver(shmdriver)
+        SyncSHMDriver shmdriver, bool once)
+        : _shmdriver(shmdriver),
+          _exec_once(once)
     {
         // try to load library from Windows Debugging Tools directory
         // to get symsrv support i#3
@@ -127,6 +128,10 @@ namespace msr {
 
         _shmdriver->id(SMDataID::READY);
         _shmdriver->commit();
+
+        if (_exec_once) {
+            _keep_running = false;
+        }
     }
 
     void ProtocolHandler::getCurrentStack() {
@@ -226,6 +231,10 @@ namespace msr {
         syminit(_phandle, NULL, false);
         if (symgetsearchpath(_phandle, str, 128)) {
             logger->debug("symbol search path: {}", str);
+            if (strstr(str, "https://msdl.microsoft.com/download/symbols") == NULL) {
+                logger->warn("no MS symbol server in search path");
+                logger->warn("hint: for online search, set _NT_SYMBOL_PATH");
+            }
         }
         else {
             logger->warn("could not obtain symbol search path");
@@ -301,9 +310,12 @@ namespace msr {
         std::string strpath(symreq.path.data());
         std::wstring wstrpath(strpath.begin(), strpath.end());
 
-        logger->debug("search symobls matching {} at {}", symreq.match.data(), (void*)symreq.base);
+        logger->debug("search symbols matching {} at {} - full: {}",
+            symreq.match.data(),
+            (void*)symreq.base,
+            symreq.full ? "no" : "yes");
         if (symsearch(_phandle, symreq.base, 0, 0, symreq.match.data(), 0, SymbolMatchCallback,
-            (void*)&symbol_addrs, symreq.full ? SYMSEARCH_ALLITEMS : NULL))
+            (void*)&symbol_addrs, symreq.full ? SYMSEARCH_ALLITEMS : SYMSEARCH_GLOBALSONLY))
         {
             auto & symresp = _shmdriver->emplace<ipc::SymbolResponse>(ipc::SMDataID::SEARCHSYMS);
             symresp.size = std::min(symbol_addrs.size(), symresp.adresses.size());
