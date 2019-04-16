@@ -33,6 +33,8 @@
 #include "Module.h"
 #include "symbols.h"
 #include "statistics.h"
+#include "DrFile.h"
+
 #include "sink/hr-text.h"
 #ifdef XML_EXPORTER
 #include "sink/valkyrie.h"
@@ -55,6 +57,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Parse runtime arguments and print generated configuration
     drace::parse_args(argc, argv);
     drace::print_config();
+
+    // time app start
+    app_start = std::chrono::system_clock::now();
 
     bool success = config.loadfile(params.config_file);
     if (!success) {
@@ -97,6 +102,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     race_collector = std::make_unique<RaceCollector>(
         params.delayed_sym_lookup,
         symbol_table);
+    register_report_sinks();
 
     // Initialize Detector
     detector::init(argc, argv, race_collector_add_race);
@@ -111,11 +117,50 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
             dr_abort();
         }
     }
-
-    app_start = std::chrono::system_clock::now();
 }
 
 namespace drace {
+
+    static void register_report_sinks() {
+        // register the console printer
+        race_collector->register_sink(
+            std::make_shared<sink::HRText>(drace::log_file)
+        );
+
+        // when using direct lookup, we stream the races
+        if (!params.delayed_sym_lookup) {
+#ifdef XML_EXPORTER
+            if (params.xml_file != "") {
+                auto target = std::make_shared<DrFile>(params.xml_file, DR_FILE_WRITE_OVERWRITE);
+                if (target->good()) {
+                    race_collector->register_sink(
+                        std::make_shared<sink::Valkyrie>(
+                            target, params.argc, params.argv, dr_get_application_name(),
+                            app_start, app_stop)
+                    );
+                    LOG_NOTICE(0, "Stream data-races to %s in XML format", params.xml_file.c_str());
+                }
+                else {
+                    LOG_WARN(0, "Cannot create XML-report file");
+                }
+            }
+#endif
+            if (params.out_file != "") {
+                auto target = std::make_shared<DrFile>(params.out_file, DR_FILE_WRITE_OVERWRITE);
+                if (target->good()) {
+                    race_collector->register_sink(
+                        std::make_shared<sink::HRText>(target)
+                    );
+                    LOG_NOTICE(0, "Stream data-races to %s in text format", params.out_file.c_str());
+                }
+                else {
+                    LOG_WARN(0, "Cannot create text-report file");
+                }
+            }
+        }
+    }
+
+    // Events
     static void event_exit()
     {
         app_stop = std::chrono::system_clock::now();
@@ -128,9 +173,12 @@ namespace drace {
         generate_summary();
         stats->print_summary(drace::log_target);
 
+        LOG_INFO(-1, "found %i possible data-races", race_collector->num_races());
+
         // Cleanup all drace modules
         module_tracker.reset();
         memory_tracker.reset();
+        race_collector.reset();
         stats.reset();
 
         funwrap::finalize();
@@ -147,8 +195,7 @@ namespace drace {
 
         LOG_INFO(-1, "DRace exit");
 
-        if (drace::log_requires_close)
-            dr_close_file(drace::log_target);
+        log_file.reset();
     }
 
     static void event_thread_init(void *drcontext)
@@ -245,18 +292,10 @@ namespace drace {
         }
 
         // setup logging target
-        if (params.logfile == "null")
-            drace::log_target = nullptr;
-        else if (params.logfile == "stdout")
-            drace::log_target = (FILE*)dr_get_stdout_file();
-        else if (params.logfile == "stderr")
-            drace::log_target = (FILE*)dr_get_stderr_file();
-        else if (params.logfile != "") { // filename
-            if ((drace::log_target = (FILE*)dr_open_file(params.logfile.c_str(), DR_FILE_WRITE_OVERWRITE)) != INVALID_FILE)
-                drace::log_requires_close = true;
+        drace::log_file = std::make_shared<DrFile>(params.logfile, DR_FILE_WRITE_OVERWRITE);
+        if (log_file->good()) {
+            drace::log_target = log_file->get();
         }
-        else
-            drace::log_target = nullptr;
     }
 
     static void print_config() {
@@ -304,30 +343,35 @@ namespace drace {
 
     static void generate_summary() {
         using namespace drace;
-        race_collector->resolve_all();
 
-        if (params.out_file != "") {
-            FILE * racereport = (FILE*)dr_open_file(params.out_file.c_str(), DR_FILE_WRITE_OVERWRITE);
-            if (racereport != INVALID_FILE) {
-                sink::HRText hr_sink(racereport);
-                hr_sink.process_all(race_collector->get_races());
-                dr_close_file(racereport);
-            }
-            else {
-                LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
-            }
-        }
+        // with delayed lookup we cannot stream, hence we write
+        // the report here
+        if (params.delayed_sym_lookup) {
+            race_collector->resolve_all();
 
+            if (params.out_file != "") {
+                auto race_text_report = std::make_shared<DrFile>(params.out_file, DR_FILE_WRITE_OVERWRITE);
+                if (race_text_report->good()) {
+                    sink::HRText hr_sink(race_text_report);
+                    hr_sink.process_all(race_collector->get_races());
+                }
+                else {
+                    LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
+                }
+            }
 #ifdef XML_EXPORTER
-        // Write XML output
-        if (params.xml_file != "") {
-            std::ofstream races_xml_file(params.xml_file, std::ofstream::out);
-            sink::Valkyrie<std::ofstream> v_sink(races_xml_file,
-                params.argc, params.argv, dr_get_application_name(),
-                app_start, app_stop);
-            v_sink.process_all(race_collector->get_races());
-        }
+            // Write XML output
+            if (params.xml_file != "") {
+                auto race_xml_report = std::make_shared<DrFile>(params.xml_file, DR_FILE_WRITE_OVERWRITE);
+                if (race_xml_report->good()) {
+                    sink::Valkyrie v_sink(race_xml_report,
+                        params.argc, params.argv, dr_get_application_name(),
+                        app_start, app_stop);
+                    v_sink.process_all(race_collector->get_races());
+                }
+            }
 #endif
+        }
     }
 
 } // namespace drace

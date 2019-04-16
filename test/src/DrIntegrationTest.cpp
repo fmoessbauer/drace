@@ -56,6 +56,12 @@ TEST_P(FlagMode, DisabledAnnotations) {
 
 // Individual tests
 
+TEST_F(DrIntegration, DelayedLookup) {
+    // with delayed lookup all races have to be cached,
+    // hence make test more difficult by disabling suppressions
+    run("--delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 50);
+}
+
 TEST_F(DrIntegration, ExclStack) {
 	run("--excl-stack", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
 }
@@ -94,8 +100,12 @@ TEST_F(DrIntegration, ReportXML) {
         tinyxml2::XMLDocument doc;
         ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
         const auto errornode = doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
-        EXPECT_GT(errornode->FirstChildElement("tid")->UnsignedText(), 0);
+        EXPECT_GT(errornode->FirstChildElement("tid")->UnsignedText(), 0u);
         EXPECT_STREQ(errornode->FirstChildElement("kind")->GetText(), "Race");
+
+        const auto status = doc.FirstChildElement("valgrindoutput")->LastChildElement("status");
+        EXPECT_STREQ(status->FirstChildElement("state")->GetText(), "FINISHED");
+        EXPECT_GT(status->FirstChildElement("duration")->UnsignedText(), 0u);
     }
     std::remove(filename.c_str());
 }
