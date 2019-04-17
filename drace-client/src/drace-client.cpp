@@ -220,7 +220,7 @@ namespace drace {
 
         memory_tracker->event_thread_exit(drcontext);
 
-        LOG_INFO(-1, "Thread exited");
+        LOG_INFO(dr_get_thread_id(drcontext), "Thread exited");
     }
 
     static void parse_args(int argc, const char ** argv) {
@@ -232,7 +232,7 @@ namespace drace {
             (clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file + ")"),
             (
             (clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
-                (clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate)) % "instrument each nth instruction (default: no sampling)"
+                (clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate)) % "instrument each nth instruction (default: no sampling, 0: no instrumentation)"
                 ) % "sampling options",
                 (
             (clipp::option("--lossy").set(params.lossy) % "dynamically exclude fragments using lossy counting") &
@@ -258,6 +258,7 @@ namespace drace {
             clipp::option("--extctrl").set(params.extctrl) % "use second process for symbol lookup and state-controlling (required for Dotnet)",
             // for testing reasons only. Abort execution after the first race was detected
             clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
+            clipp::option("--stats").set(params.stats_show) % "display per-thread statistics on thread-exit",
             (clipp::option("--version")([]() {
             std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
                 << "Hash:    " << DRACE_BUILD_HASH << std::endl;

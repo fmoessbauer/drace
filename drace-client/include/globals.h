@@ -53,6 +53,7 @@ namespace drace {
 		/** Use external controller */
 		bool     extctrl{ false };
 		bool     break_on_race{ false };
+        bool     stats_show{ false };
 		unsigned stack_size{ 31 };
 		std::string  config_file{ "drace.ini" };
 		std::string  out_file;
