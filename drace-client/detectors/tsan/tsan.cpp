@@ -52,7 +52,7 @@ namespace detector {
         static std::atomic<uint64_t>    heap_ub{ 0 };
         /* Cannot use std::mutex here, hence use spinlock */
         static ipc::spinlock            mxspin;
-        static std::map<uint64_t, size_t, std::greater<uint64_t>> allocations;
+        static std::unordered_map<uint64_t, size_t> allocations;
         static std::unordered_map<detector::tid_t, ThreadState> thread_states;
 
         void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
@@ -153,33 +153,6 @@ namespace detector {
                 << "> version:   " << detector::version() << std::endl;
         }
 
-        /* precisely decide if (cropped to 32 bit) addr is on the heap */
-        template<bool fastapprox = false>
-        static inline bool on_heap(uint64_t addr) {
-            // filter step without locking
-            if (on_heap<true>(addr)) {
-                std::lock_guard<spinlock> lg(mxspin);
-
-                auto it = allocations.lower_bound(addr);
-                uint64_t beg = it->first;
-                size_t   sz = it->second;
-
-                return (addr < (beg + sz));
-            }
-            else {
-                return false;
-            }
-        }
-
-        /* approximate if (cropped to 23 bit) addr is on the heap
-        *  (no false-negatives, but possibly false positives)
-        */
-        template<>
-        static inline bool on_heap<true>(uint64_t addr) {
-            return ((addr >= heap_lb.load(std::memory_order_relaxed))
-                && (addr < heap_ub.load(std::memory_order_relaxed)));
-        }
-
     } // namespace tsan
 } // namespace detector
 
@@ -266,18 +239,13 @@ void detector::happens_after(tls_t tls, void* identifier) {
 void detector::read(tls_t tls, void* pc, void* addr, size_t size)
 {
     uint64_t addr_32 = lower_half((uint64_t)addr);
-    if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-        __tsan_read(tls, (void*)addr_32, (void*)pc);
-    }
+    __tsan_read(tls, (void*)addr_32, (void*)pc);
 }
 
 void detector::write(tls_t tls, void* pc, void* addr, size_t size)
 {
     uint64_t addr_32 = lower_half((uint64_t)addr);
-
-    if (!params.heap_only || on_heap<true>((uint64_t)addr_32)) {
-        __tsan_write(tls, (void*)addr_32, (void*)pc);
-    }
+    __tsan_write(tls, (void*)addr_32, (void*)pc);
 }
 
 void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
@@ -289,24 +257,6 @@ void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
         std::lock_guard<ipc::spinlock> lg(mxspin);
         allocations.emplace(addr_32, size);
     }
-
-    //std::cout << "alloc: addr: " << (void*)addr_32 << " size " << size << std::endl;
-
-    // this is a bit racy as other allocations might finish first
-    // but this is ok as only approximations are necessary
-
-    // increase heap upper bound
-    uint64_t new_ub = addr_32 + size;
-    if (new_ub > heap_ub.load(std::memory_order_relaxed)) {
-        heap_ub.store(new_ub, std::memory_order_relaxed);
-        //std::cout << "New heap ub " << std::hex << new_ub << std::endl;
-    }
-    // decrease heap lower bound
-    if (addr_32 < heap_lb.load(std::memory_order_relaxed)) {
-        heap_lb.store(addr_32, std::memory_order_relaxed);
-        //std::cout << "New heap lb " << std::hex << addr_32 << std::endl;
-    }
-
 }
 
 void detector::deallocate(tls_t tls, void* addr) {
@@ -317,28 +267,9 @@ void detector::deallocate(tls_t tls, void* addr) {
     if (allocations.count(addr_32) == 1) {
         size_t size = allocations[addr_32];
         allocations.erase(addr_32);
-        // if allocation was top of heap, decrease heap_limit
-        if (addr_32 + size == heap_ub.load(std::memory_order_relaxed)) {
-            if (allocations.size() != 0) {
-                auto upper_heap = allocations.rbegin();
-                heap_ub.store(upper_heap->first + upper_heap->second);
-            }
-            else {
-                heap_ub.store(0, std::memory_order_relaxed);
-            }
-        }
-        mxspin.unlock();
-
         __tsan_free((void*)addr_32, size);
-        //std::cout << "free: addr:  " << (void*)addr_32 << " size " << size << std::endl;
     }
-    else {
-        // we expect some errors here, as either dr does not catch all 
-        // alloc events, or they are not fully balanced.
-        // TODO: compare with drmemory
-        mxspin.unlock();
-        //std::cout << "Error on free at " << (void*) addr_32 << std::endl;
-    }
+    mxspin.unlock();
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {

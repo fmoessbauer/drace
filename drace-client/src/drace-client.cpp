@@ -271,7 +271,7 @@ namespace drace {
         auto detector_cli = clipp::group(
             // we just name the options here to provide a well-defined cli.
             // The detector parses the argv itself
-            clipp::option("--heap-only") % "only analyze heap memory"
+            clipp::option("--heap-only") % "only analyze heap memory (not supported currently)"
         );
         auto cli = (
             (drace_cli % "DRace Options"),
