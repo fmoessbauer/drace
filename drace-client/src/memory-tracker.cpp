@@ -155,14 +155,6 @@ namespace drace {
 			if (num_refs > 0) {
 				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 				DR_ASSERT(data->detector_data != nullptr);
-
-				auto * stack = &(data->stack);
-
-				// In non-fast-mode we have to protect the stack
-				if (!params.fastmode)
-					dr_mutex_lock(th_mutex);
-
-				DR_ASSERT(stack->entries >= 0);
 				
 				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 				if (params.lossy) {
@@ -172,9 +164,7 @@ namespace drace {
 					}
 				}
 
-				for (uint64_t i = 0; i < num_refs; ++i) {
-					// todo: better use iterator like access
-					mem_ref = &((mem_ref_t *)data->mem_buf.data)[i];
+                for (; mem_ref < (mem_ref_t *)data->buf_ptr; ++mem_ref) {
 					if (params.excl_stack &&
 						((ULONG_PTR)mem_ref->addr > data->appstack_beg) && 
 						((ULONG_PTR)mem_ref->addr < data->appstack_end))
@@ -186,10 +176,6 @@ namespace drace {
 						// outside process address space
 						continue;
 					}
-					// this is a mem-ref candidate
-					//if (!memory_tracker->sample_ref(data)) {
-					//	continue;
-					//}
 
 					if (mem_ref->write) {
 						detector::write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
@@ -201,8 +187,6 @@ namespace drace {
 					}
 					++(data->stats->proc_refs);
 				}
-				if (!params.fastmode)
-					dr_mutex_unlock(th_mutex);
 				data->stats->total_refs += num_refs;
 			}
 		}
@@ -293,8 +277,9 @@ namespace drace {
 		TLS_buckets.erase(data->tid);
 		dr_rwlock_write_unlock(tls_rw_mutex);
 
-        /* #i2, temporary disable the statistics */
-        //data->stats->print_summary(drace::log_target);
+        if (params.stats_show) {
+            data->stats->print_summary(drace::log_target);
+        }
 
 		// Cleanup TLS
 		// As we cannot rely on current drcontext here, use provided one
@@ -341,6 +326,7 @@ namespace drace {
 		}
 		else {
 			module_tracker->lock_read();
+            // TODO: investigate performance impact
 			modptr = (module_tracker->get_module_containing(bb_addr)).get();
 			if (modptr) {
 				// bb in known module
@@ -419,7 +405,7 @@ namespace drace {
 		// Sampling: Only instrument some instructions
 		// This is a racy increment, but we do not rely on exact numbers
 		auto cnt = ++instrum_count;
-		if (cnt % params.instr_rate != 0) {
+		if (params.instr_rate == 0 || cnt % params.instr_rate != 0) {
 			return DR_EMIT_DEFAULT;
 		}
 

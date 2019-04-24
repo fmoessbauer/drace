@@ -66,10 +66,9 @@ namespace drace {
 		}
 
 		/** Call Instrumentation */
-		static void on_call(void *call_ins, void *target_addr)
+		static void on_call(app_pc *call_ins, app_pc *target_addr)
 		{
 			void * drcontext = dr_get_current_drcontext();
-			DR_ASSERT(!dr_using_app_state(drcontext));
 
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			if (!params.fastmode) {
@@ -92,7 +91,7 @@ namespace drace {
 		}
 
 		/** Return Instrumentation */
-		static void on_ret(void *ret_ins, void *target_addr)
+		static void on_ret(app_pc *ret_ins, app_pc *target_addr)
 		{
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
 			stack_t * stack = &(data->stack);
@@ -120,6 +119,8 @@ namespace drace {
 			instr_t *instr, bool for_trace,
 			bool translating, void *user_data)
 		{
+            // TODO: Handle dotnet calls with push addr; ret;
+
 			if (instr == instrlist_last(bb)) {
 				if (instr_is_call_direct(instr))
 					dr_insert_call_instrumentation(drcontext, bb, instr, on_call);

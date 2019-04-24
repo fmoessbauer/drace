@@ -86,7 +86,7 @@ OPTIONS
                     sample each nth instruction (default: no sampling)
 
                 -i, --instr-rate <instr-rate>
-                    instrument each nth instruction (default: no sampling)
+                    instrument each nth instruction (default: no sampling, 0: no instrumentation)
 
             analysis scope
                 --lossy
