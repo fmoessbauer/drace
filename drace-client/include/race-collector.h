@@ -19,46 +19,48 @@
 #include <vector>
 #include <unordered_map>
 #include <chrono>
+#include <atomic>
 
 namespace drace {
-	class RaceCollector {
+    /**
+    * \brief collects all detected races and manages symbol resolving
+    *
+    * Note for developers: Be very cautious with concurrency in this class.
+    * Locking has to be avoided at all cost, as this heavily interferes with
+    * locks held by the application.
+    */
+    class RaceCollector {
     public:
-		/** Maximum number of races to collect in delayed mode */
-		static constexpr int MAX = 200;
-	private:
-        using RaceCollectionT = std::vector<race::DecoratedRace>;
-		using entry_t         = race::DecoratedRace;
-		using clock_t         = std::chrono::high_resolution_clock;
-		using tp_t            = decltype(clock_t::now());
+        /** Maximum number of races to collect in delayed mode */
+        static constexpr int MAX = 200;
+    private:
+        using RaceCollectionT = std::vector<std::unique_ptr<race::DecoratedRace>>;
+        using entry_t = race::DecoratedRace;
+        using clock_t = std::chrono::high_resolution_clock;
+        using tp_t = decltype(clock_t::now());
 
-		RaceCollectionT _races;
-        unsigned long   _race_count{0};
-		// TODO: histogram
+        RaceCollectionT _races;
+        std::atomic<uint_fast64_t> _race_count{ 0 };
+        // TODO: histogram
 
-		bool                     _delayed_lookup{ false };
-		std::shared_ptr<Symbols> _syms;
-		tp_t                     _start_time;
+        bool                     _delayed_lookup{ false };
+        std::shared_ptr<Symbols> _syms;
+        tp_t                     _start_time;
         std::set<uint64_t>       _racy_stacks;
 
-		std::vector<std::shared_ptr<sink::Sink>> _sinks;
+        std::vector<std::shared_ptr<sink::Sink>> _sinks;
 
-		void *                   _race_mx;
-
-	public:
-		RaceCollector(
-			bool delayed_lookup,
-			const std::shared_ptr<Symbols> & symbols)
-			: _delayed_lookup(delayed_lookup),
-			_syms(symbols),
-			_start_time(clock_t::now())
-		{
-			_races.reserve(10);
-			_race_mx = dr_mutex_create();
-		}
-
-		~RaceCollector() {
-			dr_mutex_destroy(_race_mx);
-		}
+    public:
+        RaceCollector(
+            bool delayed_lookup,
+            const std::shared_ptr<Symbols> & symbols)
+            : _delayed_lookup(delayed_lookup),
+            _syms(symbols),
+            _start_time(clock_t::now())
+        {
+            // we have to make sure the vector does not resize at any time
+            _races.resize(MAX);
+        }
 
         /**
         * register a sink that is notified on each race
@@ -67,6 +69,74 @@ namespace drace {
             _sinks.push_back(sink);
         }
 
+        /** Adds a race and updates histogram
+        *
+        * \note we must NOT use any locks here, as this callback heavily interferes
+        *       with application locks
+        * \note threadsafe
+        */
+        void add_race(const detector::Race * r) {
+            if (num_races() > MAX)
+                return;
+
+            auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
+
+            // TODO: as a first workaround for the locking issues here,
+            //       add a skip guard (let second concurrent call just skip this)
+
+            // TODO: this is not thread-safe, find workaround
+            if (filter_duplicates(r))
+                return;
+
+            auto rptr = std::make_unique<race::DecoratedRace>(*r, ttr);
+            resolve_race(*rptr);
+            // TODO: this is not thread-safe, find workaround
+            forward_race(*rptr);
+            auto cur_cntr = _race_count.fetch_add(1, std::memory_order_relaxed);
+
+            if (_delayed_lookup) {
+                _races[cur_cntr] = std::move(rptr);
+            }
+        }
+
+        /**
+        * Resolves all unresolved race entries
+        *
+        * \note not-threadsafe
+        */
+        void resolve_all() {
+            auto num_races = _race_count.load(std::memory_order_relaxed);
+            for (int i = 0; i < num_races; ++i) {
+                resolve_race(*_races[i]);
+            }
+        }
+
+        /**
+        * In delayed mode, return data-races.
+        * Otherwise return empty container
+        *
+        * \note internally we make a copy of all races, hence expect overhead
+        *       on each call. If possible, try to cache result
+        * \note threadsafe, eventually consistent
+        */
+        const std::vector<race::DecoratedRace> get_races() const {
+            std::vector<race::DecoratedRace> races;
+            auto num_races = _race_count.load(std::memory_order_relaxed);
+            races.reserve(num_races);
+            for (int i = 0; i < num_races; ++i) {
+                races.push_back(*_races[i]);
+            }
+            return races;
+        }
+
+        /**
+        * return the number of observed races
+        */
+        unsigned long num_races() const {
+            return static_cast<unsigned long>(_race_count);
+        }
+
+    private:
         /**
         * suppress this race if similar race is already reported
         * \return true if race is suppressed
@@ -86,114 +156,57 @@ namespace drace {
             return true;
         }
 
-		/** Adds a race and updates histogram
-		* TODO: The locking has to be removed completely as this callback
-		* heavily interferes with application locks. Use lockfree queue for
-		* storing the races
-        *
-        * \note not-threadsafe
-		*/
-		void add_race(const detector::Race * r) {
-			if (num_races() > MAX)
-				return;
-
-			auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
-
-            if (filter_duplicates(r))
-                return;
-
-            if (!_delayed_lookup) {
-                race::DecoratedRace dr(
-                    std::move(resolve_symbols(r->first)),
-                    std::move(resolve_symbols(r->second)),
-                    ttr);
-
-                //dr_mutex_lock(_race_mx);
-                _races.emplace_back(dr);
-                //dr_mutex_unlock(_race_mx);
+        /** Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
+        race::ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
+            race::ResolvedAccess ra(e);
+            for (unsigned i = 0; i < e.stack_size; ++i) {
+                ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
             }
-			else {
-				//dr_mutex_lock(_race_mx);
-				_races.emplace_back(*r, ttr); // TODO, validate ttr value
-				//dr_mutex_unlock(_race_mx);
-			}
-            ++_race_count;
-            // notify sinks about this race
-			forward_last_race();
-            // in non-delayed mode, we can drop the race
-            if (!_delayed_lookup)
-                _races.pop_back();
-		}
 
-		/** Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
-		race::ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
-			race::ResolvedAccess ra(e);
-			for (unsigned i = 0; i < e.stack_size; ++i) {
-				ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
-			}
+            void* drcontext = dr_get_current_drcontext();
+            dr_mcontext_t mc;
+            mc.size = sizeof(dr_mcontext_t);
+            mc.flags = DR_MC_ALL;
+            dr_get_mcontext(drcontext, &mc);
 
-			void* drcontext = dr_get_current_drcontext();
-			dr_mcontext_t mc;
-			mc.size = sizeof(dr_mcontext_t);
-			mc.flags = DR_MC_ALL;
-			dr_get_mcontext(drcontext, &mc);
+            // TODO: Validate external callstacks
+            //if(shmdriver)
+            //	MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
 
-			// TODO: Validate external callstacks
-			//if(shmdriver)
-			//	MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
+            return ra;
+        }
 
-			return ra;
-		}
-
-		/** Resolves all unresolved race entries */
-		void resolve_all() {
-			for (auto & r : _races) {
-				if (!r.is_resolved) {
-					r.first = std::move(resolve_symbols(r.first));
-					r.second = std::move(resolve_symbols(r.second));
-				}
-			}
-		}
-
-        /**
-        * forward last observed race to sinks
-        */
-        inline void forward_last_race() const {
-            for (const auto & s : _sinks) {
-                s->process_single_race(_races.back());
+        /** resolve a single race */
+        void resolve_race(race::DecoratedRace & race) {
+            if (!race.is_resolved) {
+                race.first = std::move(resolve_symbols(race.first));
+                race.second = std::move(resolve_symbols(race.second));
             }
         }
 
         /**
-        * In delayed mode, return data-races.
-        * Otherwise return empty container
+        * forward a single race to the sinks
         *
-        * \note not threadsafe.
-        *       If a new race arrives during inspection of this container,
-        *       the iterators might get invalidated
+        * \note threadsafe (if sinks are thread-safe)
         */
-		const RaceCollectionT & get_races() const {
-            return _races;
-		}
+        inline void forward_race(const race::DecoratedRace & race) const {
+            for (const auto & s : _sinks) {
+                s->process_single_race(race);
+            }
+        }
+    };
 
-        /**
-        * return the number of observed races
-        */
-		unsigned long num_races() const {
-			return static_cast<unsigned long>(_race_count);
-		}
-	};
-
-	/** This function provides a callback to the RaceCollector::add_race
-	*  on the singleton object. As we have to pass this callback to
-	*  as a function pointer to c, we cannot use std::bind
-	*/
-	static void race_collector_add_race(const detector::Race * r) {
-		race_collector->add_race(r);
-		// for benchmarking and testing
-		if (params.break_on_race) {
-			dr_abort();
-		}
-	}
+    /**
+    * This function provides a callback to the RaceCollector::add_race
+    * on the singleton object. As we have to pass this callback to
+    * as a function pointer to c, we cannot use std::bind
+    */
+    static void race_collector_add_race(const detector::Race * r) {
+        race_collector->add_race(r);
+        // for benchmarking and testing
+        if (params.break_on_race) {
+            dr_abort();
+        }
+    }
 
 } // namespace drace
