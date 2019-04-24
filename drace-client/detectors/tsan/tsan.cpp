@@ -39,20 +39,9 @@ namespace detector {
         /// reserved area at begin of shadow memory addr range;
         constexpr uint64_t MEMSTART = 4096;
 
-        /**
-         * To avoid false-positives track races only if they are on the heap
-         * invert order to get range using lower_bound
-         */
-        static std::atomic<bool>		alloc_readable{ true };
-        static std::atomic<uint64_t>	misses{ 0 };
-        static std::atomic<uint64_t>    races{ 0 };
-        // lower bound of heap
-        static std::atomic<uint64_t>    heap_lb{ std::numeric_limits<uint64_t>::max() };
-        // upper bound of heap
-        static std::atomic<uint64_t>    heap_ub{ 0 };
         /* Cannot use std::mutex here, hence use spinlock */
-        static ipc::spinlock            mxspin;
-        static std::unordered_map<uint64_t, size_t> allocations;
+        static ipc::spinlock mxspin;
+        static std::unordered_map<uint64_t, size_t>             allocations;
         static std::unordered_map<detector::tid_t, ThreadState> thread_states;
 
         void reportRaceCallBack(__tsan_race_info* raceInfo, void * add_race_clb) {
@@ -68,7 +57,6 @@ namespace detector {
                 detector::AccessEntry access;
                 if (i == 0) {
                     race_info_ac = raceInfo->access1;
-                    races.fetch_add(1, std::memory_order_relaxed);
                 }
                 else {
                     race_info_ac = raceInfo->access2;
@@ -85,15 +73,7 @@ namespace detector {
                 access.stack_size = ssize;
 
                 uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
-                // todo: lock allocations
-                mxspin.lock();
-                auto it = allocations.lower_bound(addr);
-                if (it != allocations.end() && (addr < (it->first + it->second))) {
-                    access.onheap = true;
-                    access.heap_block_begin = it->first;
-                    access.heap_block_size = it->second;
-                }
-                mxspin.unlock();
+                // TODO: Ask TSAN if block is on heap, or scan allocations map
 
                 if (i == 0) {
                     race.first = access;
@@ -176,8 +156,7 @@ void detector::finalize() {
         if (t.second.active)
             detector::finish(t.second.tsan, t.first);
     }
-    // TODO: this calls exit which we cannot do here
-    //__tsan_fini();
+    __tsan_fini();
     // do not perform IO here, as it crashes / interfers with dotnet
     //std::cout << "> ----- SUMMARY -----" << std::endl;
     //std::cout << "> Found " << races.load(std::memory_order_relaxed) << " possible data-races" << std::endl;
@@ -206,8 +185,6 @@ void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
     if (addr_32 < MEMSTART)
         addr_32 += MEMSTART;
 
-    //std::cout << "detector::acquire " << thread_id << " @ " << mutex << std::endl;
-
     assert(nullptr != tls);
 
     __tsan_mutex_after_lock(tls, (void*)addr_32, (void*)write);
@@ -218,8 +195,6 @@ void detector::release(tls_t tls, void* mutex, bool write) {
     // if the mutex is a handle, the ID might be too small
     if (addr_32 < MEMSTART)
         addr_32 += MEMSTART;
-
-    //std::cout << "detector::release " << thread_id << " @ " << mutex << std::endl;
 
     assert(nullptr != tls);
 

@@ -55,9 +55,6 @@ namespace drace {
 					if (ac.onheap) {
                         dr_fprintf(handle, "Block begin at %p, size %u\n", ac.heap_block_begin, ac.heap_block_size);
 			        }
-					else {
-                        dr_fprintf(handle, "Block not on heap (anymore)\n");
-					}
 
 					if (race.is_resolved) {
 						// stack is stored in reverse order, hence print inverted
