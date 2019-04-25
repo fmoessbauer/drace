@@ -96,56 +96,6 @@ namespace drace {
 		wrap_functions(mod, config.get_multi("functions", "deallocators"), false, Method::EXPORTS, event::free_pre, nullptr);
 	}
 
-	bool starters_wrap_callback(const char *name, size_t modoffs, void *data) {
-		module_data_t * mod = (module_data_t*)data;
-		bool ok = drwrap_wrap_ex(
-			mod->start + modoffs,
-			funwrap::event::thread_creation,
-			funwrap::event::thread_handover,
-			(void*)name,
-			DRWRAP_CALLCONV_FASTCALL);
-        if (ok) {
-            LOG_NOTICE(0, "wrapped thread-start function %s", name);
-        }
-		return true;
-	}
-
-	bool starters_sys_callback(const char *name, size_t modoffs, void *data) {
-		module_data_t * mod = (module_data_t*)data;
-		bool ok = drwrap_wrap_ex(
-			mod->start + modoffs,
-			funwrap::event::thread_pre_sys,
-			funwrap::event::thread_post_sys,
-			(void*)name,
-			DRWRAP_CALLCONV_FASTCALL);
-        if (ok) {
-            LOG_NOTICE(0, "wrapped system thread-start function %s", name);
-        }
-		return true;
-	}
-
-	void funwrap::wrap_thread_start(const module_data_t *mod) {
-		for (const auto & name : config.get_multi("functions", "thread_starters")) {
-			drsym_error_t err = drsym_search_symbols(
-				mod->full_path,
-				name.c_str(),
-				false,
-				(drsym_enumerate_cb)starters_wrap_callback,
-				(void*)mod);
-		}
-	}
-
-	void funwrap::wrap_thread_start_sys(const module_data_t *mod) {
-		for (const auto & name : config.get_multi("functions", "thread_starters_sys")) {
-			drsym_error_t err = drsym_search_symbols(
-				mod->full_path,
-				name.c_str(),
-				false,
-				(drsym_enumerate_cb)starters_sys_callback,
-				(void*)mod);
-		}
-	}
-
 	void funwrap::wrap_excludes(const module_data_t *mod, std::string section) {
 		wrap_functions(mod, config.get_multi(section, "exclude"), false, Method::DBGSYMS, event::begin_excl, event::end_excl);
 	}

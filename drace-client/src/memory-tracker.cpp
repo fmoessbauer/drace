@@ -217,15 +217,6 @@ namespace drace {
 		// set first sampling period
 		data->sampling_pos = params.sampling_rate;
 
-		// If threads are started concurrently, assume first thread is correct one
-		bool true_val = true;
-		if (th_start_pending.compare_exchange_weak(true_val, false,
-			std::memory_order_relaxed, std::memory_order_relaxed))
-		{
-			last_th_start = data->tid;
-			disable(data);
-		}
-
 		// this is the master thread
 		if (params.exclude_master && (data->tid == runtime_tid)) {
 			disable_scope(data);

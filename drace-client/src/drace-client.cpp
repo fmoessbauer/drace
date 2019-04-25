@@ -69,8 +69,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     }
     LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
 
-    TLS_buckets.reserve(128);
-
     th_mutex = dr_mutex_create();
     tls_rw_mutex = dr_rwlock_create();
 
