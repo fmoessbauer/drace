@@ -38,7 +38,6 @@ namespace drace {
 		unsigned long flushes{ 0 };
 		unsigned long flush_events{ 0 };
 		unsigned long external_flushes{ 0 };
-		ms_t time_in_flushes{ 0 };
 		unsigned long module_loads{ 0 };
 		ms_t module_load_duration{ 0 };
 		uint64_t proc_refs{ 0 };
@@ -77,7 +76,6 @@ namespace drace {
 				s << "avg. buffer size:\t" << std::dec << (total_refs / flushes) << std::endl;
 			}
 			s << "e-flushes:\t\t" << std::dec << external_flushes << std::endl
-				<< "flush-time (total):\t" << std::dec << time_in_flushes.count() << "ms" << std::endl
 				<< "analyzed-refs:\t\t" << std::dec << proc_refs << std::endl
 				<< "total-refs:\t\t" << std::dec << total_refs << std::endl
 				<< "module loads:\t\t" << std::dec << module_loads << std::endl
@@ -104,7 +102,6 @@ namespace drace {
 			flushes += other.flushes;
 			flush_events += other.flush_events;
 			external_flushes += other.external_flushes;
-			time_in_flushes += other.time_in_flushes;
 			module_loads += other.module_loads;
 			module_load_duration += other.module_load_duration;
 			proc_refs += other.proc_refs;

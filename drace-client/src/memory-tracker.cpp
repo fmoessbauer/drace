@@ -191,11 +191,6 @@ namespace drace {
 			}
 		}
 		data->buf_ptr = data->mem_buf.data;
-
-		if (!params.fastmode && !data->no_flush.load(std::memory_order_relaxed)) {
-			byte expect = 0;
-			data->no_flush.compare_exchange_weak(expect, (byte)1, std::memory_order_relaxed);
-		}
 	}
 
 	/*
@@ -238,11 +233,6 @@ namespace drace {
 
 		data->stats = std::make_unique<Statistics>(data->tid);
 
-		dr_rwlock_write_lock(tls_rw_mutex);
-		TLS_buckets.emplace(data->tid, data);
-		data->th_towait.reserve(TLS_buckets.bucket_count());
-		dr_rwlock_write_unlock(tls_rw_mutex);
-
 		flush_all_threads(data, false, false);
 
 #ifndef DRACE_USE_LEGACY_API
@@ -263,19 +253,9 @@ namespace drace {
 
         detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
 
-		dr_rwlock_write_lock(tls_rw_mutex);
 		// as this is a exclusive lock and this is the only place
 		// where stats are combined, we use it
 		*stats |= *(data->stats);
-
-		// As TLS_buckets stores a pointer to this tls,
-		// we cannot release the lock until the deallocation
-		// is finished. Otherwise a second thread might
-		// read a local copy of the tls while holding
-		// a read lock on TLS_buckets during deallocation
-		DR_ASSERT(TLS_buckets.count(data->tid) == 1);
-		TLS_buckets.erase(data->tid);
-		dr_rwlock_write_unlock(tls_rw_mutex);
 
         if (params.stats_show) {
             data->stats->print_summary(drace::log_target);
@@ -433,18 +413,6 @@ namespace drace {
 
 		analyze_access(data);
 		data->stats->flushes++;
-
-		// block until flush is done
-		if (!params.fastmode) {
-            unsigned tries = 0;
-			while (memory_tracker->flush_active.load(std::memory_order_relaxed)) {
-				++tries;
-				if (tries > 100) {
-					dr_thread_yield();
-					tries = 0;
-				}
-			}
-		}
 	}
 
 	void MemoryTracker::clear_buffer(void)
@@ -464,81 +432,8 @@ namespace drace {
 	*  \Warning: This function read-locks the TLS mutex
 	*/
 	void MemoryTracker::flush_all_threads(per_thread_t * data, bool self, bool flush_external) {
-		if (params.fastmode) {
-			if (self) process_buffer();
-			return;
-		}
-
-		DR_ASSERT(data != nullptr);
-		auto start = std::chrono::system_clock::now();
-		data->stats->flush_events++;
-
-		// Do not run two flushes simultaneously
-		int expect = false;
-		int cntr = 0;
-		while (memory_tracker->flush_active.compare_exchange_weak(expect, true, std::memory_order_relaxed)) {
-			if (++cntr > 100) {
-				dr_thread_yield();
-			}
-		}
-
-		if (self) {
-			analyze_access(data);
-		}
-
-		data->th_towait.clear();
-
-		// Preserve state by copying tls pointers to local array
-		dr_rwlock_read_lock(tls_rw_mutex);
-
-
-		// Get threads and notify them
-		for (const auto & td : TLS_buckets) {
-			if (td.first != data->tid && td.second->enabled && td.second->no_flush.load(std::memory_order_relaxed))
-			{
-				uint64_t refs = (td.second->buf_ptr - td.second->mem_buf.data) / sizeof(mem_ref_t);
-				if (refs > 0) {
-					//printf("[%.5i] Flush thread %.5i, ~numrefs, %u\n",
-					//	data->tid, td.first, refs);
-					// TODO: check if memory_order_relaxed is sufficient
-					td.second->no_flush.store(false, std::memory_order_relaxed);
-					data->th_towait.push_back(td);
-				}
-			}
-		}
-
-		// wait until all threads flushed
-		// this is a hacky half-barrier implementation
-		for (const auto & td : data->th_towait) {
-			// Flush thread given that:
-			// 1. thread is not the calling thread
-			// 2. thread is not disabled
-			unsigned waits = 0;
-			while (!td.second->no_flush.load(std::memory_order_relaxed)) {
-				if (++waits > 100) {
-					// avoid busy-waiting and blocking CPU if other thread did not flush
-					// within given period
-					if (flush_external) {
-						byte expect_bool = false;
-						if (td.second->external_flush.compare_exchange_weak(expect_bool, (byte)true, std::memory_order_release)) {
-							//	//dr_printf("<< Thread %i took to long to flush, flush externaly\n", td.first);
-							analyze_access(td.second);
-							td.second->stats->external_flushes++;
-							td.second->external_flush.store(false, std::memory_order_release);
-						}
-					}
-					// Here we might loose some refs, clear them
-					td.second->buf_ptr = td.second->mem_buf.data;
-					td.second->no_flush.store(true, std::memory_order_relaxed);
-					break;
-				}
-			}
-		}
-		memory_tracker->flush_active.store(false, std::memory_order_relaxed);
-		dr_rwlock_read_unlock(tls_rw_mutex);
-
-		auto duration = std::chrono::system_clock::now() - start;
-		data->stats->time_in_flushes += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+		if (self)
+            process_buffer();
 	}
 
 	void MemoryTracker::code_cache_init(void) {

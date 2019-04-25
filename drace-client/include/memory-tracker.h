@@ -186,12 +186,7 @@ namespace drace {
 		* and jump to our own code cache to call the clean_call when the buffer is full.
 		*/
 		inline void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write) {
-			if (params.fastmode) {
-				instrument_mem_fast(drcontext, ilist, where, ref, write);
-			}
-			else {
-				instrument_mem_full(drcontext, ilist, where, ref, write);
-			}
+			instrument_mem_fast(drcontext, ilist, where, ref, write);
 		}
 
 		/** Read data from external CB and modify instrumentation / detection accordingly */

@@ -130,4 +130,4 @@ TEST_F(DrIntegration, ReportText) {
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(DrIntegration,
 	FlagMode,
-	::testing::Values("--sync-mode", ""));
+	::testing::Values(""));

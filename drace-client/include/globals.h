@@ -46,7 +46,6 @@ namespace drace {
 		bool     excl_stack{ false };
 		bool     exclude_master{ false };
 		bool     delayed_sym_lookup{ false };
-		bool     fastmode{ true };
         /// search for annotations in modules of target application
         bool     annotations{ true };
         unsigned suppression_level{ 1 };
@@ -84,8 +83,6 @@ namespace drace {
         byte          enabled{ true };
         /// inverse of flush pending, jmpecxz
         std::atomic<byte> no_flush{ false };
-        /// external flush is currently executed;
-        std::atomic<byte> external_flush{ false };
         /// bool external change detected
         /// this flag is used to trigger the enable or disable
         /// logic on this thread
