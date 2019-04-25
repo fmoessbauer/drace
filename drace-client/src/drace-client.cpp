@@ -120,10 +120,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 namespace drace {
 
     static void register_report_sinks() {
-        // register the console printer
-        race_collector->register_sink(
-            std::make_shared<sink::HRText>(drace::log_file)
-        );
+        if (drace::log_target != NULL) {
+            // register the console printer
+            race_collector->register_sink(
+                std::make_shared<sink::HRText>(drace::log_file)
+            );
+        }
 
         // when using direct lookup, we stream the races
         if (!params.delayed_sym_lookup) {

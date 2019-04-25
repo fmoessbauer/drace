@@ -65,7 +65,9 @@ namespace drace {
 
 		Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const
 		{
+            lock_read();
 			auto m_it = _modules_idx.lower_bound(pc);
+            unlock_read();
 			if (m_it != _modules_idx.end() && pc < m_it->second->end) {
 				return m_it->second;
 			}

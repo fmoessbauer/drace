@@ -224,8 +224,6 @@ namespace drace {
 
 		data->stats = std::make_unique<Statistics>(data->tid);
 
-		flush_all_threads(data, false, false);
-
 #ifndef DRACE_USE_LEGACY_API
         // TODO: emulate this for windows 7
 		// determin stack range of this thread
@@ -236,30 +234,32 @@ namespace drace {
 #endif
 	}
 
-	void MemoryTracker::event_thread_exit(void *drcontext)
-	{
-		per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
+    void MemoryTracker::event_thread_exit(void *drcontext)
+    {
+        per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 
-		flush_all_threads(data, true, false);
+        flush_all_threads(data, true, false);
 
         detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
 
-		// as this is a exclusive lock and this is the only place
-		// where stats are combined, we use it
-		*stats |= *(data->stats);
+        // as this is a exclusive lock and this is the only place
+        // where stats are combined, we use it
+        dr_rwlock_write_lock(tls_rw_mutex);
+        *stats |= *(data->stats);
 
         if (params.stats_show) {
             data->stats->print_summary(drace::log_target);
         }
+        dr_rwlock_write_unlock(tls_rw_mutex);
 
-		// Cleanup TLS
-		// As we cannot rely on current drcontext here, use provided one
-		data->stack.deallocate(drcontext);
-		data->mem_buf.deallocate(drcontext);
-		// deconstruct struct
-		data->~per_thread_t();
-		dr_thread_free(drcontext, data, sizeof(per_thread_t));
-	}
+        // Cleanup TLS
+        // As we cannot rely on current drcontext here, use provided one
+        data->stack.deallocate(drcontext);
+        data->mem_buf.deallocate(drcontext);
+        // deconstruct struct
+        data->~per_thread_t();
+        dr_thread_free(drcontext, data, sizeof(per_thread_t));
+    }
 
 
 	/* We transform string loops into regular loops so we can more easily
@@ -296,9 +296,9 @@ namespace drace {
 			instrument_bb = modptr->instrument;
 		}
 		else {
-			module_tracker->lock_read();
             // TODO: investigate performance impact
-			modptr = (module_tracker->get_module_containing(bb_addr)).get();
+			auto s_modptr = module_tracker->get_module_containing(bb_addr);
+            modptr = s_modptr.get();
 			if (modptr) {
 				// bb in known module
 				instrument_bb = modptr->instrument;
@@ -309,7 +309,6 @@ namespace drace {
 				LOG_TRACE(0, "Module unknown, probably JIT code (%p)", bb_addr);
 				instrument_bb = (INSTR_FLAGS)(INSTR_FLAGS::MEMORY | INSTR_FLAGS::STACK);
 			}
-			module_tracker->unlock_read();
 		}
 
 		// Do not instrument if block is frequent
