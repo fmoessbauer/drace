@@ -91,14 +91,7 @@ namespace drace {
 
 			// first deallocate, then allocate again
 			void* old_addr = drwrap_get_arg(wrapctx, 2);
-
-			// to avoid high pressure on the internal spinlock,
-			// we lock externally using a os lock
-			// TODO: optimize tsan wrapper internally
-			dr_mutex_lock(th_mutex);
 			detector::deallocate(data->detector_data, old_addr);
-			//detector::happens_before(data->tid, old_addr);
-			dr_mutex_unlock(th_mutex);
 
 			*user_data = drwrap_get_arg(wrapctx, 3);
 			//LOG_INFO(data->tid, "reallocate, new blocksize %u at %p", (SIZE_T)*user_data, old_addr);
@@ -110,15 +103,10 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			void * addr = drwrap_get_arg(wrapctx, 2);
-
 			MemoryTracker::flush_all_threads(data);
 
-			// TODO: optimize tsan wrapper internally (see comment in alloc_post)
-			dr_mutex_lock(th_mutex);
+            void * addr = drwrap_get_arg(wrapctx, 2);
 			detector::deallocate(data->detector_data, addr);
-			//detector::happens_before(data->tid, addr);
-			dr_mutex_unlock(th_mutex);
 		}
 
 		void event::free_post(void *wrapctx, void *user_data) {
