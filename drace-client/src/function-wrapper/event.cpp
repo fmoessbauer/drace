@@ -91,14 +91,7 @@ namespace drace {
 
 			// first deallocate, then allocate again
 			void* old_addr = drwrap_get_arg(wrapctx, 2);
-
-			// to avoid high pressure on the internal spinlock,
-			// we lock externally using a os lock
-			// TODO: optimize tsan wrapper internally
-			dr_mutex_lock(th_mutex);
 			detector::deallocate(data->detector_data, old_addr);
-			//detector::happens_before(data->tid, old_addr);
-			dr_mutex_unlock(th_mutex);
 
 			*user_data = drwrap_get_arg(wrapctx, 3);
 			//LOG_INFO(data->tid, "reallocate, new blocksize %u at %p", (SIZE_T)*user_data, old_addr);
@@ -110,15 +103,10 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
 
-			void * addr = drwrap_get_arg(wrapctx, 2);
-
 			MemoryTracker::flush_all_threads(data);
 
-			// TODO: optimize tsan wrapper internally (see comment in alloc_post)
-			dr_mutex_lock(th_mutex);
+            void * addr = drwrap_get_arg(wrapctx, 2);
 			detector::deallocate(data->detector_data, addr);
-			//detector::happens_before(data->tid, addr);
-			dr_mutex_unlock(th_mutex);
 		}
 
 		void event::free_post(void *wrapctx, void *user_data) {
@@ -127,60 +115,6 @@ namespace drace {
 
 			//end_excl_region(data);
 			//dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
-		}
-
-		void event::thread_creation(void *wrapctx, void **user_data) {
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			beg_excl_region(data);
-
-			th_start_pending.store(true);
-			LOG_INFO(data->tid, "setup new thread");
-		}
-		void event::thread_handover(void *wrapctx, void *user_data) {
-            SKIP_ON_EXCEPTION(wrapctx);
-			app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			DR_ASSERT(nullptr != data);
-
-			end_excl_region(data);
-			// Enable recently started thread
-			auto last_th = last_th_start.load(std::memory_order_relaxed);
-			// TLS is already updated, hence read lock is sufficient
-			dr_rwlock_read_lock(tls_rw_mutex);
-			if (TLS_buckets.count(last_th) == 1) {
-				auto & other_tls = TLS_buckets[last_th];
-				if (other_tls->event_cnt == 0)
-					MemoryTracker::enable(TLS_buckets[last_th]);
-			}
-			dr_rwlock_read_unlock(tls_rw_mutex);
-			LOG_INFO(data->tid, "new thread created: %i", last_th_start.load());
-		}
-
-		void event::thread_pre_sys(void *wrapctx, void **user_data) {
-		}
-
-		/* Deprecated as this did never really work */
-		void event::thread_post_sys(void *wrapctx, void *user_data) {
-			return; // TODO: Fix or remove this code
-#if 0
-			//app_pc drcontext = drwrap_get_drcontext(wrapctx);
-			//per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			dr_rwlock_read_lock(tls_rw_mutex);
-			auto other_th = last_th_start.load(std::memory_order_acquire);
-			// There are some spurious failures where the thread init event
-			// is not called but the system call has already returned
-			// Hence, skip the fork here and rely on fallback-fork in
-			// analyze_access
-			if (TLS_buckets.count(other_th) == 1) {
-				auto other_tls = TLS_buckets[other_th];
-				//MemoryTracker::flush_all_threads(data, false);
-				//detector::fork(dr_get_thread_id(drcontext), other_tls->tid, &(other_tls->detector_data));
-			}
-			dr_rwlock_read_unlock(tls_rw_mutex);
-#endif
 		}
 
 		void event::begin_excl(void *wrapctx, void **user_data) {

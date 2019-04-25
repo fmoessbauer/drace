@@ -19,54 +19,119 @@
 #include <vector>
 #include <unordered_map>
 #include <chrono>
+#include <atomic>
 
 namespace drace {
-	class RaceCollector {
+    /**
+    * \brief collects all detected races and manages symbol resolving
+    *
+    * Note for developers: Be very cautious with concurrency in this class.
+    * Locking has to be avoided if possible, as this might interfere with
+    * locks held by the application.
+    */
+    class RaceCollector {
     public:
-		/** Maximum number of races to collect in delayed mode */
-		static constexpr int MAX = 200;
-	private:
+        /** Maximum number of races to collect in delayed mode */
+        static constexpr int MAX = 200;
+    private:
         using RaceCollectionT = std::vector<race::DecoratedRace>;
-		using entry_t         = race::DecoratedRace;
-		using clock_t         = std::chrono::high_resolution_clock;
-		using tp_t            = decltype(clock_t::now());
+        using entry_t = race::DecoratedRace;
+        using clock_t = std::chrono::high_resolution_clock;
+        using tp_t = decltype(clock_t::now());
 
-		RaceCollectionT _races;
-        unsigned long   _race_count{0};
-		// TODO: histogram
+        RaceCollectionT _races;
+        /// guards all accesses to the _races container
+        void * _races_lock;
+        unsigned long _race_count{ 0 };
 
-		bool                     _delayed_lookup{ false };
-		std::shared_ptr<Symbols> _syms;
-		tp_t                     _start_time;
+        bool                     _delayed_lookup{ false };
+        std::shared_ptr<Symbols> _syms;
+        tp_t                     _start_time;
         std::set<uint64_t>       _racy_stacks;
 
-		std::vector<std::shared_ptr<sink::Sink>> _sinks;
+        std::vector<std::shared_ptr<sink::Sink>> _sinks;
 
-		void *                   _race_mx;
+    public:
+        RaceCollector(
+            bool delayed_lookup,
+            const std::shared_ptr<Symbols> & symbols)
+            : _delayed_lookup(delayed_lookup),
+            _syms(symbols),
+            _start_time(clock_t::now())
+        {
+            _races.reserve(1);
+            _races_lock = dr_mutex_create();
+        }
 
-	public:
-		RaceCollector(
-			bool delayed_lookup,
-			const std::shared_ptr<Symbols> & symbols)
-			: _delayed_lookup(delayed_lookup),
-			_syms(symbols),
-			_start_time(clock_t::now())
-		{
-			_races.reserve(10);
-			_race_mx = dr_mutex_create();
-		}
-
-		~RaceCollector() {
-			dr_mutex_destroy(_race_mx);
-		}
+        ~RaceCollector() {
+            dr_mutex_destroy(_races_lock);
+        }
 
         /**
         * register a sink that is notified on each race
+        * \note not-threadsafe
         */
         void register_sink(const std::shared_ptr<sink::Sink> & sink) {
             _sinks.push_back(sink);
         }
 
+        /** Adds a race and updates histogram
+        *
+        * \note threadsafe
+        */
+        void add_race(const detector::Race * r) {
+            if (num_races() > MAX)
+                return;
+
+            auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
+
+            dr_mutex_lock(_races_lock);
+            if (!filter_duplicates(r)) {
+                _races.emplace_back(*r, ttr);
+                if (!_delayed_lookup) {
+                    resolve_race(_races.back());
+                }
+                forward_race(_races.back());
+                // destroy race in streaming mode
+                if (!_delayed_lookup) {
+                    _races.pop_back();
+                }
+                _race_count += 1;
+            }
+            dr_mutex_unlock(_races_lock);
+        }
+
+        /**
+        * Resolves all unresolved race entries
+        *
+        * \note threadsafe
+        */
+        void resolve_all() {
+            dr_mutex_lock(_races_lock);
+            for (auto & r : _races) {
+                resolve_race(r);
+            }
+            dr_mutex_unlock(_races_lock);
+        }
+
+        /**
+        * In delayed mode, return data-races.
+        * Otherwise return empty container
+        *
+        * \note not-threadsafe
+        */
+        const std::vector<race::DecoratedRace> & get_races() const {
+            return _races;
+        }
+
+        /**
+        * return the number of observed races
+        */
+        unsigned long num_races() const {
+            return _race_count;
+        }
+
+    private:
         /**
         * suppress this race if similar race is already reported
         * \return true if race is suppressed
@@ -86,114 +151,54 @@ namespace drace {
             return true;
         }
 
-		/** Adds a race and updates histogram
-		* TODO: The locking has to be removed completely as this callback
-		* heavily interferes with application locks. Use lockfree queue for
-		* storing the races
-        *
-        * \note not-threadsafe
-		*/
-		void add_race(const detector::Race * r) {
-			if (num_races() > MAX)
-				return;
-
-			auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
-
-            if (filter_duplicates(r))
-                return;
-
-            if (!_delayed_lookup) {
-                race::DecoratedRace dr(
-                    std::move(resolve_symbols(r->first)),
-                    std::move(resolve_symbols(r->second)),
-                    ttr);
-
-                //dr_mutex_lock(_race_mx);
-                _races.emplace_back(dr);
-                //dr_mutex_unlock(_race_mx);
+        /** Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
+        void resolve_symbols(race::ResolvedAccess  & ra) {
+            for (unsigned i = 0; i < ra.stack_size; ++i) {
+                ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)ra.stack_trace[i]));
             }
-			else {
-				//dr_mutex_lock(_race_mx);
-				_races.emplace_back(*r, ttr); // TODO, validate ttr value
-				//dr_mutex_unlock(_race_mx);
-			}
-            ++_race_count;
-            // notify sinks about this race
-			forward_last_race();
-            // in non-delayed mode, we can drop the race
-            if (!_delayed_lookup)
-                _races.pop_back();
-		}
 
-		/** Takes a detector Access Entry, resolves symbols and converts it to a ResolvedAccess */
-		race::ResolvedAccess resolve_symbols(const detector::AccessEntry & e) const {
-			race::ResolvedAccess ra(e);
-			for (unsigned i = 0; i < e.stack_size; ++i) {
-				ra.resolved_stack.emplace_back(_syms->get_symbol_info((app_pc)e.stack_trace[i]));
-			}
+#if 0
+            // TODO: possibly use this information to refine callstack
+            void* drcontext = dr_get_current_drcontext();
+            dr_mcontext_t mc;
+            mc.size = sizeof(dr_mcontext_t);
+            mc.flags = DR_MC_ALL;
+            dr_get_mcontext(drcontext, &mc);
+#endif
+        }
 
-			void* drcontext = dr_get_current_drcontext();
-			dr_mcontext_t mc;
-			mc.size = sizeof(dr_mcontext_t);
-			mc.flags = DR_MC_ALL;
-			dr_get_mcontext(drcontext, &mc);
-
-			// TODO: Validate external callstacks
-			//if(shmdriver)
-			//	MSR::getCurrentStack(e.thread_id, (void*)mc.xbp, (void*)mc.xsp, (void*)e.stack_trace[e.stack_size-1]);
-
-			return ra;
-		}
-
-		/** Resolves all unresolved race entries */
-		void resolve_all() {
-			for (auto & r : _races) {
-				if (!r.is_resolved) {
-					r.first = std::move(resolve_symbols(r.first));
-					r.second = std::move(resolve_symbols(r.second));
-				}
-			}
-		}
-
-        /**
-        * forward last observed race to sinks
-        */
-        inline void forward_last_race() const {
-            for (const auto & s : _sinks) {
-                s->process_single_race(_races.back());
+        /** resolve a single race */
+        void resolve_race(race::DecoratedRace & race) {
+            if (!race.is_resolved) {
+                resolve_symbols(race.first);
+                resolve_symbols(race.second);
             }
+            race.is_resolved = true;
         }
 
         /**
-        * In delayed mode, return data-races.
-        * Otherwise return empty container
+        * forward a single race to the sinks
         *
-        * \note not threadsafe.
-        *       If a new race arrives during inspection of this container,
-        *       the iterators might get invalidated
+        * \note not-threadsafe
         */
-		const RaceCollectionT & get_races() const {
-            return _races;
-		}
+        inline void forward_race(const race::DecoratedRace & race) const {
+            for (const auto & s : _sinks) {
+                s->process_single_race(race);
+            }
+        }
+    };
 
-        /**
-        * return the number of observed races
-        */
-		unsigned long num_races() const {
-			return static_cast<unsigned long>(_race_count);
-		}
-	};
-
-	/** This function provides a callback to the RaceCollector::add_race
-	*  on the singleton object. As we have to pass this callback to
-	*  as a function pointer to c, we cannot use std::bind
-	*/
-	static void race_collector_add_race(const detector::Race * r) {
-		race_collector->add_race(r);
-		// for benchmarking and testing
-		if (params.break_on_race) {
-			dr_abort();
-		}
-	}
+    /**
+    * This function provides a callback to the RaceCollector::add_race
+    * on the singleton object. As we have to pass this callback to
+    * as a function pointer to c, we cannot use std::bind
+    */
+    static void race_collector_add_race(const detector::Race * r) {
+        race_collector->add_race(r);
+        // for benchmarking and testing
+        if (params.break_on_race) {
+            dr_abort();
+        }
+    }
 
 } // namespace drace

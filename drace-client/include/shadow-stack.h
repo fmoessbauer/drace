@@ -71,11 +71,7 @@ namespace drace {
 			void * drcontext = dr_get_current_drcontext();
 
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-			if (!params.fastmode) {
-				while (data->external_flush.load(std::memory_order_relaxed)) {
-					// wait
-				}
-			}
+
 			// TODO: possibibly racy in non-fast-mode
 			MemoryTracker::analyze_access(data);
 
@@ -96,11 +92,6 @@ namespace drace {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
 			stack_t * stack = &(data->stack);
 
-			if (!params.fastmode) {
-				while (data->external_flush.load(std::memory_order_relaxed)) {
-					// wait
-				}
-			}
 			MemoryTracker::analyze_access(data);
 
 			if (stack->entries == 0) return;

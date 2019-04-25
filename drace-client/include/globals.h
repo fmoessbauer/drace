@@ -46,7 +46,6 @@ namespace drace {
 		bool     excl_stack{ false };
 		bool     exclude_master{ false };
 		bool     delayed_sym_lookup{ false };
-		bool     fastmode{ true };
         /// search for annotations in modules of target application
         bool     annotations{ true };
         unsigned suppression_level{ 1 };
@@ -84,8 +83,6 @@ namespace drace {
         byte          enabled{ true };
         /// inverse of flush pending, jmpecxz
         std::atomic<byte> no_flush{ false };
-        /// external flush is currently executed;
-        std::atomic<byte> external_flush{ false };
         /// bool external change detected
         /// this flag is used to trigger the enable or disable
         /// logic on this thread
@@ -125,14 +122,11 @@ namespace drace {
 
 	/** Thread local storage */
 	extern int      tls_idx;
-	extern std::unordered_map<thread_id_t, per_thread_t*> TLS_buckets;
 	extern void* tls_rw_mutex;
 
 	// TODO check if global is better
 	extern std::atomic<int> num_threads_active;
 	extern std::atomic<uint> runtime_tid;
-	extern std::atomic<thread_id_t> last_th_start;
-	extern std::atomic<bool> th_start_pending;
 
 	// Start time of the application
 	extern std::chrono::system_clock::time_point app_start;

@@ -34,8 +34,6 @@ namespace drace {
 
 	std::atomic<int> num_threads_active{ 0 };
 	std::atomic<uint> runtime_tid{ 0 };
-	std::atomic<thread_id_t> last_th_start{ 0 };
-	std::atomic<bool> th_start_pending{ false };
 
 	std::chrono::system_clock::time_point app_start;
 	std::chrono::system_clock::time_point app_stop;

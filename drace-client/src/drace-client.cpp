@@ -69,8 +69,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     }
     LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
 
-    TLS_buckets.reserve(128);
-
     th_mutex = dr_mutex_create();
     tls_rw_mutex = dr_rwlock_create();
 
@@ -122,10 +120,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 namespace drace {
 
     static void register_report_sinks() {
-        // register the console printer
-        race_collector->register_sink(
-            std::make_shared<sink::HRText>(drace::log_file)
-        );
+        if (drace::log_target != NULL) {
+            // register the console printer
+            race_collector->register_sink(
+                std::make_shared<sink::HRText>(drace::log_file)
+            );
+        }
 
         // when using direct lookup, we stream the races
         if (!params.delayed_sym_lookup) {
@@ -245,8 +245,6 @@ namespace drace {
             ("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
-            clipp::option("--sync-mode").set(params.fastmode, false) % "flush all buffers on a sync event (instead of participating only)",
-            clipp::option("--fast-mode").set(params.fastmode) % "DEPRECATED: inverse of sync-mode",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
             (
 #ifndef DRACE_USE_LEGACY_API
@@ -311,7 +309,6 @@ namespace drace {
             "< Exclude Master:\t%s\n"
             "< Annotation Sup.:\t%s\n"
             "< Delayed Sym Lookup:\t%s\n"
-            "< Fast Mode:\t\t%s\n"
             "< Config File:\t\t%s\n"
             "< Output File:\t\t%s\n"
             "< XML File:\t\t%s\n"
@@ -328,7 +325,6 @@ namespace drace {
             params.exclude_master ? "ON" : "OFF",
             params.annotations ? "ON" : "OFF",
             params.delayed_sym_lookup ? "ON" : "OFF",
-            params.fastmode ? "ON" : "OFF",
             params.config_file.c_str(),
             params.out_file != "" ? params.out_file.c_str() : "OFF",
 #ifdef DRACE_USE_LEGACY_API

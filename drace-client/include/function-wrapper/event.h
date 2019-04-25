@@ -47,12 +47,6 @@ namespace drace {
 			static void free_pre(void *wrapctx, void **user_data);
 			static void free_post(void *wrapctx, void *user_data);
 
-			static void thread_creation(void *wrapctx, void **user_data);
-			static void thread_handover(void *wrapctx, void *user_data);
-
-			static void thread_pre_sys(void *wrapctx, void **user_data);
-			static void thread_post_sys(void *wrapctx, void *user_data);
-
 			static void begin_excl(void *wrapctx, void **user_data);
 			static void end_excl(void *wrapctx, void *user_data);
 

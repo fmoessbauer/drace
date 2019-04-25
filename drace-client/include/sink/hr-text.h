@@ -44,7 +44,6 @@ namespace drace {
                 ss.clear();
 
                 dr_fprintf(handle, "%s\n", header.c_str());
-
 				for (int i = 0; i != 2; ++i) {
 					race::ResolvedAccess ac = (i == 0) ? race.first : race.second;
 
@@ -55,22 +54,21 @@ namespace drace {
 					if (ac.onheap) {
                         dr_fprintf(handle, "Block begin at %p, size %u\n", ac.heap_block_begin, ac.heap_block_size);
 			        }
-					else {
-                        dr_fprintf(handle, "Block not on heap (anymore)\n");
-					}
 
 					if (race.is_resolved) {
 						// stack is stored in reverse order, hence print inverted
 						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
-                            dr_fprintf(handle, "# %p %s", p, ac.resolved_stack[ssize - 1 - p].get_pretty().c_str());
+                            std::string pretty(ac.resolved_stack[ssize - 1 - p].get_pretty());
+                            dr_fprintf(handle, "# %p %s", p, pretty.c_str());
 						}
 					}
 					else {
                         dr_fprintf(handle, "-> (unresolved stack size: %u)\n", ac.stack_size);
 					}
 				}
-				dr_fprintf(handle, "%s\n", std::string(header.length(), '-').c_str());
+                std::string footer(header.length(), '-');
+				dr_fprintf(handle, "%s\n", footer.c_str());
                 dr_flush_file(handle);
             }
 
