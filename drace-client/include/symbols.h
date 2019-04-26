@@ -31,32 +31,41 @@ namespace drace {
 
 		/** Pretty print symbol location */
 		std::string get_pretty() const {
-			std::stringstream result;
-			result << "PC " << std::hex << (void*)pc;
+            // we use c-style formatting here, as we cannot
+            // use std::stringstream (see i#9)
+            constexpr int bufsize = 256;
+            char strbuf[bufsize];
+
+            dr_snprintf(strbuf, bufsize, "PC %p ", pc);
 			if (nullptr != mod_base) {
-				result << " (rel: " << (void*)(pc - mod_base) << ")";
+                size_t len = strlen(strbuf);
+                dr_snprintf(strbuf + len, bufsize - len,
+                    "(rel: %#010x)\n", (void*)(pc - mod_base));
 			}
 			else {
-				result << " (dynamic code)";
+                size_t len = strlen(strbuf);
+                dr_snprintf(strbuf + len, bufsize - len,
+                    "(dynamic code)\n");
 			}
 			if (mod_name != "") {
-				result << "\n\tModule " << mod_name;
+                size_t len = strlen(strbuf);
+                dr_snprintf(strbuf + len, bufsize - len,
+                    "\tModule %s\n", mod_name.c_str());
+
 				if (sym_name != "") {
-					result << " - " << sym_name << "\n";
-				}
-#if 0
-                // this information is not very interesting for the end-user
-				if (mod_base != mod_end) {
-					result << "\tfrom " << (void*)mod_base
-						<< " to " << (void*)mod_end << "\n";
-				}
-#endif
+                    // we overwrite the last \n here
+                    size_t len = strlen(strbuf);
+                    dr_snprintf(strbuf + len-1, bufsize - len,
+                        " - %s\n", sym_name.c_str());
+                }
+
 				if (file != "") {
-					result << "\tFile " << file << ":" << std::dec
-						<< line << " + " << line_offs << "\n";
+                    size_t len = strlen(strbuf);
+                    dr_snprintf(strbuf + len, bufsize - len,
+                        "\tFile %s:%i + %i\n", file.c_str(), (int)line, (int)line_offs);
 				}
 			}
-			return result.str();
+            return std::string(strbuf);
 		}
 	};
 

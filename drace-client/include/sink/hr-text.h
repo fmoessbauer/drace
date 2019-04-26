@@ -56,7 +56,7 @@ namespace drace {
 						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
                             std::string pretty(ac.resolved_stack[ssize - 1 - p].get_pretty());
-                            dr_fprintf(handle, "# %p %s", p, pretty.c_str());
+                            dr_fprintf(handle, "%#04x %s", (int)p, pretty.c_str());
 						}
 					}
 					else {
