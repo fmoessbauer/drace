@@ -67,12 +67,13 @@ namespace drace {
 		{
             lock_read();
 			auto m_it = _modules_idx.lower_bound(pc);
+            auto mptr = m_it->second;
             unlock_read();
-			if (m_it != _modules_idx.end() && pc < m_it->second->end) {
-				return m_it->second;
+			if (m_it != _modules_idx.end() && pc < mptr->end) {
+				return mptr;
 			}
 			else {
-				return nullptr;
+                return nullptr;
 			}
 		}
 
@@ -257,9 +258,7 @@ namespace drace {
 			LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s",
 				dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
-			module_tracker->lock_read();
 			auto modptr = module_tracker->get_module_containing(mod->start);
-			module_tracker->unlock_read();
 			if (modptr) {
 				modptr->loaded = false;
 			}
