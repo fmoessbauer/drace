@@ -90,7 +90,7 @@ namespace drace {
 					const auto & f = stack[ssize - 1 - i];
 					p.OpenElement("frame");
                     // format program counter
-                    snprintf(strbuf, sizeof(strbuf), "%#018llx", (uint64_t)f.pc);
+                    dr_snprintf(strbuf, sizeof(strbuf), "%#018llx", (uint64_t)f.pc);
 					p.OpenElement("ip"); p.PushText(strbuf); p.CloseElement();
 					p.OpenElement("obj"); p.PushText(f.mod_name.c_str()); p.CloseElement();
 					if (!f.sym_name.empty()) {
@@ -112,11 +112,12 @@ namespace drace {
                 const race::ResolvedAccess & r = race.first;
                 const race::ResolvedAccess & r2 = race.second;
                 auto & p = _printer;
+                // buffer for pc formatting
+                char strbuf[256];
 
                 p.OpenElement("error");
-                std::stringstream unique;
-                unique << "0x" << std::hex << _num_processed++;
-                p.OpenElement("unique"); p.PushText(unique.str().c_str()); p.CloseElement();
+                dr_snprintf(strbuf, sizeof(strbuf), "%#04dx", _num_processed++);
+                p.OpenElement("unique"); p.PushText(strbuf); p.CloseElement();
                 p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
                 p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
                 p.OpenElement("kind"); p.PushText("Race"); p.CloseElement();
@@ -124,12 +125,9 @@ namespace drace {
                 {
                     p.OpenElement("xwhat");
                     p.OpenElement("text");
-                    std::stringstream text;
-                    text << "Possible data race during ";
-                    text << (r2.write ? "write" : "read") << " of size "
-                        << r2.access_size << " at 0x" << std::hex << r2.accessed_memory
-                        << " by thread #" << std::dec << r2.thread_id;
-                    p.PushText(text.str().c_str());
+                    dr_snprintf(strbuf, sizeof(strbuf), "Possible data race during %s of size %ull at %#018llx by thread #%d",
+                        (r2.write ? "write" : "read"), r2.access_size, r2.accessed_memory, r2.thread_id);
+                    p.PushText(strbuf);
                     p.CloseElement();
                     p.OpenElement("hthreadid"); p.PushText(r2.thread_id); p.CloseElement();
                     p.CloseElement();
@@ -138,12 +136,8 @@ namespace drace {
                 {
                     p.OpenElement("xwhat");
                     p.OpenElement("text");
-                    std::stringstream text;
-                    text << "This conflicts with a previous ";
-                    text << (r.write ? "write" : "read") << " of size "
-                        << r.access_size << " at 0x" << std::hex << r.accessed_memory
-                        << " by thread #" << std::dec << r.thread_id;
-                    p.PushText(text.str().c_str());
+                    dr_snprintf(strbuf, sizeof(strbuf), "This conflicts with a previous %s of size %d at %#018llx by thread #%d",
+                        (r.write ? "write" : "read"), r.access_size, r.accessed_memory, r.thread_id);
                     p.CloseElement();
                     p.OpenElement("hthreadid"); p.PushText(r.thread_id); p.CloseElement();
                     p.CloseElement();
