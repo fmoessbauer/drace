@@ -171,7 +171,11 @@ namespace drace {
 
         // Generate summary while information is still present
         generate_summary();
-        stats->print_summary(drace::log_target);
+
+        if (params.stats_show) {
+            // TODO: workaround for i#9. After print_summary is fixed, remove this guard
+            stats->print_summary(drace::log_target);
+        }
 
         LOG_INFO(-1, "found %i possible data-races", race_collector->num_races());
 

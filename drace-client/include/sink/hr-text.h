@@ -38,12 +38,8 @@ namespace drace {
 
 			virtual void process_single_race(const race::DecoratedRace & race) {
                 FILE * handle = _target->get();
-				std::stringstream ss;
-				ss << "----- DATA Race at " << std::dec << race.elapsed.count() << "ms runtime -----";
-				std::string header(ss.str());
-                ss.clear();
+                dr_fprintf(handle, "----- DATA Race at %8lld ms runtime -----\n", race.elapsed.count());
 
-                dr_fprintf(handle, "%s\n", header.c_str());
 				for (int i = 0; i != 2; ++i) {
 					race::ResolvedAccess ac = (i == 0) ? race.first : race.second;
 
@@ -60,15 +56,14 @@ namespace drace {
 						int ssize = static_cast<int>(ac.resolved_stack.size());
 						for (int p = 0; p < ssize; ++p) {
                             std::string pretty(ac.resolved_stack[ssize - 1 - p].get_pretty());
-                            dr_fprintf(handle, "# %p %s", p, pretty.c_str());
+                            dr_fprintf(handle, "%#04x %s", (int)p, pretty.c_str());
 						}
 					}
 					else {
                         dr_fprintf(handle, "-> (unresolved stack size: %u)\n", ac.stack_size);
 					}
 				}
-                std::string footer(header.length(), '-');
-				dr_fprintf(handle, "%s\n", footer.c_str());
+				dr_fprintf(handle, "--------------------------------------------\n");
                 dr_flush_file(handle);
             }
 

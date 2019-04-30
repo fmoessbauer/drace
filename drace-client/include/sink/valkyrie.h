@@ -81,15 +81,17 @@ namespace drace {
 
 			void print_stack(const std::vector<SymbolLocation> & stack) {
                 auto & p = _printer;
+                // buffer for pc formatting
+                char strbuf[32];
+
 				p.OpenElement("stack");
 				int ssize = static_cast<int>(stack.size());
 				for (int i = 0; i < ssize; ++i) {
 					const auto & f = stack[ssize - 1 - i];
 					p.OpenElement("frame");
-
-					std::stringstream pc;
-					pc << "0x" << std::hex << (uint64_t)f.pc;
-					p.OpenElement("ip"); p.PushText(pc.str().c_str()); p.CloseElement();
+                    // format program counter
+                    snprintf(strbuf, sizeof(strbuf), "%#018llx", (uint64_t)f.pc);
+					p.OpenElement("ip"); p.PushText(strbuf); p.CloseElement();
 					p.OpenElement("obj"); p.PushText(f.mod_name.c_str()); p.CloseElement();
 					if (!f.sym_name.empty()) {
 						p.OpenElement("fn"); p.PushText(f.sym_name.c_str()); p.CloseElement();

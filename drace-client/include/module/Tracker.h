@@ -48,14 +48,12 @@ namespace drace {
 
 			/** Registers a new module by moving it */
 			inline PMetadata add(Metadata && mod) {
-				PMetadata ptr = std::make_shared<Metadata>(mod);
-				return ptr;
+				return std::make_shared<Metadata>(mod);
 			}
 
 			/** Registers a new module by copying it */
 			inline PMetadata add(const Metadata & mod) {
-				PMetadata ptr = std::make_shared<Metadata>(mod);
-				return ptr;
+				return std::make_shared<Metadata>(mod);
 			}
 
 			/** Creates new module in place */
@@ -69,6 +67,7 @@ namespace drace {
 			/** Registers a module and sets flags accordingly */
 			PMetadata register_module(const module_data_t * mod, bool loaded);
 
+        private:
 			/** Request a read-lock for the module dataset*/
 			inline void lock_read() const {
 				dr_rwlock_read_lock(mod_lock);
