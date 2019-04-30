@@ -87,6 +87,10 @@ namespace drace {
 
             dr_mutex_lock(_races_lock);
             if (!filter_duplicates(r)) {
+
+                DR_ASSERT(r->first.stack_size > 0);
+                DR_ASSERT(r->second.stack_size > 0);
+
                 _races.emplace_back(*r, ttr);
                 if (!_delayed_lookup) {
                     resolve_race(_races.back());
