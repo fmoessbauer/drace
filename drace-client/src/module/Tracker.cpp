@@ -234,7 +234,7 @@ namespace drace {
 			}
 
 			LOG_INFO(tid,
-				"Track module: % 20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
+				"Track module: %20s, beg : %p, end : %p, instrument : %s, debug info : %s, full path : %s",
 				mod_name.c_str(), modptr->base, modptr->end,
 				util::instr_flags_to_str((uint8_t)modptr->instrument).c_str(),
 				modptr->debug_info ? "YES" : " NO",
@@ -255,7 +255,7 @@ namespace drace {
 		*  as a callback to a C api, we cannot use std::bind
 		*/
 		void event_module_unload(void *drcontext, const module_data_t *mod) {
-			LOG_INFO(-1, "Unload module: % 20s, beg : %p, end : %p, full path : %s",
+			LOG_INFO(-1, "Unload module: %19s, beg : %p, end : %p, full path : %s",
 				dr_module_preferred_name(mod), mod->start, mod->end, mod->full_path);
 
 			auto modptr = module_tracker->get_module_containing(mod->start);

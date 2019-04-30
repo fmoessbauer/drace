@@ -69,6 +69,10 @@ namespace detector {
                 access.access_type = race_info_ac->type;
 
                 size_t ssize = std::min(race_info_ac->stack_trace_size, detector::max_stack_size);
+                if (ssize == 0) {
+                    // TODO: this should not happen
+                    return;
+                }
                 memcpy(access.stack_trace, race_info_ac->stack_trace, ssize * sizeof(uint64_t));
                 access.stack_size = ssize;
 
