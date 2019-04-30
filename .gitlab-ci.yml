@@ -102,7 +102,7 @@ test-tsan-dr71-legacy:
   script:
   - cd build-legacy-tsan-dr71
   - echo "Use DR 7.1.x (LEGACY build)"
-  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
+  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml" --gtest_filter="-DrIntegration*.DotnetClr*"
   artifacts:
     reports:
       junit:
