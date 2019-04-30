@@ -116,7 +116,7 @@ namespace drace {
                 char strbuf[256];
 
                 p.OpenElement("error");
-                dr_snprintf(strbuf, sizeof(strbuf), "%#04dx", _num_processed++);
+                dr_snprintf(strbuf, sizeof(strbuf), "%#04lx", _num_processed++);
                 p.OpenElement("unique"); p.PushText(strbuf); p.CloseElement();
                 p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
                 p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
@@ -125,7 +125,7 @@ namespace drace {
                 {
                     p.OpenElement("xwhat");
                     p.OpenElement("text");
-                    dr_snprintf(strbuf, sizeof(strbuf), "Possible data race during %s of size %ull at %#018llx by thread #%d",
+                    dr_snprintf(strbuf, sizeof(strbuf), "Possible data race during %s of size %d at %#018llx by thread #%d",
                         (r2.write ? "write" : "read"), r2.access_size, r2.accessed_memory, r2.thread_id);
                     p.PushText(strbuf);
                     p.CloseElement();
@@ -138,6 +138,7 @@ namespace drace {
                     p.OpenElement("text");
                     dr_snprintf(strbuf, sizeof(strbuf), "This conflicts with a previous %s of size %d at %#018llx by thread #%d",
                         (r.write ? "write" : "read"), r.access_size, r.accessed_memory, r.thread_id);
+                    p.PushText(strbuf);
                     p.CloseElement();
                     p.OpenElement("hthreadid"); p.PushText(r.thread_id); p.CloseElement();
                     p.CloseElement();
