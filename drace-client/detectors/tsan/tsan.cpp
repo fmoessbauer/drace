@@ -228,6 +228,10 @@ void detector::write(tls_t tls, void* pc, void* addr, size_t size)
 }
 
 void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
+    // TODO: The current handling of allocations in tsan port is buggy.
+    // for now we do not rely on this, hence just short-circuit
+    return;
+#if 0
     uint64_t addr_32 = lower_half((uint64_t)addr);
 
     __tsan_malloc(tls, pc, (void*)addr_32, size);
@@ -236,9 +240,14 @@ void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
         std::lock_guard<ipc::spinlock> lg(mxspin);
         allocations.emplace(addr_32, size);
     }
+#endif
 }
 
 void detector::deallocate(tls_t tls, void* addr) {
+    // TODO: The current handling of allocations in tsan port is buggy.
+    // for now we do not rely on this, hence just short-circuit
+    return;
+#if 0
     uint64_t addr_32 = lower_half((uint64_t)addr);
 
     mxspin.lock();
@@ -249,6 +258,7 @@ void detector::deallocate(tls_t tls, void* addr) {
         __tsan_free((void*)addr_32, size);
     }
     mxspin.unlock();
+#endif
 }
 
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
