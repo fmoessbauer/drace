@@ -112,10 +112,11 @@ namespace drace {
                 const race::ResolvedAccess & r = race.first;
                 const race::ResolvedAccess & r2 = race.second;
                 auto & p = _printer;
+
                 // buffer for pc formatting
                 constexpr int strbufsize = 256;
-                auto strbufptr = std::make_unique<char>(strbufsize);
-                char * strbuf = strbufptr.get();
+                void* drcontext = dr_get_current_drcontext();
+                char * strbuf = (char*)dr_thread_alloc(drcontext, strbufsize);
 
                 p.OpenElement("error");
                 dr_snprintf(strbuf, strbufsize, "%#04lx", _num_processed++);
@@ -148,6 +149,9 @@ namespace drace {
                 }
 
                 p.CloseElement();
+
+                dr_thread_free(drcontext, strbuf, strbufsize);
+
                 flush();
             }
 

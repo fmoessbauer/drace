@@ -34,7 +34,7 @@ namespace drace {
             // we use c-style formatting here, as we cannot
             // use std::stringstream (see i#9)
             constexpr int bufsize = 256;
-            char strbuf[bufsize];
+            char * strbuf = (char*)dr_thread_alloc(dr_get_current_drcontext(), bufsize); //strbufptr.get();
 
             dr_snprintf(strbuf, bufsize, "PC %p ", pc);
 			if (nullptr != mod_base) {
@@ -65,7 +65,9 @@ namespace drace {
                         "\tFile %s:%i + %i\n", file.c_str(), (int)line, (int)line_offs);
 				}
 			}
-            return std::string(strbuf);
+            auto str = std::string(strbuf);
+            dr_thread_free(dr_get_current_drcontext(), strbuf, bufsize);
+            return str;
 		}
 	};
 
