@@ -113,10 +113,12 @@ namespace drace {
                 const race::ResolvedAccess & r2 = race.second;
                 auto & p = _printer;
                 // buffer for pc formatting
-                char strbuf[256];
+                constexpr int strbufsize = 256;
+                auto strbufptr = std::make_unique<char>(strbufsize);
+                char * strbuf = strbufptr.get();
 
                 p.OpenElement("error");
-                dr_snprintf(strbuf, sizeof(strbuf), "%#04lx", _num_processed++);
+                dr_snprintf(strbuf, strbufsize, "%#04lx", _num_processed++);
                 p.OpenElement("unique"); p.PushText(strbuf); p.CloseElement();
                 p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
                 p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
@@ -125,7 +127,7 @@ namespace drace {
                 {
                     p.OpenElement("xwhat");
                     p.OpenElement("text");
-                    dr_snprintf(strbuf, sizeof(strbuf), "Possible data race during %s of size %d at %#018llx by thread #%d",
+                    dr_snprintf(strbuf, strbufsize, "Possible data race during %s of size %d at %#018llx by thread #%d",
                         (r2.write ? "write" : "read"), r2.access_size, r2.accessed_memory, r2.thread_id);
                     p.PushText(strbuf);
                     p.CloseElement();
@@ -136,7 +138,7 @@ namespace drace {
                 {
                     p.OpenElement("xwhat");
                     p.OpenElement("text");
-                    dr_snprintf(strbuf, sizeof(strbuf), "This conflicts with a previous %s of size %d at %#018llx by thread #%d",
+                    dr_snprintf(strbuf, strbufsize, "This conflicts with a previous %s of size %d at %#018llx by thread #%d",
                         (r.write ? "write" : "read"), r.access_size, r.accessed_memory, r.thread_id);
                     p.PushText(strbuf);
                     p.CloseElement();
@@ -195,7 +197,8 @@ namespace drace {
                 p.OpenElement("state"); p.PushText("RUNNING"); p.CloseElement();
 
                 p.OpenElement("time");
-                p.PushText(util::to_iso_time(_start_time).c_str());
+                std::string timestr = util::to_iso_time(_start_time);
+                p.PushText(timestr.c_str());
                 p.CloseElement();
                 p.CloseElement();
 
@@ -214,7 +217,8 @@ namespace drace {
                 p.OpenElement("status");
                 p.OpenElement("state"); p.PushText("FINISHED"); p.CloseElement();
                 p.OpenElement("time");
-                p.PushText(util::to_iso_time(_end_time).c_str());
+                std::string timestr = util::to_iso_time(_end_time);
+                p.PushText(timestr.c_str());
                 p.CloseElement();
 
                 p.OpenElement("duration"); p.PushAttribute("unit", "ms");
