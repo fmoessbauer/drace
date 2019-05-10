@@ -442,8 +442,8 @@ namespace drace {
 		/* jump back to the DR's code cache */
 		where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
 		instrlist_meta_append(ilist, where);
-		/* clean call */
-		dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, false, 0);
+		/* clean call, save fpstate */
+		dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, true, 0);
 		/* Encodes the instructions into memory and then cleans up. */
 		end = instrlist_encode(drcontext, ilist, cc_flush, false);
 		DR_ASSERT((size_t)(end - cc_flush) < page_size);
