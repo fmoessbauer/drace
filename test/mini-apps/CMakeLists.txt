@@ -8,6 +8,7 @@ add_subdirectory("annotations")
 add_subdirectory("atomics")
 add_subdirectory("sampler")
 add_subdirectory("single-thread")
+add_subdirectory("memchecker")
 
 # CSharp examples
 add_subdirectory("cs-sync")
