@@ -8,14 +8,14 @@ cmake --build .
 cmake --build . --target install
 cd ..
 
-echo "=== Build drace-TSAN DR 7.1.x ==="
-cd build-tsan-dr71
+echo "=== Build drace-TSAN DR 7.90.x ==="
+cd build-tsan-dr790
 cmake --build .
 cmake --build . --target install
 cd ..
 
-echo "=== Build drace-LEGACY-TSAN DR 7.1.x ==="
-cd build-legacy-tsan-dr71
+echo "=== Build drace-LEGACY-TSAN DR 7.90.x ==="
+cd build-legacy-tsan-dr790
 cmake --build .
 cmake --build . --target install
 cd ..

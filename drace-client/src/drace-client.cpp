@@ -22,7 +22,6 @@
 #include <atomic>
 #include <string>
 #include <memory>
-#include <iostream>
 #include <fstream>
 
 #include "globals.h"
@@ -262,10 +261,11 @@ namespace drace {
             clipp::option("--brkonrace").set(params.break_on_race) % "abort execution after first race is found (for testing purpose only)",
             clipp::option("--stats").set(params.stats_show) % "display per-thread statistics on thread-exit",
             (clipp::option("--version")([]() {
-            std::cout << "DRace, a dynamic data race detector\nVersion: " << DRACE_BUILD_VERSION << "\n"
-                << "Hash:    " << DRACE_BUILD_HASH << std::endl;
+            dr_printf("DRace, a dynamic data race detector\nVersion: %s\nHash: %s\n",
+                DRACE_BUILD_VERSION,
+                DRACE_BUILD_HASH);
 #ifdef DRACE_USE_LEGACY_API
-            std::cout << "Note:    Windows 7 compatible build with limited feature set" << std::endl;
+            dr_printf("Note:    Windows 7 compatible build with limited feature set\n");
 #endif
             dr_abort(); }) % "display version information"),
             clipp::option("-h", "--usage").set(display_help) % "display help"
@@ -277,7 +277,7 @@ namespace drace {
         );
         auto cli = (
             (drace_cli % "DRace Options"),
-            (detector_cli % ("Detector (" + detector::name() + ") Options"))
+            (detector_cli % ("Detector Options"))
             );
 
         if (!clipp::parse(argc, (char**)argv, cli) || display_help) {
@@ -338,7 +338,7 @@ namespace drace {
 #endif
             params.stack_size,
             params.extctrl ? "ON" : "OFF",
-            params.logfile,
+            params.logfile.c_str(),
             dr_using_all_private_caches() ? "ON" : "OFF");
     }
 

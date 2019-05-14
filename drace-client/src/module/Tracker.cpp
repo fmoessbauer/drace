@@ -63,19 +63,26 @@ namespace drace {
 			dr_rwlock_destroy(mod_lock);
 		}
 
-		Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const
-		{
+        Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const
+        {
             lock_read();
-			auto m_it = _modules_idx.lower_bound(pc);
+            auto m_it = _modules_idx.lower_bound(pc);
+
+            if (m_it == _modules_idx.end()) {
+                unlock_read();
+                return nullptr;
+            }
+
             auto mptr = m_it->second;
             unlock_read();
-			if (m_it != _modules_idx.end() && pc < mptr->end) {
-				return mptr;
-			}
-			else {
+
+            if (pc < mptr->end) {
+                return mptr;
+            }
+            else {
                 return nullptr;
-			}
-		}
+            }
+        }
 
 		Tracker::PMetadata Tracker::register_module(const module_data_t * mod, bool loaded)
 		{

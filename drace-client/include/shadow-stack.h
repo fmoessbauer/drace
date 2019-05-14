@@ -110,6 +110,9 @@ namespace drace {
 			instr_t *instr, bool for_trace,
 			bool translating, void *user_data)
 		{
+            // TODO: The shadow stack instrumentation triggers many assertions
+            // when running in debug mode on a CoreCLR application
+
             // TODO: Handle dotnet calls with push addr; ret;
 
 			if (instr == instrlist_last(bb)) {

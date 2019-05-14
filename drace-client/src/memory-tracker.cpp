@@ -222,15 +222,23 @@ namespace drace {
 			disable_scope(data);
 		}
 
+        DR_ASSERT(drcontext == dr_get_current_drcontext());
 		data->stats = std::make_unique<Statistics>(data->tid);
 
 #ifndef DRACE_USE_LEGACY_API
         // TODO: emulate this for windows 7
 		// determin stack range of this thread
-		dr_switch_to_app_state(drcontext);
-		// dr does not support this natively, so make syscall in app context
-		GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
-		LOG_NOTICE(data->tid, "stack from %p to %p", data->appstack_beg, data->appstack_end);
+        if (runtime_tid.load(std::memory_order_relaxed) != data->tid) {
+            if (!dr_using_app_state(drcontext))
+                dr_switch_to_app_state(drcontext);
+            // dr does not support this natively, so make syscall in app context
+            GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
+            LOG_NOTICE(data->tid, "stack from %p to %p", data->appstack_beg, data->appstack_end);
+        }
+        else {
+            // TODO: this lookup cannot be performed on master thread, as state is not valid. See drmem#xxx
+            LOG_NOTICE(data->tid, "stack range cannot be detected");
+        }
 #endif
 	}
 
@@ -315,7 +323,7 @@ namespace drace {
 		if (for_trace && instrument_bb) {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			if (pc_in_freq(data, bb_addr)) {
-				instrument_bb = INSTR_FLAGS::NONE;
+		        instrument_bb = INSTR_FLAGS::NONE;
 			}
 		}
 
@@ -442,8 +450,8 @@ namespace drace {
 		/* jump back to the DR's code cache */
 		where = INSTR_CREATE_jmp_ind(drcontext, opnd_create_reg(DR_REG_XCX));
 		instrlist_meta_append(ilist, where);
-		/* clean call */
-		dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, false, 0);
+		/* clean call, save fpstate */
+		dr_insert_clean_call(drcontext, ilist, where, (void *)process_buffer, true, 0);
 		/* Encodes the instructions into memory and then cleans up. */
 		end = instrlist_encode(drcontext, ilist, cc_flush, false);
 		DR_ASSERT((size_t)(end - cc_flush) < page_size);

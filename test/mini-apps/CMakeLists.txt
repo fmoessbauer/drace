@@ -7,6 +7,7 @@ add_subdirectory("lock-kinds")
 add_subdirectory("annotations")
 add_subdirectory("atomics")
 add_subdirectory("sampler")
+add_subdirectory("single-thread")
 
 # CSharp examples
 add_subdirectory("cs-sync")
