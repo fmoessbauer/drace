@@ -139,6 +139,10 @@ namespace drace {
                 runtime_tid.load(std::memory_order_relaxed),
                 static_cast<detector::tid_t>(data->tid),
                 &(data->detector_data));
+            // arc between parent thread and this thread
+            detector::happens_after(data->detector_data, (void*)data->tid);
+            clear_buffer();
+            return;
 		}
 
 		// toggle detector on external state change

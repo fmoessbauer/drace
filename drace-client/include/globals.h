@@ -74,8 +74,6 @@ namespace drace {
 	*          in memory_instr.
 	*/
 	struct per_thread_t {
-		using tls_map_t = std::vector<std::pair<thread_id_t, per_thread_t*>>;
-
 		byte *        buf_ptr;
 		ptr_int_t     buf_end;
 
@@ -116,8 +114,6 @@ namespace drace {
 
         /// book-keeping of active mutexes
         std::unordered_map<uint64_t, unsigned> mutex_book;
-        /// Used for event syncronisation procedure
-        tls_map_t     th_towait;
 	};
 
 	/** Thread local storage */

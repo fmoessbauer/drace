@@ -170,7 +170,7 @@ namespace drace {
 			else if (util::common_prefix(mod_name, "KERNEL"))
 			{
 				funwrap::wrap_allocations(mod);
-				//funwrap::wrap_thread_start_sys(mod);
+				funwrap::wrap_thread_start_sys(mod);
 			}
 			else if (util::common_prefix(mod_name, "clr.dll") ||
 				util::common_prefix(mod_name, "coreclr.dll"))
