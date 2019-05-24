@@ -224,6 +224,11 @@ namespace drace {
 					if (!util::common_prefix(basename, "System.Private")) {
 						modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
 					}
+                    // this module often crashes if calls are instrumented. Reason unclear. Hence, exclude.
+                    if (util::common_prefix(mod_name, "System.Linq.Expressions.dll")) {
+                        LOG_NOTICE(data->tid, "Exclude System.Linq.Expressions.dll");
+                        modptr->instrument = INSTR_FLAGS::NONE;
+                    }
 				}
 				else {
 					// Not a System DLL
