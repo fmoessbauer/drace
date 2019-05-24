@@ -70,9 +70,9 @@ int main(int argc, char ** argv) {
     // generate blocks
     workers.reserve(1000);
     for (int i = 0; i < 32; ++i) {
-        for (int i = 2; i <= (4096 * 1024); i *= 2) {
-            workers.emplace_back(generate_block, i, &blocks, &checksums);
-            elem_allocated += i;
+        for (int j = 2; j <= (4096 * 1024); j *= 2) {
+            workers.emplace_back(generate_block, j, &blocks, &checksums);
+            elem_allocated += j;
         }
     }
 
