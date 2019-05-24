@@ -348,6 +348,9 @@ namespace drace {
 		// we treat all atomic accesses as reads
 		bool instr_is_atomic{ false };
 
+        if (instr_get_app_pc(instr) == NULL)
+            return DR_EMIT_DEFAULT;
+
 		if (!instr_is_app(instr))
 			return DR_EMIT_DEFAULT;
 
@@ -391,18 +394,21 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 		}
 
-		/* insert code to add an entry for each memory reference opnd */
-		for (int i = 0; i < instr_num_srcs(instr); i++) {
-			opnd_t src = instr_get_src(instr, i);
-			if (opnd_is_memory_reference(src))
-				instrument_mem(drcontext, bb, instr, src, false);
-		}
-
-		for (int i = 0; i < instr_num_dsts(instr); i++) {
-			opnd_t dst = instr_get_dst(instr, i);
-			if (opnd_is_memory_reference(dst))
-				instrument_mem(drcontext, bb, instr, dst, !instr_is_atomic);
-		}
+        if (instr_reads_memory(instr)) {
+            /* insert code to add an entry for each memory reference opnd */
+            for (int i = 0; i < instr_num_srcs(instr); i++) {
+                opnd_t src = instr_get_src(instr, i);
+                if (opnd_is_memory_reference(src))
+                    instrument_mem(drcontext, bb, instr, src, false);
+            }
+        }
+        else {
+            for (int i = 0; i < instr_num_dsts(instr); i++) {
+                opnd_t dst = instr_get_dst(instr, i);
+                if (opnd_is_memory_reference(dst))
+                    instrument_mem(drcontext, bb, instr, dst, !instr_is_atomic);
+            }
+        }
 
 		return DR_EMIT_DEFAULT;
 	}
