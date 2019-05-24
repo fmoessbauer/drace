@@ -58,17 +58,19 @@ namespace drace {
 			: page_hits(0.01, 0.001),
 			pc_hits(0.01, 0.001)
 		{
-			thread_ids.push_back(tid);
+			//thread_ids.push_back(tid);
 		}
 
 		void print_summary(FILE * target) {
 			std::stringstream s;
+#if 0
 			s << std::string(20, '-') << std::endl
 				<< "Cumulative Stats for:" << std::endl
 				<< "thread-ids:\t\t" << std::dec;
 			std::copy(thread_ids.begin(), thread_ids.end(),
 				std::ostream_iterator<thread_id_t>(s, ","));
 			s << std::endl;
+#endif
 			s << "mutex_ops:\t\t" << std::dec << mutex_ops << std::endl
 				<< "all-flushes:\t\t" << std::dec << flush_events << std::endl
 				<< "flushes:\t\t" << std::dec << flushes << std::endl;
@@ -97,7 +99,7 @@ namespace drace {
 		}
 
 		inline Statistics & operator|= (const Statistics & other) {
-			thread_ids.insert(thread_ids.end(), other.thread_ids.begin(), other.thread_ids.end());
+			//thread_ids.insert(thread_ids.end(), other.thread_ids.begin(), other.thread_ids.end());
 			mutex_ops += other.mutex_ops;
 			flushes += other.flushes;
 			flush_events += other.flush_events;
