@@ -25,6 +25,7 @@
 #include <chrono>
 
 #include <dr_api.h>
+#include <hashtable.h>
 
 /// max number of individual mutexes per thread
 constexpr int MUTEX_MAP_SIZE = 128;
@@ -110,10 +111,10 @@ namespace drace {
         AlignedBuffer<byte, 64> mem_buf;
 
 		/// Statistics
-		std::unique_ptr<Statistics> stats;
+		Statistics * stats;
 
         /// book-keeping of active mutexes
-        std::unordered_map<uint64_t, unsigned> mutex_book;
+        hashtable_t mutex_book;
 	};
 
 	/** Thread local storage */

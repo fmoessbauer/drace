@@ -20,6 +20,7 @@
 #include <dr_api.h>
 #include <drmgr.h>
 #include <drwrap.h>
+#include <hashtable.h>
 
 // on CLR applications we sometimes get no wrapctx
 // this issue can be reproduced using the cs-lock application with sync = mutex.
@@ -168,7 +169,11 @@ namespace drace {
 
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
-			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+
+            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            if (cnt > 1) {
+                hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
+            }
 
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
@@ -193,15 +198,18 @@ namespace drace {
 			void* mutex = drwrap_get_arg(wrapctx, 0);
 			//detector::happens_before(data->tid, mutex);
 
-			if (!data->mutex_book.count((uint64_t)mutex)) {
+            uint64_t cnt = (uint64_t)hashtable_lookup(&data->mutex_book, mutex);
+			if (cnt == 0) {
 				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 				// mutex not in book
 				return;
 			}
-			auto & cnt = --(data->mutex_book[(uint64_t)mutex]);
-			if (cnt == 0) {
-				data->mutex_book.erase((uint64_t)mutex);
-			}
+            if (cnt > 1) {
+                hashtable_add_replace(&data->mutex_book, mutex, (void*)--cnt);
+            }
+            else if (cnt == 1) {
+                hashtable_remove(&data->mutex_book, mutex);
+            }
 
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
@@ -282,7 +290,12 @@ namespace drace {
 
 			LOG_TRACE(data->tid, "waitForSingleObject: %p (Success)", mutex);
 
-			uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+            // add or increment counter in table
+            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            if (cnt > 1) {
+                hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
+            }
+
 			MemoryTracker::flush_all_threads(data);
 			detector::acquire(data->detector_data, mutex, (int)cnt, 1);
 			data->stats->mutex_ops++;
@@ -318,7 +331,12 @@ namespace drace {
 				LOG_TRACE(data->tid, "waitForMultipleObjects:finished all");
 				for (DWORD i = 0; i < info->ncount; ++i) {
 					HANDLE mutex = info->handles[i];
-					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+
+                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    if (cnt > 1) {
+                        hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
+                    }
+
 					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}
@@ -327,7 +345,12 @@ namespace drace {
 				if (retval <= (WAIT_OBJECT_0 + info->ncount - 1)) {
 					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
-					uint64_t cnt = ++(data->mutex_book[(uint64_t)mutex]);
+
+                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    if (cnt > 1) {
+                        hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
+                    }
+
 					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}

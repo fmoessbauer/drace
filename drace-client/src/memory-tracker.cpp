@@ -16,6 +16,7 @@
 #include <drreg.h>
 #include <drutil.h>
 #include <dr_tools.h>
+#include <hashtable.h>
 
 #include <detector/detector_if.h>
 
@@ -213,11 +214,14 @@ namespace drace {
 		data->buf_ptr = data->mem_buf.data;
 		/* set buf_end to be negative of address of buffer end for the lea later */
 		data->buf_end = -(ptr_int_t)(data->mem_buf.data + MEM_BUF_SIZE);
+
 		data->tid = dr_get_thread_id(drcontext);
 		// Init ShadowStack with max_size + 1 Element for PC of access
 		data->stack.resize(ShadowStack::max_size + 1, drcontext);
 
-		data->mutex_book.reserve(MUTEX_MAP_SIZE);
+		//data->mutex_book.reserve(MUTEX_MAP_SIZE);
+        hashtable_init(&(data->mutex_book), 8, HASH_INTPTR, false);
+
 		// set first sampling period
 		data->sampling_pos = params.sampling_rate;
 
@@ -226,8 +230,8 @@ namespace drace {
 			disable_scope(data);
 		}
 
-        DR_ASSERT(drcontext == dr_get_current_drcontext());
-		data->stats = std::make_unique<Statistics>(data->tid);
+        data->stats = (Statistics*) dr_thread_alloc(drcontext, sizeof(Statistics));
+        new (data->stats) Statistics(data->tid);
 
 #ifndef DRACE_USE_LEGACY_API
         // TODO: emulate this for windows 7
@@ -268,6 +272,11 @@ namespace drace {
         // As we cannot rely on current drcontext here, use provided one
         data->stack.deallocate(drcontext);
         data->mem_buf.deallocate(drcontext);
+
+        // free statistics
+        data->stats->~Statistics();
+        dr_thread_free(drcontext, data->stats, sizeof(Statistics));
+
         // deconstruct struct
         data->~per_thread_t();
         dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -356,7 +365,8 @@ namespace drace {
 
 		if (instrument_instr & INSTR_FLAGS::STACK) {
 			// Instrument ShadowStack
-			ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data);
+            if (ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data))
+                return DR_EMIT_DEFAULT;
 		}
 
 		if (!(instrument_instr & INSTR_FLAGS::MEMORY))
