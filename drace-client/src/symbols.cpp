@@ -15,6 +15,7 @@
 #include "MSR.h"
 #include "ipc/SyncSHMDriver.h"
 
+#include <dr_api.h>
 #include <string>
 #include <sstream>
 #include <algorithm>
@@ -104,18 +105,19 @@ namespace drace {
 		return false;
 	}
 
-	void Symbols::create_drsym_info() {
-		syminfo.struct_size = sizeof(drsym_info_t);
-		syminfo.debug_kind = DRSYM_SYMBOLS;
-		syminfo.name_size = buffer_size;
-		syminfo.file_size = buffer_size;
-		syminfo.file = new char[buffer_size];
-		syminfo.name = new char[buffer_size];
-	}
+    void Symbols::create_drsym_info() {
+        syminfo.struct_size = sizeof(drsym_info_t);
+        syminfo.debug_kind = DRSYM_SYMBOLS;
+        syminfo.name_size = buffer_size;
+        syminfo.file_size = buffer_size;
+        // this is shared data, hence allocate from global pool
+        syminfo.file = (char*)dr_global_alloc(buffer_size);
+        syminfo.name = (char*)dr_global_alloc(buffer_size);
+    }
 
-	void Symbols::free_drsmy_info() {
-		delete[] syminfo.file;
-		delete[] syminfo.name;
-	}
+    void Symbols::free_drsmy_info() {
+        dr_global_free(syminfo.file, buffer_size);
+        dr_global_free(syminfo.name, buffer_size);
+    }
 
 } // namespace drace
