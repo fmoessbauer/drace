@@ -312,7 +312,7 @@ namespace drace {
 
 		// Lookup module from cache, hit is very likely as adiacent bb's 
 		// are mostly in the same module
-		module::Metadata * modptr = mc.lookup(bb_addr);
+		const module::Metadata * modptr = mc.lookup(bb_addr);
 		if (nullptr != modptr) {
 			instrument_bb = modptr->instrument;
 		}
