@@ -37,7 +37,7 @@ namespace detector {
         };
 
         /// reserved area at begin of shadow memory addr range;
-        constexpr uint64_t MEMSTART = 4096;
+        constexpr uint64_t MEMSTART = 0xc0'0000'0000ull;
 
         /* Cannot use std::mutex here, hence use spinlock */
         static ipc::spinlock mxspin;
@@ -64,7 +64,10 @@ namespace detector {
 
                 access.thread_id = (unsigned) race_info_ac->user_id;
                 access.write = race_info_ac->write;
-                access.accessed_memory = (uint64_t)race_info_ac->accessed_memory;
+
+                // only report last 32 bits until full 64 bit support is implemented in i#11
+                uint64_t addr = (uint64_t)(race_info_ac->accessed_memory) & 0xFFFFFFFF;
+                access.accessed_memory = addr;
                 access.access_size = race_info_ac->size;
                 access.access_type = race_info_ac->type;
 
@@ -75,9 +78,6 @@ namespace detector {
                 }
                 memcpy(access.stack_trace, race_info_ac->stack_trace, ssize * sizeof(uint64_t));
                 access.stack_size = ssize;
-
-                uint64_t addr = (uint64_t)(race_info_ac->accessed_memory);
-                // TODO: Ask TSAN if block is on heap, or scan allocations map
 
                 if (i == 0) {
                     race.first = access;
@@ -102,21 +102,21 @@ namespace detector {
          * TODO: Find a solution to reliably detect all stack and heap
          *       regions to finally work with full 64-bit addresses
          */
-        constexpr uint64_t lower_half(uint64_t addr) {
-            return (addr & 0x00000000FFFFFFFF);
+        constexpr uint64_t translate(uint64_t addr) {
+            return (addr & 0x00000000FFFFFFFF) + MEMSTART;
         }
 
         /** Fast trivial hash function using a prime. We expect tids in [1,10^5] */
         constexpr uint64_t get_event_id(detector::tid_t parent, detector::tid_t child) {
-            return parent * 65521 + child;
+            return translate(parent * 65521 + child);
         }
         constexpr uint64_t get_event_id(detector::tls_t parent, detector::tid_t child) {
             // not ideal as symmetric
-            return (uint64_t)(parent)+child;
+            return translate((uint64_t)(parent)+child);
         }
         constexpr uint64_t get_event_id(detector::tls_t parent, detector::tls_t child) {
             // not ideal as symmetric
-            return (uint64_t)(parent) ^ (uint64_t)(child);
+            return translate((uint64_t)(parent) ^ (uint64_t)(child));
         }
 
         static void parse_args(int argc, const char ** argv) {
@@ -149,9 +149,24 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
     thread_states.reserve(128);
 
     __tsan_init_simple(reportRaceCallBack, (void*)rc_clb);
-    // we create a shadow memory of nearly the whole 32-bit address range
-    // all memory accesses have to be inside this region
-    __tsan_map_shadow((void*)MEMSTART, (size_t)(0xFFFFFFFF - MEMSTART));
+
+    // we fake the go-mapping here, until we have implemented
+    // the allocation interceptors in i#11
+
+    /* Go on windows
+    0000 0000 1000 - 0000 1000 0000: executable
+    0000 1000 0000 - 00f8 0000 0000: -
+    00c0 0000 0000 - 00e0 0000 0000: heap
+    00e0 0000 0000 - 0100 0000 0000: -
+    0100 0000 0000 - 0500 0000 0000: shadow
+    0500 0000 0000 - 0560 0000 0000: -
+    0560 0000 0000 - 0760 0000 0000: traces
+    0760 0000 0000 - 07d0 0000 0000: metainfo (memory blocks and sync objects)
+    07d0 0000 0000 - 8000 0000 0000: -
+    */
+
+    // map a 32 bit (4GB) heap
+    __tsan_map_shadow((void*)MEMSTART, (size_t)(0xFFFFFFFF));
     return true;
 }
 
@@ -175,6 +190,10 @@ std::string detector::version() {
     return std::string("0.2.0");
 }
 
+void detector::map_shadow(void* startaddr, size_t size_in_bytes) {
+    __tsan_map_shadow(startaddr, size_in_bytes);
+}
+
 void detector::func_enter(tls_t tls, void* pc) {
     __tsan_func_enter(tls, pc);
 }
@@ -184,7 +203,7 @@ void detector::func_exit(tls_t tls) {
 }
 
 void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
-    uint64_t addr_32 = lower_half((uint64_t)mutex);
+    uint64_t addr_32 = translate((uint64_t)mutex);
     // if the mutex is a handle, the ID might be too small
     if (addr_32 < MEMSTART)
         addr_32 += MEMSTART;
@@ -195,7 +214,7 @@ void detector::acquire(tls_t tls, void* mutex, int rec, bool write) {
 }
 
 void detector::release(tls_t tls, void* mutex, bool write) {
-    uint64_t addr_32 = lower_half((uint64_t)mutex);
+    uint64_t addr_32 = translate((uint64_t)mutex);
     // if the mutex is a handle, the ID might be too small
     if (addr_32 < MEMSTART)
         addr_32 += MEMSTART;
@@ -206,24 +225,24 @@ void detector::release(tls_t tls, void* mutex, bool write) {
 }
 
 void detector::happens_before(tls_t tls, void* identifier) {
-    uint64_t addr_32 = lower_half((uint64_t)identifier);
+    uint64_t addr_32 = translate((uint64_t)identifier);
     __tsan_happens_before(tls, (void*)addr_32);
 }
 
 void detector::happens_after(tls_t tls, void* identifier) {
-    uint64_t addr_32 = lower_half((uint64_t)identifier);
+    uint64_t addr_32 = translate((uint64_t)identifier);
     __tsan_happens_after(tls, (void*)addr_32);
 }
 
 void detector::read(tls_t tls, void* pc, void* addr, size_t size)
 {
-    uint64_t addr_32 = lower_half((uint64_t)addr);
+    uint64_t addr_32 = translate((uint64_t)addr);
     __tsan_read(tls, (void*)addr_32, (void*)pc);
 }
 
 void detector::write(tls_t tls, void* pc, void* addr, size_t size)
 {
-    uint64_t addr_32 = lower_half((uint64_t)addr);
+    uint64_t addr_32 = translate((uint64_t)addr);
     __tsan_write(tls, (void*)addr_32, (void*)pc);
 }
 
@@ -232,7 +251,7 @@ void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) {
     // for now we do not rely on this, hence just short-circuit
     return;
 #if 0
-    uint64_t addr_32 = lower_half((uint64_t)addr);
+    uint64_t addr_32 = translate((uint64_t)addr);
 
     __tsan_malloc(tls, pc, (void*)addr_32, size);
 
@@ -248,7 +267,7 @@ void detector::deallocate(tls_t tls, void* addr) {
     // for now we do not rely on this, hence just short-circuit
     return;
 #if 0
-    uint64_t addr_32 = lower_half((uint64_t)addr);
+    uint64_t addr_32 = translate((uint64_t)addr);
 
     mxspin.lock();
     // ocasionally free is called more often than allocate, hence guard

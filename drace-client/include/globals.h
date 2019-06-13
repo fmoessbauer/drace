@@ -32,6 +32,7 @@ constexpr int MUTEX_MAP_SIZE = 128;
 
 /** Upper limit of process address space according to
 *   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
+*   TODO: does not seem to be correct, as all DLLs are loaded at 0x7FFx'xxxx'xxxx, i#11
 */
 constexpr uint64_t PROC_ADDR_LIMIT = 0x7FF'FFFFFFFF;
 

@@ -47,6 +47,14 @@ namespace detector {
     bool init(int argc, const char **argv, Callback rc_clb);
 
     /**
+    * Maps a new block of shadow memory.
+    * All memory accesses have to be inside a mapped block.
+    * \note the mapped shadow region has to be in a memory range that is shadowable
+    * \todo rework memory mapping, i#11
+    */
+    void map_shadow(void* startaddr, size_t size_in_bytes);
+
+    /**
      * Finalizes the detector.
      * After a finalize, a later init must be possible
      */
