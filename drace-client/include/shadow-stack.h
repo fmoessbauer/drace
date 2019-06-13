@@ -106,7 +106,7 @@ namespace drace {
 		}
 
 	public:
-		static void instrument(void *drcontext, void *tag, instrlist_t *bb,
+		static bool instrument(void *drcontext, void *tag, instrlist_t *bb,
 			instr_t *instr, bool for_trace,
 			bool translating, void *user_data)
 		{
@@ -116,13 +116,20 @@ namespace drace {
             // TODO: Handle dotnet calls with push addr; ret;
 
 			if (instr == instrlist_last(bb)) {
-				if (instr_is_call_direct(instr))
-					dr_insert_call_instrumentation(drcontext, bb, instr, on_call);
-				else if (instr_is_call_indirect(instr))
-					dr_insert_mbr_instrumentation(drcontext, bb, instr, on_call, SPILL_SLOT_1);
-				else if (instr_is_return(instr))
-					dr_insert_mbr_instrumentation(drcontext, bb, instr, on_ret, SPILL_SLOT_1);
+                if (instr_is_call_direct(instr)) {
+                    dr_insert_call_instrumentation(drcontext, bb, instr, on_call);
+                    return true;
+                }
+                else if (instr_is_call_indirect(instr)) {
+                    dr_insert_mbr_instrumentation(drcontext, bb, instr, on_call, SPILL_SLOT_1);
+                    return true;
+                }
+                else if (instr_is_return(instr)) {
+                    dr_insert_mbr_instrumentation(drcontext, bb, instr, on_ret, SPILL_SLOT_1);
+                    return true;
+                }
 			}
+            return false;
 		}
 	};
 } // namespace drace

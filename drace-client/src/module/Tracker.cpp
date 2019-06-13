@@ -136,7 +136,11 @@ namespace drace {
 			}
 			if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
 				// check if debug info is available
+                // TODO: unclear if drsyms is threadsafe.
+                //       so better lock
+                lock_write();
 				modptr->debug_info = _syms->debug_info_available(mod);
+                unlock_write();
 			}
 
 			return modptr;
@@ -170,7 +174,7 @@ namespace drace {
 			else if (util::common_prefix(mod_name, "KERNEL"))
 			{
 				funwrap::wrap_allocations(mod);
-				//funwrap::wrap_thread_start_sys(mod);
+				funwrap::wrap_thread_start_sys(mod);
 			}
 			else if (util::common_prefix(mod_name, "clr.dll") ||
 				util::common_prefix(mod_name, "coreclr.dll"))

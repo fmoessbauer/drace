@@ -9,9 +9,11 @@
  *
  * SPDX-License-Identifier: MIT
  */
+#include <drmgr.h>
 
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
+#include "statistics.h"
 
 #include <sstream>
 #include <iostream>
@@ -86,7 +88,7 @@ namespace drace {
             auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
 
             dr_mutex_lock(_races_lock);
-            if (!filter_duplicates(r)) {
+            if (!filter_duplicates(r) && !filter_excluded(r)) {
 
                 DR_ASSERT(r->first.stack_size > 0);
                 DR_ASSERT(r->second.stack_size > 0);
@@ -136,6 +138,21 @@ namespace drace {
         }
 
     private:
+
+        /**
+        * Filter false-positive data-races
+        * \return true if race is suppressed
+        */
+        bool filter_excluded(const detector::Race * r) {
+            // PC is null
+            if (r->first.stack_trace[r->first.stack_size - 1] == 0x0)
+                return true;
+            if (r->second.stack_trace[r->second.stack_size - 1] == 0x0)
+                return true;
+
+            return false;
+        }
+
         /**
         * suppress this race if similar race is already reported
         * \return true if race is suppressed
@@ -201,6 +218,11 @@ namespace drace {
         race_collector->add_race(r);
         // for benchmarking and testing
         if (params.break_on_race) {
+            
+            void * drcontext = dr_get_current_drcontext();
+            per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
+            data->stats->print_summary(drace::log_target);
+            dr_flush_file(drace::log_target);
             dr_abort();
         }
     }

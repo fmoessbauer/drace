@@ -44,7 +44,7 @@ namespace drace {
 		};
 
 		/** Maximum number of references between clean calls */
-		static constexpr int MAX_NUM_MEM_REFS = 128;
+		static constexpr int MAX_NUM_MEM_REFS = 64;
 		static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
 		/** aggregate frequent pc's on this granularity (2^n bytes)*/

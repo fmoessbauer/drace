@@ -146,6 +146,10 @@ namespace drace {
 		}
 	}
 
+    void funwrap::wrap_thread_start_sys(const module_data_t *mod) {
+        wrap_functions(mod, config.get_multi("functions", "threadstart"), false, Method::EXPORTS, NULL, event::thread_start);
+    }
+
 	void funwrap::wrap_sync_dotnet(const module_data_t *mod, bool native) {
 		using namespace internal;
 

@@ -33,7 +33,6 @@ namespace drace {
 		using ms_t = std::chrono::milliseconds;
 		using hist_t = std::vector<std::pair<uint64_t, size_t>>;
 
-		std::vector<thread_id_t> thread_ids;
 		unsigned long mutex_ops{ 0 };
 		unsigned long flushes{ 0 };
 		unsigned long flush_events{ 0 };
@@ -57,18 +56,10 @@ namespace drace {
 		explicit Statistics(thread_id_t tid)
 			: page_hits(0.01, 0.001),
 			pc_hits(0.01, 0.001)
-		{
-			thread_ids.push_back(tid);
-		}
+		{ }
 
 		void print_summary(FILE * target) {
 			std::stringstream s;
-			s << std::string(20, '-') << std::endl
-				<< "Cumulative Stats for:" << std::endl
-				<< "thread-ids:\t\t" << std::dec;
-			std::copy(thread_ids.begin(), thread_ids.end(),
-				std::ostream_iterator<thread_id_t>(s, ","));
-			s << std::endl;
 			s << "mutex_ops:\t\t" << std::dec << mutex_ops << std::endl
 				<< "all-flushes:\t\t" << std::dec << flush_events << std::endl
 				<< "flushes:\t\t" << std::dec << flushes << std::endl;
@@ -97,7 +88,6 @@ namespace drace {
 		}
 
 		inline Statistics & operator|= (const Statistics & other) {
-			thread_ids.insert(thread_ids.end(), other.thread_ids.begin(), other.thread_ids.end());
 			mutex_ops += other.mutex_ops;
 			flushes += other.flushes;
 			flush_events += other.flush_events;

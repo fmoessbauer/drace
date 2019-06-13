@@ -86,6 +86,8 @@ namespace drace {
 			static void wait_for_mo_getargs(void *wrapctx, OUT void **user_data);
 			/** WaitForMultipleObjects Windows API call (experimental) */
 			static void wait_for_mult_obj(void *wrapctx, void *user_data);
+            /** Thread start event on caller side*/
+            static void thread_start(void *wrapctx, void *user_data);
 #endif
 			/** Call this function before a thread-barrier is entered */
 			static void barrier_enter(void *wrapctx, void **user_data);
