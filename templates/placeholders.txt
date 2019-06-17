@@ -1,0 +1,33 @@
+Placeholders:
+Header:
+    *DATE*
+    *TIME*
+    *DURATION*
+    *ARGS*
+    *EXE*
+    *PROTOCOLVERSION*
+    *PROTOCOLTOOL*
+    *NUMBER_OF_ERRORS*
+    *ERROR_ENTRIES*
+
+Error General:
+    *ERROR_ID*
+    *ERROR_TYPE*
+    *XWHAT_TEXT_1*
+    *XWHAT_TEXT_2*
+    *CALL_STACK_ENTRIES_1*
+    *CALL_STACK_ENTRIES_2*
+
+Call Stacks:
+    *STACK_NUMBER*
+    *OBJ*
+    *FILE*
+    *DIRECTORY*
+    *FUNCTION*
+    *LINE_OF_CODE*
+    *INSTRUCTION_POINTER*
+    *CODE_TAG*
+    *SOURCEFILE*
+    *CODE*
+
+    

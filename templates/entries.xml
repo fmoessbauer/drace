@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entries>
+  <base_entry>
+    <![CDATA[
+      <!DOCTYPE html>
+      <html>
+      <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+      <script src="js/prism.js"></script> 
+      <!--Import Google Icon Font-->
+      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+      <script type="text/javascript" src="js/materialize.min.js"></script>
+      <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+      <link rel="stylesheet" href="css/prism.css"/>
+      <link rel="stylesheet" href="css/style.css"/>
+
+      <script>
+          $(document).ready(function(){
+              $('.collapsible').collapsible();
+            }); 
+      </script>
+
+      </head>
+      <body>
+          <div style="text-align:center">
+              <h1>DRace Report</h1>
+          </div>
+          <h3>General Dates</h3>
+          <div class="row">
+              <div class="col s6">
+                  <p><b>Date: </b>*DATE*</p>
+                  <p><b>Time: </b>*TIME*</p>
+                  <p><b>Duration [ms]: </b>*DURATION*</p>
+                  <p><b>Args: </b>*ARGS*</p>
+              </div>
+              <div class="col s6">
+                  <p><b>Exe: </b>*EXE*</p>
+                  <p><b>Protocolversion: </b>*PROTOCOLVERSION*</p>
+                  <p><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
+                  <p><b>Total Errors: </b>*NUMBER_OF_ERRORS*</p>
+              </div>
+          </div>
+          <hr />
+          <h3>Errors</h3>
+          <ul class="collapsible expandable">
+          *ERROR_ENTRIES*
+          </ul>
+        
+      </body>
+      </html> ]]>
+  </base_entry>
+  <error_entry>
+    <![CDATA[
+        <li>
+          <div class="collapsible-header"><i class="material-icons">error</i>*ERROR_ID*</div>
+          <div class="collapsible-body">
+            <h4>Error Type: *ERROR_TYPE*</h4>
+            <p>*XWHAT_TEXT_1*</p>
+            <p>*XWHAT_TEXT_2*</p>
+            <hr />
+            <div class="row">
+              <div class="col s6">
+                <h5>Call Stack 1</h5>
+                <hr \>
+                <ul class="collapsible expandable">
+                  *CALL_STACK_ENTRIES_1*
+                </ul>
+              </div>
+              <div class="col s6">
+                <h5>Call Stack 2</h5>
+                <hr \>
+                <ul class="collapsible expandable">       
+                  *CALL_STACK_ENTRIES_2*
+                </ul>
+            </div>
+          </div>
+        </li>
+    ]]>
+  </error_entry>
+  <stack_entry>
+    <![CDATA[
+      <li>
+        <div class="grey collapsible-header"><i class="material-icons">error</i>*STACK_NUMBER* *FILE*</div>
+        <div class="collapsible-body">
+          <p><b>Obj.: </b>*OBJ*</p>
+          <p><b>File: </b>*FILE*</p>
+          <p><b>Dir.: </b>*DIRECTORY*</p>
+          <p><b>Function: </b>*FUNCTION*</p>
+          <p><b>Line: </b>*LINE_OF_CODE*</p>
+          <p><b>IP @ </b>*INSTRUCTION_POINTER*</p>
+          *CODE_TAG*
+        </div>
+      </li>
+    ]]>
+  </stack_entry>
+  <code_entry>
+    <![CDATA[ 
+    <pre class="line-numbers" data-line="*LINE_OF_CODE*" ><code class="language-cpp">
+      *CODE*
+    </code></pre>
+    ]]>
+  </code_entry>
+  <code_entry_reference>
+    <![CDATA[<pre class="line-numbers"  data-line="*LINE_OF_CODE*" data-src="*SOURCEFILE*"></pre>]]>
+  </code_entry_reference>
+  <no_code_entry>
+    <![CDATA[
+      <div class="noCode">
+        <span class="noCodeSpan">No code preview available.</span>
+      </div>]]>
+  </no_code_entry>
+
+</entries>
+
+
+
+
+
+
+
+
