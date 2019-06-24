@@ -1,6 +1,13 @@
 import xml.etree.ElementTree as ET
 import os
 import shutil
+import argparse
+
+#Paths
+g_HTMLTEMPLATES = "templates/entries.xml"
+g_CSSPATH = "templates/css"
+g_JSPATH = "templates/js"
+DEBUG = True
 
 SOURCEFILE_BL = list()
 SOURCEFILE_WL = list()
@@ -9,7 +16,7 @@ WHITELISTING = False
 
 class ReportCreator:
     __errorTag  = 'error'
-    __htmlTemplatesPath = "templates/entries.xml"
+    __htmlTemplatesPath = g_HTMLTEMPLATES
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
     sourcefileList = list()
     __callStackNumber = 0
@@ -241,24 +248,48 @@ class ReportCreator:
         
 
 def main():
-    targetDirectory = 'test_files/output'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--inputFile", help='input file', type=str)
+    parser.add_argument("-o", "--outputDirectory", help='output directory', type=str)
+    args = parser.parse_args()
+    
+    inFile = args.inputFile
+    targetDirectory = args.outputDirectory
 
-    report = ReportCreator('test_files/test.1.xml')
+   
 
-    shutil.rmtree(targetDirectory)
+    if DEBUG:
+        targetDirectory = 'test_files/output'
+        inFile = 'test_files/test.xml'
+
+    try:
+        if not os.path.isfile(inFile):
+            print("Your input file does not exist")
+            return 0
+    except TypeError:
+        print("You must specify an input file")
+        return 0
+    
+
+    report = ReportCreator(inFile)
+
 
     if not os.path.isdir(targetDirectory):
         os.mkdir(targetDirectory)
 
-    
-    output = open(targetDirectory+'/output.html', mode='w')
+    #write report to destination
+    output = open(targetDirectory+'/index.html', mode='w')
     output.write(report.htmlReport)
     output.close()
 
-    shutil.copytree("templates/css", targetDirectory+"/css")
-    shutil.copytree("templates/js", targetDirectory+"/js")
+    #copy needed files to destination
+    shutil.rmtree(targetDirectory+"/css")
+    shutil.rmtree(targetDirectory+"/js")
+    shutil.copytree(g_CSSPATH, targetDirectory+"/css")
+    shutil.copytree(g_JSPATH, targetDirectory+"/js")
 
     return 0
+
 
 if __name__ == "__main__":
     main()
