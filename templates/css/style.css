@@ -61,3 +61,10 @@ html {
 .line-highlight {
 	background: hsla(24, 50%, 80%,.08);
 }
+
+code[class*="language-"],
+pre[class*="language-"] {
+    line-height: 22px;
+    height: 350px;
+
+}
