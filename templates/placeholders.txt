@@ -9,14 +9,19 @@ Header:
     *PROTOCOLTOOL*
     *NUMBER_OF_ERRORS*
     *ERROR_ENTRIES*
+    *CODE_VARIABLES*
+    *SNIPPET_VARIABLES*
 
 Error General:
     *ERROR_ID*
     *ERROR_TYPE*
+    *ERROR_HEADING*
     *XWHAT_TEXT_1*
     *XWHAT_TEXT_2*
     *CALL_STACK_ENTRIES_1*
     *CALL_STACK_ENTRIES_2*
+    *OUTPUT_ID_1*
+    *OUTPUT_ID_2*
 
 Call Stacks:
     *STACK_NUMBER*
