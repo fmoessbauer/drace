@@ -60,7 +60,7 @@ document.getElementById(box).innerHTML = snippet;
 if (code_id != 'None'){
 document.getElementById(code_id).innerHTML  = code;
 Prism.highlightAllUnder(document.getElementById(box));
-var offset = Math.round((line-5)*22.22);
+var offset = Math.round((line-5)*22);
 document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
