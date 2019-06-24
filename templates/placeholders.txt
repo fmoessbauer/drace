@@ -33,6 +33,9 @@ Call Stacks:
     *INSTRUCTION_POINTER*
     *CODE_TAG*
     *SOURCEFILE*
-    *CODE*
+    *OUTPUT_ID*
+    *SNIPPET_VAR*
+    *CODE_VAR*
+    *CODE_ID_VAR*
 
     
