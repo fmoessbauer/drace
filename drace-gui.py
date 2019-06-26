@@ -15,21 +15,47 @@ BLACKLISTING = True
 WHITELISTING = False
 
 class ReportCreator:
-    __errorTag  = 'error'
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
-    sourcefileList = list()
-    __callStackNumber = 0
-    __errorNumber = 0
-    snippets = str()
-
-
+    
 
     def __init__(self, pathOfReport):
+        self.sourcefileList = list()
+        self.__callStackNumber = 0
+        self.__errorNumber = 0
+        self.__snippets = str()
+        self.succesfullReportCreation = True
+
         self.__pathOfReport = pathOfReport
-        self.__reportContent = ET.parse(self.__pathOfReport)
-        self.__reportRoot = self.__reportContent.getroot()
-        self.__createReport()
+        if self.__inputValidation():
+            self.__createReport()
+        else:
+            print("input file is not valid")
+            self.succesfullReportCreation = False
+
+    def __inputValidation(self):
+        try:
+            self.__reportContent = ET.parse(self.__pathOfReport)
+            self.__reportRoot = self.__reportContent.getroot()
+        except:
+            return 0
+
+        if self.__reportRoot.find('protocolversion') != None and \
+            self.__reportRoot.find('protocoltool') != None and \
+            self.__reportRoot.find('preamble') != None and \
+            self.__reportRoot.find('pid') != None and \
+            self.__reportRoot.find('tool') != None and \
+            self.__reportRoot.find('args') != None and \
+            self.__reportRoot.find('status') != None and \
+            self.__reportRoot.tag == 'valgrindoutput':
+
+            return 1
+        else:
+            return 0
+
+
+            
+
 
     def __getHeader(self):
         header = list()
@@ -79,7 +105,7 @@ class ReportCreator:
             codeString += tmpCode
 
         self.htmlReport = self.htmlReport.replace("*CODE_VARIABLES*", codeString)
-        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.snippets)
+        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.__snippets)
 
     def __returnCode(self, fullPath, justExistance):
         
@@ -112,92 +138,118 @@ class ReportCreator:
         else:
             return -1
 
+    def __determineLanguage(self, filename):
+        fileParts = filename.split('.')
+        if len(fileParts) == 1:
+            return 'cpp' #files without file endigs are treated as cpp files
+        else:
+            ending = fileParts[-1]
+            if ending == 'c':
+                return 'c'
+            elif ending == 'cpp':
+                return 'cpp'
+            elif ending == 'h':
+                return 'cpp'
+            elif ending == 'cs':
+                return 'csharp'
+            elif ending == 'css':
+                return 'css'
+            elif ending == 'js':
+                return 'javascript'
+            elif ending == 'html':
+                return 'markup'
+            else:
+                return 'cpp'     
+
+    def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex):
+        newSnippet = self.__htmlTemplates.find('snippet_entry').text
+
+        newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
+        newSnippet = newSnippet.replace('*STACK_NUMBER*', self.adjText(hex(elementNumber)))
+        newSnippet = newSnippet.replace('*OBJ*', self.adjText(frame.find('obj').text))
+        newSnippet = newSnippet.replace('*FUNCTION*', self.adjText(frame.find('fn').text))
+        newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', self.adjText(frame.find('ip').text))
+        newSnippet = newSnippet.replace('*CODE_TAG*', tag)
+
+        if (frame.find('file')!= None):
+            newSnippet = newSnippet.replace('*FILE*', self.adjText(frame.find('file').text))
+            newSnippet = newSnippet.replace('*DIRECTORY*', self.adjText(frame.find('dir').text))
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
+            if(codeIndex != -1):
+                newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
+                newSnippet = newSnippet.replace('*LANGUAGE*', self.__determineLanguage(self.adjText(frame.find('file').text)))
+            else:
+                newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
+
+        else:
+            newSnippet = newSnippet.replace('*FILE*', 'no filename available')
+            newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory available')
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code available')
+
+        self.__snippets += newSnippet #append referenced code snippet
+
     def __createCallStack(self, errorEntry, position, outputID):
         
         callStack = str()
         stackTemplate = self.__htmlTemplates.find('stack_entry').text
-        snippetTemplate = self.__htmlTemplates.find('snippet_entry').text
         stackArray = errorEntry.findall('stack')
         stack = stackArray[position]
-
         elementNumber = 0
+
         for frame in stack.findall('frame'):
-            
-            ###make heading in read box### 
+            noPreview = False    
+            ###make heading for the red box### 
             if elementNumber == 0:
                 if len(self.__errorHeading) == 0:
                     self.__errorHeading += "<br> Obj. 1: " + (self.adjText(frame.find('obj').text) + ': "' + self.adjText(frame.find('fn').text)) + '" <br> '
                 else:
                     self.__errorHeading += "Obj. 2: " + (self.adjText(frame.find('obj').text) + ': "' + self.adjText(frame.find('fn').text)) + '"'
 
-        
+            #general entries (always available)
             newStackElement = stackTemplate.replace('*STACK_NUMBER*', self.adjText(hex(elementNumber))+":")
             newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
             newStackElement = newStackElement.replace('*OUTPUT_ID*', outputID+str(position))
-            
-            newSnippet = snippetTemplate.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
-            newSnippet = newSnippet.replace('*STACK_NUMBER*', self.adjText(hex(elementNumber)))
-            newSnippet = newSnippet.replace('*OBJ*', self.adjText(frame.find('obj').text))
-            newSnippet = newSnippet.replace('*FUNCTION*', self.adjText(frame.find('fn').text))
-            newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', self.adjText(frame.find('ip').text))
-            
+            newStackElement = newStackElement.replace('*FUNCTION*', self.adjText(frame.find('fn').text))
             
 
-
-            if (frame.find('file')!= None):
-                code_index, tag = self.__handleSourceCode(frame.find('file').text, frame.find('dir').text)
-
+            if (frame.find('file')!= None): #file is in xml report defined
+                codeIndex, tag = self.__handleSourceCode(frame.find('file').text, frame.find('dir').text)
                 newStackElement = newStackElement.replace('*FILE*', self.adjText(frame.find('file').text))
-                newSnippet = newSnippet.replace('*FILE*', self.adjText(frame.find('file').text))
-                newSnippet = newSnippet.replace('*DIRECTORY*', self.adjText(frame.find('dir').text))
-                newSnippet = newSnippet.replace('*CODE_TAG*', tag)
-                newSnippet = newSnippet.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
 
-                if(code_index != -1):
-                    newStackElement = newStackElement.replace('*CODE_VAR*', "code_"+str(code_index))
+                if(codeIndex != -1):
+                    newStackElement = newStackElement.replace('*CODE_VAR*', "code_"+str(codeIndex))
                     newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self.__callStackNumber)+"_code'")
-                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
-                    newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
+                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))      
                 
-                else: #file is not available on device
-                    newStackElement = newStackElement.replace('*CODE_VAR*', "'None'")
-                    newStackElement = newStackElement.replace('*CODE_ID_VAR*',  "'None'")
-                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', "'None'")
-                    newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
-
-                    insertPosition = newStackElement.find('btn"') 
-                    newStackElement = newStackElement[:insertPosition] + "grey " + newStackElement[insertPosition:]  
+                else: #file is not available on device or file is blacklisted or not whitelisted
+                    noPreview = True
+                     
                 
-            else: #no filepath for file is given 
-                code_index, tag = self.__handleSourceCode("","")
-
+            else: #no filepath for file in xml is given 
+                codeIndex, tag = self.__handleSourceCode("","")
                 newStackElement = newStackElement.replace('*FILE*', 'no filename available')
-                newStackElement = newStackElement.replace('*LINE_OF_CODE*', "'None'")
+                noPreview = True
 
-                newSnippet = newSnippet.replace('*FILE*', 'no filename available')
-                newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory available')
-                newSnippet = newSnippet.replace('*CODE_TAG*', tag)
-
+            if noPreview:
                 newStackElement = newStackElement.replace('*CODE_VAR*', "'None'")
-                newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'None'")
-                newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code available')
-
+                newStackElement = newStackElement.replace('*CODE_ID_VAR*',  "'None'")
+                newStackElement = newStackElement.replace('*LINE_OF_CODE*', "'None'")
                 insertPosition = newStackElement.find('btn"') 
                 newStackElement = newStackElement[:insertPosition] + "grey " + newStackElement[insertPosition:] 
-            
-            
 
+            
+            self.__createSnippetEntry(frame, elementNumber, tag, codeIndex)
             callStack += newStackElement #append stack element
-            self.snippets += newSnippet #append referenced code snippet
             elementNumber += 1
             self.__callStackNumber += 1 #increase global call stack number (used for reference variables)
+
         return callStack
 
     def __createErrorList(self):
         self.__strErrors = str()
         
         errorTemplate = self.__htmlTemplates.find('error_entry').text
-        errorList = self.__reportRoot.findall(self.__errorTag)
+        errorList = self.__reportRoot.findall('error')
         self.__numberOfErrors = len(errorList)
         
         for error in errorList:
@@ -210,7 +262,7 @@ class ReportCreator:
             newError = newError.replace('*XWHAT_TEXT_1*', self.adjText(xwhat[0].find('text').text))
             newError = newError.replace('*XWHAT_TEXT_2*', self.adjText(xwhat[1].find('text').text))
 
-            self.__errorHeading = str() #filled by __createCallStack
+            self.__errorHeading = str() #reset errorHeading, will be filled filled by __createCallStack
             newError = newError.replace('*CALL_STACK_ENTRIES_1*', self.__createCallStack(error, 0, outputID))
             newError = newError.replace('*CALL_STACK_ENTRIES_2*', self.__createCallStack(error, 1, outputID))
             newError = newError.replace('*OUTPUT_ID_1*', outputID+'0')
@@ -236,7 +288,6 @@ class ReportCreator:
         self.__createErrorList()
         self.__createHeader()
         self.__createCodeVars()
-
 
     def adjText(self, text): #change html symbols
         text = text.replace('&', '&amp;')
@@ -273,22 +324,27 @@ def main():
 
     report = ReportCreator(inFile)
 
+    if report.succesfullReportCreation:
 
-    if not os.path.isdir(targetDirectory):
-        os.mkdir(targetDirectory)
+        if not os.path.isdir(targetDirectory):
+            os.mkdir(targetDirectory)
 
-    #write report to destination
-    output = open(targetDirectory+'/index.html', mode='w')
-    output.write(report.htmlReport)
-    output.close()
+        #write report to destination
+        output = open(targetDirectory+'/index.html', mode='w')
+        output.write(report.htmlReport)
+        output.close()
 
-    #copy needed files to destination
-    shutil.rmtree(targetDirectory+"/css")
-    shutil.rmtree(targetDirectory+"/js")
-    shutil.copytree(g_CSSPATH, targetDirectory+"/css")
-    shutil.copytree(g_JSPATH, targetDirectory+"/js")
+        #copy needed files to destination
+        if  os.path.isdir(targetDirectory+"/css"):
+            shutil.rmtree(targetDirectory+"/css")
+        if  os.path.isdir(targetDirectory+"/js"):
+            shutil.rmtree(targetDirectory+"/js")
+        shutil.copytree(g_CSSPATH, targetDirectory+"/css")
+        shutil.copytree(g_JSPATH, targetDirectory+"/js")
+        return 0
 
-    return 0
+    else:
+        return -1
 
 
 if __name__ == "__main__":

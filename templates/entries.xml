@@ -8,7 +8,6 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-
 <script src="js/prism.js"></script> 
 <!--Import Google Icon Font-->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -69,8 +68,7 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 </html> ]]>
   </base_entry>
 <error_entry>
-<![CDATA[
-<li>
+<![CDATA[<li>
 <div class="collapsible-header"><i class="material-icons">error</i>*ERROR_ID*: *ERROR_HEADING*</div>
 <div class="collapsible-body">
 <h5>Error Type: *ERROR_TYPE*</h5>
@@ -93,6 +91,7 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 </ul>
 </div>
 </div>
+<hr \>
 <div class="row">
 <div class="col s6">
 <div id= "*OUTPUT_ID_1*"></div>
@@ -101,20 +100,15 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 <div id= "*OUTPUT_ID_2*"></div>
 </div>
 </div>
-
-</li>
-]]>
+</li>]]>
 </error_entry>
 <stack_entry><![CDATA[<li>
-<button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*)">*STACK_NUMBER* *FILE*</button>
+<button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button>
 </li>]]></stack_entry>
 <code_entry>
-<![CDATA[<pre class="line-numbers" data-line=*LINE_OF_CODE* ><code class="language-cpp" id = "*CODE_ID_VAR*">
+<![CDATA[<pre class="line-numbers" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*">
 </code></pre>]]>
 </code_entry>
-<code_entry_reference>
-<![CDATA[<pre class="line-numbers"  data-line="*LINE_OF_CODE*" data-src="*SOURCEFILE*"></pre>]]>
-</code_entry_reference>
 <no_code_entry>
 <![CDATA[<div class="noCode">
 <span class="noCodeSpan">No code preview available.</span>
