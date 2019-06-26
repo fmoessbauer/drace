@@ -11,9 +11,12 @@ DEBUG = True
 
 SOURCEFILE_BL = list()
 SOURCEFILE_WL = list()
-BLACKLISTING = True
 WHITELISTING = False
-NUMBEROFCODELINES = 500
+NUMBEROFCODELINES = 400
+if NUMBEROFCODELINES % 2:
+    print('Number of maximum of displayed code lines must be even, but is:')
+    print(str(NUMBEROFCODELINES))
+    exit(-1)
 
 class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
@@ -25,6 +28,7 @@ class ReportCreator:
         self.__errorNumber = 0
         self.__snippets = str()
         self.succesfullReportCreation = True
+        self.SCM = SourceCodeManagement()
 
         self.__pathOfReport = pathOfReport
         if self.__inputValidation():
@@ -75,88 +79,6 @@ class ReportCreator:
 
         return header
 
-    def __handleSourceCode(self, filename, directory):
-        fullPath = directory +'/'+ filename
-        fullPath = fullPath.replace('\\', '/')
-        
-        src = self.__returnCode(fullPath, justExistance=1)
-        if src == -1:
-            return -1, self.__htmlTemplates.find('no_code_entry').text
-
-        else:
-            try:
-                index = self.sourcefileList.index(fullPath)
-            except ValueError:
-                self.sourcefileList.append(fullPath)
-                index = self.sourcefileList.index(fullPath)
-            
-            return index, (self.__htmlTemplates.find('code_entry').text)
-
-    def __createCodeVars(self):
-        codeString = str()
-
-        for sourcefile in self.sourcefileList:
-            src = self.__returnCode(sourcefile, justExistance=0)
-            tmpCode = "code_" + str(self.sourcefileList.index(sourcefile)) + ' = `' + src + '`;\n'
-            codeString += tmpCode
-
-        self.htmlReport = self.htmlReport.replace("*CODE_VARIABLES*", codeString)
-        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.__snippets)
-
-    def __returnCode(self, fullPath, justExistance):
-        
-        if os.path.isfile(fullPath):
-            if BLACKLISTING:
-                for element in SOURCEFILE_BL:
-                    if element in fullPath:
-                        return -1
-                if justExistance:
-                    return 0
-                else:
-                    sourceFile = open(fullPath, mode='r')
-                    sourceCode = sourceFile.read()
-                    sourceFile.close()
-                    sourceCode = self.adjText(sourceCode)
-                    return sourceCode
-
-            if WHITELISTING:
-                for element in SOURCEFILE_WL:
-                    if element in fullPath:
-                        if justExistance:
-                            return 0
-                    else:
-                        sourceFile = open(fullPath, mode='r')
-                        sourceCode = sourceFile.read()
-                        sourceFile.close()
-                        sourceCode = self.adjText(sourceCode)
-                        return sourceCode
-                return -1
-        else:
-            return -1
-
-    def __determineLanguage(self, filename):
-        fileParts = filename.split('.')
-        if len(fileParts) == 1:
-            return 'cpp' #files without file endigs are treated as cpp files
-        else:
-            ending = fileParts[-1]
-            if ending == 'c':
-                return 'c'
-            elif ending == 'cpp':
-                return 'cpp'
-            elif ending == 'h':
-                return 'cpp'
-            elif ending == 'cs':
-                return 'csharp'
-            elif ending == 'css':
-                return 'css'
-            elif ending == 'js':
-                return 'javascript'
-            elif ending == 'html':
-                return 'markup'
-            else:
-                return 'cpp'     
-
     def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex):
         newSnippet = self.__htmlTemplates.find('snippet_entry').text
 
@@ -173,7 +95,8 @@ class ReportCreator:
             newSnippet = newSnippet.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
             if(codeIndex != -1):
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
-                newSnippet = newSnippet.replace('*LANGUAGE*', self.__determineLanguage(self.adjText(frame.find('file').text)))
+                newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(self.adjText(frame.find('file').text)))
+                newSnippet = newSnippet.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))
             else:
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
 
@@ -209,20 +132,21 @@ class ReportCreator:
             
 
             if (frame.find('file')!= None): #file is in xml report defined
-                codeIndex, tag = self.__handleSourceCode(frame.find('file').text, frame.find('dir').text)
+                codeIndex, tag = self.SCM.handleSourceCode(frame.find('file').text, frame.find('dir').text, frame.find('line').text)
                 newStackElement = newStackElement.replace('*FILE*', self.adjText(frame.find('file').text))
 
                 if(codeIndex != -1):
-                    newStackElement = newStackElement.replace('*CODE_VAR*', "code_"+str(codeIndex))
+                    newStackElement = newStackElement.replace('*CODE_VAR*', str(codeIndex))
                     newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self.__callStackNumber)+"_code'")
-                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))      
+                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
+                    newStackElement = newStackElement.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))  
                 
                 else: #file is not available on device or file is blacklisted or not whitelisted
                     noPreview = True
                      
                 
             else: #no filepath for file in xml is given 
-                codeIndex, tag = self.__handleSourceCode("","")
+                codeIndex, tag = self.SCM.handleSourceCode("","", "")
                 newStackElement = newStackElement.replace('*FILE*', 'no filename available')
                 noPreview = True
 
@@ -230,6 +154,7 @@ class ReportCreator:
                 newStackElement = newStackElement.replace('*CODE_VAR*', "'None'")
                 newStackElement = newStackElement.replace('*CODE_ID_VAR*',  "'None'")
                 newStackElement = newStackElement.replace('*LINE_OF_CODE*', "'None'")
+                newStackElement = newStackElement.replace('*FIRST_LINE*', "'NONE'") 
                 insertPosition = newStackElement.find('btn"') 
                 newStackElement = newStackElement[:insertPosition] + "grey " + newStackElement[insertPosition:] 
 
@@ -283,7 +208,8 @@ class ReportCreator:
     def __createReport(self):
         self.__createErrorList()
         self.__createHeader()
-        self.__createCodeVars()
+        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.__snippets)
+        self.htmlReport = self.SCM.createCodeVars(self.htmlReport)
 
     def adjText(self, text): #change html symbols
         text = text.replace('&', '&amp;')
@@ -294,6 +220,141 @@ class ReportCreator:
         return text
 
 
+class SourceCodeManagement:
+    __htmlTemplatesPath = g_HTMLTEMPLATES
+    __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
+
+    def __init__(self):
+        self.__sourcefilelist = list()
+
+    def __createSourcefileEntry(self, path, line):
+        #one entry consists of the full file path the line number of interest and wether the complete file is copied in the html report or not
+        src = open(path, mode='r')
+        sourceCode = src.readlines()
+        src.close()
+        if len(sourceCode) <= NUMBEROFCODELINES:
+            newElement = [path, int(line), True]
+        else:
+            newElement = [path, int(line), False]
+
+        self.__sourcefilelist.append(newElement)
+        return self.__sourcefilelist.index(newElement)
+        
+    def __returnCode(self, fullPath, justExistance, line = 0, completeFileFlag = False):
+        returnSrc = False
+        
+        if os.path.isfile(fullPath):
+            for element in SOURCEFILE_BL: #blacklisting routine
+                if element in fullPath:
+                    return -1
+                
+            if WHITELISTING:
+                for element in SOURCEFILE_WL:
+                    if element in fullPath:
+                        returnSrc = True
+                        break
+                if not returnSrc:
+                    return -1
+            if justExistance:
+                return 0
+        else:
+            return -1
+
+        #return sourcecode
+        sourceFile = open(fullPath, mode='r')
+        if completeFileFlag:
+            sourceCode = sourceFile.read()
+            sourceCode = self.adjText(sourceCode)
+
+        else:
+            sourceLineList = sourceFile.readlines()
+            if line <= NUMBEROFCODELINES//2:
+                begin = 0
+                end = NUMBEROFCODELINES
+            else:
+                begin = (line - NUMBEROFCODELINES//2) - 1
+                end = begin + NUMBEROFCODELINES
+
+            listOfInterest = sourceLineList[begin:end]
+            sourceCode = str()
+            for sourceLine in listOfInterest:
+                sourceCode += sourceLine
+
+        sourceFile.close()
+        return self.adjText(sourceCode)
+
+    def handleSourceCode(self, filename, directory, line):
+        fullPath = directory +'/'+ filename
+        fullPath = fullPath.replace('\\', '/')
+        
+        src = self.__returnCode(fullPath, justExistance=1)
+        if src == -1:
+            return -1, self.__htmlTemplates.find('no_code_entry').text
+
+        index = -1
+        #entry = list()
+
+        for item in self.__sourcefilelist:
+            if item[0] == fullPath:
+                if item[2] or (int(line) - NUMBEROFCODELINES//10) <= item[1] <= (int(line) + NUMBEROFCODELINES//10): 
+                    index = self.__sourcefilelist.index(item)
+                    #entry = item
+
+        if index == -1:
+            index = self.__createSourcefileEntry(fullPath, line)
+            
+        strIndex = 'code_' + str(index) 
+        return strIndex, (self.__htmlTemplates.find('code_entry').text)
+
+    def createCodeVars(self, report):
+        codeString = str()
+
+        for sourceObject in self.__sourcefilelist:
+            src = self.__returnCode(sourceObject[0], justExistance=0, line = sourceObject[1], completeFileFlag = sourceObject[2])
+            tmpCode = "code_" + str(self.__sourcefilelist.index(sourceObject)) + ' = `' + src + '`;\n'
+            codeString += tmpCode
+
+        report = report.replace("*CODE_VARIABLES*", codeString)
+        return report
+
+    def determineLanguage(self, filename):
+        fileParts = filename.split('.')
+        if len(fileParts) == 1:
+            return 'cpp' #files without file endigs are treated as cpp files
+        else:
+            ending = fileParts[-1]
+            if ending == 'c':
+                return 'c'
+            elif ending == 'cpp':
+                return 'cpp'
+            elif ending == 'h':
+                return 'cpp'
+            elif ending == 'cs':
+                return 'csharp'
+            elif ending == 'css':
+                return 'css'
+            elif ending == 'js':
+                return 'javascript'
+            elif ending == 'html':
+                return 'markup'
+            else:
+                return 'cpp'     
+
+    def getFirstLineOfCodeSnippet(self, index):
+        codeSnippet = int(index.split("_")[-1]) #index is e.g. code_3
+        srcObject = self.__sourcefilelist[codeSnippet]
+        if srcObject[2]:
+            return 1
+        else:
+            return srcObject[1] - NUMBEROFCODELINES//2
+
+    def adjText(self, text): #change html symbols
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        text = text.replace('"', '&quot;')
+        text = text.replace('\\', '/')
+        return text
 
 
 def main():

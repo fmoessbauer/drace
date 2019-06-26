@@ -54,12 +54,12 @@ $('.collapsible').collapsible();
 </ul>
 
 <script>
-function displayEntry(box, snippet, code, code_id, line){
+function displayEntry(box, snippet, code, code_id, line, first_line){
 document.getElementById(box).innerHTML = snippet;
 if (code_id != 'None'){
 document.getElementById(code_id).innerHTML  = code;
 Prism.highlightAllUnder(document.getElementById(box));
-var offset = Math.round((line-5)*22);
+var offset = Math.round((line-first_line-5)*22);
 document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
@@ -103,10 +103,10 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 </li>]]>
 </error_entry>
 <stack_entry><![CDATA[<li>
-<button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button>
+<button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*, *FIRST_LINE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button>
 </li>]]></stack_entry>
 <code_entry>
-<![CDATA[<pre class="line-numbers" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*">
+<![CDATA[<pre class="line-numbers" data-start="*FIRST_LINE*" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*">
 </code></pre>]]>
 </code_entry>
 <no_code_entry>
