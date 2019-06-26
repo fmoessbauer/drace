@@ -13,12 +13,12 @@ SOURCEFILE_BL = list()
 SOURCEFILE_WL = list()
 BLACKLISTING = True
 WHITELISTING = False
+NUMBEROFCODELINES = 500
 
 class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
     
-
     def __init__(self, pathOfReport):
         self.sourcefileList = list()
         self.__callStackNumber = 0
@@ -52,10 +52,6 @@ class ReportCreator:
             return 1
         else:
             return 0
-
-
-            
-
 
     def __getHeader(self):
         header = list()
@@ -296,7 +292,9 @@ class ReportCreator:
         text = text.replace('"', '&quot;')
         text = text.replace('\\', '/')
         return text
-        
+
+
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -307,11 +305,12 @@ def main():
     inFile = args.inputFile
     targetDirectory = args.outputDirectory
 
-   
-
     if DEBUG:
-        targetDirectory = 'test_files/output'
-        inFile = 'test_files/test.xml'
+        if inFile == None:
+            inFile = 'test_files/test.xml'    
+        if targetDirectory == None:
+            targetDirectory = 'test_files/output'
+        
 
     try:
         if not os.path.isfile(inFile):
