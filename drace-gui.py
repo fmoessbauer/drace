@@ -2,6 +2,8 @@ import xml.etree.ElementTree as ET
 import os
 import shutil
 import argparse
+import matplotlib
+import matplotlib.pyplot as plt
 
 #Paths
 g_HTMLTEMPLATES = "templates/entries.xml"
@@ -23,7 +25,7 @@ class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
     
-    def __init__(self, pathOfReport):
+    def __init__(self, pathOfReport, target):
         self.sourcefileList = list()
         self.__callStackNumber = 0
         self.__errorNumber = 0
@@ -34,6 +36,7 @@ class ReportCreator:
         self.__pathOfReport = pathOfReport
         if self.__inputValidation():
             self.__createReport()
+            self.__countTopStackOccurences(target)
         else:
             print("input file is not valid")
             self.succesfullReportCreation = False
@@ -167,6 +170,52 @@ class ReportCreator:
             self.__callStackNumber += 1 #increase global call stack number (used for reference variables)
 
         return callStack
+
+    def __countTopStackOccurences(self,target):
+        topStackOccurences = dict()
+        errors = self.__reportRoot.findall('error')
+        for error in errors:
+            stacks = error.findall('stack')
+            for stack in stacks:
+                topFrame = stack.find('frame') #returns first element of type frame
+                tmp1 = topFrame.find('file').text
+                tmp2 = topFrame.find('fn').text
+                identifier = tmp1 + ":\n" + tmp2
+
+                if topStackOccurences.get(identifier) != None:
+                    value = topStackOccurences.pop(identifier)
+                    topStackOccurences.update({identifier: int(value)+1})
+                else:
+                    topStackOccurences.update({identifier: 1})
+        #sort dict
+        sortedOccurences = sorted(topStackOccurences.items(), key=lambda kv: kv[1])
+
+
+        #make plot
+        x=list()
+        y=list()
+        for ele in reversed(sortedOccurences[-5:]):
+            x.append(ele[0])
+            y.append(ele[1])
+
+
+        #matplotlib.rcParams['font.size']=5
+        fig = plt.figure(figsize=(20,6))    
+        ax = plt.axes() 
+        width = 1 # the width of the bars 
+        ind = list(range(len(y)))  # the x locations for the groups
+        ax.bar([1.1*ele for ele in ind], y, width, color='rgbkymc')
+        ax.set_xticks([1.1*ele for ele in ind])
+        ax.set_xticklabels(x, minor=False)
+        
+        #plt.xticks(rotation=90)
+        plt.title('Top five functions by top of stack occurences')
+        plt.xlabel('Function Name')
+        plt.ylabel('No of top of stack occurences')      
+        #plt.show()
+        fig.add_axes(ax)
+        plt.savefig(os.path.join(target+'/barchart.png'), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
+       
 
     def __createErrorList(self):
         self.__strErrors = str()
@@ -411,7 +460,7 @@ def main():
         exit(-1)
     
 
-    report = ReportCreator(inFile)
+    report = ReportCreator(inFile, targetDirectory)
 
     if report.succesfullReportCreation:
 

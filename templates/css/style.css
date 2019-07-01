@@ -38,7 +38,11 @@ html {
 .grey{
     background-color: grey;
 }
-
+.header_border{
+    border-color: green;
+    border-width: 5px;
+    border-style: solid;
+}
 
 .reduced-margin{
     margin-top: 0;
