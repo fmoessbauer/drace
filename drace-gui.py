@@ -64,20 +64,20 @@ class ReportCreator:
         strDatetime = status.find('time').text
         date = strDatetime.split('T')[0]
         time = (strDatetime.split('T')[1])[0:-1] #last digit is 'Z' -> not needed
-        header.append(self.adjText(date))
-        header.append(self.adjText(time))
-        header.append(self.adjText(status.find('duration').text))
-        header.append(self.adjText(status.find('duration').get('unit')))
+        header.append(adjText(date))
+        header.append(adjText(time))
+        header.append(adjText(status.find('duration').text))
+        header.append(adjText(status.find('duration').get('unit')))
 
         arguments = str()
         for arg in self.__reportRoot.find('args').find('vargv').findall('arg'):
             arguments += arg.text
             arguments += ' '
-        header.append(self.adjText(arguments[0:-1])) #remove last ' '
+        header.append(adjText(arguments[0:-1])) #remove last ' '
         
-        header.append(self.adjText(self.__reportRoot.find('args').find('argv').find('exe').text))
-        header.append(self.adjText(self.__reportRoot.find('protocolversion').text))
-        header.append(self.adjText(self.__reportRoot.find('protocoltool').text))
+        header.append(adjText(self.__reportRoot.find('args').find('argv').find('exe').text))
+        header.append(adjText(self.__reportRoot.find('protocolversion').text))
+        header.append(adjText(self.__reportRoot.find('protocoltool').text))
 
         return header
 
@@ -85,19 +85,19 @@ class ReportCreator:
         newSnippet = self.__htmlTemplates.find('snippet_entry').text
 
         newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
-        newSnippet = newSnippet.replace('*STACK_NUMBER*', self.adjText(hex(elementNumber)))
-        newSnippet = newSnippet.replace('*OBJ*', self.adjText(frame.find('obj').text))
-        newSnippet = newSnippet.replace('*FUNCTION*', self.adjText(frame.find('fn').text))
-        newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', self.adjText(frame.find('ip').text))
+        newSnippet = newSnippet.replace('*STACK_NUMBER*', adjText(hex(elementNumber)))
+        newSnippet = newSnippet.replace('*OBJ*', adjText(frame.find('obj').text))
+        newSnippet = newSnippet.replace('*FUNCTION*', adjText(frame.find('fn').text))
+        newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', adjText(frame.find('ip').text))
         newSnippet = newSnippet.replace('*CODE_TAG*', tag)
 
         if (frame.find('file')!= None):
-            newSnippet = newSnippet.replace('*FILE*', self.adjText(frame.find('file').text))
-            newSnippet = newSnippet.replace('*DIRECTORY*', self.adjText(frame.find('dir').text))
-            newSnippet = newSnippet.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
+            newSnippet = newSnippet.replace('*FILE*', adjText(frame.find('file').text))
+            newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
             if(codeIndex != -1):
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
-                newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(self.adjText(frame.find('file').text)))
+                newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(adjText(frame.find('file').text)))
                 newSnippet = newSnippet.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))
             else:
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
@@ -122,25 +122,25 @@ class ReportCreator:
             ###make heading for the red box### 
             if elementNumber == 0:
                 if len(self.__errorHeading) == 0:
-                    self.__errorHeading += "<br> Obj. 1: " + (self.adjText(frame.find('obj').text) + ': "' + self.adjText(frame.find('fn').text)) + '" <br> '
+                    self.__errorHeading += "<br> Obj. 1: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '" <br> '
                 else:
-                    self.__errorHeading += "Obj. 2: " + (self.adjText(frame.find('obj').text) + ': "' + self.adjText(frame.find('fn').text)) + '"'
+                    self.__errorHeading += "Obj. 2: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '"'
 
             #general entries (always available)
-            newStackElement = stackTemplate.replace('*STACK_NUMBER*', self.adjText(hex(elementNumber))+":")
+            newStackElement = stackTemplate.replace('*STACK_NUMBER*', adjText(hex(elementNumber))+":")
             newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
             newStackElement = newStackElement.replace('*OUTPUT_ID*', outputID+str(position))
-            newStackElement = newStackElement.replace('*FUNCTION*', self.adjText(frame.find('fn').text))
+            newStackElement = newStackElement.replace('*FUNCTION*', adjText(frame.find('fn').text))
             
 
             if (frame.find('file')!= None): #file is in xml report defined
                 codeIndex, tag = self.SCM.handleSourceCode(frame.find('file').text, frame.find('dir').text, frame.find('line').text)
-                newStackElement = newStackElement.replace('*FILE*', self.adjText(frame.find('file').text))
+                newStackElement = newStackElement.replace('*FILE*', adjText(frame.find('file').text))
 
                 if(codeIndex != -1):
                     newStackElement = newStackElement.replace('*CODE_VAR*', str(codeIndex))
                     newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self.__callStackNumber)+"_code'")
-                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', self.adjText(frame.find('line').text))
+                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
                     newStackElement = newStackElement.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))  
                 
                 else: #file is not available on device or file is blacklisted or not whitelisted
@@ -178,12 +178,12 @@ class ReportCreator:
         for error in errorList:
             self.__errorNumber += 1
             outputID = "output_"+str(self.__errorNumber)+"_"
-            newError = errorTemplate.replace('*ERROR_ID*', self.adjText(error.find('unique').text))
-            newError = newError.replace('*ERROR_TYPE*', self.adjText(error.find('kind').text))
+            newError = errorTemplate.replace('*ERROR_ID*', adjText(error.find('unique').text))
+            newError = newError.replace('*ERROR_TYPE*', adjText(error.find('kind').text))
             
             xwhat = error.findall('xwhat')
-            newError = newError.replace('*XWHAT_TEXT_1*', self.adjText(xwhat[0].find('text').text))
-            newError = newError.replace('*XWHAT_TEXT_2*', self.adjText(xwhat[1].find('text').text))
+            newError = newError.replace('*XWHAT_TEXT_1*', adjText(xwhat[0].find('text').text))
+            newError = newError.replace('*XWHAT_TEXT_2*', adjText(xwhat[1].find('text').text))
 
             self.__errorHeading = str() #reset errorHeading, will be filled filled by __createCallStack
             newError = newError.replace('*CALL_STACK_ENTRIES_1*', self.__createCallStack(error, 0, outputID))
@@ -213,14 +213,6 @@ class ReportCreator:
         self.__createHeader()
         self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.__snippets)
         self.htmlReport = self.SCM.createCodeVars(self.htmlReport)
-
-    def adjText(self, text): #change html symbols
-        text = text.replace('&', '&amp;')
-        text = text.replace('<', '&lt;')
-        text = text.replace('>', '&gt;')
-        text = text.replace('"', '&quot;')
-        text = text.replace('\\', '/')
-        return text
 
 
 class SourceCodeManagement:
@@ -267,7 +259,7 @@ class SourceCodeManagement:
         sourceFile = open(fullPath, mode='r')
         if completeFileFlag:
             sourceCode = sourceFile.read()
-            sourceCode = self.adjText(sourceCode)
+            sourceCode = sourceCode
 
         else:
             sourceLineList = sourceFile.readlines()
@@ -284,7 +276,7 @@ class SourceCodeManagement:
                 sourceCode += sourceLine
 
         sourceFile.close()
-        return self.adjText(sourceCode)
+        return adjText(sourceCode)
 
     def handleSourceCode(self, filename, directory, line):
         fullPath = directory +'/'+ filename
@@ -351,14 +343,14 @@ class SourceCodeManagement:
         else:
             return srcObject[1] - NUMBEROFCODELINES//2
 
-    def adjText(self, text): #change html symbols
-        text = text.replace('&', '&amp;')
-        text = text.replace('<', '&lt;')
-        text = text.replace('>', '&gt;')
-        text = text.replace('"', '&quot;')
-        text = text.replace('\\', '/')
-        return text
 
+def adjText(text): #change html symbols e.g. & -> &amp;
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    text = text.replace('"', '&quot;')
+    text = text.replace('\\', '/')
+    return text
 
 def addListEntries(fileList, strEntries):
     strEntries = strEntries.replace("\\","/")
@@ -383,31 +375,38 @@ def main():
     parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
     args = parser.parse_args()
     
-    inFile = args.inputFile
-    targetDirectory = args.outputDirectory
+    ###args handling
+    if args.inputFile != None:
+        inFile = args.inputFile
+
+    if args.outputDirectory != None:
+        targetDirectory = args.outputDirectory
+    else:
+        targetDirectory = './drace-gui_output'
 
     if args.blacklist != None:
         addListEntries(SOURCEFILE_BL, args.blacklist)
         
-
     if args.whitelist != None:
         addListEntries(SOURCEFILE_WL, args.whitelist)
         WHITELISTING = True
+    #end of args handling
+
 
     if DEBUG:
         if inFile == None:
             inFile = 'test_files/test.xml'    
-        if targetDirectory == None:
-            targetDirectory = 'test_files/output'
+       
+        targetDirectory = 'test_files/output'
         
 
     try:
         if not os.path.isfile(inFile):
             print("Your input file does not exist")
-            return 0
+            exit(-1)
     except TypeError:
         print("You must specify an input file")
-        return 0
+        exit(-1)
     
 
     report = ReportCreator(inFile)
