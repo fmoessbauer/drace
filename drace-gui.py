@@ -9,6 +9,7 @@ g_CSSPATH = "templates/css"
 g_JSPATH = "templates/js"
 DEBUG = True
 
+#info: blacklisting overrules whitelisting
 SOURCEFILE_BL = list()
 SOURCEFILE_WL = list()
 WHITELISTING = False
@@ -66,6 +67,7 @@ class ReportCreator:
         header.append(self.adjText(date))
         header.append(self.adjText(time))
         header.append(self.adjText(status.find('duration').text))
+        header.append(self.adjText(status.find('duration').get('unit')))
 
         arguments = str()
         for arg in self.__reportRoot.find('args').find('vargv').findall('arg'):
@@ -198,10 +200,11 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*DATE*', headerInformation[0])
         self.htmlReport = self.htmlReport.replace('*TIME*', headerInformation[1])
         self.htmlReport = self.htmlReport.replace('*DURATION*', headerInformation[2])
-        self.htmlReport = self.htmlReport.replace('*ARGS*', headerInformation[3])
-        self.htmlReport = self.htmlReport.replace('*EXE*', headerInformation[4])
-        self.htmlReport = self.htmlReport.replace('*PROTOCOLVERSION*', headerInformation[5])
-        self.htmlReport = self.htmlReport.replace('*PROTOCOLTOOL*', headerInformation[6])
+        self.htmlReport = self.htmlReport.replace('*DURATION_UNIT*', headerInformation[3])
+        self.htmlReport = self.htmlReport.replace('*ARGS*', headerInformation[4])
+        self.htmlReport = self.htmlReport.replace('*EXE*', headerInformation[5])
+        self.htmlReport = self.htmlReport.replace('*PROTOCOLVERSION*', headerInformation[6])
+        self.htmlReport = self.htmlReport.replace('*PROTOCOLTOOL*', headerInformation[7])
         self.htmlReport = self.htmlReport.replace('*NUMBER_OF_ERRORS*', str(self.__numberOfErrors))
         self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self.__strErrors)
 
@@ -357,14 +360,39 @@ class SourceCodeManagement:
         return text
 
 
+def addListEntries(fileList, strEntries):
+    strEntries = strEntries.replace("\\","/")
+    listEntries = strEntries.split(',')
+    for entry in listEntries: 
+        #remove potential leading and trailing whitespaces
+        while entry[0] == ' ':
+            entry = entry[1:]
+        while entry[-1] == ' ':
+            entry = entry[:-1]
+        
+        fileList.append(entry)
+
+
+
 def main():
+    global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--inputFile", help='input file', type=str)
     parser.add_argument("-o", "--outputDirectory", help='output directory', type=str)
+    parser.add_argument("-b", "--blacklist", help='add blacklist entries <entry1,entry2 ...>', type=str)
+    parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
     args = parser.parse_args()
     
     inFile = args.inputFile
     targetDirectory = args.outputDirectory
+
+    if args.blacklist != None:
+        addListEntries(SOURCEFILE_BL, args.blacklist)
+        
+
+    if args.whitelist != None:
+        addListEntries(SOURCEFILE_WL, args.whitelist)
+        WHITELISTING = True
 
     if DEBUG:
         if inFile == None:

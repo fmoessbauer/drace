@@ -11,6 +11,7 @@ Header:
     *ERROR_ENTRIES*
     *CODE_VARIABLES*
     *SNIPPET_VARIABLES*
+    *DURATION_UNIT*
 
 Error General:
     *ERROR_ID*

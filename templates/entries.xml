@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <entries>
-  <base_entry>
-<![CDATA[
-<!DOCTYPE html>
+<base_entry><![CDATA[<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<script src="js/prism.js"></script> 
-<!--Import Google Icon Font-->
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
 <script type="text/javascript" src="js/materialize.min.js"></script>
+<script type="text/javascript" src="js/prism.js"></script> 
 <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
-<link rel="stylesheet" href="css/prism.css"/>
-<link rel="stylesheet" href="css/style.css"/>
-<script>
-$(document).ready(function(){
-$('.collapsible').collapsible();
-}); 
-</script>
+<link type="text/css" rel="stylesheet" href="css/prism.css"/>
+<link type="text/css" rel="stylesheet" href="css/style.css"/>
 </head>
+
 <body>
 <script>
 *CODE_VARIABLES*
@@ -37,7 +28,7 @@ $('.collapsible').collapsible();
 <div class="col s6">
 <p><b>Date: </b>*DATE*</p>
 <p><b>Time: </b>*TIME*</p>
-<p><b>Duration [ms]: </b>*DURATION*</p>
+<p><b>Duration [*DURATION_UNIT*]: </b>*DURATION*</p>
 <p><b>Args: </b>*ARGS*</p>
 </div>
 <div class="col s6">
@@ -64,67 +55,53 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
 </script> 
+<script>
+$(document).ready(function(){
+$('.collapsible').collapsible();
+}); 
+</script>
 </body>
 </html> ]]>
-  </base_entry>
-<error_entry>
-<![CDATA[<li>
-<div class="collapsible-header"><i class="material-icons">error</i>*ERROR_ID*: *ERROR_HEADING*</div>
+</base_entry>
+<error_entry><![CDATA[<li>
+<div class="collapsible-header"><span><h5>&#10006;&nbsp;&nbsp;&nbsp;</h5></span>*ERROR_ID*: *ERROR_HEADING*</div>
 <div class="collapsible-body">
 <h5>Error Type: *ERROR_TYPE*</h5>
 <p class='reduced-margin'>*XWHAT_TEXT_1*</p>
 <p class='reduced-margin'>*XWHAT_TEXT_2*</p>
 <hr />
-<div class="row">
-<div class="col s6">
+<div class="row"><div class="col s6">
 <h5>Call Stack 1</h5>
 <hr \>
-<ul>
-*CALL_STACK_ENTRIES_1*
+<ul>*CALL_STACK_ENTRIES_1*
 </ul>
 </div>
 <div class="col s6">
 <h5>Call Stack 2</h5>
 <hr \>
-<ul>       
-*CALL_STACK_ENTRIES_2*
-</ul>
-</div>
-</div>
+<ul>*CALL_STACK_ENTRIES_2*</ul>
+</div></div>
 <hr \>
-<div class="row">
-<div class="col s6">
+<div class="row"><div class="col s6">
 <div id= "*OUTPUT_ID_1*"></div>
 </div>
 <div class="col s6">
 <div id= "*OUTPUT_ID_2*"></div>
-</div>
-</div>
-</li>]]>
-</error_entry>
-<stack_entry><![CDATA[<li>
-<button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*, *FIRST_LINE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button>
-</li>]]></stack_entry>
-<code_entry>
-<![CDATA[<pre class="line-numbers" data-start="*FIRST_LINE*" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*">
-</code></pre>]]>
-</code_entry>
-<no_code_entry>
-<![CDATA[<div class="noCode">
-<span class="noCodeSpan">No code preview available.</span>
-</div>]]>
-</no_code_entry>
+</div></div>
+</li>]]></error_entry>
+<stack_entry><![CDATA[
+<li><button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*, *FIRST_LINE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button></li>]]></stack_entry>
+<code_entry><![CDATA[<pre class="line-numbers" data-start="*FIRST_LINE*" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*"></code></pre>]]></code_entry>
+<no_code_entry><![CDATA[<div class="noCode"><span class="noCodeSpan">No code preview available.</span></div>]]></no_code_entry>
 
-<snippet_entry>
-<![CDATA[*SNIPPET_VAR* = `
-<h5 class="reduced-margin"><u><b>Element: </b>*STACK_NUMBER*</u></h5>
+<snippet_entry><![CDATA[*SNIPPET_VAR* = `<h5 class="reduced-margin"><u><b>Element: </b>*STACK_NUMBER*</u></h5>
 <p class="reduced-margin"><b>Obj.: </b>*OBJ*</p>
 <p class="reduced-margin"><b>File: </b>*FILE* : *LINE_OF_CODE*</p>
 <p class="reduced-margin"><b>Dir.: </b>*DIRECTORY*</p>
 <p class="reduced-margin"><b>Function: </b>*FUNCTION*</p>
 <p class="reduced-margin"><b>IP @ </b>*INSTRUCTION_POINTER*</p>
 <p \>
-*CODE_TAG*`]]>
+*CODE_TAG*`;]]>
 </snippet_entry>
 
 </entries>
