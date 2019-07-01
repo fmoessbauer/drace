@@ -1,0 +1,16 @@
+tags:
+- windows
+- python
+
+variables:
+  PROJECT_NAME: "drace-gui"
+  GIT_SUBMODULE_STRATEGY: "normal"
+
+stages:
+  - test
+
+python:
+  stage: test
+  script:
+  - echo "Start test..."
+  - python drace-gui.py
