@@ -1,6 +1,7 @@
-tags:
-- windows
-- python
+.globals: &globals
+  tags:
+  - windows
+  - python
 
 variables:
   PROJECT_NAME: "drace-gui"
