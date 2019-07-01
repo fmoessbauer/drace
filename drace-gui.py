@@ -378,6 +378,8 @@ def main():
     ###args handling
     if args.inputFile != None:
         inFile = args.inputFile
+    else:
+        inFile = None
 
     if args.outputDirectory != None:
         targetDirectory = args.outputDirectory
