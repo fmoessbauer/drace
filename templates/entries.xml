@@ -118,7 +118,7 @@ $('.collapsible').collapsible();
 <snippet_entry><![CDATA[*SNIPPET_VAR* = `<h5 class="reduced-margin"><u><b>Element: </b>*STACK_NUMBER*</u></h5>
 <p class="reduced-margin"><b>Obj.: </b>*OBJ*</p>
 <p class="reduced-margin"><b>File: </b>*FILE* : *LINE_OF_CODE*</p>
-<p class="reduced-margin"><b>Dir.: </b>*DIRECTORY*</p>
+<div class="tooltip reduced-margin"><b>Dir.: </b>*SHORT_DIR*<span class="tooltiptext">*DIRECTORY*</span></div>
 <p class="reduced-margin"><b>Function: </b>*FUNCTION*</p>
 <p class="reduced-margin"><b>IP @ </b>*INSTRUCTION_POINTER*</p>
 <p \>

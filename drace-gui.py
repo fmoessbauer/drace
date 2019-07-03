@@ -110,6 +110,7 @@ class ReportCreator:
         if (frame.find('file')!= None):
             newSnippet = newSnippet.replace('*FILE*', adjText(frame.find('file').text))
             newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
+            newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self.__makeShortDir(frame.find('dir').text)))
             newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
             if(codeIndex != -1):
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
@@ -121,9 +122,14 @@ class ReportCreator:
         else:
             newSnippet = newSnippet.replace('*FILE*', 'no filename avail.')
             newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory avail.')
+            newSnippet = newSnippet.replace('*SHORT_DIR*', 'no directory avail.')
             newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code avail.')
 
         self.__snippets += newSnippet #append referenced code snippet
+
+    def __makeShortDir(self, strDir):
+        elements = strDir.split("\\")
+        return elements[0] + "/" + elements[1] + "/.../" + elements[-1]
 
     def __createCallStack(self, errorEntry, position, outputID):
         
@@ -231,7 +237,6 @@ class ReportCreator:
         fig.add_axes(ax)
         plt.savefig(os.path.join(target+'/'+self.__topStackGraphFileName), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
        
-
     def __createErrorList(self):
         self.__strErrors = str()
         

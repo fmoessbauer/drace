@@ -29,6 +29,7 @@ Call Stacks:
     *STACK_NUMBER*
     *OBJ*
     *FILE*
+    *SHORT_DIR*
     *DIRECTORY*
     *FUNCTION*
     *LINE_OF_CODE*
