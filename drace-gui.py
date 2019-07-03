@@ -7,7 +7,7 @@ try:
     import matplotlib
     import matplotlib.pyplot as plt
     noMatplotLib = False
-except ModuleNotFoundError:
+except ImportError:
     noMatplotLib = True
 
 
