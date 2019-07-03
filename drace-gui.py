@@ -119,9 +119,9 @@ class ReportCreator:
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
 
         else:
-            newSnippet = newSnippet.replace('*FILE*', 'no filename available')
-            newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory available')
-            newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code available')
+            newSnippet = newSnippet.replace('*FILE*', 'no filename avail.')
+            newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory avail.')
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code avail.')
 
         self.__snippets += newSnippet #append referenced code snippet
 
@@ -165,7 +165,7 @@ class ReportCreator:
                 
             else: #no filepath for file in xml is given 
                 codeIndex, tag = self.SCM.handleSourceCode("","", "")
-                newStackElement = newStackElement.replace('*FILE*', 'no filename available')
+                newStackElement = newStackElement.replace('*FILE*', 'no filename availa')
                 noPreview = True
 
             if noPreview:
@@ -441,6 +441,7 @@ def main():
     parser.add_argument("-o", "--outputDirectory", help='output directory', type=str)
     parser.add_argument("-b", "--blacklist", help='add blacklist entries <entry1,entry2 ...>', type=str)
     parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
+    parser.add_argument("-D", "--Debug", help='add whitelist entries entries <entry1,entry2 ...>', type=bool)
     args = parser.parse_args()
     
     ###args handling

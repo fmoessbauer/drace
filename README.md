@@ -7,7 +7,7 @@ Takes an existing drace xml report searches for the mentioned source files on th
 ## How to use
 
 ### Installation
-The tool itself does not any installation, just a Python3 installation is needed.
+The tool itself does not need any installation, just a Python3 installation is needed.
 Beside the script the folder '/templates' is also needed for execution.
 
 ### Example
@@ -20,16 +20,23 @@ Linux:
 ### needed parameter:
 
 -i: specifies a drace-xml file
+
     -i "C:/my/awesome/report.xml"
  
 ### optional parameters:
 
--o: specifies an output directory (default is: ./drace-gui_output/)
+- -o: specifies an output directory (default is: ./drace-gui_output/)
+
     -o "C:/plenty/of/reports"
--b: sourcefiles can be excluded from being loaded in the report
+
+- -b: sourcefiles can be excluded from being loaded in the report
+
     -b "C:/do/not/show/in/report, C:/private" excludes all files in the specified folders and all of their subfolders
--w: sourcefile can specifically included;
+
+- -w: sourcefile can specifically included;
+
     -w "C:/just/show/this/files, C:/public" exclusively includes all files in the specified folders and all their subfolders
+
 info: 
 - blacklist wins over whitelist (-> whitelisted files and subfolders can be blacklisted and therefore be excluded)
 - all needed files must be whitelisted if at least on element is whitelisted
