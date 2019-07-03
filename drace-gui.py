@@ -49,7 +49,8 @@ class ReportCreator:
         self.__pathOfReport = pathOfReport
         if self.__inputValidation():
             self.__createReport()
-            self.__countTopStackOccurences(target)
+            if not noMatplotLib:
+                self.__countTopStackOccurences(target)
         else:
             print("input file is not valid")
             self.succesfullReportCreation = False
