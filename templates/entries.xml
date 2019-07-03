@@ -65,7 +65,8 @@ document.getElementById(box).innerHTML = snippet;
 if (code_id != 'None'){
 document.getElementById(code_id).innerHTML  = code;
 Prism.highlightAllUnder(document.getElementById(box));
-var offset = Math.round((line-first_line-5)*22);
+var height = window.getComputedStyle(document.getElementById(box)).getPropertyValue('line-height');
+var offset = Math.round((line-first_line-5)*parseInt(height));
 document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
