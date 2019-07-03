@@ -1,6 +1,5 @@
 .globals: &globals
   tags:
-  - windows
   - python
 
 variables:
@@ -14,4 +13,4 @@ python:
   stage: test
   script:
   - echo "Start test..."
-  - python drace-gui.py
+  - python3 drace-gui.py
