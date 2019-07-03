@@ -12,6 +12,7 @@ Header:
     *CODE_VARIABLES*
     *SNIPPET_VARIABLES*
     *DURATION_UNIT*
+    *TOP_OF_STACK_GRAPH*
 
 Error General:
     *ERROR_ID*

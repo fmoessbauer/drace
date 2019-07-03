@@ -40,8 +40,13 @@
 <p><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
 </div>
 </div></div>
-
-<center><img src="barchart.png"  width=100%  ></center>
+<p></p>
+<div class="row"><div class="col s6">
+<img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
+</div>
+<div class="col s6">
+<img src=""  width=100%  >
+</div></div>
 <hr />
 
 <h4>Errors</h4>
