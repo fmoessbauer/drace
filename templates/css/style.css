@@ -39,8 +39,8 @@ html {
     background-color: grey;
 }
 .header_border{
-    border-color: green;
-    border-width: 5px;
+    border-color: black;
+    border-width: 2px;
     border-style: solid;
 }
 
@@ -68,7 +68,7 @@ html {
 }
 
 .line-highlight {
-	background: hsla(24, 50%, 80%,.08);
+	background: hsla(24, 50%, 80%,.4);
 }
 
 code[class*="language-"],

@@ -109,10 +109,11 @@ class ReportCreator:
         newSnippet = newSnippet.replace('*CODE_TAG*', tag)
 
         if (frame.find('file')!= None):
-            newSnippet = newSnippet.replace('*FILE*', adjText(frame.find('file').text))
+            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', "<a href='vscode://file/"+adjText(frame.find('dir').text)+"/"+adjText(frame.find('file').text)+":"+adjText(frame.find('line').text) +"'>"+adjText(frame.find('file').text)+":"+adjText(frame.find('line').text)+"</a>")
             newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
             newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self.__makeShortDir(frame.find('dir').text)))
-            newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
+
+
             if(codeIndex != -1):
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
                 newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(adjText(frame.find('file').text)))
@@ -121,10 +122,9 @@ class ReportCreator:
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
 
         else:
-            newSnippet = newSnippet.replace('*FILE*', 'no filename avail.')
+            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', 'no filename avail.')
             newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory avail.')
             newSnippet = newSnippet.replace('*SHORT_DIR*', 'no directory avail.')
-            newSnippet = newSnippet.replace('*LINE_OF_CODE*', 'no line of code avail.')
 
         self.__snippets += newSnippet #append referenced code snippet
 
@@ -232,10 +232,11 @@ class ReportCreator:
         plt.ylabel('No of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
 
         for i,v in enumerate(y):
-            ax.text(i,  v-10, str(v), ha='center',color='black', fontweight='bold')
+            ax.text(i,  v, str(v), ha='center',color='black', fontweight='bold')
         
-        #plt.show()
+        
         fig.add_axes(ax)
+        #plt.show()
         plt.savefig(os.path.join(target+'/'+self.__topStackGraphFileName), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
        
     def __createErrorList(self):
@@ -472,7 +473,7 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = 'test_files/test.xml'    
+            inFile = 'test_files/report.xml'    
        
         targetDirectory = 'test_files/output'
         

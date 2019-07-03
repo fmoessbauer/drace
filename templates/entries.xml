@@ -21,7 +21,7 @@
 *SNIPPET_VARIABLES*
 </script>
 <h3><u>DRace Report</u></h3>
-<h4>General Dates</h4>
+<h4>General Data</h4>
 <div class="header_border"><div class="row">
 <div class="col s3">
 <p><b>Exe: </b>*EXE*</p>
@@ -42,7 +42,7 @@
 </div></div>
 <p></p>
 <div class="row"><div class="col s2">
-<h5>Example:</h5>
+<h5>Legend:</h5>
 <p />
 <img src="legend.png"  width=100%  >
 </div>
@@ -117,7 +117,7 @@ $('.collapsible').collapsible();
 
 <snippet_entry><![CDATA[*SNIPPET_VAR* = `<h5 class="reduced-margin"><u><b>Element: </b>*STACK_NUMBER*</u></h5>
 <p class="reduced-margin"><b>Obj.: </b>*OBJ*</p>
-<p class="reduced-margin"><b>File: </b>*FILE* : *LINE_OF_CODE*</p>
+<p class="reduced-margin"><b>File: </b>*FILE_NAME_ENTRY*</p>
 <div class="tooltip reduced-margin"><b>Dir.: </b>*SHORT_DIR*<span class="tooltiptext">*DIRECTORY*</span></div>
 <p class="reduced-margin"><b>Function: </b>*FUNCTION*</p>
 <p class="reduced-margin"><b>IP @ </b>*INSTRUCTION_POINTER*</p>
@@ -126,11 +126,5 @@ $('.collapsible').collapsible();
 </snippet_entry>
 
 </entries>
-
-
-
-
-
-
 
 
