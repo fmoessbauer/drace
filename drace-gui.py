@@ -165,7 +165,7 @@ class ReportCreator:
                 
             else: #no filepath for file in xml is given 
                 codeIndex, tag = self.SCM.handleSourceCode("","", "")
-                newStackElement = newStackElement.replace('*FILE*', 'no filename availa')
+                newStackElement = newStackElement.replace('*FILE*', 'no filename avail.')
                 noPreview = True
 
             if noPreview:
@@ -499,6 +499,7 @@ def main():
             shutil.rmtree(targetDirectory+"/js")
         shutil.copytree(g_CSSPATH, targetDirectory+"/css")
         shutil.copytree(g_JSPATH, targetDirectory+"/js")
+        shutil.copy('templates/legend.png', targetDirectory)
         return 0
 
     else:
