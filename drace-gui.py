@@ -1,7 +1,20 @@
+# /*
+#  * DRace-GUI: A graphical report generator for DRace
+#  *
+#  * Copyright 2019 Siemens AG
+#  *
+#  * Authors:
+#  *   <Philip Harr> <philip.harr@siemens.com>
+#  *
+#  * SPDX-License-Identifier: MIT
+#  */
+
+
 import xml.etree.ElementTree as ET
 import os
 import shutil
 import argparse
+from subprocess import check_call, STDOUT, DEVNULL
 
 try:
     import matplotlib
@@ -30,6 +43,11 @@ if NUMBEROFCODELINES % 2:
 class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __topStackGraphFileName = 'topStackBarchart.png'
+    if check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
+        __vscodeFlag = True
+    else:
+        __vscodeFlag = False
+
 
     def __init__(self, pathOfReport, target):
         self.sourcefileList = list()
@@ -98,6 +116,18 @@ class ReportCreator:
 
         return header
 
+    def __makeFileEntry(self, frame):
+        strDir = adjText(frame.find('dir').text)
+        strFile = adjText(frame.find('file').text)
+        strLine = adjText(frame.find('line').text)
+
+        if cself.__vscodeFlag:
+            entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine +"'>"+ strFile +":" + strLine + "</a>"
+        else:
+            entry  = "<a href='file://"+ strDir + "/" + strFile + ":" + strLine + "'>" + strFile + ":" + strLine + "</a>"
+        
+        return entry
+
     def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex):
         newSnippet = self.__htmlTemplates.find('snippet_entry').text
 
@@ -109,9 +139,10 @@ class ReportCreator:
         newSnippet = newSnippet.replace('*CODE_TAG*', tag)
 
         if (frame.find('file')!= None):
-            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', "<a href='vscode://file/"+adjText(frame.find('dir').text)+"/"+adjText(frame.find('file').text)+":"+adjText(frame.find('line').text) +"'>"+adjText(frame.find('file').text)+":"+adjText(frame.find('line').text)+"</a>")
+            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', self.__makeFileEntry(frame))
             newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
             newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self.__makeShortDir(frame.find('dir').text)))
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
 
 
             if(codeIndex != -1):
@@ -473,7 +504,7 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = 'test_files/report.xml'    
+            inFile = 'test_files/test.xml'    
        
         targetDirectory = 'test_files/output'
         
