@@ -102,6 +102,7 @@ namespace drace {
 					}
 					if (f.line) {
 						p.OpenElement("line"); p.PushText(std::to_string(f.line).c_str()); p.CloseElement();
+                        p.OpenElement("offset"); p.PushText(std::to_string(f.line_offs).c_str()); p.CloseElement();
 					}
 					p.CloseElement();
 				}
