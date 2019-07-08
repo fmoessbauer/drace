@@ -15,6 +15,7 @@ html {
     font-size: 12px;
     margin-left: 10px;
     margin-right: 10px;
+    
 }
 
 
@@ -38,7 +39,7 @@ html {
     border: none;
 }
 .collapsible-header{
-    background-color: #B22222;
+    background-color: rgb(153,0,0); /*siemens red*/
     width: 100%;
     color: white;
     font-weight: bold;
@@ -47,9 +48,14 @@ html {
     background-color: rgb(161, 117, 117);
 }
 
-.grey{
-    background-color: grey;
+.highlight-button{
+    background-color: rgb(0,153,153) !important; /*siemens green*/
 }
+
+.btn.grey-button{
+    background-color: rgb(135, 155, 170); /*siemens grey*/
+}
+
 .header_border{
     border-color: black;
     border-width: 2px;
@@ -64,7 +70,7 @@ html {
 .btn{
     width: 100%;
     height: 22px;
-    background-color: black;
+    background-color:  black;
     text-align: left;
     text-transform: lowercase;   
     margin: 1px; 
@@ -72,6 +78,9 @@ html {
     border-radius: 0;
     box-shadow: none;
     font-size: inherit;
+}
+.btn:hover, .btn:focus {
+    background-color: rgb(71, 71, 71);
 }
 
 .text-left{
@@ -81,10 +90,6 @@ html {
     text-align: right;
 }
 
-
-.btn:hover, .btn:focus {
-    background-color: rgb(71, 71, 71);
-}
 
 .line-highlight {
 	background: hsla(24, 50%, 80%,.4);
@@ -111,7 +116,6 @@ pre[class*="language-"] {
 
 .vl {
     border-right: 1px solid black;
-    border-left: 1px solid black;
     height: 100%;
   }
 

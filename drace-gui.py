@@ -125,9 +125,10 @@ class ReportCreator:
         strDir = adjText(frame.find('dir').text)
         strFile = adjText(frame.find('file').text)
         strLine = adjText(frame.find('line').text)
+        offset = adjText(frame.find('offset').text)
 
         if self.__vscodeFlag:
-            entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine +"'>"+ strFile +":" + strLine + "</a>"
+            entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine + ":" + offset +"'>"+ strFile +":" + strLine + ":" + offset + "</a>"
         else:
             entry  = "<a href='file://"+ strDir + "/" + strFile + ":" + strLine + "'>" + strFile + ":" + strLine + "</a>"
         
@@ -222,8 +223,10 @@ class ReportCreator:
                 newStackElement = newStackElement.replace('*CODE_ID_VAR*',  "'None'")
                 newStackElement = newStackElement.replace('*LINE_OF_CODE*', "'None'")
                 newStackElement = newStackElement.replace('*FIRST_LINE*', "'NONE'") 
-                insertPosition = newStackElement.find('btn"') 
-                newStackElement = newStackElement[:insertPosition] + "grey " + newStackElement[insertPosition:] 
+                searchStr = 'class="'
+                insertPosition = newStackElement.find(searchStr)+len(searchStr) #to add the ".grey" class the position before after class
+                #insertPosition += newStackElement[insertPosition:].find('"')
+                newStackElement = newStackElement[:insertPosition] + "grey-button " + newStackElement[insertPosition:] 
 
             
             self.__createSnippetEntry(frame, elementNumber, tag, codeIndex, buttonID)
@@ -544,7 +547,7 @@ def main():
     if not targetDirectory.is_dir():
         targetDirectory.mkdir()
 
-    report = ReportCreator(inFile, str(targetDirectory))
+    report = ReportCreator(str(inFile), str(targetDirectory))
 
 
     if report.succesfullReportCreation:

@@ -32,35 +32,36 @@
 *SNIPPET_VARIABLES*
 </script>
 <h3><u>DRace Report</u></h3>
-<h4>General Data</h4>
-<div class="header_border"><div class="row">
-<div class="col s3">
+
+
+<div class="row"><div class="col s6">
+<h5>General Data</h5>
 <p><b>Exe: </b>*EXE*</p>
 <p><b>Total Errors: </b>*NUMBER_OF_ERRORS*</p>
-</div>
-<div class="col s3">
+
 <p><b>Args: </b>*ARGS*</p>
 <p><b>Duration [*DURATION_UNIT*]: </b>*DURATION*</p>
-</div>
-<div class="col s3">
+
 <p><b>Date: </b>*DATE*</p>
 <p><b>Time: </b>*TIME*</p>
-</div>
-<div class="col s3">
+
 <p><b>Protocolversion: </b>*PROTOCOLVERSION*</p>
 <p><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
+
 </div>
-</div></div>
-<p></p>
-<div class="row"><div class="col s2">
+
+<div class="col s6">
 <h5>Legend:</h5>
 <p />
 <img src="legend.png"  width=100%  >
-</div>
-<div class="vl col s5">
+</div></div>
+
+
+
+<div class="row"><div class="vl col s6">
 <img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
 </div>
-<div class="col s5">
+<div class="col s6">
 <img src=""  width=100%  >
 </div></div>
 <hr />
@@ -87,30 +88,49 @@ document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
 function pressButton(id, upDown){
-	if (upDown == 0){
-		var splittedButtonID = id.split('_');
-		if (splittedButtonID[3] != "0"){
-			splittedButtonID[3] = parseInt(splittedButtonID[3]) - 1;
-			var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
-			if (document.getElementById(newID) != null){
-				$(document.getElementById(newID)).click();
-			}
-		}
-	} 
-    if (upDown == 1){
-		var splittedButtonID = id.split('_');
-        splittedButtonID[3] = parseInt(splittedButtonID[3]) + 1;
-        var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
-        if (document.getElementById(newID) != null){
-            $(document.getElementById(newID)).click();
-        }
-	} 
+if (upDown == 0){
+var splittedButtonID = id.split('_');
+if (splittedButtonID[3] != "0"){
+splittedButtonID[3] = parseInt(splittedButtonID[3]) - 1;
+var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
+if (document.getElementById(newID) != null){
+$(document.getElementById(newID)).click();
+}
+}
+else{
+$(document.getElementById(id)).click();
+}
+} 
+if (upDown == 1){
+var splittedButtonID = id.split('_');
+splittedButtonID[3] = parseInt(splittedButtonID[3]) + 1;
+var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
+if (document.getElementById(newID) != null){
+$(document.getElementById(newID)).click();
+}
+else{
+$(document.getElementById(id)).click();
+}
+} 
 }
 </script> 
 <script>
 $(document).ready(function(){
 $('.collapsible').collapsible();
 }); 
+$("button").click(function() {
+	var str = this.id;
+	splitString = str.split("_");
+	var wildCardId = ""
+	for(i = 0; i<splitString.length-1; i++){
+		wildCardId += (splitString[i] +"_") ; 
+	}
+	var elements = document.querySelectorAll('[id^='+wildCardId +']');
+	for(i = 0; i<elements.length;i++){
+		$( elements[i] ).removeClass( "highlight-button" );
+	}
+    $( document.getElementById(this.id) ).addClass( "highlight-button" );
+});
 </script>
 </body>
 </html> ]]>
