@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 import os
 import shutil
 import argparse
+import pathlib
 from subprocess import check_call, STDOUT, DEVNULL
 
 try:
@@ -228,7 +229,7 @@ class ReportCreator:
 
         return callStack
 
-    def __countTopStackOccurences(self,target):
+    def __countTopStackOccurences(self, target):
         topStackOccurences = dict()
         errors = self.__reportRoot.findall('error')
         for error in errors:
@@ -350,15 +351,19 @@ class SourceCodeManagement:
         
     def __returnCode(self, fullPath, justExistance, line = 0, completeFileFlag = False):
         returnSrc = False
-        
-        if os.path.isfile(fullPath):
+        try:
+            fp = pathlib.Path(fullPath).resolve() #returns absolute path
+        except:
+            return -1
+
+        if fp.is_file():
             for element in SOURCEFILE_BL: #blacklisting routine
-                if element in fullPath:
+                if str(element) in str(fp): #both are absoulte paths, so comparing is valid
                     return -1
                 
             if WHITELISTING:
                 for element in SOURCEFILE_WL:
-                    if element in fullPath:
+                    if str(element) in str(fullPath):
                         returnSrc = True
                         break
                 if not returnSrc:
@@ -465,7 +470,7 @@ def adjText(text): #change html symbols e.g. & -> &amp;
     text = text.replace('\\', '/')
     return text
 
-def addListEntries(fileList, strEntries):
+def parseArgumentString(fileList, strEntries):
     strEntries = strEntries.replace("\\","/")
     listEntries = strEntries.split(',')
     for entry in listEntries: 
@@ -474,8 +479,12 @@ def addListEntries(fileList, strEntries):
             entry = entry[1:]
         while entry[-1] == ' ':
             entry = entry[:-1]
-        
-        fileList.append(entry)
+
+        newObject = pathlib.Path(entry)
+        newObject = newObject.resolve()
+        fileList.append(newObject)   
+
+    return      
 
 
 
@@ -495,29 +504,29 @@ def main():
         DEBUG = True
     
     if args.inputFile != None:
-        inFile = args.inputFile
+        inFile = pathlib.Path(args.inputFile)
     else:
         inFile = None
 
     if args.outputDirectory != None:
-        targetDirectory = args.outputDirectory
+        targetDirectory = pathlib.Path(args.outputDirectory)
     else:
-        targetDirectory = './drace-gui_output'
+        targetDirectory = pathlib.Path('./drace-gui_output')
 
     if args.blacklist != None:
-        addListEntries(SOURCEFILE_BL, args.blacklist)
+        parseArgumentString(SOURCEFILE_BL, args.blacklist)
         
     if args.whitelist != None:
-        addListEntries(SOURCEFILE_WL, args.whitelist)
+        parseArgumentString(SOURCEFILE_WL, args.whitelist)
         WHITELISTING = True
     #end of args handling
 
 
     if DEBUG:
         if inFile == None:
-            inFile = 'test_files/test.xml'    
+            inFile = pathlib.Path('test_files/test.xml')    
        
-        targetDirectory = 'test_files/output'
+        targetDirectory = pathlib.Path('test_files/output')
         
 
     try:
@@ -528,30 +537,34 @@ def main():
         print("You must specify an input file")
         exit(-1)
     
+    if not targetDirectory.is_dir():
+        targetDirectory.mkdir()
 
-    report = ReportCreator(inFile, targetDirectory)
+    report = ReportCreator(inFile, str(targetDirectory))
+
 
     if report.succesfullReportCreation:
 
-        if not os.path.isdir(targetDirectory):
-            os.mkdir(targetDirectory)
-
         #write report to destination
-        output = open(targetDirectory+'/index.html', mode='w')
+        output = open(str(targetDirectory)+'/index.html', mode='w')
         output.write(report.htmlReport)
         output.close()
 
         #copy needed files to destination
-        if  os.path.isdir(targetDirectory+"/css"):
-            shutil.rmtree(targetDirectory+"/css")
-        if  os.path.isdir(targetDirectory+"/js"):
-            shutil.rmtree(targetDirectory+"/js")
-        shutil.copytree(g_CSSPATH, targetDirectory+"/css")
-        shutil.copytree(g_JSPATH, targetDirectory+"/js")
-        shutil.copy('templates/legend.png', targetDirectory)
+        if  os.path.isdir(str(targetDirectory)+"/css"):
+            shutil.rmtree(str(targetDirectory)+"/css")
+        if  os.path.isdir(str(targetDirectory)+"/js"):
+            shutil.rmtree(str(targetDirectory)+"/js")
+        shutil.copytree(g_CSSPATH, str(targetDirectory)+"/css")
+        shutil.copytree(g_JSPATH, str(targetDirectory)+"/js")
+        shutil.copy('templates/legend.png', str(targetDirectory))
+        print("Report creation successfull")
+        print("Report is at:")
+        print(targetDirectory)
         return 0
 
     else:
+        targetDirectory.rmdir()
         return -1
 
 
