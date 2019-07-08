@@ -12,19 +12,21 @@ Beside the script the folder '/templates' is also needed for execution.
 
 ### Example
 Windows:
+```bash
     python drace-gui.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
-
+```
 Linux:
+```bash
     python3 drace-gui.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
-
+```
 ### needed parameter:
-
+```bash
 -i: specifies a drace-xml file
 
     -i "C:/my/awesome/report.xml"
- 
+ ```
 ### optional parameters:
-
+```bash
 - -o: specifies an output directory (default is: ./drace-gui_output/)
 
     -o "C:/plenty/of/reports"
@@ -36,7 +38,7 @@ Linux:
 - -w: sourcefile can specifically included;
 
     -w "C:/just/show/this/files, C:/public" exclusively includes all files in the specified folders and all their subfolders
-
+```
 *Info:* 
 - blacklist wins over whitelist (-> whitelisted files and subfolders can be blacklisted and therefore be excluded)
 - all needed files must be whitelisted if at least on element is whitelisted

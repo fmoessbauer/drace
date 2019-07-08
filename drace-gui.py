@@ -528,16 +528,16 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = pathlib.Path('test_files/test.xml')    
+            inFile = pathlib.Path('./test_files/test.xml')    
        
-        targetDirectory = pathlib.Path('test_files/output')
+        targetDirectory = pathlib.Path('./test_files/output')
         
 
     try:
-        if not os.path.isfile(inFile):
+        if not inFile.is_file():
             print("Your input file does not exist")
             exit(-1)
-    except TypeError:
+    except:
         print("You must specify an input file")
         exit(-1)
     
