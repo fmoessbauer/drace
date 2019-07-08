@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- /*
  * DRace-GUI: A graphical report generator for DRace
  *
@@ -9,8 +10,6 @@
  * SPDX-License-Identifier: MIT
  */
  -->
-
-<?xml version="1.0" encoding="UTF-8"?>
 <entries>
 <base_entry><![CDATA[<!DOCTYPE html>
 <html>
@@ -87,6 +86,26 @@ var offset = Math.round((line-first_line-5)*parseInt(height));
 document.getElementById(code_id).parentNode.scrollTop+=(offset);
 }
 }
+function pressButton(id, upDown){
+	if (upDown == 0){
+		var splittedButtonID = id.split('_');
+		if (splittedButtonID[3] != "0"){
+			splittedButtonID[3] = parseInt(splittedButtonID[3]) - 1;
+			var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
+			if (document.getElementById(newID) != null){
+				$(document.getElementById(newID)).click();
+			}
+		}
+	} 
+    if (upDown == 1){
+		var splittedButtonID = id.split('_');
+        splittedButtonID[3] = parseInt(splittedButtonID[3]) + 1;
+        var newID = splittedButtonID[0].concat("_", splittedButtonID[1], "_", splittedButtonID[2], "_", splittedButtonID[3]);
+        if (document.getElementById(newID) != null){
+            $(document.getElementById(newID)).click();
+        }
+	} 
+}
 </script> 
 <script>
 $(document).ready(function(){
@@ -103,7 +122,7 @@ $('.collapsible').collapsible();
 <p class='reduced-margin'>*XWHAT_TEXT_1*</p>
 <p class='reduced-margin'>*XWHAT_TEXT_2*</p>
 <hr />
-<div class="row"><div class="col s6">
+<div class="row reduced-margin"><div class="col s6">
 <h5>Call Stack 1</h5>
 <hr \>
 <ul>*CALL_STACK_ENTRIES_1*
@@ -123,7 +142,7 @@ $('.collapsible').collapsible();
 </div></div>
 </li>]]></error_entry>
 <stack_entry><![CDATA[
-<li><button class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*, *FIRST_LINE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button></li>]]></stack_entry>
+<li><button id="*BUTTON_ID*" class="btn" onclick="displayEntry('*OUTPUT_ID*', *SNIPPET_VAR*, *CODE_VAR*, *CODE_ID_VAR*, *LINE_OF_CODE*, *FIRST_LINE*)">*STACK_NUMBER* *FILE* : <b>*FUNCTION*</b></button></li>]]></stack_entry>
 <code_entry><![CDATA[<pre class="line-numbers" data-start="*FIRST_LINE*" data-line=*LINE_OF_CODE* ><code class="language-*LANGUAGE*" id = "*CODE_ID_VAR*"></code></pre>]]></code_entry>
 <no_code_entry><![CDATA[<div class="noCode"><span class="noCodeSpan">No code preview available.</span></div>]]></no_code_entry>
 
@@ -132,10 +151,16 @@ $('.collapsible').collapsible();
 <p class="reduced-margin"><b>File: </b>*FILE_NAME_ENTRY*</p>
 <div class="tooltip reduced-margin"><b>Dir.: </b>*SHORT_DIR*<span class="tooltiptext">*DIRECTORY*</span></div>
 <p class="reduced-margin"><b>Function: </b>*FUNCTION*</p>
+<div class="row reduced-margin"><div class="col s8">
 <p class="reduced-margin"><b>IP @ </b>*INSTRUCTION_POINTER*</p>
-<p \>
+</div>
+<div class="col s4 text-right">
+<button class="btn arrow-button" onclick="pressButton('*SNIPPET_BUTTON_ID*', 0)">&#129068;</button> 
+<button class="btn arrow-button" onclick="pressButton('*SNIPPET_BUTTON_ID*', 1)">&#129066;</button>
+</div></div>
 *CODE_TAG*`;]]>
 </snippet_entry>
+<!-- &#129068 is a left arrow,  &#129066 is a right arrow-->
 
 </entries>
 

@@ -52,6 +52,8 @@ Call Stacks:
     *SNIPPET_VAR*
     *CODE_VAR*
     *CODE_ID_VAR*
+    *BUTTON_ID*
+    *SNIPPET_BUTTON_ID*
 
 Code:
     *LANGUAGE*

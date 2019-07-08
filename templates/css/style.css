@@ -74,6 +74,13 @@ html {
     font-size: inherit;
 }
 
+.text-left{
+    text-align: left;
+}
+.text-right{
+    text-align: right;
+}
+
 
 .btn:hover, .btn:focus {
     background-color: rgb(71, 71, 71);
@@ -83,6 +90,14 @@ html {
 	background: hsla(24, 50%, 80%,.4);
 }
 
+.arrow-button{
+    text-align: center;
+    height: 100%;
+    max-width: 50px;
+    padding: 0;
+    margin: 0;
+}
+
 code[class*="language-"],
 pre[class*="language-"] {
     
@@ -90,6 +105,7 @@ pre[class*="language-"] {
     min-width: 10px;
     width: 100%;
     font-size: inherit;
+    margin: 0;
 
 }
 

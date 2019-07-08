@@ -28,7 +28,7 @@ except ImportError:
 g_HTMLTEMPLATES = "templates/entries.xml"
 g_CSSPATH = "templates/css"
 g_JSPATH = "templates/js"
-DEBUG = True
+DEBUG = False
 
 #info: blacklisting overrules whitelisting
 SOURCEFILE_BL = list()
@@ -121,14 +121,14 @@ class ReportCreator:
         strFile = adjText(frame.find('file').text)
         strLine = adjText(frame.find('line').text)
 
-        if cself.__vscodeFlag:
+        if self.__vscodeFlag:
             entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine +"'>"+ strFile +":" + strLine + "</a>"
         else:
             entry  = "<a href='file://"+ strDir + "/" + strFile + ":" + strLine + "'>" + strFile + ":" + strLine + "</a>"
         
         return entry
 
-    def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex):
+    def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex, buttonID):
         newSnippet = self.__htmlTemplates.find('snippet_entry').text
 
         newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
@@ -137,6 +137,7 @@ class ReportCreator:
         newSnippet = newSnippet.replace('*FUNCTION*', adjText(frame.find('fn').text))
         newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', adjText(frame.find('ip').text))
         newSnippet = newSnippet.replace('*CODE_TAG*', tag)
+        newSnippet = newSnippet.replace('*SNIPPET_BUTTON_ID*', buttonID)
 
         if (frame.find('file')!= None):
             newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', self.__makeFileEntry(frame))
@@ -171,20 +172,25 @@ class ReportCreator:
         stack = stackArray[position]
         elementNumber = 0
 
+
         for frame in stack.findall('frame'):
-            noPreview = False    
-            ###make heading for the red box### 
+            noPreview = False 
+            buttonID = "button_" + str(self.__errorNumber) + "_" + str(position) + "_" + str(elementNumber)
+            strOutputID = outputID+str(position)
+
             if elementNumber == 0:
+                ###make heading for the red box### 
                 if len(self.__errorHeading) == 0:
                     self.__errorHeading += "<br> Obj. 1: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '" <br> '
                 else:
                     self.__errorHeading += "Obj. 2: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '"'
-
+           
             #general entries (always available)
             newStackElement = stackTemplate.replace('*STACK_NUMBER*', adjText(hex(elementNumber))+":")
             newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
-            newStackElement = newStackElement.replace('*OUTPUT_ID*', outputID+str(position))
+            newStackElement = newStackElement.replace('*OUTPUT_ID*', strOutputID)
             newStackElement = newStackElement.replace('*FUNCTION*', adjText(frame.find('fn').text))
+            newStackElement = newStackElement.replace('*BUTTON_ID*', buttonID)
             
 
             if (frame.find('file')!= None): #file is in xml report defined
@@ -215,7 +221,7 @@ class ReportCreator:
                 newStackElement = newStackElement[:insertPosition] + "grey " + newStackElement[insertPosition:] 
 
             
-            self.__createSnippetEntry(frame, elementNumber, tag, codeIndex)
+            self.__createSnippetEntry(frame, elementNumber, tag, codeIndex, buttonID)
             callStack += newStackElement #append stack element
             elementNumber += 1
             self.__callStackNumber += 1 #increase global call stack number (used for reference variables)
@@ -278,7 +284,7 @@ class ReportCreator:
         self.__numberOfErrors = len(errorList)
         
         for error in errorList:
-            self.__errorNumber += 1
+            
             outputID = "output_"+str(self.__errorNumber)+"_"
             newError = errorTemplate.replace('*ERROR_ID*', adjText(error.find('unique').text))
             newError = newError.replace('*ERROR_TYPE*', adjText(error.find('kind').text))
@@ -294,6 +300,7 @@ class ReportCreator:
             newError = newError.replace('*OUTPUT_ID_2*', outputID+'1')
             newError = newError.replace('*ERROR_HEADING*', self.__errorHeading)
 
+            self.__errorNumber += 1
             self.__strErrors += newError
 
     def __createHeader(self):
@@ -473,16 +480,20 @@ def addListEntries(fileList, strEntries):
 
 
 def main():
-    global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING
+    global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, DEBUG
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--inputFile", help='input file', type=str)
     parser.add_argument("-o", "--outputDirectory", help='output directory', type=str)
     parser.add_argument("-b", "--blacklist", help='add blacklist entries <entry1,entry2 ...>', type=str)
     parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
-    parser.add_argument("-D", "--Debug", help='add whitelist entries entries <entry1,entry2 ...>', type=bool)
+    parser.add_argument("--Debug", help='Debug Mode', action="store_true")
     args = parser.parse_args()
     
     ###args handling
+    if args.Debug:
+        print("Debug Mode is on")
+        DEBUG = True
+    
     if args.inputFile != None:
         inFile = args.inputFile
     else:
