@@ -1,0 +1,23 @@
+<!--
+DRace, a dynamic data race detector
+
+Copyright 2018 Siemens AG
+
+Authors:
+  Felix Moessbauer <felix.moessbauer@siemens.com>
+
+SPDX-License-Identifier: MIT
+
+Compile using dotnet build cs-sync-coreclr.csproj
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <Platforms>x64</Platforms>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <StartupObject>MultithreadingApplication.ThreadCreationProgram</StartupObject>
+    <ApplicationIcon />
+  </PropertyGroup>
+</Project>

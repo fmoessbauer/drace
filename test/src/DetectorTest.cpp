@@ -209,3 +209,17 @@ TEST_F(DetectorTest, RaceInspection) {
     EXPECT_EQ(a2.stack_trace[0], (uint64_t)&callstack_funB);
     EXPECT_EQ(a2.stack_trace[1], 0x0091ull);
 }
+
+// TODO: i#11
+#if 0
+TEST_F(DetectorTest, ShadowMemory) {
+    detector::tls_t tls100;
+    detector::fork(1, 100, &tls100);
+
+    // DLLs are loaded at 07ff8 xxxx xxxx most times
+    uint64_t shadow_beg = 0x7ff7'0000'0000ull;
+
+    detector::map_shadow((void*)(shadow_beg), (size_t)(0xFFFF'FFFF - 4096));
+    detector::write(tls100, (void*)0x0100, (void*)(shadow_beg + 0xF), 8);
+}
+#endif
