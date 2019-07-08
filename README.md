@@ -37,9 +37,10 @@ Linux:
 
     -w "C:/just/show/this/files, C:/public" exclusively includes all files in the specified folders and all their subfolders
 
-info: 
+*Info:* 
 - blacklist wins over whitelist (-> whitelisted files and subfolders can be blacklisted and therefore be excluded)
 - all needed files must be whitelisted if at least on element is whitelisted
+- if a path is specified, all subelements of the path are treated the same
 
 ## Dependencies
 
@@ -51,6 +52,14 @@ Mandatory (only standard python libs):
 - xml.etree.ElementTree
 - os
 - shutil
+- pathlib
+- argparse
 
 Optional (for chart creation)
 - matplotlib
+
+### Programs
+
+If the user has installed Visual Studio Code and code.exe is in the PATH variable (is by default), then source file can be opened at the line of interest via a click on the link in the HTML file.
+
+If VS Code is not installed the files will be opened with the used browser.
