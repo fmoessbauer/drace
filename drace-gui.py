@@ -268,7 +268,7 @@ class ReportCreator:
         ax = plt.axes() 
         barWidth = 0.9 # the width of the bars 
         xLoc = list(range(len(y)))  # the x locations for the groups
-        ax.bar([loc for loc in xLoc], y, barWidth, color='rryyg')
+        ax.bar([loc for loc in xLoc], y, barWidth, color='#009999')
         ax.set_xticks([loc for loc in xLoc])
         ax.set_xticklabels(x, minor=False)
         

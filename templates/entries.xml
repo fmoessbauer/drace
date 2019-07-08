@@ -34,34 +34,29 @@
 <h3><u>DRace Report</u></h3>
 
 
-<div class="row"><div class="col s6">
+
 <h5>General Data</h5>
-<p><b>Exe: </b>*EXE*</p>
-<p><b>Total Errors: </b>*NUMBER_OF_ERRORS*</p>
+<p class="reduced-margin"><b>Exe: </b>*EXE*</p>
+<p class="reduced-margin"><b>Total Errors: </b>*NUMBER_OF_ERRORS*</p>
 
-<p><b>Args: </b>*ARGS*</p>
-<p><b>Duration [*DURATION_UNIT*]: </b>*DURATION*</p>
+<p class="reduced-margin"><b>Args: </b>*ARGS*</p>
+<p class="reduced-margin"><b>Duration [*DURATION_UNIT*]: </b>*DURATION*</p>
 
-<p><b>Date: </b>*DATE*</p>
-<p><b>Time: </b>*TIME*</p>
+<p class="reduced-margin"><b>Date: </b>*DATE*</p>
+<p class="reduced-margin"><b>Time: </b>*TIME*</p>
 
-<p><b>Protocolversion: </b>*PROTOCOLVERSION*</p>
-<p><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
+<p class="reduced-margin"><b>Protocolversion: </b>*PROTOCOLVERSION*</p>
+<p class="reduced-margin"><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
 
-</div>
 
-<div class="col s6">
+<div class="row"><div class="col s4">
 <h5>Legend:</h5>
-<p />
-<img src="legend.png"  width=100%  >
-</div></div>
-
-
-
-<div class="row"><div class="vl col s6">
+<img src="legend.png"  width=100% >
+</div>
+<div class="vl col s4">
 <img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
 </div>
-<div class="col s6">
+<div class="col s4">
 <img src=""  width=100%  >
 </div></div>
 <hr />
