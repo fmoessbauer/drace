@@ -44,9 +44,11 @@ if NUMBEROFCODELINES % 2:
 class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __topStackGraphFileName = 'topStackBarchart.png'
-    if check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
+
+    try:
+        check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
         __vscodeFlag = True
-    else:
+    except:
         __vscodeFlag = False
 
 
