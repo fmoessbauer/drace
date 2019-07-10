@@ -83,7 +83,12 @@ namespace drace {
 				// copy this as value is modified by std::align
 				size_t space_size = _size_in_bytes;
 				_mem = dr_thread_alloc(drcontext, _size_in_bytes);
-				data = (T*)std::align(alignment, capacity, _mem, space_size);
+                // std::align changes pointer to memspace, hence copy
+                void * mem_align = _mem;
+                DR_ASSERT_MSG(
+                    std::align(alignment, capacity, mem_align, space_size) != nullptr,
+                    "could not allocate aligned memory");
+                data = (T*)mem_align;
 				DR_ASSERT(((uint64_t)data % alignment) == 0);
 			}
 		}
