@@ -44,6 +44,7 @@ if NUMBEROFCODELINES % 2:
 class ReportCreator:
     __htmlTemplatesPath = g_HTMLTEMPLATES
     __topStackGraphFileName = 'topStackBarchart.png'
+    __errorTimesPlot        = 'errorTimes.png'
 
     try:
         if check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
@@ -73,6 +74,7 @@ class ReportCreator:
         if self.__inputValidation():
             self.__createReport()
             if not noMatplotLib:
+                self.__makeHistogramm(target)
                 self.__countTopStackOccurences(target)
         else:
             print("input file is not valid")
@@ -236,6 +238,43 @@ class ReportCreator:
 
         return callStack
 
+    def __makeHistogramm(self, target):
+        errorTimes = dict()
+        statusNode = self.__reportRoot.findall('status')[1]
+        totalDuration =  int(statusNode.find('duration').text)
+        errors = self.__reportRoot.findall('error')
+        
+        for error in errors:
+            timePoint = (round(float(100 * int(error.find('timestamp').text) /totalDuration))) #get occurance in %
+            if errorTimes.get(timePoint) != None:
+                value = errorTimes.pop(timePoint)
+                errorTimes.update({timePoint: int(value)+1})
+            else:
+                    errorTimes.update({timePoint: 1})
+            
+        x = list(errorTimes.keys())
+        y = list(errorTimes.values())
+        #make plot       
+        fig = plt.figure(figsize=(10,4))    
+        ax = plt.axes() 
+        ax.scatter(x, y, color='#009999', edgecolor='black')
+
+        xRangeEnd = max(y)+1
+        if xRangeEnd < 3:    #0, 1, 2 shall be always visible, even if max(y) is only 1
+            xRangeEnd = 3
+        ax.set_yticks([i for i in range(0, xRangeEnd)])
+        ax.set_xticks([i for i in range(0, 110, 10)])
+      
+        plt.title('Error occurrences by time',fontfamily="monospace", fontweight='bold')
+        plt.ylabel('Occurrences', fontfamily="monospace",fontweight='bold')
+        plt.xlabel('Execution of program in %. \n Total execution time = ' + str(totalDuration) + 'ms', fontfamily="monospace",fontweight='bold')   
+
+        
+        fig.add_axes(ax)
+        #plt.show()
+        figPath = pathlib.Path(target+'/'+self.__errorTimesPlot)
+        plt.savefig(str(figPath), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
+
     def __countTopStackOccurences(self, target):
         topStackOccurences = dict()
         errors = self.__reportRoot.findall('error')
@@ -274,7 +313,7 @@ class ReportCreator:
         
         plt.title('Top five functions by top of stack occurrences',fontfamily="monospace", fontweight='bold')
         plt.xlabel('Function Name', fontfamily="monospace",fontweight='bold')
-        plt.ylabel('No of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
+        plt.ylabel('No. of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
 
         for i,v in enumerate(y):
             ax.text(i,  v, str(v), ha='center',color='black', fontweight='bold')
@@ -327,6 +366,7 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self.__strErrors)
         if not noMatplotLib:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self.__topStackGraphFileName)
+            self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self.__errorTimesPlot)
         else:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', '')
 
@@ -497,7 +537,6 @@ def parseArgumentString(fileList, strEntries):
 def returnDateString():
     date = datetime.datetime.now()
     return date.strftime('%Y%m%d_%H%M')
-
 
 def main():
     global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, DEBUG
