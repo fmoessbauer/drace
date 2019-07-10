@@ -11,7 +11,6 @@
 
 
 import xml.etree.ElementTree as ET
-import os
 import shutil
 import argparse
 import pathlib
@@ -283,7 +282,8 @@ class ReportCreator:
         
         fig.add_axes(ax)
         #plt.show()
-        plt.savefig(os.path.join(target+'/'+self.__topStackGraphFileName), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
+        figPath = pathlib.Path(target+'/'+self.__topStackGraphFileName)
+        plt.savefig(str(figPath), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
        
     def __createErrorList(self):
         self.__strErrors = str()
@@ -496,7 +496,7 @@ def parseArgumentString(fileList, strEntries):
 
 def returnDateString():
     date = datetime.datetime.now()
-    return (str(date.year)+str(date.month)+str(date.day)+'_'+str(date.hour)+str(date.minute))
+    return date.strftime('%Y%m%d_%H%M')
 
 
 def main():
@@ -563,10 +563,15 @@ def main():
         output.close()
 
         #copy needed files to destination
-        if  os.path.isdir(str(targetDirectory)+"/css"):
-            shutil.rmtree(str(targetDirectory)+"/css")
-        if  os.path.isdir(str(targetDirectory)+"/js"):
-            shutil.rmtree(str(targetDirectory)+"/js")
+        cssPath = pathlib.Path(str(targetDirectory)+"/css")
+        jsPath  = pathlib.Path(str(targetDirectory)+"/js")
+
+        if cssPath.is_dir():
+            shutil.rmtree(str(cssPath))
+            
+        if jsPath.is_dir():
+            shutil.rmtree(str(jsPath))
+
         shutil.copytree(g_CSSPATH, str(targetDirectory)+"/css")
         shutil.copytree(g_JSPATH, str(targetDirectory)+"/js")
         shutil.copy('templates/legend.png', str(targetDirectory))
