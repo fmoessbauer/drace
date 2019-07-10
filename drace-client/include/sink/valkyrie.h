@@ -108,7 +108,7 @@ namespace drace {
 				}
 				p.CloseElement();
 			}
-
+            
             void print_race(const race::DecoratedRace & race) {
                 const race::ResolvedAccess & r = race.first;
                 const race::ResolvedAccess & r2 = race.second;
@@ -125,6 +125,7 @@ namespace drace {
                 p.OpenElement("tid"); p.PushText(r2.thread_id); p.CloseElement();
                 p.OpenElement("threadname"); p.PushText("Thread"); p.CloseElement();
                 p.OpenElement("kind"); p.PushText("Race"); p.CloseElement();
+                p.OpenElement("timestamp"); p.PushAttribute("unit", "ms"); p.PushText(std::to_string(race.elapsed.count()).c_str()); p.CloseElement();
 
                 {
                     p.OpenElement("xwhat");
