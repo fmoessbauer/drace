@@ -15,6 +15,7 @@ import os
 import shutil
 import argparse
 import pathlib
+import datetime
 from subprocess import check_call, STDOUT, DEVNULL
 
 try:
@@ -493,6 +494,9 @@ def parseArgumentString(fileList, strEntries):
 
     return      
 
+def returnDateString():
+    date = datetime.datetime.now()
+    return (str(date.year)+str(date.month)+str(date.day)+'_'+str(date.hour)+str(date.minute))
 
 
 def main():
@@ -515,10 +519,11 @@ def main():
     else:
         inFile = None
 
+    strDate = returnDateString()
     if args.outputDirectory != None:
-        targetDirectory = pathlib.Path(args.outputDirectory)
+        targetDirectory = pathlib.Path(args.outputDirectory+'/drace-gui_output_'+strDate)
     else:
-        targetDirectory = pathlib.Path('./drace-gui_output')
+        targetDirectory = pathlib.Path('./drace-gui_output_'+strDate)
 
     if args.blacklist != None:
         parseArgumentString(SOURCEFILE_BL, args.blacklist)
