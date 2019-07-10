@@ -273,6 +273,8 @@ namespace drace {
         data->stack.deallocate(drcontext);
         data->mem_buf.deallocate(drcontext);
 
+        hashtable_delete(&(data->mutex_book));
+
         // free statistics
         data->stats->~Statistics();
         dr_thread_free(drcontext, data->stats, sizeof(Statistics));
