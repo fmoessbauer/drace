@@ -252,9 +252,10 @@ A sample VisualStudio `CMakeSettings.json` is given here:
 }
 ```
 
-To clone all submodules of this repository, issue the following command inside the drace directory:
+To clone all submodules of this repository, issue the following commands inside the drace directory:
 
 ```
+git submodule init
 git submodule update --recursive
 ```
 
