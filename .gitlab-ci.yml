@@ -51,7 +51,7 @@ cppcheck:
   <<: *globals
   stage: validate
   script:
-  - cd ../build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-legacy-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
