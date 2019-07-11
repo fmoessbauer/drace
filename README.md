@@ -252,9 +252,10 @@ A sample VisualStudio `CMakeSettings.json` is given here:
 }
 ```
 
-To clone all submodules of this repository, issue the following command inside the drace directory:
+To clone all submodules of this repository, issue the following commands inside the drace directory:
 
 ```
+git submodule init
 git submodule update --recursive
 ```
 
@@ -287,6 +288,14 @@ Each queue is then processed and analyzed by it's own thread.
 **dummy**
 
 This detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
+
+## Tools 
+### drace-gui
+With drace-gui an HTML report generator was added to the project. By using the `drace-gui.py` script one can generate an HTML report from the generated drace XML report.
+
+For more information have a look in 
+`./tools/drace-gui/README.md`
+
 
 ## Licensing
 
