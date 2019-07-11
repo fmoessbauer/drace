@@ -22,14 +22,14 @@ and user-level synchronization cannot be detected.
 
 When using the pre-build releases, only DynamoRIO is required:
 
-- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.90.x (use weekly releases)
+- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.91.x (use weekly releases)
 - [Debugging Tools for Windows](https://docs.microsoft.com/de-de/windows-hardware/drivers/debugger/debugger-download-tools) for symbol lookup in .Net runtime libraries (only required for .Net)
 
 ### Development
 
 - CMake > 3.8
 - C++11 / C99 Compiler
-- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) > 7.90.x
+- [DynamoRIO](https://github.com/DynamoRIO/dynamorio) > 7.91.x
 
 For detailed information on all dependencies, see `DEPENDENCIES.md`.
 
