@@ -10,8 +10,7 @@
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
-  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.90.18026-0\\bin64\\drrun.exe"
-  DRRUN70_EXE: "C:\\opt\\DynamoRIO-Windows-7.0.17837-0\\bin64\\drrun.exe"
+  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18081-0\\bin64\\drrun.exe"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 stages:
   - generate
@@ -28,9 +27,8 @@ cmake:
   - .\contrib\generate-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr70
-    - build-tsan-dr790
-    - build-legacy-tsan-dr790
+    - build-tsan-dr791
+    - build-legacy-tsan-dr791
     - build-dummy
         
 compile:
@@ -43,9 +41,8 @@ compile:
   - .\contrib\build-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr70
-    - build-tsan-dr790
-    - build-legacy-tsan-dr790
+    - build-tsan-dr791
+    - build-legacy-tsan-dr791
     - build-dummy
   dependencies:
   - cmake
@@ -54,9 +51,8 @@ cppcheck:
   <<: *globals
   stage: validate
   script:
-  - cd build-tsan-dr70;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-  - cd ../build-tsan-dr790;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-  - cd ../build-legacy-tsan-dr790;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd ../build-legacy-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
   - cmake
@@ -65,48 +61,33 @@ cppcheck:
 # Test all builds
 #
 
-test-tsan-dr70:
+test-tsan-dr791:
   <<: *globals
   <<: *testing
   stage: test
   script:
-  - cd build-tsan-dr70
-  - echo "Use DR 7.0.x"
-  - .\test\drace-tests.exe --dr $env:DRRUN70_EXE --gtest_output="xml:test-results.xml" --gtest_filter="-DrIntegration*.DotnetClr*"
-  artifacts:
-    reports:
-      junit:
-      - build-tsan-dr70\test-results.xml
-  dependencies:
-  - compile
-
-test-tsan-dr790:
-  <<: *globals
-  <<: *testing
-  stage: test
-  script:
-  - cd build-tsan-dr790
-  - echo "Use DR 7.1.x"
+  - cd build-tsan-dr791
+  - echo "Use DR 7.91.x"
   - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
   artifacts:
     reports:
       junit:
-      - build-tsan-dr790\test-results.xml
+      - build-tsan-dr791\test-results.xml
   dependencies:
   - compile
 
-test-tsan-dr790-legacy:
+test-tsan-dr791-legacy:
   <<: *globals
   <<: *testing
   stage: test
   script:
-  - cd build-legacy-tsan-dr790
-  - echo "Use DR 7.90.x (LEGACY build)"
+  - cd build-legacy-tsan-dr791
+  - echo "Use DR 7.91.x (LEGACY build)"
   - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml" --gtest_filter="-DrIntegration*.DotnetClr*"
   artifacts:
     reports:
       junit:
-      - build-legacy-tsan-dr790\test-results.xml
+      - build-legacy-tsan-dr791\test-results.xml
   dependencies:
   - compile
 
@@ -120,14 +101,12 @@ bundle:
   - Copy-Item "contrib/package-lock.json" -Destination "."
   - echo "Generate Changelog"
   - npx generate-changelog
-  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr70/package/doc/"
-  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr790/package/doc/"
-  - Copy-Item "CHANGELOG.md" -Destination "build-legacy-tsan-dr790/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr791/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-legacy-tsan-dr791/package/doc/"
   dependencies:
   - compile
   artifacts:
     paths:
-    - build-tsan-dr70/package
-    - build-tsan-dr790/package
-    - build-legacy-tsan-dr790/package
+    - build-tsan-dr791/package
+    - build-legacy-tsan-dr791/package
 
