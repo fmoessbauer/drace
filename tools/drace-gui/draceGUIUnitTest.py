@@ -12,24 +12,25 @@ import unittest
 import pathlib
 import draceGUI as gui
 
-STRREPORTPATH = './test_files/output/index.html'
+SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
+STRREPORTPATH = SCRIPTPATH / 'test_files/output/index.html'
 
 class TestMethods(unittest.TestCase):
     def testFilesAvaliable(self):
         paths = list()
         paths.append(pathlib.Path(STRREPORTPATH))
-        paths.append(pathlib.Path('./test_files/output/legend.png'))
-        paths.append(pathlib.Path('./test_files/output/js/jquery.min.js'))
-        paths.append(pathlib.Path('./test_files/output/js/prism.js'))
-        paths.append(pathlib.Path('./test_files/output/js/materialize.min.js'))
-        paths.append(pathlib.Path('./test_files/output/css/style.css'))
-        paths.append(pathlib.Path('./test_files/output/css/prism.css'))
-        paths.append(pathlib.Path('./test_files/output/css/materialize.min.css'))
+        paths.append(SCRIPTPATH / 'test_files/output/legend.png')
+        paths.append(SCRIPTPATH / 'test_files/output/js/jquery.min.js')
+        paths.append(SCRIPTPATH / 'test_files/output/js/prism.js')
+        paths.append(SCRIPTPATH / 'test_files/output/js/materialize.min.js')
+        paths.append(SCRIPTPATH / 'test_files/output/css/style.css')
+        paths.append(SCRIPTPATH / 'test_files/output/css/prism.css')
+        paths.append(SCRIPTPATH / 'test_files/output/css/materialize.min.css')
         
         try:
             import matplotlib
-            paths.append(pathlib.Path('./test_files/output/topStackBarchart.png'))
-            paths.append(pathlib.Path('./test_files/output/errorTimes.png'))
+            paths.append(SCRIPTPATH / 'test_files/output/topStackBarchart.png')
+            paths.append(SCRIPTPATH / 'test_files/output/errorTimes.png')
         except ImportError:
             pass
 
@@ -60,8 +61,8 @@ class TestMethods(unittest.TestCase):
 
 # check if all placeholders were removed
     def testPlaceholdersGone(self):
-        
-        with open('test_files/placeholders.txt', 'r') as placeholderFile:
+        plcPath = SCRIPTPATH / 'test_files/placeholders.txt'
+        with open(str(plcPath), 'r') as placeholderFile:
             allLines = placeholderFile.readlines()
 
         #retrieve all placeholders

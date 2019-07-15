@@ -28,14 +28,14 @@ except ImportError:
     noMatplotLib = True
 
 #look for resources path
-scriptPath = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
+SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
 
-if pathlib.Path(scriptPath / '../resources').is_dir():
-    resourcesPath = pathlib.Path(scriptPath / '../resources')
+if pathlib.Path(SCRIPTPATH / '../resources').is_dir():
+    resourcesPath = pathlib.Path(SCRIPTPATH / '../resources')
 
 else:
-    if pathlib.Path(scriptPath / 'resources').is_dir():
-        resourcesPath = pathlib.Path(scriptPath / 'resources')
+    if pathlib.Path(SCRIPTPATH / 'resources').is_dir():
+        resourcesPath = pathlib.Path(SCRIPTPATH / 'resources')
     else:
         print("path of resources not found")
         exit(-1)
@@ -591,9 +591,9 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = pathlib.Path(scriptPath / 'test_files/test.xml')    
+            inFile = pathlib.Path(SCRIPTPATH / 'test_files/test.xml')    
        
-        targetDirectory = pathlib.Path(scriptPath / 'test_files/output')
+        targetDirectory = pathlib.Path(SCRIPTPATH / 'test_files/output')
         
 
     try:
