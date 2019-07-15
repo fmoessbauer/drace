@@ -110,8 +110,8 @@ test-tsan-dr791-legacy:
   - compile
 
 
-python:
-  stage: gui-test
+gui-test:
+  stage: test 
   tags: 
   - AWS
   only:
@@ -120,8 +120,8 @@ python:
     - .gitlab-ci.yml
   script:
   - echo "Start test..."
-  - python3 draceGUI.py --Debug
-  - python3 draceGUIUnitTest.py
+  - python3 tools/drace-gui/draceGUI.py --Debug
+  - python3 tools/drace-gui/draceGUIUnitTest.py
   
 
 # Package
