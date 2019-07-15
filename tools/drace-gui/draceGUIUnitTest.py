@@ -1,12 +1,21 @@
+#  /*
+#   * DRace-GUI: A graphical report generator for DRace
+#   *
+#   * Copyright 2019 Siemens AG
+#   *
+#   * Authors:
+#   *   <Philip Harr> <philip.harr@siemens.com>
+#   *
+#   * SPDX-License-Identifier: MIT
+# */
 import unittest
 import pathlib
-import importlib  
-
+import draceGUI as gui
 
 STRREPORTPATH = './test_files/output/index.html'
 
 class TestMethods(unittest.TestCase):
-    def test_files_avaliable(self):
+    def testFilesAvaliable(self):
         paths = list()
         paths.append(pathlib.Path(STRREPORTPATH))
         paths.append(pathlib.Path('./test_files/output/legend.png'))
@@ -33,8 +42,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(flag, 0)
 
 #checj if determine language works
-    def test_determine_language(self):
-        gui = __import__('drace-gui')
+    def testDetermineLanguage(self):
         languageMap = {
             'test.h': 'cpp',
             'test.cpp':'cpp',
@@ -51,7 +59,7 @@ class TestMethods(unittest.TestCase):
 
 
 # check if all placeholders were removed
-    def test_placeholders_gone(self):
+    def testPlaceholdersGone(self):
         
         with open('test_files/placeholders.txt', 'r') as placeholderFile:
             allLines = placeholderFile.readlines()
