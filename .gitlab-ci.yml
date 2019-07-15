@@ -7,6 +7,7 @@
   variables:
     GIT_STRATEGY: "none"
 
+
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
@@ -18,6 +19,7 @@ stages:
   - validate
   - build
   - test
+  - gui-test
   - package
 
 cmake:
@@ -26,6 +28,9 @@ cmake:
   script:
   - echo "Release build..."
   - .\contrib\generate-ci.bat
+  except:
+    changes:
+      - test/drace-gui/*
   artifacts:
     paths:
     - build-tsan-dr70
@@ -38,6 +43,8 @@ compile:
   stage: build
   except:
     - doc-*
+    changes:
+    - test/drace-gui/*
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
@@ -53,6 +60,9 @@ compile:
 cppcheck:
   <<: *globals
   stage: validate
+  except:
+    changes:
+    - test/drace-gui/*
   script:
   - cd build-tsan-dr70;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-tsan-dr790;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
@@ -69,6 +79,9 @@ test-tsan-dr70:
   <<: *globals
   <<: *testing
   stage: test
+  except:
+    changes:
+    - test/drace-gui/*
   script:
   - cd build-tsan-dr70
   - echo "Use DR 7.0.x"
@@ -84,6 +97,9 @@ test-tsan-dr790:
   <<: *globals
   <<: *testing
   stage: test
+  except:
+    changes:
+    - test/drace-gui/*
   script:
   - cd build-tsan-dr790
   - echo "Use DR 7.1.x"
@@ -99,6 +115,9 @@ test-tsan-dr790-legacy:
   <<: *globals
   <<: *testing
   stage: test
+  except:
+    changes:
+    - test/drace-gui/*
   script:
   - cd build-legacy-tsan-dr790
   - echo "Use DR 7.90.x (LEGACY build)"
@@ -110,11 +129,28 @@ test-tsan-dr790-legacy:
   dependencies:
   - compile
 
+
+python:
+  stage: gui-test
+  tags: 
+  - python
+  only:
+    changes:
+    - test/drace-gui/*
+  script:
+  - echo "Start test..."
+  - python3 drace-gui.py --Debug
+  - python3 ./test_files/unit_test.py
+  
+
 # Package
 
 bundle:
   <<: *globals
   stage: package
+  except:
+    changes:
+    - test/drace-gui/*
   script:
   - Copy-Item "contrib/package.json" -Destination "."
   - Copy-Item "contrib/package-lock.json" -Destination "."

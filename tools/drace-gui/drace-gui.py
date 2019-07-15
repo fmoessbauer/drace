@@ -24,11 +24,22 @@ try:
 except ImportError:
     noMatplotLib = True
 
+#look for resources path
+if pathlib.Path('../resources').is_dir():
+    resourcesPath = pathlib.Path('../resources')
+
+else:
+    if pathlib.Path('resources').is_dir():
+        resourcesPath = pathlib.Path('resources')
+    else:
+        print("path of resources not found")
+        exit(-1)
 
 #Paths
-g_HTMLTEMPLATES = "templates/entries.xml"
-g_CSSPATH = "templates/css"
-g_JSPATH = "templates/js"
+g_HTMLTEMPLATES = resourcesPath / "entries.xml"
+g_CSSPATH = resourcesPath / "css"
+g_JSPATH = resourcesPath / "js"
+
 DEBUG = False
 
 #info: blacklisting overrules whitelisting
@@ -611,9 +622,9 @@ def main():
         if jsPath.is_dir():
             shutil.rmtree(str(jsPath))
 
-        shutil.copytree(g_CSSPATH, str(targetDirectory)+"/css")
-        shutil.copytree(g_JSPATH, str(targetDirectory)+"/js")
-        shutil.copy('templates/legend.png', str(targetDirectory))
+        shutil.copytree(str(g_CSSPATH.resolve()), str(targetDirectory / "css"))
+        shutil.copytree(str(g_JSPATH.resolve()), str(targetDirectory / "js"))
+        shutil.copy(str((resourcesPath / 'legend.png').resolve()), str(targetDirectory))
         print("Report creation successfull")
         print("Report is at:")
         print(targetDirectory)
