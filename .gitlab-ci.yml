@@ -29,7 +29,7 @@ cmake:
   - .\contrib\generate-ci.bat
   except:
     changes:
-      - test/drace-gui/**/*
+      - tools/drace-gui/**/*
   artifacts:
     paths:
     - build-tsan-dr791
@@ -43,7 +43,7 @@ compile:
   - doc-*
   except:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
@@ -60,7 +60,7 @@ cppcheck:
   stage: validate
   except:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-legacy-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
@@ -78,7 +78,7 @@ test-tsan-dr791:
   stage: test
   except:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - cd build-tsan-dr791
   - echo "Use DR 7.91.x"
@@ -97,7 +97,7 @@ test-tsan-dr791-legacy:
   stage: test
   except:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - cd build-legacy-tsan-dr791
   - echo "Use DR 7.91.x (LEGACY build)"
@@ -116,7 +116,7 @@ python:
   - python
   only:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - echo "Start test..."
   - python3 draceGUI.py --Debug
@@ -130,7 +130,7 @@ bundle:
   stage: package
   except:
     changes:
-    - test/drace-gui/**/*
+    - tools/drace-gui/**/*
   script:
   - Copy-Item "contrib/package.json" -Destination "."
   - Copy-Item "contrib/package-lock.json" -Destination "."
