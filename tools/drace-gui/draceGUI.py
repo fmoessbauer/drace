@@ -58,7 +58,7 @@ if NUMBEROFCODELINES % 2:
     exit(-1)
 
 class ReportCreator:
-    __htmlTemplatesPath = g_HTMLTEMPLATES
+    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
     __topStackGraphFileName = 'topStackBarchart.png'
     __errorTimesPlot        = 'errorTimes.png'
 
