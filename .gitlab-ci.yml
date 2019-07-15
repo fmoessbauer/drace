@@ -43,6 +43,7 @@ compile:
   stage: build
   except:
   - doc-*
+  except:
     changes:
     - test/drace-gui/*
   script:
