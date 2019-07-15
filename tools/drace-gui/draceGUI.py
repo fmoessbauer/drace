@@ -28,7 +28,7 @@ except ImportError:
     noMatplotLib = True
 
 #look for resources path
-scriptPath = pathlib.Path(pathlib.Path(__file__).resolve() / '..')
+scriptPath = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
 
 if pathlib.Path(scriptPath / '../resources').is_dir():
     resourcesPath = pathlib.Path(scriptPath / '../resources')
