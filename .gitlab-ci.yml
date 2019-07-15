@@ -42,7 +42,7 @@ compile:
   <<: *globals
   stage: build
   except:
-    - doc-*
+  - doc-*
     changes:
     - test/drace-gui/*
   script:
