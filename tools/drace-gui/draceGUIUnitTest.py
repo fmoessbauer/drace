@@ -85,6 +85,8 @@ class TestMethods(unittest.TestCase):
 
         self.assertEqual(1,1)
 
+    def testDummy(self):
+        self.assertEqual(1,1)
 
 
 if __name__ == '__main__':
