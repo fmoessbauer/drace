@@ -10,12 +10,15 @@
 #  */
 
 
+
 import xml.etree.ElementTree as ET
 import shutil
 import argparse
 import pathlib
 import datetime
 from subprocess import check_call, STDOUT, DEVNULL
+
+
 
 try:
     import matplotlib
@@ -24,11 +27,24 @@ try:
 except ImportError:
     noMatplotLib = True
 
+#look for resources path
+SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
+
+if pathlib.Path(SCRIPTPATH / '../resources').is_dir():
+    resourcesPath = pathlib.Path(SCRIPTPATH / '../resources')
+
+else:
+    if pathlib.Path(SCRIPTPATH / 'resources').is_dir():
+        resourcesPath = pathlib.Path(SCRIPTPATH / 'resources')
+    else:
+        print("path of resources not found")
+        exit(-1)
 
 #Paths
-g_HTMLTEMPLATES = "templates/entries.xml"
-g_CSSPATH = "templates/css"
-g_JSPATH = "templates/js"
+g_HTMLTEMPLATES = resourcesPath / "entries.xml"
+g_CSSPATH = resourcesPath / "css"
+g_JSPATH = resourcesPath / "js"
+
 DEBUG = False
 
 #info: blacklisting overrules whitelisting
@@ -42,8 +58,9 @@ if NUMBEROFCODELINES % 2:
     exit(-1)
 
 class ReportCreator:
-    __htmlTemplatesPath = g_HTMLTEMPLATES
+    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
     __topStackGraphFileName = 'topStackBarchart.png'
+    __errorTimesPlot        = 'errorTimes.png'
 
     try:
         if check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
@@ -73,6 +90,7 @@ class ReportCreator:
         if self.__inputValidation():
             self.__createReport()
             if not noMatplotLib:
+                self.__makeHistogramm(target)
                 self.__countTopStackOccurences(target)
         else:
             print("input file is not valid")
@@ -236,6 +254,43 @@ class ReportCreator:
 
         return callStack
 
+    def __makeHistogramm(self, target):
+        errorTimes = dict()
+        statusNode = self.__reportRoot.findall('status')[1]
+        totalDuration =  int(statusNode.find('duration').text)
+        errors = self.__reportRoot.findall('error')
+        
+        for error in errors:
+            timePoint = (round(float(100 * int(error.find('timestamp').text) /totalDuration))) #get occurance in %
+            if errorTimes.get(timePoint) != None:
+                value = errorTimes.pop(timePoint)
+                errorTimes.update({timePoint: int(value)+1})
+            else:
+                    errorTimes.update({timePoint: 1})
+            
+        x = list(errorTimes.keys())
+        y = list(errorTimes.values())
+        #make plot       
+        fig = plt.figure(figsize=(10,4))    
+        ax = plt.axes() 
+        ax.scatter(x, y, color='#009999', edgecolor='black')
+
+        xRangeEnd = max(y)+1
+        if xRangeEnd < 3:    #0, 1, 2 shall be always visible, even if max(y) is only 1
+            xRangeEnd = 3
+        ax.set_yticks([i for i in range(0, xRangeEnd)])
+        ax.set_xticks([i for i in range(0, 110, 10)])
+      
+        plt.title('Error occurrences by time',fontfamily="monospace", fontweight='bold')
+        plt.ylabel('Occurrences', fontfamily="monospace",fontweight='bold')
+        plt.xlabel('Execution of program in %. \n Total execution time = ' + str(totalDuration) + 'ms', fontfamily="monospace",fontweight='bold')   
+
+        
+        fig.add_axes(ax)
+        #plt.show()
+        figPath = pathlib.Path(target+'/'+self.__errorTimesPlot)
+        plt.savefig(str(figPath), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
+
     def __countTopStackOccurences(self, target):
         topStackOccurences = dict()
         errors = self.__reportRoot.findall('error')
@@ -274,7 +329,7 @@ class ReportCreator:
         
         plt.title('Top five functions by top of stack occurrences',fontfamily="monospace", fontweight='bold')
         plt.xlabel('Function Name', fontfamily="monospace",fontweight='bold')
-        plt.ylabel('No of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
+        plt.ylabel('No. of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
 
         for i,v in enumerate(y):
             ax.text(i,  v, str(v), ha='center',color='black', fontweight='bold')
@@ -327,6 +382,7 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self.__strErrors)
         if not noMatplotLib:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self.__topStackGraphFileName)
+            self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self.__errorTimesPlot)
         else:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', '')
 
@@ -338,7 +394,7 @@ class ReportCreator:
 
 
 class SourceCodeManagement:
-    __htmlTemplatesPath = g_HTMLTEMPLATES
+    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
 
     def __init__(self):
@@ -498,7 +554,6 @@ def returnDateString():
     date = datetime.datetime.now()
     return date.strftime('%Y%m%d_%H%M')
 
-
 def main():
     global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, DEBUG
     parser = argparse.ArgumentParser()
@@ -521,9 +576,9 @@ def main():
 
     strDate = returnDateString()
     if args.outputDirectory != None:
-        targetDirectory = pathlib.Path(args.outputDirectory+'/drace-gui_output_'+strDate)
+        targetDirectory = pathlib.Path(args.outputDirectory+'/draceGUI_output_'+strDate)
     else:
-        targetDirectory = pathlib.Path('./drace-gui_output_'+strDate)
+        targetDirectory = pathlib.Path('./draceGUI_output_'+strDate)
 
     if args.blacklist != None:
         parseArgumentString(SOURCEFILE_BL, args.blacklist)
@@ -536,9 +591,9 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = pathlib.Path('./test_files/test.xml')    
+            inFile = pathlib.Path(SCRIPTPATH / 'test_files/test.xml')    
        
-        targetDirectory = pathlib.Path('./test_files/output')
+        targetDirectory = pathlib.Path(SCRIPTPATH / 'test_files/output')
         
 
     try:
@@ -572,9 +627,9 @@ def main():
         if jsPath.is_dir():
             shutil.rmtree(str(jsPath))
 
-        shutil.copytree(g_CSSPATH, str(targetDirectory)+"/css")
-        shutil.copytree(g_JSPATH, str(targetDirectory)+"/js")
-        shutil.copy('templates/legend.png', str(targetDirectory))
+        shutil.copytree(str(g_CSSPATH.resolve()), str(targetDirectory / "css"))
+        shutil.copytree(str(g_JSPATH.resolve()), str(targetDirectory / "js"))
+        shutil.copy(str((resourcesPath / 'legend.png').resolve()), str(targetDirectory))
         print("Report creation successfull")
         print("Report is at:")
         print(targetDirectory)

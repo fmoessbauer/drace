@@ -5,11 +5,11 @@
     <preamble>
         <line>Drace, a thread error detector</line>
     </preamble>
-    <pid>17928</pid>
+    <pid>12268</pid>
     <tool>drace</tool>
     <args>
         <vargv>
-            <exe>C:\Users\z00435hk\CMakeBuilds\e76e1403-ec81-733b-90a1-cd4774213f32\build\x64-Release-TSAN\drace-client\drace-client.dll</exe>
+            <exe>C:\Users\z00435hk\CMakeBuilds\946fc3e9-69c9-3f32-97dc-c2e81324dbc1\build\x64-Release-TSAN\drace-client\drace-client.dll</exe>
             <arg>--xml-file</arg>
             <arg>test.xml</arg>
         </vargv>
@@ -19,29 +19,30 @@
     </args>
     <status>
         <state>RUNNING</state>
-        <time>2019-07-08T10:51:00.756Z</time>
+        <time>2019-07-10T10:58:24.980Z</time>
     </status>
     <error>
         <unique>0x00</unique>
-        <tid>16552</tid>
+        <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
+        <timestamp unit="ms">531</timestamp>
         <xwhat>
-            <text>Possible data race during write of size 1 at 0x0000000025fefc70 by thread #16552</text>
-            <hthreadid>16552</hthreadid>
+            <text>Possible data race during write of size 1 at 0x0000000022ceec80 by thread #7308</text>
+            <hthreadid>7308</hthreadid>
         </xwhat>
         <stack>
             <frame>
-                <ip>0x00007ff7dcd32a30</ip>
+                <ip>0x00007ff7dc682a30</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>inc</fn>
-                <dir>c:\userdata\z00435hk\documents\drace\test\mini-apps\concurrent-inc</dir>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>26</line>
                 <offset>0</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd32636</ip>
+                <ip>0x00007ff7dc682636</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -50,7 +51,7 @@
                 <offset>79</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd324d7</ip>
+                <ip>0x00007ff7dc6824d7</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_Pad::_Call_func</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -80,21 +81,21 @@
             </frame>
         </stack>
         <xwhat>
-            <text>This conflicts with a previous read of size 1 at 0x0000000025fefc70 by thread #18088</text>
-            <hthreadid>18088</hthreadid>
+            <text>This conflicts with a previous read of size 1 at 0x0000000022ceec80 by thread #8180</text>
+            <hthreadid>8180</hthreadid>
         </xwhat>
         <stack>
             <frame>
-                <ip>0x00007ff7dcd32947</ip>
+                <ip>0x00007ff7dc682947</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>dec</fn>
-                <dir>c:\userdata\z00435hk\documents\drace\test\mini-apps\concurrent-inc</dir>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>32</line>
                 <offset>0</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd32636</ip>
+                <ip>0x00007ff7dc682636</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -103,7 +104,7 @@
                 <offset>79</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd324d7</ip>
+                <ip>0x00007ff7dc6824d7</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_Pad::_Call_func</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -135,25 +136,26 @@
     </error>
     <error>
         <unique>0x00</unique>
-        <tid>16552</tid>
+        <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
+        <timestamp unit="ms">154</timestamp>
         <xwhat>
-            <text>Possible data race during write of size 1 at 0x0000000025fefc70 by thread #16552</text>
-            <hthreadid>16552</hthreadid>
+            <text>Possible data race during write of size 1 at 0x0000000022ceec80 by thread #7308</text>
+            <hthreadid>7308</hthreadid>
         </xwhat>
         <stack>
             <frame>
-                <ip>0x00007ff7dcd32a30</ip>
+                <ip>0x00007ff7dc682a30</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>inc</fn>
-                <dir>c:\userdata\z00435hk\documents\drace\test\mini-apps\concurrent-inc</dir>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>26</line>
                 <offset>0</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd32636</ip>
+                <ip>0x00007ff7dc682636</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -162,7 +164,7 @@
                 <offset>79</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd324d7</ip>
+                <ip>0x00007ff7dc6824d7</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_Pad::_Call_func</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -192,21 +194,21 @@
             </frame>
         </stack>
         <xwhat>
-            <text>This conflicts with a previous read of size 1 at 0x0000000025fefc70 by thread #18088</text>
-            <hthreadid>18088</hthreadid>
+            <text>This conflicts with a previous read of size 1 at 0x0000000022ceec80 by thread #8180</text>
+            <hthreadid>8180</hthreadid>
         </xwhat>
         <stack>
             <frame>
-                <ip>0x00007ff7dcd32947</ip>
+                <ip>0x00007ff7dc682947</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>dec</fn>
-                <dir>c:\userdata\z00435hk\documents\drace\test\mini-apps\concurrent-inc</dir>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>32</line>
                 <offset>0</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd32636</ip>
+                <ip>0x00007ff7dc682636</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -215,7 +217,346 @@
                 <offset>79</offset>
             </frame>
             <frame>
-                <ip>0x00007ff7dcd324d7</ip>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+    </error>
+    <error>
+        <unique>0x00</unique>
+        <tid>7308</tid>
+        <threadname>Thread</threadname>
+        <kind>Race</kind>
+        <timestamp unit="ms">100</timestamp>
+        <xwhat>
+            <text>Possible data race during write of size 1 at 0x0000000022ceec80 by thread #7308</text>
+            <hthreadid>7308</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682a30</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>inc</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>26</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+        <xwhat>
+            <text>This conflicts with a previous read of size 1 at 0x0000000022ceec80 by thread #8180</text>
+            <hthreadid>8180</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682947</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>dec</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>32</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+    </error>
+    <error>
+        <unique>0x00</unique>
+        <tid>7308</tid>
+        <threadname>Thread</threadname>
+        <kind>Race</kind>
+        <timestamp unit="ms">4</timestamp>
+        <xwhat>
+            <text>Possible data race during write of size 1 at 0x0000000022ceec80 by thread #7308</text>
+            <hthreadid>7308</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682a30</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>inc</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>26</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+        <xwhat>
+            <text>This conflicts with a previous read of size 1 at 0x0000000022ceec80 by thread #8180</text>
+            <hthreadid>8180</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682947</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>dec</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>32</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+    </error>
+    <error>
+        <unique>0x00</unique>
+        <tid>7308</tid>
+        <threadname>Thread</threadname>
+        <kind>Race</kind>
+        <timestamp unit="ms">615</timestamp>
+        <xwhat>
+            <text>Possible data race during write of size 1 at 0x0000000022ceec80 by thread #7308</text>
+            <hthreadid>7308</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682a30</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>inc</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>26</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_Pad::_Call_func</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>208</line>
+                <offset>3</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ffd678de3f8</ip>
+                <obj>ucrtbase.dll</obj>
+                <fn>o_strcat_s</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd69a3402e</ip>
+                <obj>KERNEL32.dll</obj>
+                <fn>BaseThreadInitThunk</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa3368b</ip>
+                <obj>ntdll.dll</obj>
+                <fn>RtlUserThreadStart</fn>
+            </frame>
+            <frame>
+                <ip>0x00007ffd6aa34fa3</ip>
+                <obj>ntdll.dll</obj>
+                <fn>LdrInitializeThunk</fn>
+            </frame>
+        </stack>
+        <xwhat>
+            <text>This conflicts with a previous read of size 1 at 0x0000000022ceec80 by thread #8180</text>
+            <hthreadid>8180</hthreadid>
+        </xwhat>
+        <stack>
+            <frame>
+                <ip>0x00007ff7dc682947</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>dec</fn>
+                <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
+                <file>main.cpp</file>
+                <line>32</line>
+                <offset>0</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc682636</ip>
+                <obj>gp-concurrent-inc.exe</obj>
+                <fn>std::_LaunchPad&lt;&gt;::_Go</fn>
+                <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
+                <file>xthread</file>
+                <line>230</line>
+                <offset>79</offset>
+            </frame>
+            <frame>
+                <ip>0x00007ff7dc6824d7</ip>
                 <obj>gp-concurrent-inc.exe</obj>
                 <fn>std::_Pad::_Call_func</fn>
                 <dir>c:\program files (x86)\microsoft visual studio\2017\professional\vc\tools\msvc\14.16.27023\include\thr</dir>
@@ -247,8 +588,8 @@
     </error>
     <status>
         <state>FINISHED</state>
-        <time>2019-07-08T10:51:01.606Z</time>
-        <duration unit="ms">849</duration>
+        <time>2019-07-10T10:58:25.695Z</time>
+        <duration unit="ms">715</duration>
     </status>
 </valgrindoutput>
 

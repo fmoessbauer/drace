@@ -13,11 +13,11 @@ Beside the script the folder '/templates' is also needed for execution.
 ### Example
 Windows:
 ```bash
-    python drace-gui.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python draceGUI.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
 ```
 Linux:
 ```bash
-    python3 drace-gui.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python3 draceGUI.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
 ```
 ### needed parameter:
 ```bash
@@ -27,7 +27,7 @@ Linux:
  ```
 ### optional parameters:
 ```bash
-- -o: specifies an output directory (default is: ./drace-gui_output/)
+- -o: specifies an output directory (default is: ./draceGUI_output_<date>_<time>/)
 
     -o "C:/plenty/of/reports"
 
