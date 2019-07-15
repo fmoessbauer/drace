@@ -77,7 +77,7 @@ class TestMethods(unittest.TestCase):
             if line == 'Placeholders:':
                 start = True
 
-        with open(STRREPORTPATH, 'r') as html:
+        with open(str(STRREPORTPATH), 'r') as html:
             strReport = html.read()
         
         for tag in lines:
