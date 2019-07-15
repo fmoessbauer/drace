@@ -89,6 +89,9 @@ if(${DRACE_ENABLE_BENCH})
 	add_subdirectory("bench")
 endif()
 
+# install tooling scripts
+add_subdirectory("tools")
+
 # Build documentation
 find_package(Doxygen)
 if(${Doxygen_FOUND})
