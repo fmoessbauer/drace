@@ -49,15 +49,15 @@
 <p class="reduced-margin"><b>Protocoltool: </b>*PROTOCOLTOOL*</p>
 
 
-<div class="row"><div class="col s4">
 <h5>Legend:</h5>
+<div class="row"><div class="col s4">
 <img src="legend.png"  width=100% >
 </div>
 <div class="vl col s4">
 <img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
 </div>
 <div class="col s4">
-<img src=""  width=100%  >
+<img src="*ERROR_TIMES_PLOT*"  width=100%  >
 </div></div>
 <hr />
 

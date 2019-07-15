@@ -7,6 +7,7 @@
   variables:
     GIT_STRATEGY: "none"
 
+
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
@@ -17,6 +18,7 @@ stages:
   - validate
   - build
   - test
+  - gui-test
   - package
 
 cmake:
@@ -25,6 +27,9 @@ cmake:
   script:
   - echo "Release build..."
   - .\contrib\generate-ci.bat
+  except:
+    changes:
+      - tools/drace-gui/**/*
   artifacts:
     paths:
     - build-tsan-dr791
@@ -35,7 +40,10 @@ compile:
   <<: *globals
   stage: build
   except:
-    - doc-*
+  - doc-*
+  except:
+    changes:
+    - tools/drace-gui/**/*
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
@@ -50,6 +58,9 @@ compile:
 cppcheck:
   <<: *globals
   stage: validate
+  except:
+    changes:
+    - tools/drace-gui/**/*
   script:
   - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-legacy-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
@@ -65,6 +76,9 @@ test-tsan-dr791:
   <<: *globals
   <<: *testing
   stage: test
+  except:
+    changes:
+    - tools/drace-gui/**/*
   script:
   - cd build-tsan-dr791
   - echo "Use DR 7.91.x"
@@ -76,10 +90,14 @@ test-tsan-dr791:
   dependencies:
   - compile
 
+
 test-tsan-dr791-legacy:
   <<: *globals
   <<: *testing
   stage: test
+  except:
+    changes:
+    - tools/drace-gui/**/*
   script:
   - cd build-legacy-tsan-dr791
   - echo "Use DR 7.91.x (LEGACY build)"
@@ -91,11 +109,29 @@ test-tsan-dr791-legacy:
   dependencies:
   - compile
 
+
+gui-test:
+  stage: test 
+  tags: 
+  - AWS
+  only:
+    changes:
+    - tools/drace-gui/**/*
+    - .gitlab-ci.yml
+  script:
+  - echo "Start test..."
+  - python3 tools/drace-gui/draceGUI.py --Debug
+  - python3 tools/drace-gui/draceGUIUnitTest.py
+  
+
 # Package
 
 bundle:
   <<: *globals
   stage: package
+  except:
+    changes:
+    - tools/drace-gui/**/*
   script:
   - Copy-Item "contrib/package.json" -Destination "."
   - Copy-Item "contrib/package-lock.json" -Destination "."

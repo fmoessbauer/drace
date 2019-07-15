@@ -47,7 +47,7 @@ a:link, a:visited, a:hover, a:active{
     color: white;
     font-weight: bold;
 }
-.collapsible-header:hover, .collapsible-header:focus{
+.collapsible-header:hover, .collapsible-header:focus, .keyboard-focused .collapsible-header:focus{
     background-color: rgb(0,153,153);
 }
 
