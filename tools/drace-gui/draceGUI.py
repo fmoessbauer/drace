@@ -10,12 +10,15 @@
 #  */
 
 
+
 import xml.etree.ElementTree as ET
 import shutil
 import argparse
 import pathlib
 import datetime
 from subprocess import check_call, STDOUT, DEVNULL
+
+
 
 try:
     import matplotlib
@@ -25,12 +28,14 @@ except ImportError:
     noMatplotLib = True
 
 #look for resources path
-if pathlib.Path('../resources').is_dir():
-    resourcesPath = pathlib.Path('../resources')
+scriptPath = pathlib.Path(pathlib.Path(__file__).resolve() / '..')
+
+if pathlib.Path(scriptPath / '../resources').is_dir():
+    resourcesPath = pathlib.Path(scriptPath / '../resources')
 
 else:
-    if pathlib.Path('resources').is_dir():
-        resourcesPath = pathlib.Path('resources')
+    if pathlib.Path(scriptPath / 'resources').is_dir():
+        resourcesPath = pathlib.Path(scriptPath / 'resources')
     else:
         print("path of resources not found")
         exit(-1)
@@ -586,9 +591,9 @@ def main():
 
     if DEBUG:
         if inFile == None:
-            inFile = pathlib.Path('./test_files/test.xml')    
+            inFile = pathlib.Path(scriptPath / 'test_files/test.xml')    
        
-        targetDirectory = pathlib.Path('./test_files/output')
+        targetDirectory = pathlib.Path(scriptPath / 'test_files/output')
         
 
     try:
