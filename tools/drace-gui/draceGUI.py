@@ -394,7 +394,7 @@ class ReportCreator:
 
 
 class SourceCodeManagement:
-    __htmlTemplatesPath = g_HTMLTEMPLATES
+    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
     __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
 
     def __init__(self):
