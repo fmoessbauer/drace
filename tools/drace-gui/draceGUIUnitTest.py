@@ -93,7 +93,8 @@ class TestMethods(unittest.TestCase):
             self.fail()
 
     def testCodeReturn(self):
-        scm = gui.SourceCodeManagement()._returnCode('./draceGUI.py', justExistance=1)
+        path = pathlib.Path(SCRIPTPATH / 'draceGUI.py')
+        scm = gui.SourceCodeManagement()._returnCode(path, justExistance=1)
         self.assertEqual(0, scm)
 
     
