@@ -10,6 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <drmgr.h>
+#include <detector/detector_if.h>
 
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
@@ -81,7 +82,7 @@ namespace drace {
         *
         * \note threadsafe
         */
-        void add_race(const detector::Race * r) {
+        void add_race(const Detector::Race * r) {
             if (num_races() > MAX)
                 return;
 
@@ -143,7 +144,7 @@ namespace drace {
         * Filter false-positive data-races
         * \return true if race is suppressed
         */
-        bool filter_excluded(const detector::Race * r) {
+        bool filter_excluded(const Detector::Race * r) {
             // PC is null
             if (r->first.stack_trace[r->first.stack_size - 1] == 0x0)
                 return true;
@@ -158,7 +159,7 @@ namespace drace {
         * \return true if race is suppressed
         * \note   not-threadsafe
         */
-        bool filter_duplicates(const detector::Race * r) {
+        bool filter_duplicates(const Detector::Race * r) {
             // TODO: add more precise control over suppressions
             if (params.suppression_level == 0)
                 return false;
@@ -214,7 +215,7 @@ namespace drace {
     * on the singleton object. As we have to pass this callback to
     * as a function pointer to c, we cannot use std::bind
     */
-    static void race_collector_add_race(const detector::Race * r) {
+    static void race_collector_add_race(const Detector::Race * r) {
         race_collector->add_race(r);
         // for benchmarking and testing
         if (params.break_on_race) {

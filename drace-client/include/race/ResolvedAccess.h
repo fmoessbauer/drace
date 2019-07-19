@@ -20,12 +20,12 @@ namespace drace {
         /**
          * Race access entry with symbolized callstack information
          */
-        class ResolvedAccess : public detector::AccessEntry {
+        class ResolvedAccess : public Detector::AccessEntry {
         public:
             std::vector<SymbolLocation> resolved_stack;
 
-            ResolvedAccess(const detector::AccessEntry & e)
-                : detector::AccessEntry(e)
+            ResolvedAccess(const Detector::AccessEntry & e)
+                : Detector::AccessEntry(e)
             {
                 std::copy(e.stack_trace, e.stack_trace + e.stack_size, this->stack_trace);
             }

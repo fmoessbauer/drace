@@ -136,12 +136,12 @@ namespace drace {
 			// 1. Flush all threads (except this thread)
 			// 2. Fork thread
 			LOG_TRACE(data->tid, "Missed a fork, do it now");
-			detector::fork(
+			detector->fork(
                 runtime_tid.load(std::memory_order_relaxed),
-                static_cast<detector::tid_t>(data->tid),
+                static_cast<Detector::tid_t>(data->tid),
                 &(data->detector_data));
             // arc between parent thread and this thread
-            detector::happens_after(data->detector_data, (void*)data->tid);
+            detector->happens_after(data->detector_data, (void*)data->tid);
             clear_buffer();
             return;
 		}
@@ -183,11 +183,11 @@ namespace drace {
 					}
 
 					if (mem_ref->write) {
-						detector::write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					else {
-						detector::read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++(data->stats->proc_refs);
@@ -256,7 +256,7 @@ namespace drace {
 
         flush_all_threads(data, true, false);
 
-        detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
+        detector->join(runtime_tid.load(std::memory_order_relaxed), static_cast<Detector::tid_t>(data->tid));
 
         // as this is a exclusive lock and this is the only place
         // where stats are combined, we use it

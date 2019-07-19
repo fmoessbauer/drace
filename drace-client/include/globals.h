@@ -36,6 +36,9 @@ constexpr int MUTEX_MAP_SIZE = 128;
 */
 constexpr uint64_t PROC_ADDR_LIMIT = 0x7FF'FFFFFFFF;
 
+// forward decls
+class Detector;
+
 /// DRace instrumentation framework
 namespace drace {
 	/** Runtime parameters */
@@ -154,6 +157,9 @@ namespace drace {
 
 	// Global Statistics Collector
 	extern std::unique_ptr<Statistics> stats;
+
+    // Detector instance
+    extern std::unique_ptr<Detector> detector;
 
 } // namespace drace
 

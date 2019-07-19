@@ -79,7 +79,7 @@ namespace drace {
 				// we lock externally using an os lock
 				// TODO: optimize tsan wrapper internally
 				dr_mutex_lock(th_mutex);
-				detector::allocate(data->detector_data, pc, retval, size);
+				detector->allocate(data->detector_data, pc, retval, size);
 				dr_mutex_unlock(th_mutex);
 			}
 		}
@@ -92,7 +92,7 @@ namespace drace {
 
 			// first deallocate, then allocate again
 			void* old_addr = drwrap_get_arg(wrapctx, 2);
-			detector::deallocate(data->detector_data, old_addr);
+			detector->deallocate(data->detector_data, old_addr);
 
 			*user_data = drwrap_get_arg(wrapctx, 3);
 			//LOG_INFO(data->tid, "reallocate, new blocksize %u at %p", (SIZE_T)*user_data, old_addr);
@@ -107,7 +107,7 @@ namespace drace {
 			MemoryTracker::flush_all_threads(data);
 
             void * addr = drwrap_get_arg(wrapctx, 2);
-			detector::deallocate(data->detector_data, addr);
+			detector->deallocate(data->detector_data, addr);
 		}
 
 		void event::free_post(void *wrapctx, void *user_data) {
@@ -177,7 +177,7 @@ namespace drace {
 
 			LOG_TRACE(data->tid, "Mutex book size: %i, count: %i, mutex: %p\n", data->mutex_book.size(), cnt, mutex);
 
-			detector::acquire(data->detector_data, mutex, (int)cnt, write);
+			detector->acquire(data->detector_data, mutex, (int)cnt, write);
 			//detector::happens_after(data->tid, mutex);
 
 			data->stats->mutex_ops++;
@@ -216,7 +216,7 @@ namespace drace {
 
 			MemoryTracker::flush_all_threads(data);
 			LOG_TRACE(data->tid, "Release %p : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
-			detector::release(data->detector_data, mutex, write);
+			detector->release(data->detector_data, mutex, write);
 		}
 
 		void event::get_arg(void *wrapctx, OUT void **user_data) {
@@ -297,7 +297,7 @@ namespace drace {
             }
 
 			MemoryTracker::flush_all_threads(data);
-			detector::acquire(data->detector_data, mutex, (int)cnt, 1);
+			detector->acquire(data->detector_data, mutex, (int)cnt, 1);
 			data->stats->mutex_ops++;
 		}
 
@@ -337,7 +337,7 @@ namespace drace {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }
 
-					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
+					detector->acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}
 			}
@@ -351,7 +351,7 @@ namespace drace {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }
 
-					detector::acquire(data->detector_data, (void*)mutex, (int)cnt, true);
+					detector->acquire(data->detector_data, (void*)mutex, (int)cnt, true);
 					data->stats->mutex_ops++;
 				}
 			}
@@ -366,7 +366,7 @@ namespace drace {
             // the return value contains a handle to the thread, but we need the unique id
             DWORD threadid = GetThreadId((HANDLE)retval);
             LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", (HANDLE)retval, threadid);
-            detector::happens_before(data->detector_data, (void*)threadid);
+            detector->happens_before(data->detector_data, (void*)threadid);
         }
 
         void event::barrier_enter(void *wrapctx, void** addr) {
@@ -377,7 +377,7 @@ namespace drace {
             LOG_TRACE(static_cast<detector::tid_t>(data->tid), "barrier enter %p", *addr);
             // each thread enters the barrier individually
 
-            detector::happens_before(data->detector_data, *addr);
+            detector->happens_before(data->detector_data, *addr);
         }
 
 		void event::barrier_leave(void *wrapctx, void *addr) {
@@ -390,7 +390,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "barrier passed");
 
 			// each thread leaves individually, but only after all barrier_enters have been called
-			detector::happens_after(data->detector_data, addr);
+			detector->happens_after(data->detector_data, addr);
 		}
 
 		void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
@@ -405,7 +405,7 @@ namespace drace {
 			// TODO: Validate cancellation path, where happens_before will be called again
 			if (passed) {
 				// each thread leaves individually, but only after all barrier_enters have been called
-				detector::happens_after(data->detector_data, addr);
+				detector->happens_after(data->detector_data, addr);
 			}
 		}
 
@@ -415,7 +415,7 @@ namespace drace {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
-			detector::happens_before(data->detector_data, identifier);
+			detector->happens_before(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-before @ %p", identifier);
 		}
 
@@ -425,7 +425,7 @@ namespace drace {
 			app_pc drcontext = drwrap_get_drcontext(wrapctx);
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			DR_ASSERT(nullptr != data);
-			detector::happens_after(data->detector_data, identifier);
+			detector->happens_after(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
 #endif

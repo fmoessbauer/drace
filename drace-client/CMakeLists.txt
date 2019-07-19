@@ -35,7 +35,6 @@ target_link_libraries(
 	"drace-client"   # main drace-libs
 	"drace-common"   # drace and msr common libs
 	"jtilly-inih"    # ini parser
-	"drace-detector" # race-detector
 	"hh-date"        # C++ date lib
 	"clipp"          # option parser
 )

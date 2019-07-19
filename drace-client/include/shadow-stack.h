@@ -51,7 +51,7 @@ namespace drace {
 			for (unsigned i = 0; i < size; ++i)
 				if (stack->data[i] == addr) return;
 #endif
-			detector::func_enter(data->detector_data, addr);
+			detector->func_enter(data->detector_data, addr);
 			stack.data[stack.entries++] = addr;
 		}
 
@@ -61,7 +61,7 @@ namespace drace {
 			DR_ASSERT(stack.entries > 0);
 			stack.entries--;
 
-			detector::func_exit(data->detector_data);
+			detector->func_exit(data->detector_data);
 			return stack.data[stack.entries];
 		}
 

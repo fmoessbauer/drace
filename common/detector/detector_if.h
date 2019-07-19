@@ -15,7 +15,8 @@
 #include <functional>
 
  /// Interface for a DRace compatible race detector
-namespace detector {
+class Detector {
+public:
     typedef unsigned long tid_t;
     typedef void*         tls_t;
 
@@ -38,13 +39,13 @@ namespace detector {
     /** A Data-Race is a tuple of two Accesses */
     using Race = std::pair<AccessEntry, AccessEntry>;
 
-    using Callback = void(*)(const detector::Race*);
+    using Callback = void(*)(const Race*);
 
     /**
     * Takes command line arguments and a callback to process a data-race.
     * Type of callback is (const detector::Race*) -> void
     */
-    bool init(int argc, const char **argv, Callback rc_clb);
+    virtual bool init(int argc, const char **argv, Callback rc_clb) = 0;
 
     /**
     * Maps a new block of shadow memory.
@@ -52,16 +53,16 @@ namespace detector {
     * \note the mapped shadow region has to be in a memory range that is shadowable
     * \todo rework memory mapping, i#11
     */
-    void map_shadow(void* startaddr, size_t size_in_bytes);
+    virtual void map_shadow(void* startaddr, size_t size_in_bytes) = 0;
 
     /**
      * Finalizes the detector.
      * After a finalize, a later init must be possible
      */
-    void finalize();
+    virtual void finalize() = 0;
 
     /** Acquire a mutex */
-    void acquire(
+    virtual void acquire(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// ptr to mutex location
@@ -70,31 +71,31 @@ namespace detector {
         int   recursive,
         /// true, for RW-mutexes in read-mode false
         bool  write
-    );
+    ) = 0;
 
     /** Release a mutex */
-    void release(
+    virtual void release(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// ptr to mutex location
         void* mutex,
         /// true, for RW-mutexes in read-mode false
         bool  write
-    );
+    ) = 0;
 
     /** Enter a function (push stack entry) */
-    void func_enter(tls_t tls, void* pc);
+    virtual void func_enter(tls_t tls, void* pc) = 0;
 
     /** Leave a function (pop stack entry) */
-    void func_exit(tls_t tls);
+    virtual void func_exit(tls_t tls) = 0;
 
     /** Draw a happens-before edge between thread and identifier (optional) */
-    void happens_before(tls_t tls, void* identifier);
+    virtual void happens_before(tls_t tls, void* identifier) = 0;
     /** Draw a happens-after edge between thread and identifier (optional) */
-    void happens_after(tls_t tls, void* identifier);
+    virtual void happens_after(tls_t tls, void* identifier) = 0;
 
     /** Log a read access */
-    void read(
+    virtual void read(
         /// ptr to thread-local storage of calling thread
         tls_t    tls,
         /// current program counter
@@ -103,10 +104,10 @@ namespace detector {
         void*    addr,
         /// access size log2 (bytes)
         size_t   size
-    );
+    ) = 0;
 
     /** Log a write access */
-    void write(
+    virtual void write(
         /// ptr to thread-local storage of calling thread
         tls_t    tls,
         /// current program counter
@@ -115,10 +116,10 @@ namespace detector {
         void*    addr,
         /// access size log2 (bytes)
         size_t   size
-    );
+    ) = 0;
 
     /** Log a memory allocation */
-    void allocate(
+    virtual void allocate(
         /// ptr to thread-local storage of calling thread
         tls_t  tls,
         /// current instruction pointer
@@ -127,41 +128,43 @@ namespace detector {
         void*  addr,
         /// size of memory block
         size_t size
-    );
+    ) = 0;
 
     /** Log a memory deallocation*/
-    void deallocate(
+    virtual void deallocate(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// begin of memory block
         void* addr
-    );
+    ) = 0;
 
     /** Log a thread-creation event */
-    void fork(
+    virtual void fork(
         /// id of parent thread
         tid_t parent,
         /// id of child thread
         tid_t child,
         /// out parameter for tls data
         tls_t * tls
-    );
+    ) = 0;
 
     /** Log a thread join event */
-    void join(
+    virtual void join(
         /// id of parent thread
         tid_t parent,
         /// id of child thread
         tid_t child
-    );
+    ) = 0;
 
     /** Log a thread detach event */
-    void detach(tls_t tls, tid_t thread_id);
+    virtual void detach(tls_t tls, tid_t thread_id) = 0;
     /** Log a thread exit event (detached thread) */
-    void finish(tls_t tls, tid_t thread_id);
+    virtual void finish(tls_t tls, tid_t thread_id) = 0;
 
     /** Return name of detector */
-    std::string name();
+    virtual std::string name() = 0;
     /** Return version of detector */
-    std::string version();
-}
+    virtual std::string version() = 0;
+};
+
+extern "C" __declspec(dllexport) Detector * CreateDetector();

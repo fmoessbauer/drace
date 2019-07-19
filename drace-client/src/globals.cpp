@@ -19,6 +19,8 @@
 #include "ipc/SharedMemory.h"
 #include "ipc/MtSyncSHMDriver.h"
 
+#include <detector/detector_if.h>
+
 namespace drace {
 	/**
 	* Thread local storage metadata has to be globally accessable
@@ -48,4 +50,6 @@ namespace drace {
 
 	/* Runtime parameters */
 	params_t params;
+
+    std::unique_ptr<Detector> detector;
 }

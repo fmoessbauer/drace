@@ -27,7 +27,7 @@ namespace drace {
             bool           is_resolved{ false };
 
             DecoratedRace(
-                const detector::Race & r,
+                const Detector::Race & r,
                 /// elapsed time since program start
                 const std::chrono::milliseconds & ttr)
                 : first(r.first),

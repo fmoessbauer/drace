@@ -102,7 +102,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     register_report_sinks();
 
     // Initialize Detector
-    detector::init(argc, argv, race_collector_add_race);
+    auto detlib = dr_load_aux_library("drace-detector.dll", NULL, NULL);
+    auto create_detector = reinterpret_cast<decltype(CreateDetector)*>(dr_lookup_aux_library_routine(detlib, "CreateDetector"));
+
+    detector = std::unique_ptr<Detector>(create_detector());
+    detector->init(argc, argv, race_collector_add_race);
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
@@ -191,7 +195,7 @@ namespace drace {
         drmgr_exit();
 
         // Finalize Detector
-        detector::finalize();
+        detector->finalize();
 
         dr_mutex_destroy(th_mutex);
         dr_rwlock_destroy(tls_rw_mutex);
