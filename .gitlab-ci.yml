@@ -29,7 +29,7 @@ cmake:
   - .\contrib\generate-ci.bat
   except:
     changes:
-      - tools/drace-gui/**/*
+    - tools/drace-gui/**/*
   artifacts:
     paths:
     - build-tsan-dr791
@@ -40,10 +40,11 @@ compile:
   <<: *globals
   stage: build
   except:
-  - doc-*
-  except:
     changes:
     - tools/drace-gui/**/*
+  except:
+  - doc-*
+    
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
