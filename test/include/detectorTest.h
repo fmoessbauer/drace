@@ -30,7 +30,7 @@ public:
 	DetectorTest() {
 		num_races = 0;
         last_race = {};
-		if (detector::name() != "TSAN") {
+		if (std::string(detector::name()) != "TSAN") {
 			const char * _argv = "drace-tests.exe";
 			detector::init(1, &_argv, callback);
 		}
@@ -46,7 +46,7 @@ protected:
 	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
 		std::cout << "Detector: " << detector::name() << std::endl;
-		if (detector::name() == "TSAN") {
+		if (std::string(detector::name()) == "TSAN") {
 			const char * _argv = "drace-tests-tsan.exe";
 			detector::init(1, &_argv, callback);
 		}
