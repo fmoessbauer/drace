@@ -58,67 +58,68 @@ if NUMBEROFCODELINES % 2:
     exit(-1)
 
 class ReportCreator:
-    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
-    __topStackGraphFileName = 'topStackBarchart.png'
-    __errorTimesPlot        = 'errorTimes.png'
+    _htmlTemplatesPath = str(g_HTMLTEMPLATES)
+    _topStackGraphFileName = 'topStackBarchart.png'
+    _errorTimesPlot        = 'errorTimes.png'
+
 
     try:
         if check_call(['code', '--version'], stdout=DEVNULL, stderr=STDOUT, shell=True) == 0: #check if vscode is installed, for sourcefile linking
-            __vscodeFlag = True
+            _vscodeFlag = True
         else:
-            __vscodeFlag = False
+            _vscodeFlag = False
     except:
-        __vscodeFlag = False
+        _vscodeFlag = False
 
 
     def __init__(self, pathOfReport, target):
         self.sourcefileList = list()
-        self.__callStackNumber = 0
-        self.__errorNumber = 0
-        self.__snippets = str()
+        self._callStackNumber = 0
+        self._errorNumber = 0
+        self._snippets = str()
         self.succesfullReportCreation = True
         self.SCM = SourceCodeManagement()
 
         try:
-            self.__htmlTemplates = (ET.parse(self.__htmlTemplatesPath)).getroot()
+            self._htmlTemplates = (ET.parse(self._htmlTemplatesPath)).getroot()
         except FileNotFoundError:
             print("template file is missing")
             self.succesfullReportCreation = False
             return
 
-        self.__pathOfReport = pathOfReport
-        if self.__inputValidation():
-            self.__createReport()
+        self._pathOfReport = pathOfReport
+        if self._inputValidation():
+            self._createReport()
             if not noMatplotLib:
-                self.__makeHistogramm(target)
-                self.__countTopStackOccurences(target)
+                self._makeHistogramm(target)
+                self._countTopStackOccurences(target)
         else:
             print("input file is not valid")
             self.succesfullReportCreation = False
 
-    def __inputValidation(self):
+    def _inputValidation(self):
         try:
-            self.__reportContent = ET.parse(self.__pathOfReport)
-            self.__reportRoot = self.__reportContent.getroot()
+            self._reportContent = ET.parse(self._pathOfReport)
+            self._reportRoot = self._reportContent.getroot()
         except:
             return 0
 
-        if self.__reportRoot.find('protocolversion') != None and \
-            self.__reportRoot.find('protocoltool') != None and \
-            self.__reportRoot.find('preamble') != None and \
-            self.__reportRoot.find('pid') != None and \
-            self.__reportRoot.find('tool') != None and \
-            self.__reportRoot.find('args') != None and \
-            self.__reportRoot.find('status') != None and \
-            self.__reportRoot.tag == 'valgrindoutput':
+        if self._reportRoot.find('protocolversion') != None and \
+            self._reportRoot.find('protocoltool') != None and \
+            self._reportRoot.find('preamble') != None and \
+            self._reportRoot.find('pid') != None and \
+            self._reportRoot.find('tool') != None and \
+            self._reportRoot.find('args') != None and \
+            self._reportRoot.find('status') != None and \
+            self._reportRoot.tag == 'valgrindoutput':
 
             return 1
         else:
             return 0
 
-    def __getHeader(self):
+    def _getHeader(self):
         header = list()
-        status = self.__reportRoot.findall('status')[1]
+        status = self._reportRoot.findall('status')[1]
         strDatetime = status.find('time').text
         date = strDatetime.split('T')[0]
         time = (strDatetime.split('T')[1])[0:-1] #last digit is 'Z' -> not needed
@@ -128,34 +129,34 @@ class ReportCreator:
         header.append(adjText(status.find('duration').get('unit')))
 
         arguments = str()
-        for arg in self.__reportRoot.find('args').find('vargv').findall('arg'):
+        for arg in self._reportRoot.find('args').find('vargv').findall('arg'):
             arguments += arg.text
             arguments += ' '
         header.append(adjText(arguments[0:-1])) #remove last ' '
         
-        header.append(adjText(self.__reportRoot.find('args').find('argv').find('exe').text))
-        header.append(adjText(self.__reportRoot.find('protocolversion').text))
-        header.append(adjText(self.__reportRoot.find('protocoltool').text))
+        header.append(adjText(self._reportRoot.find('args').find('argv').find('exe').text))
+        header.append(adjText(self._reportRoot.find('protocolversion').text))
+        header.append(adjText(self._reportRoot.find('protocoltool').text))
 
         return header
 
-    def __makeFileEntry(self, frame):
+    def _makeFileEntry(self, frame):
         strDir = adjText(frame.find('dir').text)
         strFile = adjText(frame.find('file').text)
         strLine = adjText(frame.find('line').text)
         offset = adjText(frame.find('offset').text)
 
-        if self.__vscodeFlag:
+        if self._vscodeFlag:
             entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine + ":" + offset +"'>"+ strFile +":" + strLine + ":" + offset + "</a>"
         else:
             entry  = "<a href='file://"+ strDir + "/" + strFile + ":" + strLine + "'>" + strFile + ":" + strLine + "</a>"
         
         return entry
 
-    def __createSnippetEntry(self, frame, elementNumber, tag, codeIndex, buttonID):
-        newSnippet = self.__htmlTemplates.find('snippet_entry').text
+    def _createSnippetEntry(self, frame, elementNumber, tag, codeIndex, buttonID):
+        newSnippet = self._htmlTemplates.find('snippet_entry').text
 
-        newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
+        newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self._callStackNumber)))
         newSnippet = newSnippet.replace('*STACK_NUMBER*', adjText(hex(elementNumber)))
         newSnippet = newSnippet.replace('*OBJ*', adjText(frame.find('obj').text))
         newSnippet = newSnippet.replace('*FUNCTION*', adjText(frame.find('fn').text))
@@ -164,14 +165,14 @@ class ReportCreator:
         newSnippet = newSnippet.replace('*SNIPPET_BUTTON_ID*', buttonID)
 
         if (frame.find('file')!= None):
-            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', self.__makeFileEntry(frame))
+            newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', self._makeFileEntry(frame))
             newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
-            newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self.__makeShortDir(frame.find('dir').text)))
+            newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self._makeShortDir(frame.find('dir').text)))
             newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
 
 
             if(codeIndex != -1):
-                newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self.__callStackNumber)+"_code")
+                newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self._callStackNumber)+"_code")
                 newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(adjText(frame.find('file').text)))
                 newSnippet = newSnippet.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))
             else:
@@ -182,16 +183,16 @@ class ReportCreator:
             newSnippet = newSnippet.replace('*DIRECTORY*', 'no directory avail.')
             newSnippet = newSnippet.replace('*SHORT_DIR*', 'no directory avail.')
 
-        self.__snippets += newSnippet #append referenced code snippet
+        self._snippets += newSnippet #append referenced code snippet
 
-    def __makeShortDir(self, strDir):
+    def _makeShortDir(self, strDir):
         elements = strDir.split("\\")
         return elements[0] + "/" + elements[1] + "/.../" + elements[-1]
 
-    def __createCallStack(self, errorEntry, position, outputID):
+    def _createCallStack(self, errorEntry, position, outputID):
         
         callStack = str()
-        stackTemplate = self.__htmlTemplates.find('stack_entry').text
+        stackTemplate = self._htmlTemplates.find('stack_entry').text
         stackArray = errorEntry.findall('stack')
         stack = stackArray[position]
         elementNumber = 0
@@ -199,19 +200,19 @@ class ReportCreator:
 
         for frame in stack.findall('frame'):
             noPreview = False 
-            buttonID = "button_" + str(self.__errorNumber) + "_" + str(position) + "_" + str(elementNumber)
+            buttonID = "button_" + str(self._errorNumber) + "_" + str(position) + "_" + str(elementNumber)
             strOutputID = outputID+str(position)
 
             if elementNumber == 0:
                 ###make heading for the red box### 
-                if len(self.__errorHeading) == 0:
-                    self.__errorHeading += "<br> Obj. 1: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '" <br> '
+                if len(self._errorHeading) == 0:
+                    self._errorHeading += "<br> Obj. 1: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '" <br> '
                 else:
-                    self.__errorHeading += "Obj. 2: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '"'
+                    self._errorHeading += "Obj. 2: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '"'
            
             #general entries (always available)
             newStackElement = stackTemplate.replace('*STACK_NUMBER*', adjText(hex(elementNumber))+":")
-            newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self.__callStackNumber)))
+            newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self._callStackNumber)))
             newStackElement = newStackElement.replace('*OUTPUT_ID*', strOutputID)
             newStackElement = newStackElement.replace('*FUNCTION*', adjText(frame.find('fn').text))
             newStackElement = newStackElement.replace('*BUTTON_ID*', buttonID)
@@ -223,7 +224,7 @@ class ReportCreator:
 
                 if(codeIndex != -1):
                     newStackElement = newStackElement.replace('*CODE_VAR*', str(codeIndex))
-                    newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self.__callStackNumber)+"_code'")
+                    newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self._callStackNumber)+"_code'")
                     newStackElement = newStackElement.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
                     newStackElement = newStackElement.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))  
                 
@@ -247,18 +248,18 @@ class ReportCreator:
                 newStackElement = newStackElement[:insertPosition] + "grey-button " + newStackElement[insertPosition:] 
 
             
-            self.__createSnippetEntry(frame, elementNumber, tag, codeIndex, buttonID)
+            self._createSnippetEntry(frame, elementNumber, tag, codeIndex, buttonID)
             callStack += newStackElement #append stack element
             elementNumber += 1
-            self.__callStackNumber += 1 #increase global call stack number (used for reference variables)
+            self._callStackNumber += 1 #increase global call stack number (used for reference variables)
 
         return callStack
 
-    def __makeHistogramm(self, target):
+    def _makeHistogramm(self, target):
         errorTimes = dict()
-        statusNode = self.__reportRoot.findall('status')[1]
+        statusNode = self._reportRoot.findall('status')[1]
         totalDuration =  int(statusNode.find('duration').text)
-        errors = self.__reportRoot.findall('error')
+        errors = self._reportRoot.findall('error')
         
         for error in errors:
             timePoint = (round(float(100 * int(error.find('timestamp').text) /totalDuration))) #get occurance in %
@@ -288,12 +289,12 @@ class ReportCreator:
         
         fig.add_axes(ax)
         #plt.show()
-        figPath = pathlib.Path(target+'/'+self.__errorTimesPlot)
+        figPath = pathlib.Path(target+'/'+self._errorTimesPlot)
         plt.savefig(str(figPath), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
 
-    def __countTopStackOccurences(self, target):
+    def _countTopStackOccurences(self, target):
         topStackOccurences = dict()
-        errors = self.__reportRoot.findall('error')
+        errors = self._reportRoot.findall('error')
         for error in errors:
             stacks = error.findall('stack')
             for stack in stacks:
@@ -337,19 +338,19 @@ class ReportCreator:
         
         fig.add_axes(ax)
         #plt.show()
-        figPath = pathlib.Path(target+'/'+self.__topStackGraphFileName)
+        figPath = pathlib.Path(target+'/'+self._topStackGraphFileName)
         plt.savefig(str(figPath), dpi=300, format='png', bbox_inches='tight', orientation='landscape') # use format='svg' or 'pdf' for vectorial pictures
        
-    def __createErrorList(self):
-        self.__strErrors = str()
+    def _createErrorList(self):
+        self._strErrors = str()
         
-        errorTemplate = self.__htmlTemplates.find('error_entry').text
-        errorList = self.__reportRoot.findall('error')
-        self.__numberOfErrors = len(errorList)
+        errorTemplate = self._htmlTemplates.find('error_entry').text
+        errorList = self._reportRoot.findall('error')
+        self._numberOfErrors = len(errorList)
         
         for error in errorList:
             
-            outputID = "output_"+str(self.__errorNumber)+"_"
+            outputID = "output_"+str(self._errorNumber)+"_"
             newError = errorTemplate.replace('*ERROR_ID*', adjText(error.find('unique').text))
             newError = newError.replace('*ERROR_TYPE*', adjText(error.find('kind').text))
             
@@ -357,19 +358,19 @@ class ReportCreator:
             newError = newError.replace('*XWHAT_TEXT_1*', adjText(xwhat[0].find('text').text))
             newError = newError.replace('*XWHAT_TEXT_2*', adjText(xwhat[1].find('text').text))
 
-            self.__errorHeading = str() #reset errorHeading, will be filled filled by __createCallStack
-            newError = newError.replace('*CALL_STACK_ENTRIES_1*', self.__createCallStack(error, 0, outputID))
-            newError = newError.replace('*CALL_STACK_ENTRIES_2*', self.__createCallStack(error, 1, outputID))
+            self._errorHeading = str() #reset errorHeading, will be filled filled by _createCallStack
+            newError = newError.replace('*CALL_STACK_ENTRIES_1*', self._createCallStack(error, 0, outputID))
+            newError = newError.replace('*CALL_STACK_ENTRIES_2*', self._createCallStack(error, 1, outputID))
             newError = newError.replace('*OUTPUT_ID_1*', outputID+'0')
             newError = newError.replace('*OUTPUT_ID_2*', outputID+'1')
-            newError = newError.replace('*ERROR_HEADING*', self.__errorHeading)
+            newError = newError.replace('*ERROR_HEADING*', self._errorHeading)
 
-            self.__errorNumber += 1
-            self.__strErrors += newError
+            self._errorNumber += 1
+            self._strErrors += newError
 
-    def __createHeader(self):
-        headerInformation = self.__getHeader()
-        self.htmlReport = self.__htmlTemplates.find('base_entry').text
+    def _createHeader(self):
+        headerInformation = self._getHeader()
+        self.htmlReport = self._htmlTemplates.find('base_entry').text
         self.htmlReport = self.htmlReport.replace('*DATE*', headerInformation[0])
         self.htmlReport = self.htmlReport.replace('*TIME*', headerInformation[1])
         self.htmlReport = self.htmlReport.replace('*DURATION*', headerInformation[2])
@@ -378,42 +379,42 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*EXE*', headerInformation[5])
         self.htmlReport = self.htmlReport.replace('*PROTOCOLVERSION*', headerInformation[6])
         self.htmlReport = self.htmlReport.replace('*PROTOCOLTOOL*', headerInformation[7])
-        self.htmlReport = self.htmlReport.replace('*NUMBER_OF_ERRORS*', str(self.__numberOfErrors))
-        self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self.__strErrors)
+        self.htmlReport = self.htmlReport.replace('*NUMBER_OF_ERRORS*', str(self._numberOfErrors))
+        self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self._strErrors)
         if not noMatplotLib:
-            self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self.__topStackGraphFileName)
-            self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self.__errorTimesPlot)
+            self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self._topStackGraphFileName)
+            self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self._errorTimesPlot)
         else:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', '')
 
-    def __createReport(self):
-        self.__createErrorList()
-        self.__createHeader()
-        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self.__snippets)
+    def _createReport(self):
+        self._createErrorList()
+        self._createHeader()
+        self.htmlReport = self.htmlReport.replace("*SNIPPET_VARIABLES*", self._snippets)
         self.htmlReport = self.SCM.createCodeVars(self.htmlReport)
 
 
 class SourceCodeManagement:
-    __htmlTemplatesPath = str(g_HTMLTEMPLATES)
-    __htmlTemplates = (ET.parse(__htmlTemplatesPath)).getroot()
+    _htmlTemplatesPath = str(g_HTMLTEMPLATES)
+    _htmlTemplates = (ET.parse(_htmlTemplatesPath)).getroot()
 
     def __init__(self):
-        self.__sourcefilelist = list()
+        self._sourcefilelist = list()
 
-    def __createSourcefileEntry(self, path, line):
-        #one entry consists of the full file path the line number of interest and wether the complete file is copied in the html report or not
-        src = open(path, mode='r')
-        sourceCode = src.readlines()
-        src.close()
-        if len(sourceCode) <= NUMBEROFCODELINES:
-            newElement = [path, int(line), True]
-        else:
+    def _createSourcefileEntry(self, path, line):
+        #one entry consists of the full file path the line number of interest 
+        sourceFile = open(path, mode='r')
+        sourceLineList = sourceFile.readlines()
+        if len(sourceLineList) > NUMBEROFCODELINES:
             newElement = [path, int(line), False]
-
-        self.__sourcefilelist.append(newElement)
-        return self.__sourcefilelist.index(newElement)
+        else:
+            newElement = [path, int(line), True]
         
-    def __returnCode(self, fullPath, justExistance, line = 0, completeFileFlag = False):
+        self._sourcefilelist.append(newElement)
+        return self._sourcefilelist.index(newElement)
+
+        
+    def _returnCode(self, fullPath, justExistance, line = 0):
         returnSrc = False
         try:
             fp = pathlib.Path(fullPath).resolve() #returns absolute path
@@ -436,59 +437,60 @@ class SourceCodeManagement:
                 return 0
         else:
             return -1
+        
+        #if we are we want to return the source code
+        return adjText(self._getLines(fullPath, line))
 
-        #return sourcecode
-        sourceFile = open(fullPath, mode='r')
-        if completeFileFlag:
-            sourceCode = sourceFile.read()
-            sourceCode = sourceCode
 
-        else:
-            sourceLineList = sourceFile.readlines()
+    def _getLines(self, path, line):
+        sourceFile = open(path, mode='r')
+        sourceLineList = sourceFile.readlines()
+
+        if len(sourceLineList) > NUMBEROFCODELINES:
             if line <= NUMBEROFCODELINES//2:
                 begin = 0
                 end = NUMBEROFCODELINES
             else:
-                begin = (line - NUMBEROFCODELINES//2) - 1
+                begin = (line - NUMBEROFCODELINES//2) - 1 #-1 because array starts with 0
                 end = begin + NUMBEROFCODELINES
 
-            listOfInterest = sourceLineList[begin:end]
-            sourceCode = str()
-            for sourceLine in listOfInterest:
-                sourceCode += sourceLine
+            sourceLineList = sourceLineList[begin:end]
+            
+        sourceCode = str()
+        for sourceLine in sourceLineList:
+            sourceCode += sourceLine
 
         sourceFile.close()
-        return adjText(sourceCode)
+        return sourceCode
+
 
     def handleSourceCode(self, filename, directory, line):
-        fullPath = directory +'/'+ filename
-        fullPath = fullPath.replace('\\', '/')
+        fullPath = pathlib.Path(directory +'/'+ filename)
         
-        src = self.__returnCode(fullPath, justExistance=1)
+        src = self._returnCode(fullPath, justExistance=1)
         if src == -1:
-            return -1, self.__htmlTemplates.find('no_code_entry').text
+            return -1, self._htmlTemplates.find('no_code_entry').text
 
         index = -1
-        #entry = list()
-
-        for item in self.__sourcefilelist:
+        #check if source file is already in the list
+        for item in self._sourcefilelist:
             if item[0] == fullPath:
                 if item[2] or (int(line) - NUMBEROFCODELINES//10) <= item[1] <= (int(line) + NUMBEROFCODELINES//10): 
-                    index = self.__sourcefilelist.index(item)
+                    index = self._sourcefilelist.index(item)
                     #entry = item
 
         if index == -1:
-            index = self.__createSourcefileEntry(fullPath, line)
+            index = self._createSourcefileEntry(fullPath, line)
             
         strIndex = 'code_' + str(index) 
-        return strIndex, (self.__htmlTemplates.find('code_entry').text)
+        return strIndex, (self._htmlTemplates.find('code_entry').text)
 
     def createCodeVars(self, report):
         codeString = str()
 
-        for sourceObject in self.__sourcefilelist:
-            src = self.__returnCode(sourceObject[0], justExistance=0, line = sourceObject[1], completeFileFlag = sourceObject[2])
-            tmpCode = "code_" + str(self.__sourcefilelist.index(sourceObject)) + ' = `' + src + '`;\n'
+        for sourceObject in self._sourcefilelist:
+            src = self._returnCode(sourceObject[0], justExistance=0, line = sourceObject[1])
+            tmpCode = "code_" + str(self._sourcefilelist.index(sourceObject)) + ' = `' + src + '`;\n'
             codeString += tmpCode
 
         report = report.replace("*CODE_VARIABLES*", codeString)
@@ -519,11 +521,13 @@ class SourceCodeManagement:
 
     def getFirstLineOfCodeSnippet(self, index):
         codeSnippet = int(index.split("_")[-1]) #index is e.g. code_3
-        srcObject = self.__sourcefilelist[codeSnippet]
+        srcObject = self._sourcefilelist[codeSnippet]
+
         if srcObject[2]:
             return 1
         else:
-            return srcObject[1] - NUMBEROFCODELINES//2
+            firstLine = srcObject[1] - NUMBEROFCODELINES//2
+            return  firstLine #srcObject[1] is line of interest of snippet
 
 
 def adjText(text): #change html symbols e.g. & -> &amp;

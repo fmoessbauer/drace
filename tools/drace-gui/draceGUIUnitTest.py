@@ -58,7 +58,6 @@ class TestMethods(unittest.TestCase):
         for key, value in languageMap.items():
             self.assertEqual(value, testObject.determineLanguage(key))
 
-
 # check if all placeholders were removed
     def testPlaceholdersGone(self):
         plcPath = SCRIPTPATH / 'test_files/placeholders.txt'
@@ -86,8 +85,19 @@ class TestMethods(unittest.TestCase):
 
         self.assertEqual(1,1)
 
-    def testDummy(self):
-        self.assertEqual(1,1)
+    def testSymbolCorrection(self):
+        testStr = '&<>&"\\&'
+        if gui.adjText(testStr) == '&amp;&lt;&gt;&amp;&quot;/&amp;':
+            self.assertEqual(1,1)
+        else:
+            self.fail()
+
+    def testCodeReturn(self):
+        path = pathlib.Path(SCRIPTPATH / 'draceGUI.py')
+        scm = gui.SourceCodeManagement()._returnCode(path, justExistance=1)
+        self.assertEqual(0, scm)
+
+    
 
 
 if __name__ == '__main__':
