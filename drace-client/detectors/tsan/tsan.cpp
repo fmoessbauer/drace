@@ -182,12 +182,12 @@ void detector::finalize() {
     //std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
 }
 
-std::string detector::name() {
-    return std::string("TSAN");
+const char * detector::name() {
+    return "TSAN";
 }
 
-std::string detector::version() {
-    return std::string("0.2.0");
+const char * detector::version() {
+    return "0.2.0";
 }
 
 void detector::map_shadow(void* startaddr, size_t size_in_bytes) {

@@ -60,7 +60,7 @@ namespace detector {
      */
     void finalize();
 
-    /** Acquire a mutex */
+    /** Acquire a mutex  */
     void acquire(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
@@ -161,7 +161,9 @@ namespace detector {
     void finish(tls_t tls, tid_t thread_id);
 
     /** Return name of detector */
-    std::string name();
+    const char * name();
+
     /** Return version of detector */
-    std::string version();
+    const char * version();
+
 }
