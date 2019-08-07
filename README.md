@@ -6,7 +6,7 @@
 DRace is a data-race detector for windows applications which uses DynamoRIO
 to dynamically instrument a binary at runtime.
 It does not require any preparations like instrumentation of the binary to check.
-While the detector should work with all binaries that use the POSIX synchronization API,
+While the detector should work with all binaries that use the Windows synchronization API,
 we focus on applications written in C and C++.
 Experimental support for hybrid applications containing native and Dotnet parts
 is implemented as well.
