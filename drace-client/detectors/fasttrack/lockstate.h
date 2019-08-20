@@ -31,16 +31,14 @@ public:
         }
     }    
 
-    uint32_t get_thread_id_by_pos(uint32_t pos) {
+    uint32_t get_id_by_pos(uint32_t pos) {
         if (pos < lock_vc.size()) {
-            std::map<int, int>::iterator it = lock_vc.begin();
-            for (int i = 0; i < pos; ++i) {
-                it++;
-            }
+            auto it = lock_vc.begin();
+            std::advance(it, pos);
             return it->first;
         }
         else {
-            return -1;
+            return 0;
         }
     }
 

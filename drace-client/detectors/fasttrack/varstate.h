@@ -6,61 +6,59 @@ static constexpr int VAR_NOT_INIT = -1;
 class VarState : FTStates {
 public:
     uint64_t address;
-    int w_tid;
-    int r_tid;
-    int w;
+    int32_t w_tid;
+    int32_t r_tid;
+    int32_t w_clock;
     /// local clock of last read
-    int r;
-    std::map<int, int> rvc;
+    int32_t r_clock;
+    std::map<uint32_t, uint32_t> rvc;
 
     VarState::VarState(uint64_t addr) {
         address = addr;
-        w = r = r_tid = w_tid = VAR_NOT_INIT;
+        w_clock = r_clock = r_tid = w_tid = VAR_NOT_INIT;
     };
 
    
-    void update(bool is_write, uint32_t vc, uint32_t other_tid) {
+    void update(bool is_write, uint32_t vc, uint32_t tid) {
         if (is_write) {
-            r = -1;
-            w_tid = other_tid;
-            w = vc;
+            r_clock = VAR_NOT_INIT;
+            r_tid = VAR_NOT_INIT;
+            w_tid = tid;
+            w_clock = vc;
         }
         else {
-            r_tid = other_tid;
-            if (r == READ_SHARED) {
-                if (rvc.find(other_tid) == rvc.end()) {
-                    rvc.insert(rvc.end(), std::pair<int, int>(other_tid, vc));
+            if (r_clock == READ_SHARED) {
+                if (rvc.find(tid) == rvc.end()) {
+                    rvc.insert(rvc.end(), std::pair<uint32_t, uint32_t>(tid, vc));
                 }
                 else {
-                    rvc[other_tid] = vc;
+                    rvc[tid] = vc;
                 }
-                
             }
-            //w = 0;
             else {
-                r = vc;
+                r_tid = tid;
+                r_clock = vc;
             }
         }
     };
 
     void set_read_shared() {
-        r = READ_SHARED;
+        r_clock = READ_SHARED;
+        r_tid = READ_SHARED;
     }
 
     uint32_t get_length() {
         return rvc.size();
     }
 
-    uint32_t get_thread_id_by_pos(uint32_t pos) {
+    uint32_t get_id_by_pos(uint32_t pos) {
         if (pos < rvc.size()) {
-            std::map<int, int>::iterator it = rvc.begin();
-            for (int i = 0; i < pos; ++i) {
-                it++;
-            }
+            auto it = rvc.begin();
+            std::advance(it, pos);
             return it->first;
         }
         else {
-            return -1;
+            return 0;
         }
     }
 

@@ -15,7 +15,7 @@ public:
         }
     }
 
-    int get_vc_by_id(int tid) {
+    uint32_t get_vc_by_id(int tid) {
         if (vc.find(tid) == vc.end()) {
             return 0;
         }
@@ -25,14 +25,14 @@ public:
         }
     }
 
-    int get_id_by_pos(int pos) {
+    uint32_t get_id_by_pos(int pos) {
         if (pos < vc.size()) {
             std::map<int, int>::iterator it = vc.begin();
             std::advance(it, pos);
             return it->first;
         }
         else {
-            return -1;
+            return 0;
         }
     }
 
