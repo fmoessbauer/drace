@@ -6,21 +6,26 @@
 
 class LockState : public FTStates {
 public:
-    std::map<int, int> lock_vc; //thread id vector clocks
+    std::map<uint32_t, uint32_t> lock_vc; //thread id vector clocks
     LockState::LockState() {};
 
-    LockState::LockState(int id, int vc) {
-        lock_vc.insert(lock_vc.end(), std::pair<int, int>(id, vc));
+    LockState::LockState(uint32_t id, uint32_t vc) {
+        lock_vc.insert(lock_vc.end(), std::pair<uint32_t, uint32_t>(id, vc));
     };
 
     void update(uint32_t id, uint32_t vc) {
         if (lock_vc.find(id) == lock_vc.end()) {
-            lock_vc.insert(lock_vc.end(), std::pair<int, int>(id, vc));
+            lock_vc.insert(lock_vc.end(), std::pair<uint32_t, uint32_t>(id, vc));
         }
         else {
             lock_vc[id] = vc;
         }
     };
+
+    void delete_vc(uint32_t tid) {
+        if(lock_vc.find(tid) != lock_vc.end())
+            lock_vc.erase(tid);
+    }
 
     uint32_t get_vc_by_id(uint32_t tid) {
         if (lock_vc.find(tid) != lock_vc.end()) {
@@ -46,6 +51,6 @@ public:
         return lock_vc.size();
     }
 
-
+    
 };
 

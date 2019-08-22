@@ -75,8 +75,7 @@ public:
         uint32_t clock = 0;
         thread_vc.insert(thread_vc.end(), std::pair<uint32_t, uint32_t>(tid, clock));
         if (parent != nullptr) {
-            //if parent exists copy stack_trace and vector clock
-            stack_trace = parent->stack_trace;
+            //if parent exists vector clock
             thread_vc = parent->thread_vc;
         }
     };
@@ -127,6 +126,11 @@ public:
         thread_vc[tid]++;
     }
 
+    void delete_vc(uint32_t tid) {
+        if(thread_vc.find(tid) != thread_vc.end())
+            thread_vc.erase(tid);
+    }
+
     uint32_t get_self() {
         return thread_vc[tid];
     };
@@ -134,8 +138,10 @@ public:
     uint32_t get_vc_by_id(uint32_t other_tid) {
         auto it = thread_vc.find(other_tid);
         if (it == thread_vc.end()){
-            //if vector clock is not yet known initialize with 0
-            update(other_tid, 0);
+            //if vector clock is not known, just return 0
+            //as long as two threads never have been synchronized, read/write accesses
+            //to the same location are always data races
+            return 0;
         }
         return thread_vc[other_tid];
     };

@@ -2,11 +2,11 @@
 
 class HPState  {
 public:
-    std::map<int, int> vc;
+    std::map<uint32_t, uint32_t> vc;
 
     HPState::HPState() {    }
 
-    void add_entry(int tid, int clock) {
+    void add_entry(uint32_t tid, uint32_t clock) {
         if (vc.find(tid) == vc.end()) {
             vc.insert(vc.end(), std::pair<int, int>(tid, clock));
         }
@@ -15,7 +15,12 @@ public:
         }
     }
 
-    uint32_t get_vc_by_id(int tid) {
+    void delete_vc(uint32_t tid) {
+        if(vc.find(tid) != vc.end())
+            vc.erase(tid);
+    }
+
+    uint32_t get_vc_by_id(uint32_t tid) {
         if (vc.find(tid) == vc.end()) {
             return 0;
         }
@@ -25,9 +30,9 @@ public:
         }
     }
 
-    uint32_t get_id_by_pos(int pos) {
+    uint32_t get_id_by_pos(uint32_t pos) {
         if (pos < vc.size()) {
-            std::map<int, int>::iterator it = vc.begin();
+            auto it = vc.begin();
             std::advance(it, pos);
             return it->first;
         }

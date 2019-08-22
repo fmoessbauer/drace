@@ -13,6 +13,7 @@
 #include "varstate.h"
 #include "lockstate.h"
 #include "hpstate.h"
+#include <ipc/spinlock.h>
 static constexpr int max_stack_size = 16;
 
 
@@ -24,10 +25,10 @@ std::map<detector::tid_t, ThreadState*> threads;
 std::map<void*, HPState*> happens_states;
 void * clb;
 
-std::mutex vars_mutex;
-std::mutex locks_mutex;
-std::mutex threads_mutex;
-std::mutex happens_mutex;
+static ipc::spinlock v_lock;
+static ipc::spinlock l_lock;
+static ipc::spinlock t_lock;
+static ipc::spinlock h_lock;
 
 ///end of globals///
 
@@ -37,8 +38,8 @@ namespace fasttrack {
     void report_race(   unsigned thr1, unsigned thr2,
                         bool wr1, bool wr2,
                         uint64_t var,
-                        int clk1, int clk2)
-    {
+                        int clk1, int clk2){
+
         ThreadState* thread1 = threads[thr1];
         ThreadState* thread2 = threads[thr2];
 
@@ -57,8 +58,10 @@ namespace fasttrack {
         access1.heap_block_size     = 0;
         access1.onheap              = false;
         access1.stack_size          = stack1.size();
+
+
         std::copy(stack1.begin(), stack1.end(), access1.stack_trace);
-           
+       
 
         detector::AccessEntry access2;
         access2.thread_id           = thr2;
@@ -72,6 +75,7 @@ namespace fasttrack {
         access2.stack_size          = stack2.size();
         std::copy(stack2.begin(), stack2.end(), access2.stack_trace);
         
+
         detector::Race race;
         race.first = access1;
         race.second = access2;
@@ -92,7 +96,7 @@ namespace fasttrack {
             return;
         }
 #endif
-        if (v_ptr->w_clock >= t_ptr->get_vc_by_id(v_ptr->w_tid) && v_ptr->w_tid != t_ptr->tid) { // write-read race
+        if (v_ptr->w_clock != VAR_NOT_INIT && v_ptr->w_clock >= t_ptr->get_vc_by_id(v_ptr->w_tid) && v_ptr->w_tid != t_ptr->tid) { // write-read race
             report_race(v_ptr->w_tid, t_ptr->tid,
                         true, false,
                         v_ptr->address,
@@ -223,23 +227,22 @@ namespace fasttrack {
         }
     }
 
- 
 }
 
 
 
 void create_var(uint64_t addr) {
     VarState* var = new VarState(addr);
-    vars_mutex.lock();
+    v_lock.lock();
     vars.insert(vars.end(), std::pair<uint64_t, VarState*>(addr, var));
-    vars_mutex.unlock();
+    v_lock.unlock();
 }
 
 void create_lock(void* mutex) {
-    locks_mutex.lock();
+    l_lock.lock();
     LockState* lock = new LockState();
     locks.insert(locks.end(), std::pair<void*, LockState*>(mutex, lock));
-    locks_mutex.unlock();
+    l_lock.unlock();
 }
 
 void create_thread(detector::tid_t tid, ThreadState* parent = nullptr) {
@@ -248,20 +251,20 @@ void create_thread(detector::tid_t tid, ThreadState* parent = nullptr) {
         new_thread = new ThreadState(tid);
     }
     else{
-        threads_mutex.lock();
+        t_lock.lock();
         new_thread = new ThreadState(tid, parent);
-        threads_mutex.unlock();
+        t_lock.unlock();
     }
-    threads_mutex.lock();
+    t_lock.lock();
     threads.insert(threads.end(), std::pair<detector::tid_t, ThreadState*>(tid, new_thread));
-    threads_mutex.unlock();
+    t_lock.unlock();
 }
 
 void create_happens(void* identifier) {
     HPState * new_hp = new HPState();
-    happens_mutex.lock();
+    h_lock.lock();
     happens_states.insert(happens_states.end(), std::pair<void*, HPState*>(identifier, new_hp));
-    happens_mutex.unlock();
+    h_lock.unlock();
 }
 
 
@@ -307,14 +310,14 @@ void detector::read(tls_t tls, void* pc, void* addr, size_t size) {
 
     auto thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
-    threads_mutex.lock();
-    vars_mutex.lock();
+    t_lock.lock();
+    v_lock.lock();
 
     thr->set_read_write(reinterpret_cast<uint64_t>(pc));
     fasttrack::read(thr, vars[var_address]);
 
-    threads_mutex.unlock();
-    vars_mutex.unlock();
+    t_lock.unlock();
+    v_lock.unlock();
 }
 
 void detector::write(tls_t tls, void* pc, void* addr, size_t size) {
@@ -325,14 +328,14 @@ void detector::write(tls_t tls, void* pc, void* addr, size_t size) {
     }
     auto thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
-    threads_mutex.lock();
-    vars_mutex.lock();
+    t_lock.lock();
+    v_lock.lock();
 
     thr->set_read_write(reinterpret_cast<uint64_t>(pc));
     fasttrack::write(thr, vars[var_address]);
 
-    threads_mutex.unlock();
-    vars_mutex.unlock();
+    t_lock.unlock();
+    v_lock.unlock();
 }
 
 
@@ -340,17 +343,17 @@ void detector::func_enter(tls_t tls, void* pc) {
     ThreadState* thr = threads[reinterpret_cast<detector::tid_t>(tls)];
     uint64_t stack_element = reinterpret_cast<uint64_t>(pc);
 
-    threads_mutex.lock();
+    t_lock.lock();
     thr->push_stack_element(stack_element);
-    threads_mutex.unlock();
+    t_lock.unlock();
 }
 
 void detector::func_exit(tls_t tls) {
     ThreadState* thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
-    threads_mutex.lock();
+    t_lock.lock();
     thr->pop_stack_element(); //pops last stack element of current clock
-    threads_mutex.unlock();
+    t_lock.unlock();
 }
 
 
@@ -358,29 +361,35 @@ void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
     *tls = reinterpret_cast<void*>(child);
         
     //make parent thread if it isn't existing
-    if (threads.find(parent) == threads.end()) {
-        create_thread(parent);
+    //if (threads.find(parent) == threads.end()) {
+      //  create_thread(parent);
+    //}
+
+    if (threads.find(parent) != threads.end()) {
+        t_lock.lock();
+        threads[parent]->inc_vc(); //inc vector clock for creation of new thread
+        t_lock.unlock();
+        create_thread(child, threads[parent]);
     }
-
-    threads_mutex.lock();
-    threads[parent]->inc_vc(); //inc vector clock for creation of new thread
-    threads_mutex.unlock();
-
-    create_thread(child, threads[parent]);
+    else {
+        create_thread(child);
+    }
+    
 }
 
 void detector::join(tid_t parent, tid_t child) {
-    threads_mutex.lock();
+    t_lock.lock();
     ThreadState* del_thread = threads[child];
     del_thread->inc_vc();
 
     //pass incremented clock of deleted thread to parent
     threads[parent]->update(del_thread);
 
+
     delete del_thread;
     threads.erase(child);
 
-    threads_mutex.unlock();
+    t_lock.unlock();
 }
 
 
@@ -392,11 +401,11 @@ void detector::acquire(tls_t tls, void* mutex, int recursive, bool write) {
 
     auto id = reinterpret_cast<detector::tid_t>(tls);
 
-    threads_mutex.lock();
-    locks_mutex.lock();
+    t_lock.lock();
+    l_lock.lock();
     fasttrack::acquire(threads[id], locks[mutex]);
-    threads_mutex.unlock();
-    locks_mutex.unlock();
+    t_lock.unlock();
+    l_lock.unlock();
 }
 
 void detector::release(tls_t tls, void* mutex, bool write) {
@@ -408,11 +417,11 @@ void detector::release(tls_t tls, void* mutex, bool write) {
 
     auto id = reinterpret_cast<detector::tid_t>(tls);
 
-    threads_mutex.lock();
-    locks_mutex.lock();
+    t_lock.lock();
+    l_lock.lock();
     fasttrack::release(threads[id], locks[mutex]);
-    threads_mutex.unlock();
-    locks_mutex.unlock();
+    t_lock.unlock();
+    l_lock.unlock();
 }
 
 
@@ -424,11 +433,11 @@ void detector::happens_before(tls_t tls, void* identifier) {
     HPState* hp = happens_states[identifier];
     ThreadState* thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
-    happens_mutex.lock();
-    threads_mutex.lock();
+    h_lock.lock();
+    t_lock.lock();
     fasttrack::happens_before(thr, hp);
-    happens_mutex.unlock();
-    threads_mutex.unlock();
+    h_lock.unlock();
+    t_lock.unlock();
 }
 
 /** Draw a happens-after edge between thread and identifier (optional) */
@@ -438,11 +447,11 @@ void detector::happens_after(tls_t tls, void* identifier) {
         HPState* hp = happens_states[identifier];
         ThreadState* thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
-        threads_mutex.lock();
-        happens_mutex.lock();
+        t_lock.lock();
+        h_lock.lock();
         fasttrack::happens_after(thr, hp);
-        happens_mutex.unlock();
-        threads_mutex.unlock();
+        h_lock.unlock();
+        t_lock.unlock();
 
     }
     else {
