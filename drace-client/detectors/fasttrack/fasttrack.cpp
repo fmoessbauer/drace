@@ -13,12 +13,14 @@
 #include "varstate.h"
 #include "lockstate.h"
 #include "hpstate.h"
+#include "allocstate.h"
 #include <ipc/spinlock.h>
 static constexpr int max_stack_size = 16;
 
 
 
 /// globals ///
+std::map<std::pair<detector::tid_t, uint64_t>, AllocationState*> allocs;
 std::map<uint64_t, VarState*> vars;
 std::map< void*, LockState*> locks;
 std::map<detector::tid_t, ThreadState*> threads;
@@ -29,6 +31,7 @@ static ipc::spinlock v_lock;
 static ipc::spinlock l_lock;
 static ipc::spinlock t_lock;
 static ipc::spinlock h_lock;
+static ipc::spinlock a_lock;
 
 ///end of globals///
 
@@ -38,15 +41,15 @@ namespace fasttrack {
     void report_race(   unsigned thr1, unsigned thr2,
                         bool wr1, bool wr2,
                         uint64_t var,
-                        int clk1, int clk2){
+                        int clk1, int clk2, bool is_alloc_race=false){
 
         ThreadState* thread1 = threads[thr1];
         ThreadState* thread2 = threads[thr2];
 
-        std::vector<uint64_t> stack1 = thread1->return_stack_trace(clk1);
-        std::vector<uint64_t> stack2 = thread2->return_stack_trace(clk2);
-
-       
+        std::vector<uint64_t> stack1, stack2;
+        stack1 = thread1->return_stack_trace(clk1, var, is_alloc_race);
+        stack2 = thread2->return_stack_trace(clk2, var, is_alloc_race);
+    
 
         detector::AccessEntry access1;
         access1.thread_id           = thr1;
@@ -58,8 +61,6 @@ namespace fasttrack {
         access1.heap_block_size     = 0;
         access1.onheap              = false;
         access1.stack_size          = stack1.size();
-
-
         std::copy(stack1.begin(), stack1.end(), access1.stack_trace);
        
 
@@ -84,147 +85,111 @@ namespace fasttrack {
     }
 
     
-    void read(ThreadState* t_ptr, VarState* v_ptr) {
+    void read(ThreadState* t, VarState* v) {
 #if 0  //cannot happen in current implementation as rw increments clock, discuss
-        if (t_ptr->get_self() == v_ptr->r && t_ptr->tid == v_ptr->r_tid) {//read same epoch, sane thread
-            t_ptr->inc_vc();
+        if (t->get_self() == v_ptr->r && t->tid == v_ptr->r_tid) {//read same epoch, sane thread
+            t->inc_vc();
             return;
         }
 
-        if (v_ptr->r == READ_SHARED && v_ptr->rvc[t_ptr->tid] == t_ptr->get_self()) { //read shared same epoch
-            t_ptr->inc_vc();
+        if (v->r == READ_SHARED && v->rvc[t_ptr->tid] == t->get_self()) { //read shared same epoch
+            t->inc_vc();
             return;
         }
 #endif
-        if (v_ptr->w_clock != VAR_NOT_INIT && v_ptr->w_clock >= t_ptr->get_vc_by_id(v_ptr->w_tid) && v_ptr->w_tid != t_ptr->tid) { // write-read race
-            report_race(v_ptr->w_tid, t_ptr->tid,
+        if (v->is_wr_race(t))
+        { // write-read race
+            report_race(v->w_tid, t->tid,
                         true, false,
-                        v_ptr->address,
-                        v_ptr->w_clock, t_ptr->get_self());
+                        v->address,
+                        v->w_clock, t->get_self());
         }
 
         //update vc
-        if (v_ptr->r_clock != READ_SHARED) {
-            if (v_ptr->r_clock == VAR_NOT_INIT || (v_ptr->r_clock < t_ptr->get_vc_by_id(v_ptr->r_tid) && v_ptr->r_tid == t_ptr->tid)) {//read exclusive
-                v_ptr->update(false, t_ptr->get_self(), t_ptr->tid);
+        if (v->r_clock != READ_SHARED)
+        {
+            if (v->r_clock == VAR_NOT_INIT  ||
+               (v->r_tid == t->tid     &&
+               v->r_clock < t->get_vc_by_id(v->r_tid)))//read exclusive
+            {
+                v->update(false, t->get_self(), t->tid);
             }
             else { // read gets shared
-                int tmp_r = v_ptr->r_clock;
-                int tmp_r_tid = v_ptr->r_tid;
-                v_ptr->set_read_shared();
-                v_ptr->update(false, tmp_r, tmp_r_tid);
-                v_ptr->update(false, t_ptr->get_self(), t_ptr->tid);
+                int tmp_r = v->r_clock;
+                int tmp_r_tid = v->r_tid;
+                v->set_read_shared();
+                v->update(false, tmp_r, tmp_r_tid);
+                v->update(false, t->get_self(), t->tid);
             } 
         }
         else {//read shared
-           v_ptr->update(false, t_ptr->get_self(), t_ptr->tid);
+           v->update(false, t->get_self(), t->tid);
         }
 
-        t_ptr->inc_vc();
+        t->inc_vc();
     }
 
-    void write(ThreadState* t_ptr, VarState* v_ptr) {
+    void write(ThreadState* t, VarState* v) {
         
-        if(v_ptr->w_clock == VAR_NOT_INIT){ //initial write, update var
-            v_ptr->update(true, t_ptr->get_self(), t_ptr->tid);
-            t_ptr->inc_vc();
+        if(v->w_clock == VAR_NOT_INIT){ //initial write, update var
+            v->update(true, t->get_self(), t->tid);
+            t->inc_vc();
             return;
         }
 
 #if 0 // not possib with current impl
-        if (t_ptr->get_self() == v_ptr->w && t_ptr->tid == v_ptr->w_tid) {//write same epoch
-            t_ptr->inc_vc();
+        if (t->get_self() == v->w &&
+            t->tid == v->w_tid)
+        {//write same epoch
+            t->inc_vc();
             return;
         }
 #endif
         //tids are different && and write epoch greater or equal than known epoch of other thread
-        if (t_ptr->tid != v_ptr->w_tid && v_ptr->w_clock >= t_ptr->get_vc_by_id(v_ptr->w_tid)) { // write-write race
-            report_race(v_ptr->w_tid, t_ptr->tid,
-                true, true,
-                v_ptr->address,
-                v_ptr->w_clock, t_ptr->get_self());
+        if (v->is_ww_race(t)) // write-write race
+        {
+            report_race(v->w_tid, t->tid, true, true, v->address, v->w_clock, t->get_self());
         }
 
-        if (v_ptr->r_clock != READ_SHARED) {
-            if (v_ptr->r_tid != VAR_NOT_INIT && t_ptr->tid != v_ptr->r_tid && v_ptr->r_clock >= t_ptr->get_vc_by_id(v_ptr->r_tid)) { // read-write race
-                report_race(v_ptr->r_tid, t_ptr->tid,
-                    false, true,
-                    v_ptr->address,
-                    v_ptr->r_clock, t_ptr->get_self());
+        if (v->r_clock != READ_SHARED) {
+            if (v->is_rw_ex_race(t))// read-write race
+            { 
+                report_race(v->r_tid, t->tid, false, true, v->address, v->r_clock, t->get_self());
             }
         }
-        else {
-            for (int i = 0; i < v_ptr->get_length(); ++i) {
-                uint32_t act_tid = v_ptr->get_id_by_pos(i);
-
-                if (t_ptr->tid != act_tid && v_ptr->get_vc_by_id(act_tid) >= t_ptr->get_vc_by_id(act_tid)) {
-                    //read shared read-write race                                    
-                    report_race(act_tid, t_ptr->tid,
-                        false, true,
-                        v_ptr->address,
-                        v_ptr->get_vc_by_id(act_tid), t_ptr->get_self());
-
-                }
+        else {//come here in read shared case
+            uint32_t act_tid = v->is_rw_sh_race(t);
+            if (act_tid) //read shared read-write race       
+            {
+                report_race(act_tid, t->tid, false, true, v->address, v->get_vc_by_id(act_tid), t->get_self());
             }
         }
-        v_ptr->update(true, t_ptr->get_self(), t_ptr->tid);
-        t_ptr->inc_vc();
+        v->update(true, t->get_self(), t->tid);
+        t->inc_vc();
     }
 
 
     void acquire(ThreadState* t, LockState* l) {
-        
-        for (uint32_t i = 0; i < l->get_length(); ++i) {
-            uint32_t tid = l->get_id_by_pos(i);
-            if (tid == 0) {//should not happen
-                break;
-            }
-            uint32_t lock_vc = l->get_vc_by_id(tid);
-            uint32_t thread_vc = t->get_vc_by_id(tid);
-            if (thread_vc < lock_vc) {
-                t->update(tid, lock_vc);
-            }
-        }
+        t->update(l);
     }
 
     void release(ThreadState* t, LockState* l) {
         
         //update own clock
         t->inc_vc();       
-        
-        // update l vc to max
-        for (uint32_t i = 0; i < t->get_length(); ++i) {
-            uint32_t id = t->get_id_by_pos(i);
-            if(id == 0){
-                break;
-            }
-            uint32_t thr_vc = t->get_vc_by_id(id);
-            uint32_t lock_vc = l->get_vc_by_id(id);
-
-            if (thr_vc > lock_vc) {
-                l->update(id, thr_vc);
-            }
-        }
+        l->update(t);
     }
 
 
     void happens_before(ThreadState* t, HPState* hp) {
         //increment clock of thread and update happens state
         t->inc_vc();
-        hp->add_entry(t->tid, t->get_self());
+        hp->update(t->tid, t->get_self());
     }
 
     void happens_after(ThreadState* t, HPState* hp) {
         //update vector clock of thread with happened before clocks
-
-        int i = 0;
-        while (hp->get_id_by_pos(i) != 0) {
-            int tid = hp->get_id_by_pos(i);
-            if (t->thread_vc[tid] < hp->get_vc_by_id(tid)) {
-                t->thread_vc[tid] = hp->get_vc_by_id(tid);
-            }
-            i++;
-        }
+        t->update(hp);
     }
 
 }
@@ -265,6 +230,25 @@ void create_happens(void* identifier) {
     h_lock.lock();
     happens_states.insert(happens_states.end(), std::pair<void*, HPState*>(identifier, new_hp));
     h_lock.unlock();
+}
+
+AllocationState* create_alloc(detector::tid_t tid, uint64_t addr, uint64_t pc, size_t size) {
+
+    auto alloc_id = std::pair<detector::tid_t, uint64_t>(tid, addr);
+    auto alloc_it = allocs.find(alloc_id);
+    AllocationState* a;
+
+    if (alloc_it == allocs.end()) {
+        a = new AllocationState(addr, size, tid, pc);
+        allocs.insert(allocs.end(), { alloc_id, a });
+    }
+    else {//allocation is not new, but renewed, by same thread
+        alloc_it->second->alloc(); //dealloc_clock is reset again
+        a = alloc_it->second;
+    }
+
+    return a;
+
 }
 
 
@@ -313,7 +297,7 @@ void detector::read(tls_t tls, void* pc, void* addr, size_t size) {
     t_lock.lock();
     v_lock.lock();
 
-    thr->set_read_write(reinterpret_cast<uint64_t>(pc));
+    thr->set_read_write(var_address, reinterpret_cast<uint64_t>(pc));
     fasttrack::read(thr, vars[var_address]);
 
     t_lock.unlock();
@@ -331,7 +315,7 @@ void detector::write(tls_t tls, void* pc, void* addr, size_t size) {
     t_lock.lock();
     v_lock.lock();
 
-    thr->set_read_write(reinterpret_cast<uint64_t>(pc));
+    thr->set_read_write(var_address, reinterpret_cast<uint64_t>(pc));
     fasttrack::write(thr, vars[var_address]);
 
     t_lock.unlock();
@@ -386,8 +370,8 @@ void detector::join(tid_t parent, tid_t child) {
     threads[parent]->update(del_thread);
 
 
-    delete del_thread;
-    threads.erase(child);
+    //delete del_thread;
+    //threads.erase(child);
 
     t_lock.unlock();
 }
@@ -454,7 +438,7 @@ void detector::happens_after(tls_t tls, void* identifier) {
         t_lock.unlock();
 
     }
-    else {
+    else {//create -> no happens_before can be synced
         create_happens(identifier);
     }
 
@@ -471,7 +455,31 @@ void detector::allocate(
     void*  addr,
     /// size of memory block
     size_t size
-){}
+){
+    auto tid = reinterpret_cast<detector::tid_t>(tls);
+    auto address = reinterpret_cast<uint64_t>(addr);
+    auto prog_count = reinterpret_cast<uint64_t>(pc);
+    a_lock.lock();
+    t_lock.lock();
+    AllocationState* this_alloc = create_alloc(tid, address, prog_count, size);
+    ThreadState* thr = threads[tid];
+
+    //iterate through all existing allocation and check, if unsynchronized threads
+    //allocated the same 
+    for (auto it = allocs.begin(); it != allocs.end(); ++it) {
+        
+        uint32_t clock = thr->get_vc_by_id(it->first.first);
+        if (it->second->is_race(this_alloc, clock)) {
+            fasttrack::report_race(it->second->get_owner_tid(), tid,
+                        true, true,
+                        it->second->get_addr(),
+                        it->second->get_dealloc_clock(), thr->get_self());
+        }
+    }
+    t_lock.unlock();
+    a_lock.unlock();
+
+}
 
 /** Log a memory deallocation*/
 void detector::deallocate(
@@ -479,7 +487,18 @@ void detector::deallocate(
     tls_t tls,
     /// begin of memory block
     void* addr
-){}
+){
+    auto tid = reinterpret_cast<detector::tid_t>(tls);
+    auto address = reinterpret_cast<uint64_t>(addr);
+    auto alloc_id = std::pair<detector::tid_t, uint64_t>(tid, address);
+    ThreadState* thr = threads[tid];
+
+    a_lock.lock();
+    t_lock.lock();
+    allocs[alloc_id]->dealloc(thr->get_self());
+    t_lock.unlock();
+    a_lock.unlock();
+}
 
 
 void detector::detach(tls_t tls, tid_t thread_id){}

@@ -25,6 +25,68 @@ TEST_F(DetectorTest, WR_Race) {
 	EXPECT_EQ(num_races, 1);
 }
 
+TEST_F(DetectorTest, WR2_Race) {
+    detector::tls_t tls10;
+    detector::tls_t tls11;
+    detector::tls_t tls12;
+
+    detector::fork(1, 10, &tls10);
+    detector::fork(1, 11, &tls11);
+    detector::fork(1, 12, &tls12);
+
+    detector::acquire(tls10, (void*)0x01000000, 1, true);
+    detector::write(tls10, (void*)0x0010, (void*)0x00100000, 8);
+    detector::read(tls10, (void*)0x0011, (void*)0x00100000, 8);
+    detector::release(tls10, (void*)0x01000000, true);
+    EXPECT_EQ(num_races, 0);
+
+    detector::acquire(tls12, (void*)0x01000000, 1, true);
+    detector::read(tls12, (void*)0x0011, (void*)0x00100000, 8);
+    detector::release(tls12, (void*)0x01000000, true);
+    EXPECT_EQ(num_races, 0);
+
+    detector::acquire(tls11, (void*)0x01000000, 1, true);
+    detector::read(tls11, (void*)0x0011, (void*)0x00100000, 8);
+    detector::release(tls11, (void*)0x01000000, true);
+    EXPECT_EQ(num_races, 0);
+    
+    detector::write(tls12, (void*)0x0011, (void*)0x00100000, 8);
+    EXPECT_EQ(num_races, 1);
+}
+
+TEST_F(DetectorTest, WW_Race) {
+    detector::tls_t tls10;
+    detector::tls_t tls11;
+
+    detector::fork(1, 10, &tls10);
+    detector::fork(1, 11, &tls11);
+
+    detector::write(tls10, (void*)0x0010, (void*)0x00100000, 8);
+    detector::write(tls11, (void*)0x0011, (void*)0x00100000, 8);
+
+    EXPECT_EQ(num_races, 1);
+}
+
+TEST_F(DetectorTest, RW_Race) {
+    detector::tls_t tls10;
+    detector::tls_t tls11;
+
+    detector::fork(1, 10, &tls10);
+    detector::fork(1, 11, &tls11);
+
+    detector::acquire(tls10, (void*)0x01000000, 1, true);
+    detector::write(tls10, (void*)0x0010, (void*)0x00100000, 8);
+    detector::release(tls10, (void*)0x01000000, true);
+
+    detector::acquire(tls11, (void*)0x01000000, 1, true);
+    detector::read(tls11, (void*)0x0011, (void*)0x00100000, 8);
+    detector::release(tls11, (void*)0x01000000, true);
+    EXPECT_EQ(num_races, 0);
+
+    detector::write(tls10, (void*)0x0010, (void*)0x00100000, 8);
+    EXPECT_EQ(num_races, 1);
+}
+
 TEST_F(DetectorTest, Mutex) {
 	detector::tls_t tls20;
 	detector::tls_t tls21;
@@ -59,7 +121,14 @@ TEST_F(DetectorTest, ThreadExit) {
 
 	detector::read(tls30, (void*)0x0031, (void*)0x00320000, 8);
 
-	EXPECT_EQ(num_races, 0);
+    if (std::string(detector::name()) != "FASTTRACK2") {
+        EXPECT_EQ(num_races, 0);
+    }
+    else {
+        // fasttrack is detecting a race here
+        // because the two child threads write unsynchronised to the same var
+        EXPECT_EQ(num_races, 1);
+    }
 }
 
 TEST_F(DetectorTest, MultiFork) {
@@ -98,7 +167,14 @@ TEST_F(DetectorTest, ForkInitialize) {
 	detector::fork(1, 61, &tls61);
 	detector::write(tls61, (void*)0x0060, (void*)0x00600000, 8);
 
-	EXPECT_EQ(num_races, 0);
+    if (std::string(detector::name()) != "FASTTRACK2") {
+        EXPECT_EQ(num_races, 0);
+    }
+    else {
+        // fasttrack is detecting a race here
+        // because the two child threads write unsynchronised to the same var
+        EXPECT_EQ(num_races, 1);
+    }
 }
 
 TEST_F(DetectorTest, Barrier) {

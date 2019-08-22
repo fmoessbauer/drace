@@ -2,7 +2,8 @@ set(SOURCES
 	"src/main.cpp"
 	"src/DetectorTest.cpp"
 	"src/DrIntegrationTest.cpp"
-	"src/ShmDriver.cpp")
+	"src/ShmDriver.cpp"
+    "../drace-client/detectors/fasttrack/fasttrack.cpp")
 
 set(TEST_TARGET "drace-tests")
 
