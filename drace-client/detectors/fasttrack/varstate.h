@@ -6,6 +6,7 @@ static constexpr int VAR_NOT_INIT = -1;
 class VarState : public VectorClock {
 public:
     uint64_t address;
+    uint32_t size;
     int32_t w_tid;
     int32_t r_tid;
     int32_t w_clock;
@@ -13,8 +14,9 @@ public:
     int32_t r_clock;
     //std::map<uint32_t, uint32_t> vc;
 
-    VarState::VarState(uint64_t addr) {
+    VarState::VarState(uint64_t addr, uint32_t var_size) {
         address = addr;
+        size = var_size;
         w_clock = r_clock = r_tid = w_tid = VAR_NOT_INIT;
     };
 

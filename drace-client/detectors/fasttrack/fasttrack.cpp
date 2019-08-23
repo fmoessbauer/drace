@@ -43,32 +43,48 @@ namespace fasttrack {
                         uint64_t var,
                         int clk1, int clk2, bool is_alloc_race=false){
 
+        
+        uint32_t var_size = 0;
+        if(!is_alloc_race){
+            VarState* var_object = vars[var];
+            var_size = var_object->size;
+        }
+        else {
+            var_size = 0;
+        }
+
+       
         ThreadState* thread1 = threads[thr1];
         ThreadState* thread2 = threads[thr2];
-
         std::vector<uint64_t> stack1, stack2;
-        stack1 = thread1->return_stack_trace(clk1, var, is_alloc_race);
-        stack2 = thread2->return_stack_trace(clk2, var, is_alloc_race);
-    
 
+        stack1 = thread1->return_stack_trace(var, is_alloc_race);
+        stack2 = thread2->return_stack_trace(var, is_alloc_race);
+
+        while (stack1.size() > 16) {
+            stack1.erase(stack1.begin());
+        }
+        while (stack2.size() > 16) {
+            stack2.erase(stack2.begin());
+        }
+       
         detector::AccessEntry access1;
         access1.thread_id           = thr1;
         access1.write               = wr1;
         access1.accessed_memory     = var;
-        access1.access_size         = 0;
+        access1.access_size         = var_size;
         access1.access_type         = 0;
         access1.heap_block_begin    = 0;
         access1.heap_block_size     = 0;
         access1.onheap              = false;
         access1.stack_size          = stack1.size();
         std::copy(stack1.begin(), stack1.end(), access1.stack_trace);
-       
 
         detector::AccessEntry access2;
         access2.thread_id           = thr2;
         access2.write               = wr2;
         access2.accessed_memory     = var;
-        access2.access_size         = 0;
+        access2.access_size         = var_size;
         access2.access_type         = 0;
         access2.heap_block_begin    = 0;
         access2.heap_block_size     = 0;
@@ -76,33 +92,32 @@ namespace fasttrack {
         access2.stack_size          = stack2.size();
         std::copy(stack2.begin(), stack2.end(), access2.stack_trace);
         
-
+        
         detector::Race race;
         race.first = access1;
         race.second = access2;
+
         
-        ((void(*)(const detector::Race*))clb)(&race);  
+        ((void(*)(const detector::Race*))clb)(&race);
+        
     }
 
     
     void read(ThreadState* t, VarState* v) {
-#if 0  //cannot happen in current implementation as rw increments clock, discuss
-        if (t->get_self() == v_ptr->r && t->tid == v_ptr->r_tid) {//read same epoch, sane thread
-            t->inc_vc();
+ //cannot happen in current implementation as rw increments clock, discuss
+        if (t->get_self() == v->r_clock && t->tid == v->r_tid) {//read same epoch, sane thread
+            //t->inc_vc();
             return;
         }
 
-        if (v->r == READ_SHARED && v->rvc[t_ptr->tid] == t->get_self()) { //read shared same epoch
-            t->inc_vc();
+        if (v->r_clock == READ_SHARED && v->vc[t->tid] == t->get_self()) { //read shared same epoch
+            //t->inc_vc();
             return;
         }
-#endif
+
         if (v->is_wr_race(t))
         { // write-read race
-            report_race(v->w_tid, t->tid,
-                        true, false,
-                        v->address,
-                        v->w_clock, t->get_self());
+            report_race(v->w_tid, t->tid, true, false, v->address, v->w_clock, t->get_self());
         }
 
         //update vc
@@ -126,25 +141,25 @@ namespace fasttrack {
            v->update(false, t->get_self(), t->tid);
         }
 
-        t->inc_vc();
+        //t->inc_vc();
     }
 
     void write(ThreadState* t, VarState* v) {
         
         if(v->w_clock == VAR_NOT_INIT){ //initial write, update var
             v->update(true, t->get_self(), t->tid);
-            t->inc_vc();
+            //t->inc_vc();
             return;
         }
 
-#if 0 // not possib with current impl
-        if (t->get_self() == v->w &&
+ // not possib with current impl
+        if (t->get_self() == v->w_clock &&
             t->tid == v->w_tid)
         {//write same epoch
-            t->inc_vc();
+            //t->inc_vc();
             return;
         }
-#endif
+
         //tids are different && and write epoch greater or equal than known epoch of other thread
         if (v->is_ww_race(t)) // write-write race
         {
@@ -165,39 +180,18 @@ namespace fasttrack {
             }
         }
         v->update(true, t->get_self(), t->tid);
-        t->inc_vc();
+        //t->inc_vc();
     }
 
 
-    void acquire(ThreadState* t, LockState* l) {
-        t->update(l);
-    }
 
-    void release(ThreadState* t, LockState* l) {
-        
-        //update own clock
-        t->inc_vc();       
-        l->update(t);
-    }
-
-
-    void happens_before(ThreadState* t, HPState* hp) {
-        //increment clock of thread and update happens state
-        t->inc_vc();
-        hp->update(t->tid, t->get_self());
-    }
-
-    void happens_after(ThreadState* t, HPState* hp) {
-        //update vector clock of thread with happened before clocks
-        t->update(hp);
-    }
 
 }
 
 
 
-void create_var(uint64_t addr) {
-    VarState* var = new VarState(addr);
+void create_var(uint64_t addr, size_t size) {
+    VarState* var = new VarState(addr, size);
     v_lock.lock();
     vars.insert(vars.end(), std::pair<uint64_t, VarState*>(addr, var));
     v_lock.unlock();
@@ -256,7 +250,6 @@ bool detector::init(int argc, const char **argv, Callback rc_clb) {
     clb = rc_clb; //init callback
     std::cout << "init done" << std::endl;
     return true;
-    
 }
 
 void detector::finalize() {
@@ -281,6 +274,11 @@ void detector::finalize() {
         delete it->second;
         happens_states.erase(it);
     }
+    while (allocs.size() > 0) {
+        auto it = allocs.begin();
+        delete it->second;
+        allocs.erase(it);
+    }
 }
 
 
@@ -289,7 +287,7 @@ void detector::read(tls_t tls, void* pc, void* addr, size_t size) {
 
     if (vars.find(var_address) == vars.end()) { //create new variable if new
         std::cerr << "variable is read before written" << std::endl;
-        create_var(var_address);
+        create_var(var_address, size);
     }
 
     auto thr = threads[reinterpret_cast<detector::tid_t>(tls)];
@@ -308,7 +306,7 @@ void detector::write(tls_t tls, void* pc, void* addr, size_t size) {
     uint64_t var_address = ((uint64_t)addr);
 
     if (vars.find(var_address) == vars.end()) {
-        create_var(var_address);
+        create_var(var_address, size);
     }
     auto thr = threads[reinterpret_cast<detector::tid_t>(tls)];
 
@@ -344,11 +342,6 @@ void detector::func_exit(tls_t tls) {
 void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
     *tls = reinterpret_cast<void*>(child);
         
-    //make parent thread if it isn't existing
-    //if (threads.find(parent) == threads.end()) {
-      //  create_thread(parent);
-    //}
-
     if (threads.find(parent) != threads.end()) {
         t_lock.lock();
         threads[parent]->inc_vc(); //inc vector clock for creation of new thread
@@ -369,7 +362,7 @@ void detector::join(tid_t parent, tid_t child) {
     //pass incremented clock of deleted thread to parent
     threads[parent]->update(del_thread);
 
-
+    ///deletion strategies///
     //delete del_thread;
     //threads.erase(child);
 
@@ -387,7 +380,8 @@ void detector::acquire(tls_t tls, void* mutex, int recursive, bool write) {
 
     t_lock.lock();
     l_lock.lock();
-    fasttrack::acquire(threads[id], locks[mutex]);
+    //propagate sync data from lock to thread
+    (threads[id])->update(locks[mutex]);
     t_lock.unlock();
     l_lock.unlock();
 }
@@ -403,7 +397,10 @@ void detector::release(tls_t tls, void* mutex, bool write) {
 
     t_lock.lock();
     l_lock.lock();
-    fasttrack::release(threads[id], locks[mutex]);
+    //increase vector clock and propagate to lock
+    threads[id]->inc_vc();
+    (locks[mutex])->update(threads[id]);
+
     t_lock.unlock();
     l_lock.unlock();
 }
@@ -419,7 +416,9 @@ void detector::happens_before(tls_t tls, void* identifier) {
 
     h_lock.lock();
     t_lock.lock();
-    fasttrack::happens_before(thr, hp);
+    //increment clock of thread and update happens state
+    thr->inc_vc();
+    hp->update(thr->tid, thr->get_self());
     h_lock.unlock();
     t_lock.unlock();
 }
@@ -433,7 +432,8 @@ void detector::happens_after(tls_t tls, void* identifier) {
 
         t_lock.lock();
         h_lock.lock();
-        fasttrack::happens_after(thr, hp);
+        //update vector clock of thread with happened before clocks
+        thr->update(hp);
         h_lock.unlock();
         t_lock.unlock();
 
@@ -464,16 +464,21 @@ void detector::allocate(
     AllocationState* this_alloc = create_alloc(tid, address, prog_count, size);
     ThreadState* thr = threads[tid];
 
+    thr->set_allocation(address, prog_count);
+
     //iterate through all existing allocation and check, if unsynchronized threads
-    //allocated the same 
+    //allocated the same
+
+
     for (auto it = allocs.begin(); it != allocs.end(); ++it) {
-        
         uint32_t clock = thr->get_vc_by_id(it->first.first);
+        
+       //!!!!!!DO NOT Report Allocation Races at the moment, as they're crashing the application
         if (it->second->is_race(this_alloc, clock)) {
-            fasttrack::report_race(it->second->get_owner_tid(), tid,
-                        true, true,
-                        it->second->get_addr(),
-                        it->second->get_dealloc_clock(), thr->get_self());
+            auto owner_id = it->second->get_owner_tid();
+            auto addr = it->second->get_addr();
+            auto clk1 = it->second->get_dealloc_clock();
+            fasttrack::report_race(owner_id, tid, true, true, addr, clk1, thr->get_self(), true);
         }
     }
     t_lock.unlock();
@@ -488,6 +493,7 @@ void detector::deallocate(
     /// begin of memory block
     void* addr
 ){
+    
     auto tid = reinterpret_cast<detector::tid_t>(tls);
     auto address = reinterpret_cast<uint64_t>(addr);
     auto alloc_id = std::pair<detector::tid_t, uint64_t>(tid, address);
@@ -501,6 +507,8 @@ void detector::deallocate(
 }
 
 
+
+//TODO
 void detector::detach(tls_t tls, tid_t thread_id){}
 /** Log a thread exit event (detached thread) */
 void detector::finish(tls_t tls, tid_t thread_id){}
