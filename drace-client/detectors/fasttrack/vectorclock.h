@@ -1,13 +1,14 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
-
+#include "xmap.h"
 class VectorClock {
 
 
 public:
     ///thread id, clock
-    std::map<uint32_t, uint32_t> vc;
+    xmap<uint32_t, uint32_t> vc;
 
+    VectorClock::VectorClock() { };
 
     //virtual void update(uint32_t tid, uint32_t vc) = 0;
     //virtual uint32_t get_vc_by_id(uint32_t tid) = 0;

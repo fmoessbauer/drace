@@ -1,94 +1,130 @@
 #include <map>
 #include "vectorclock.h"
+#include "xmap.h"
 
-constexpr auto READ_SHARED = -2;
-static constexpr int VAR_NOT_INIT = -1;
-class VarState : public VectorClock {
+class VarState  {
+
 public:
+    static constexpr int READ_SHARED = -2;
+    static constexpr int VAR_NOT_INIT = -1;
+
     uint64_t address;
     uint32_t size;
-    int32_t w_tid;
-    int32_t r_tid;
+    std::shared_ptr<ThreadState> w_tid;
+    std::shared_ptr<ThreadState> r_tid;
     int32_t w_clock;
     /// local clock of last read
     int32_t r_clock;
-    //std::map<uint32_t, uint32_t> vc;
+    xmap<std::shared_ptr<ThreadState>, uint32_t> vc;
 
     VarState::VarState(uint64_t addr, uint32_t var_size) {
         address = addr;
         size = var_size;
-        w_clock = r_clock = r_tid = w_tid = VAR_NOT_INIT;
+        w_clock = r_clock = VAR_NOT_INIT;
+        r_tid = w_tid = nullptr;
     };
 
-    bool is_ww_race(ThreadState* t) {
-        if (t->tid != w_tid &&
-            w_clock >= t->get_vc_by_id(w_tid)) {
+    bool is_ww_race(std::shared_ptr<ThreadState> t) {
+        if (t->tid != get_w_tid() &&
+            w_clock >= t->get_vc_by_id(get_w_tid())) {
             return true;
         }
         return false;
     };
 
-    bool is_wr_race(ThreadState* t) {
+    bool is_wr_race(std::shared_ptr<ThreadState> t) {
         if (w_clock != VAR_NOT_INIT &&
-            w_tid != t->tid      &&
-            w_clock >= t->get_vc_by_id(w_tid)) {
+            get_w_tid() != t->tid      &&
+            w_clock >= t->get_vc_by_id(get_w_tid())) {
             return true;
         }
         return false;
     };
 
-    bool is_rw_ex_race(ThreadState* t) {
+    bool is_rw_ex_race(std::shared_ptr<ThreadState> t) {
       
-        if (r_tid != VAR_NOT_INIT &&
-            t->tid != r_tid      &&
-            r_clock >= t->get_vc_by_id(r_tid))// read-write race
+        if (r_clock != VAR_NOT_INIT &&
+            t->tid != get_r_tid()      &&
+            r_clock >= t->get_vc_by_id(get_r_tid()))// read-write race
         {
             return true;
         }
         return false;
     };
 
-    uint32_t is_rw_sh_race(ThreadState* t) {
-        for (int i = 0; i < get_length(); ++i) {
-            uint32_t act_tid = get_id_by_pos(i);
+    std::shared_ptr <ThreadState> is_rw_sh_race(std::shared_ptr<ThreadState> t) {
+        for (int i = 0; i < vc.size(); ++i) {
+            auto act_thr = get_thr(i);
 
-            if (t->tid != act_tid &&
-                get_vc_by_id(act_tid) >= t->get_vc_by_id(act_tid))
+            if (t->tid != act_thr->tid &&
+               vc[act_thr] >= t->get_vc_by_id(act_thr->tid))
             {
-                return act_tid;
+                return act_thr;
             }
         }
-        return 0;
+        return nullptr;
     }
     
+    int32_t get_w_tid() {
+        if (w_tid == nullptr) {
+            return VAR_NOT_INIT;
+        }
+        return w_tid->tid;
+    }
+
+    int32_t get_r_tid() {
+        if (r_tid == nullptr) {
+            return VAR_NOT_INIT;
+        }
+        return r_tid->tid;
+    }
 
 
-    void update(bool is_write, uint32_t clock, uint32_t tid) {
+
+    void update(bool is_write, std::shared_ptr<ThreadState> thread) {
         if (is_write) {
             r_clock = VAR_NOT_INIT;
-            r_tid = VAR_NOT_INIT;
-            w_tid = tid;
-            w_clock = clock;
+            r_tid = nullptr;
+            vc.clear();
+            w_tid = thread;
+            w_clock = thread->get_self();
         }
         else {
             if (r_clock == READ_SHARED) {
-                if (vc.find(tid) == vc.end()) {
-                    vc.insert(vc.end(), std::pair<uint32_t, uint32_t>(tid, clock));
+                if (vc.find(thread) == vc.end()) {
+                    vc.insert(vc.end(), { thread, thread->get_self() });
                 }
                 else {
-                    vc[tid] = clock;
+                    vc[thread] = thread->get_self();
                 }
             }
             else {
-                r_tid = tid;
-                r_clock = clock;
+                r_tid = thread;
+                r_clock = thread->get_self();
             }
         }
     };
 
-    void set_read_shared() {
+    void set_read_shared(std::shared_ptr<ThreadState> thread) {
+        vc.insert(vc.end(), { r_tid, r_clock });
+        vc.insert(vc.end(), { thread, thread->get_self() });
+
         r_clock = READ_SHARED;
-        r_tid = READ_SHARED;
+        r_tid = nullptr;
     }
+
+
+    std::shared_ptr<ThreadState> get_thr(uint32_t pos) {
+        if (pos < vc.size()) {
+            auto it = vc.begin();
+            std::advance(it, pos);
+            return it->first;
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+
 
 };
