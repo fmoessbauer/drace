@@ -177,12 +177,12 @@ namespace detector {
             //std::cout << "> Detector missed " << misses.load() << " possible heap refs" << std::endl;
         }
 
-        virtual std::string name() {
-            return std::string("TSAN");
+        virtual const char * name() {
+            return "TSAN";
         }
 
-        virtual std::string version() {
-            return std::string("0.2.0");
+        virtual const char * version() {
+            return "0.2.0";
         }
 
         virtual void map_shadow(void* startaddr, size_t size_in_bytes) {

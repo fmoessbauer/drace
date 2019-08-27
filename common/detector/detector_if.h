@@ -162,9 +162,9 @@ public:
     virtual void finish(tls_t tls, tid_t thread_id) = 0;
 
     /** Return name of detector */
-    virtual std::string name() = 0;
+    virtual const char * name() = 0;
     /** Return version of detector */
-    virtual std::string version() = 0;
+    virtual const char * version() = 0;
 };
 
 extern "C" __declspec(dllexport) Detector * CreateDetector();

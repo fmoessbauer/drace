@@ -102,7 +102,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     register_report_sinks();
 
     // Initialize Detector
-    auto detlib = dr_load_aux_library("drace-detector.dll", NULL, NULL);
+    auto detlib = dr_load_aux_library("drace.detector.tsan.dll", NULL, NULL);
     auto create_detector = reinterpret_cast<decltype(CreateDetector)*>(dr_lookup_aux_library_routine(detlib, "CreateDetector"));
 
     detector = std::unique_ptr<Detector>(create_detector());

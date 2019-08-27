@@ -13,49 +13,55 @@
 
 #include <detector/detector_if.h>
 
-bool detector::init(int argc, const char **argv, Callback rc_clb) {
-    return true;
-}
+namespace detector
+{
+    class Dummy : public Detector
+    {
+        virtual bool init(int argc, const char **argv, Callback rc_clb) {
+            return true;
+        }
 
-void detector::finalize() { }
+        virtual void finalize() { }
 
-void detector::func_enter(tls_t tls, void* pc) { }
+        virtual void func_enter(tls_t tls, void* pc) { }
 
-void detector::func_exit(tls_t tls) { }
+        virtual void func_exit(tls_t tls) { }
 
-void detector::acquire(
-    tls_t tls,
-    void* mutex,
-    int recursive,
-    bool write) { }
+        virtual void acquire(
+            tls_t tls,
+            void* mutex,
+            int recursive,
+            bool write) { }
 
-void detector::release(
-    tls_t tls,
-    void* mutex,
-    bool write) { }
+        virtual void release(
+            tls_t tls,
+            void* mutex,
+            bool write) { }
 
-void detector::happens_before(tls_t tls, void* identifier) { }
+        virtual void happens_before(tls_t tls, void* identifier) { }
 
-void detector::happens_after(tls_t tls, void* identifier) { }
+        virtual void happens_after(tls_t tls, void* identifier) { }
 
-void detector::read(tls_t tls, void* pc, void* addr, size_t size) { }
+        virtual void read(tls_t tls, void* pc, void* addr, size_t size) { }
 
-void detector::write(tls_t tls, void* pc, void* addr, size_t size) { }
+        virtual void write(tls_t tls, void* pc, void* addr, size_t size) { }
 
-void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) { }
+        virtual void allocate(tls_t tls, void* pc, void* addr, size_t size) { }
 
-void detector::deallocate(tls_t tls, void* addr) { }
+        virtual void deallocate(tls_t tls, void* addr) { }
 
-void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
-    *tls = (void*)child;
-}
+        virtual void fork(tid_t parent, tid_t child, tls_t * tls) {
+            *tls = (void*)child;
+        }
 
-void detector::join(tid_t parent, tid_t child) { }
+        virtual void join(tid_t parent, tid_t child) { }
 
-std::string detector::name() {
-    return std::string("Dummy");
-}
+        virtual const char * name() {
+            return "Dummy";
+        }
 
-std::string detector::version() {
-    return std::string("1.0.0");
+        virtual const char * version() {
+            return "1.0.0";
+        }
+    };
 }
