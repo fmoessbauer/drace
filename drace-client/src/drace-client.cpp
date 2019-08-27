@@ -33,6 +33,7 @@
 #include "symbols.h"
 #include "statistics.h"
 #include "DrFile.h"
+#include "util/DrModuleLoader.h"
 
 #include "sink/hr-text.h"
 #ifdef XML_EXPORTER
@@ -102,8 +103,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     register_report_sinks();
 
     // Initialize Detector
-    auto detlib = dr_load_aux_library("drace.detector.tsan.dll", NULL, NULL);
-    auto create_detector = reinterpret_cast<decltype(CreateDetector)*>(dr_lookup_aux_library_routine(detlib, "CreateDetector"));
+    module_loader = std::make_unique<::drace::util::DrModuleLoader>("drace.detector.tsan.dll");
+    decltype(CreateDetector)* create_detector = (*module_loader)["CreateDetector"];
 
     detector = std::unique_ptr<Detector>(create_detector());
     detector->init(argc, argv, race_collector_add_race);
@@ -196,6 +197,8 @@ namespace drace {
 
         // Finalize Detector
         detector->finalize();
+
+        module_loader.reset();
 
         dr_mutex_destroy(th_mutex);
         dr_rwlock_destroy(tls_rw_mutex);

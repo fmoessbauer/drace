@@ -19,27 +19,28 @@ namespace drace {
 	extern FILE * log_target;
 
 	/** Utility functions for all modules */
-	struct util {
+	namespace util {
 		/** Returns true if a starts with prefix b */
-		static bool common_prefix(const std::string& a, const std::string& b);
+		bool common_prefix(const std::string& a, const std::string& b);
 
-		static std::vector<std::string> util::split(
+		std::vector<std::string> split(
 			const std::string & str,
 			const std::string & delimiter);
 
-		static std::string dir_from_path(const std::string & fullpath);
+		std::string dir_from_path(const std::string & fullpath);
 
-		static std::string basename(const std::string & fullpath);
+		std::string basename(const std::string & fullpath);
 
-		static std::string to_iso_time(std::chrono::system_clock::time_point tp);
+		std::string to_iso_time(std::chrono::system_clock::time_point tp);
 
-		static std::string instr_flags_to_str(uint8_t flags);
+		std::string instr_flags_to_str(uint8_t flags);
+
         template<typename T>
-        static T unsafe_ptr_cast(void* ptr) {
+        T unsafe_ptr_cast(void* ptr) {
             #pragma warning(suppress: 4302 4311)
             return reinterpret_cast<T>(ptr);
         }
-	};
+	} // namespace util
 } // namespace drace
 
 // Logging

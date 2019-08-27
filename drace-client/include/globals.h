@@ -161,6 +161,12 @@ namespace drace {
     // Detector instance
     extern std::unique_ptr<Detector> detector;
 
+    // Module loader
+    namespace util {
+        class DrModuleLoader;
+    }
+    extern std::unique_ptr<util::DrModuleLoader> module_loader;
+
 } // namespace drace
 
 	// MSR Communication Driver
