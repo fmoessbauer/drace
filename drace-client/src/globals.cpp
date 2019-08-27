@@ -18,6 +18,7 @@
 #include "statistics.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/MtSyncSHMDriver.h"
+#include "util/DrModuleLoader.h"
 
 #include <detector/detector_if.h>
 
@@ -52,4 +53,6 @@ namespace drace {
 	params_t params;
 
     std::unique_ptr<Detector> detector;
+
+    std::unique_ptr<::drace::util::DrModuleLoader> module_loader;
 }
