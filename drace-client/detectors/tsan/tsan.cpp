@@ -184,7 +184,7 @@ namespace detector {
         virtual const char * version() {
             return "0.2.0";
         }
-
+	
         virtual void map_shadow(void* startaddr, size_t size_in_bytes) {
             __tsan_map_shadow(startaddr, size_in_bytes);
         }

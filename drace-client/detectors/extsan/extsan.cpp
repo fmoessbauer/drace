@@ -207,10 +207,10 @@ void detector::join(tid_t parent, tid_t child, tls_t tls) {
 	delete ((tls_data*)&tls);
 }
 
-std::string detector::name() {
-	return std::string("Dummy");
+const char * detector::name() {
+	return "Dummy";
 }
 
-std::string detector::version() {
-	return std::string("1.0.0");
+const char * detector::version() {
+	return "1.0.0";
 }

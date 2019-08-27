@@ -168,3 +168,4 @@ public:
 };
 
 extern "C" __declspec(dllexport) Detector * CreateDetector();
+
