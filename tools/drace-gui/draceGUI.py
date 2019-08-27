@@ -299,18 +299,21 @@ class ReportCreator:
             stacks = error.findall('stack')
             for stack in stacks:
                 topFrame = stack.find('frame') #returns first element of type frame
-                tmp1 = topFrame.find('file').text
-                tmp2 = topFrame.find('fn').text
+                try: 
+                    tmp1 = topFrame.find('file').text
+                    tmp2 = topFrame.find('fn').text
 
-                if(len(tmp2) > 20):
-                    tmp2 = tmp2[:len(tmp2)//2] + '\n' + tmp2[len(tmp2)//2:]
-                identifier = tmp1 + ":\n" + tmp2
+                    if(len(tmp2) > 20):
+                        tmp2 = tmp2[:len(tmp2)//2] + '\n' + tmp2[len(tmp2)//2:]
+                    identifier = tmp1 + ":\n" + tmp2
 
-                if topStackOccurences.get(identifier) != None:
-                    value = topStackOccurences.pop(identifier)
-                    topStackOccurences.update({identifier: int(value)+1})
-                else:
-                    topStackOccurences.update({identifier: 1})
+                    if topStackOccurences.get(identifier) != None:
+                        value = topStackOccurences.pop(identifier)
+                        topStackOccurences.update({identifier: int(value)+1})
+                    else:
+                        topStackOccurences.update({identifier: 1})
+                except AttributeError:#if xml node is not available, just skip
+                    pass
         #sort dict
         sortedOccurences = sorted(topStackOccurences.items(), key=lambda kv: kv[1])
         x=list()
