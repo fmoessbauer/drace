@@ -1,18 +1,23 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
 #include "xmap.h"
+
+/**
+    Implements a VectorClock.
+    Can hold arbitrarily much pairs of a Thread Id and the belonging clock
+*/
+
+
 class VectorClock {
 
 
 public:
-    ///thread id, clock
+    ///vector clock which contains multiple thread ids, clocks
     xmap<uint32_t, uint32_t> vc;
 
-    VectorClock::VectorClock() { };
-
-    //virtual void update(uint32_t tid, uint32_t vc) = 0;
-    //virtual uint32_t get_vc_by_id(uint32_t tid) = 0;
-    uint32_t get_id_by_pos(uint32_t pos) {
+ 
+    ///return the thread id of the position pos of the vector clock
+    uint32_t get_thr(uint32_t pos) {
         if (pos < vc.size()) {
             auto it = vc.begin();
             std::advance(it, pos);
@@ -23,11 +28,12 @@ public:
         }
     };
 
+    ///returns the no. of elements of the vector clock
     uint32_t get_length() {
         return vc.size();
     };
 
-    ///updates this.vc with values of other.vc, if they're larger
+    ///updates this.vc with values of other.vc, if they're larger -> one way update
     void update(VectorClock* other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
@@ -43,10 +49,11 @@ public:
             vc.insert(vc.end(), std::pair<uint32_t, uint32_t>(id, clock));
         }
         else {
-            vc[id] = clock;
+            if (vc[id] < clock) { vc[id] = clock; }
         }
     };
 
+    ///deletes a vector clock entry, checks existance before
     void delete_vc(uint32_t tid) {
         if (vc.find(tid) != vc.end())
             vc.erase(tid);

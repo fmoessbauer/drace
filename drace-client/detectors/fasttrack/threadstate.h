@@ -7,21 +7,17 @@
 
 class ThreadState : public VectorClock{
 private:
-    ///if a stack trace for a clock value is not existing it will be created
-    ///otherwise it just returns
 
+    ///contains the current stack trace of the thread
+    xvector<size_t> global_stack;
+    ///contains 'historic' stack traces of a r/w of a variable
+    xmap<size_t, xvector<size_t>> read_write_traces;
 
 public:
     ///own thread id
     uint32_t tid;
-        
-    ///contains a stack trace for each address value
-    ///each stack entry consists of a pc-value(uint64)
-    xvector<size_t> global_stack;
-
-    ///contains the program counters for the read/write operation of a clock, if there was one
-    xmap<size_t, xvector<size_t>> read_write_traces;
-
+       
+    ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
     ThreadState::ThreadState(uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr) {
         tid = own_tid;
         uint32_t clock = 0;
@@ -31,9 +27,7 @@ public:
             vc = parent->vc;
         }
     };
-
-       
-
+ 
     void pop_stack_element() {
        global_stack.pop_back();
     }
@@ -42,7 +36,8 @@ public:
         global_stack.push_back(element);
     }
 
-
+    ///when a var is written or read, it copies the stack and adds the pc of the
+    ///r/w operation to be able to return the stack trace if a race was detected
     void set_read_write(size_t addr, size_t pc) {
         auto copy_stack(global_stack);
         copy_stack.push_back(pc);
@@ -55,17 +50,16 @@ public:
         }
     }
 
+    ///increases own clock value
     void inc_vc() {
         vc[tid]++;
     }
 
-
+    ///returns own clock value
     uint32_t get_self() {
         return vc[tid];
     };
 
-
-    
     ///returns a stack trace of a clock for handing it over to drace
     xvector<size_t> return_stack_trace(size_t address){//bool is_alloc) {
        

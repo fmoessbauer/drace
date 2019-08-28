@@ -121,7 +121,7 @@ TEST_F(DetectorTest, ThreadExit) {
 
 	detector::read(tls30, (void*)0x0031, (void*)0x00320000, 8);
 
-    if (std::string(detector::name()) != "FASTTRACK2") {
+    if (std::string(detector::name()) != "FASTTRACK") {
         EXPECT_EQ(num_races, 0);
     }
     else {
@@ -158,6 +158,18 @@ TEST_F(DetectorTest, HappensBefore) {
 	EXPECT_EQ(num_races, 0);
 }
 
+TEST_F(DetectorTest, HA_before_HB) {
+    detector::tls_t tls50;
+    detector::tls_t tls51;
+
+    detector::fork(1, 50, &tls50);
+    detector::fork(1, 51, &tls51);
+
+    detector::happens_after(tls51, (void*)50510000);
+    detector::happens_before(tls50, (void*)50510000);
+    //a detector must not crash on something like this
+}
+
 TEST_F(DetectorTest, ForkInitialize) {
 	detector::tls_t tls60;
 	detector::tls_t tls61;
@@ -167,7 +179,7 @@ TEST_F(DetectorTest, ForkInitialize) {
 	detector::fork(1, 61, &tls61);
 	detector::write(tls61, (void*)0x0060, (void*)0x00600000, 8);
 
-    if (std::string(detector::name()) != "FASTTRACK2") {
+    if (std::string(detector::name()) != "FASTTRACK") {
         EXPECT_EQ(num_races, 0);
     }
     else {
@@ -232,6 +244,7 @@ TEST_F(DetectorTest, ResetRange) {
 	detector::deallocate(tls81, (void*)0x00800000);
 	EXPECT_EQ(num_races, 0);
 }
+
 
 void callstack_funA() {};
 void callstack_funB() {};

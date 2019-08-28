@@ -14,7 +14,22 @@
 #include <vector>
 #include <functional>
 
- /// Interface for a DRace compatible race detector
+
+/**
+    Interface for a DRace compatible race detector
+
+    Premises for a implementation of a detector back-end:
+
+    - Every thread starts with a initial call of fork()
+    - There are no double forks of the same thread as child
+    - A read or write will never contain a tid which was not forked
+    - A read can happen before a write
+    - A happens after may arrive before a corresponding happens beore arrives
+    - A lock always will be acquired first, before it will be released
+
+*/
+
+
 namespace detector {
     typedef unsigned long tid_t;
     typedef void*         tls_t;

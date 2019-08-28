@@ -1,10 +1,6 @@
-//#include <atomic>
-//#include <algorithm>
+
 #include <mutex> // for lock_guard
-//#include <unordered_map>
 #include <iostream>
-#include <cassert>
-#include <string>
 #include <detector/detector_if.h>
 #include <ipc/spinlock.h>
 #include "threadstate.h"
@@ -12,10 +8,10 @@
 #include "xmap.h"
 #include "xvector.h"
 
-#include <ipc/spinlock.h>
+
 
 #define MAKE_OUTPUT false
-#define REGARD_ALLOCS false
+#define REGARD_ALLOCS true
 
 
 namespace fasttrack {
@@ -36,10 +32,10 @@ namespace fasttrack {
     static ipc::spinlock h_lock;
     static ipc::spinlock a_lock;
 
-    void report_race(unsigned thr1, unsigned thr2,
-        bool wr1, bool wr2,
-        size_t var,
-        int clk1, int clk2) {
+    void report_race(   unsigned thr1,  unsigned thr2,
+                        bool wr1,       bool wr2,
+                        size_t var,
+                        int clk1,       int clk2    ) {
 
 
         uint32_t var_size = 0;
@@ -108,7 +104,7 @@ namespace fasttrack {
             return;
         }
 
-        if (v->r_clock == VarState::READ_SHARED && v->vc[t] == t->get_self()) { //read shared same epoch
+        if (v->r_clock == VarState::READ_SHARED && v->get_vc_by_id(t) == t->get_self() && v->get_vc_by_id(t) != 0) { //read shared same epoch
             return;
         }
 
@@ -166,7 +162,7 @@ namespace fasttrack {
             std::shared_ptr<ThreadState> act_thr = v->is_rw_sh_race(t);
             if (act_thr != nullptr) //read shared read-write race       
             {
-                report_race(act_thr->tid, t->tid, false, true, v->address, v->vc[act_thr], t->get_self());
+                report_race(act_thr->tid, t->tid, false, true, v->address, v->get_vc_by_id(act_thr), t->get_self());
             }
         }
         v->update(true, t);
@@ -185,18 +181,44 @@ namespace fasttrack {
         locks.insert(locks.end(), std::pair<void*, VectorClock*>(mutex, lock));
     }
 
+    ///the deleter for a ThreadStates Object
+    ///if it is deleted, also the tid is removed of all other vector clocks which hold the tid
+    void thread_state_deleter(ThreadState* ptr) {
+        uint32_t tid = ptr->tid;
+
+        //as ThreadState is destroyed delete all the entries from all vectorclocks
+        l_lock.lock();
+        for (auto it = locks.begin(); it != locks.end(); ++it) {
+            it->second->delete_vc(tid);
+        }
+        l_lock.unlock();
+        t_lock.lock();
+        for (auto it = threads.begin(); it != threads.end(); ++it) {
+            it->second->delete_vc(tid);
+        }
+        t_lock.unlock();
+        h_lock.lock();
+        for (auto it = happens_states.begin(); it != happens_states.end(); ++it) {
+            it->second->delete_vc(tid);
+        }
+        h_lock.unlock();
+        delete ptr;
+    }
+    
     void create_thread(detector::tid_t tid, std::shared_ptr<ThreadState> parent = nullptr) {
         std::shared_ptr<ThreadState> new_thread;
+
         if (parent == nullptr) {
-            new_thread = std::make_shared<ThreadState>(tid);
+            new_thread = std::shared_ptr<ThreadState>(new ThreadState(tid), thread_state_deleter);
         }
         else {
             std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            new_thread = std::make_shared<ThreadState>(tid, parent);
+            new_thread = std::shared_ptr<ThreadState>(new ThreadState(tid, parent), thread_state_deleter);
         }
         std::lock_guard<ipc::spinlock>lg_t(t_lock);
         threads.insert(threads.end(), { tid, new_thread });
     }
+
 
     void create_happens(void* identifier) {
         VectorClock * new_hp = new VectorClock();
@@ -464,11 +486,11 @@ void detector::finish(tls_t tls, tid_t thread_id){}
 
 
 const char * detector::name() {
-    return "FASTTRACK2";
+    return "FASTTRACK";
 }
 
 const char * detector::version() {
-    return "0.1";
+    return "0.0.1";
 }
 
 
