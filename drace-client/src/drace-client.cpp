@@ -28,6 +28,7 @@
 #include "drace-client.h"
 #include "race-collector.h"
 #include "memory-tracker.h"
+#include "shadow-stack.h"
 #include "function-wrapper.h"
 #include "Module.h"
 #include "symbols.h"
@@ -270,7 +271,7 @@ namespace drace {
                     clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
                     ) % "analysis scope",
                     (clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) %
-            ("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
+            ("size of callstack used for race-detection (must be in [1," + std::to_string(ShadowStack::max_size) + "], default: " + std::to_string(params.stack_size) + ")"),
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
