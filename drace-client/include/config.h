@@ -19,7 +19,7 @@
 #include <INIReader.h>
 
 namespace drace {
-	/** Handles dynamic config information from configuration file */
+	/// Handles dynamic config information from configuration file
 	class Config {
 	private:
 		std::unique_ptr<INIReader> _reader;
@@ -66,7 +66,7 @@ namespace drace {
 			return _reader->Get(section, key, default);
 		}
 
-		/** returns multiline ini-items as a vector */
+		/// returns multiline ini-items as a vector
 		inline std::vector<std::string> get_multi(
 			const std::string & section,
 			const std::string & key) const

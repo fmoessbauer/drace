@@ -18,7 +18,7 @@
 namespace drace {
     namespace race {
         /**
-         * Race access entry with symbolized callstack information
+         * \brief Race access entry with symbolized callstack information
          */
         class ResolvedAccess : public Detector::AccessEntry {
         public:

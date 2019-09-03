@@ -12,9 +12,7 @@
 #include <type_traits>
 
 namespace util {
-    /**
-    * Encapsulates a pointer to a native function
-    */
+    /// Encapsulates a pointer to a native function
     class ProcedurePtr {
     public:
         /// Wrap a void ptr that represents a function ptr

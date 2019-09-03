@@ -362,10 +362,10 @@ namespace drace {
         void event::thread_start(void *wrapctx, void *user_data) {
             app_pc drcontext = drwrap_get_drcontext(wrapctx);
             per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-            DWORD retval = util::unsafe_ptr_cast<DWORD>(drwrap_get_retval(wrapctx));
+            HANDLE retval = util::unsafe_ptr_cast<HANDLE>(drwrap_get_retval(wrapctx));
             // the return value contains a handle to the thread, but we need the unique id
-            DWORD threadid = GetThreadId((HANDLE)retval);
-            LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", (HANDLE)retval, threadid);
+            DWORD threadid = GetThreadId(retval);
+            LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", retval, threadid);
             detector->happens_before(data->detector_data, (void*)threadid);
         }
 

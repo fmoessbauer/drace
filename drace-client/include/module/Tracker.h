@@ -20,6 +20,8 @@
 
 namespace drace {
 	namespace module {
+
+        /// stores information about loaded modules
 		class Tracker {
 			/// as we use lower_bound search, we have to reverse the sorting
 			using map_t = std::map<app_pc, std::shared_ptr<Metadata>, std::greater<app_pc>>;
@@ -41,22 +43,23 @@ namespace drace {
 			explicit Tracker(const std::shared_ptr<Symbols> & syms);
 			~Tracker();
 
-			/** Returns a shared_ptr to the module which contains the given program counter.
+			/**
+             * \brief Returns a shared_ptr to the module which contains the given program counter.
 			 * If the pc is not in a known module, returns a nullptr
 			 */
 			PMetadata get_module_containing(const app_pc pc) const;
 
-			/** Registers a new module by moving it */
+			/// Registers a new module by moving it
 			inline PMetadata add(Metadata && mod) {
 				return std::make_shared<Metadata>(mod);
 			}
 
-			/** Registers a new module by copying it */
+			/// Registers a new module by copying it
 			inline PMetadata add(const Metadata & mod) {
 				return std::make_shared<Metadata>(mod);
 			}
 
-			/** Creates new module in place */
+			/// Creates new module in place
 			template<class... Args>
 			inline PMetadata add_emplace(Args&&... args) {
 				PMetadata ptr = std::make_shared<Metadata>(std::forward<Args>(args)...);
@@ -64,11 +67,11 @@ namespace drace {
 				return ptr;
 			}
 
-			/** Registers a module and sets flags accordingly */
+			/// Registers a module and sets flags accordingly
 			PMetadata register_module(const module_data_t * mod, bool loaded);
 
         private:
-			/** Request a read-lock for the module dataset*/
+			/// Request a read-lock for the module dataset
 			inline void lock_read() const {
 				dr_rwlock_read_lock(mod_lock);
 			}
@@ -77,7 +80,7 @@ namespace drace {
 				dr_rwlock_read_unlock(mod_lock);
 			}
 
-			/** Request a write-lock for the module dataset*/
+			/// Request a write-lock for the module dataset
 			inline void lock_write() const {
 				dr_rwlock_write_lock(mod_lock);
 			}

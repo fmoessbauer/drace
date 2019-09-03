@@ -19,6 +19,8 @@
 
 namespace drace {
 	/**
+    * \brief shadow stack implementation for stack-tracing
+    *
 	* This class implements a shadow stack, used for
 	* getting stack traces for race detection
 	* Whenever a call has been detected, the memory-refs buffer is
@@ -32,7 +34,10 @@ namespace drace {
 		using stack_t = decltype(per_thread_t::stack);
 
 	private:
-		/** Push a pc on the stack. If the pc is already
+		/**
+        * \brief Push a pc on the stack.
+        *
+        * If the pc is already
 		* on the stack, skip. This avoids ever growing stacks
 		* if the returns are not detected properly
 		*/
@@ -65,7 +70,7 @@ namespace drace {
 			return stack.data[stack.entries];
 		}
 
-		/** Call Instrumentation */
+		/// Call Instrumentation
 		static void on_call(app_pc *call_ins, app_pc *target_addr)
 		{
 			void * drcontext = dr_get_current_drcontext();
@@ -86,7 +91,7 @@ namespace drace {
 			push(call_ins, data);
 		}
 
-		/** Return Instrumentation */
+		/// Return Instrumentation
 		static void on_ret(app_pc *ret_ins, app_pc *target_addr)
 		{
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
@@ -110,10 +115,10 @@ namespace drace {
 			instr_t *instr, bool for_trace,
 			bool translating, void *user_data)
 		{
-            // TODO: The shadow stack instrumentation triggers many assertions
+            // \todo The shadow stack instrumentation triggers many assertions
             // when running in debug mode on a CoreCLR application
 
-            // TODO: Handle dotnet calls with push addr; ret;
+            // \todo Handle dotnet calls with push addr; ret;
 
 			if (instr == instrlist_last(bb)) {
                 if (instr_is_call_direct(instr)) {

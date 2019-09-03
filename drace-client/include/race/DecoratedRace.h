@@ -17,7 +17,7 @@
 namespace drace {
     namespace race {
         /**
-         * Single data-race with two access entries
+         * \brief Single data-race with two access entries
          */
         class DecoratedRace {
         public:

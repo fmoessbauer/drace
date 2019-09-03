@@ -14,6 +14,8 @@
 
 namespace drace {
     namespace util {
+
+        /// LibraryLoader specialization to be used inside a DR client
         class DrModuleLoader : public ::util::LibraryLoader {
         public:
             DrModuleLoader() = default;

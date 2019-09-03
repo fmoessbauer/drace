@@ -11,7 +11,7 @@
  */
 
 /**
-* This template is processed by cmake and adds the current
+* \brief This template is processed by cmake and adds the current
 * git tag and commit hash to the binary.
 */
 

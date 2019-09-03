@@ -13,9 +13,12 @@
 
 #include "ProcedurePtr.h"
 
+/// Utilities and interfaces that are used in multiple components
 namespace util
 {
     /**
+    * \brief RAII wrapper around a native module
+    *
     * Abstract class providing an abstraction to load shared modules.
     * The LibraryLoader has to be referenced while the wrapped module is in use.
     * On destruction, the wrapped module is released.

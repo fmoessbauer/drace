@@ -18,7 +18,7 @@ namespace drace {
 	/** Target to which all logs are written. Can be any file handle */
 	extern FILE * log_target;
 
-	/** Utility functions for all modules */
+	/// Utility functions used in drace modules
 	namespace util {
 		/** Returns true if a starts with prefix b */
 		bool common_prefix(const std::string& a, const std::string& b);

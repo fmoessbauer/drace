@@ -41,7 +41,8 @@ class Detector;
 
 /// DRace instrumentation framework
 namespace drace {
-	/** Runtime parameters */
+
+	/// Runtime parameters
 	struct params_t {
 		unsigned sampling_rate{ 1 };
 		unsigned instr_rate{ 1 };
@@ -73,11 +74,12 @@ namespace drace {
 
 	class Statistics;
 
-	/** Per Thread data (thread-private)
-	* \warning This struct is not default-constructed
-	*          but just allocated as a memory block and casted
-	*          Initialisation is done in the thread-creation event
-	*          in memory_instr.
+	/**
+    * \brief Per Thread data (thread-private)
+    *
+	* \warning Initialisation is done in the thread-creation event
+	*          in \see MemoryTracker.
+    *          Prior thread-creation events must not use this data
 	*/
 	struct per_thread_t {
 		byte *        buf_ptr;

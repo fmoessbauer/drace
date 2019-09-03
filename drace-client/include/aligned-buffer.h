@@ -13,16 +13,16 @@
 #include <dr_api.h>
 
 namespace drace {
-	/** Aligned Buffer, allocated in DR's thread local storage of instantiator */
+	/// Aligned Buffer, allocated in DR's thread local storage of instantiator
 	template<typename T, size_t alignment>
 	class AlignedBuffer {
-		/** unaligned buffer begin */
+		/// unaligned buffer begin
 		void *   _mem{ nullptr };
 
-		/** size of the buffer in bytes */
+		/// size of the buffer in bytes
 		size_t   _size_in_bytes{ 0 };
 
-		/** dr context at allocation time. Use this context for deallocation */
+		/// dr context at allocation time. Use this context for deallocation
 		void *   _alloc_ctx;
 
 	public:
@@ -43,19 +43,20 @@ namespace drace {
 			allocate(_alloc_ctx, capacity);
 		}
 
-		/** Clears the old buffer and allocates a new one with the specified capacity */
+		/// Clears the old buffer and allocates a new one with the specified capacity
 		void resize(size_t capacity, void* drcontext = dr_get_current_drcontext()) {
 			_alloc_ctx = drcontext;
 			deallocate(_alloc_ctx);
 			allocate(_alloc_ctx, capacity);
 		}
 
-		/** Frees the allocated tls, hence has to be called in same thread as allocation */
+		/// Frees the allocated tls, hence has to be called in same thread as allocation
 		~AlignedBuffer() {
 			deallocate(_alloc_ctx);
 		}
 
-		/** deallocate this buffer using the provided drcontext.
+		/**
+         * \brief deallocate this buffer using the provided drcontext.
 		 * If no context is provided, the context at allocation time is used
 		 */
 		void deallocate(void* drcontext = nullptr) {

@@ -29,8 +29,7 @@ use_DynamoRIO_extension("drace-client" drwrap)
 use_DynamoRIO_extension("drace-client" drsyms)
 
 # Bind detectors
-message("Use detector: ${DRACE_DETECTOR}")
-add_subdirectory("detectors/${DRACE_DETECTOR}")
+add_subdirectory("detectors")
 target_link_libraries(
 	"drace-client"   # main drace-libs
 	"drace-common"   # drace and msr common libs
