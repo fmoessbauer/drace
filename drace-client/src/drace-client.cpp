@@ -103,11 +103,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     register_report_sinks();
 
     // Initialize Detector
-    module_loader = std::make_unique<::drace::util::DrModuleLoader>("drace.detector.tsan.dll");
-    decltype(CreateDetector)* create_detector = (*module_loader)["CreateDetector"];
-
-    detector = std::unique_ptr<Detector>(create_detector());
-    detector->init(argc, argv, race_collector_add_race);
+    register_detector(argc, argv, params.detector);
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
@@ -122,6 +118,27 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 }
 
 namespace drace {
+
+    static void register_detector(
+        int argc,
+        const char ** argv,
+        const std::string & detector_name)
+    {
+        std::string detector_lib("drace.detector." + detector_name + ".dll");
+
+        module_loader = std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
+        if (!module_loader->loaded())
+        {
+            LOG_ERROR(0, "could not load library %s", detector_lib.c_str());
+            dr_abort();
+        }
+
+        decltype(CreateDetector)* create_detector = (*module_loader)["CreateDetector"];
+
+        detector = std::unique_ptr<Detector>(create_detector());
+        detector->init(argc, argv, race_collector_add_race);
+        LOG_INFO(0, "Detector %s initialized", detector_lib.c_str());
+    }
 
     static void register_report_sinks() {
         if (drace::log_target != NULL) {
@@ -240,6 +257,7 @@ namespace drace {
         bool display_help = false;
         auto drace_cli = clipp::group(
             (clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file + ")"),
+            (clipp::option("-d", "--detector") & clipp::value("detector", params.detector)) % ("race detector (default: " + params.detector + ")"),
             (
             (clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
                 (clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate)) % "instrument each nth instruction (default: no sampling, 0: no instrumentation)"
@@ -311,6 +329,7 @@ namespace drace {
     static void print_config() {
         dr_fprintf(drace::log_target,
             "< Runtime Configuration:\n"
+            "< Race Detector:\t%s\n"
             "< Sampling Rate:\t%i\n"
             "< Instr. Rate:\t\t%i\n"
             "< Lossy:\t\t%s\n"
@@ -327,6 +346,7 @@ namespace drace {
             "< External Ctrl:\t%s\n"
             "< Log Target:\t\t%s\n"
             "< Private Caches:\t%s\n",
+            params.detector,
             params.sampling_rate,
             params.instr_rate,
             params.lossy ? "ON" : "OFF",

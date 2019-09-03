@@ -63,6 +63,7 @@ namespace drace {
 		std::string  out_file;
 		std::string  xml_file;
 		std::string  logfile{ "stderr" };
+        std::string  detector{ "tsan" };
 
 		// Raw arguments
 		int          argc;

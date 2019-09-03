@@ -70,7 +70,7 @@ drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- applic
 
 ```
 SYNOPSIS
-        drace-client.dll [-c <config>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
+        drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
                          <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--suplevel
                          <sample-rate>] [--xml-file <filename>] [--out-file <filename>] [--logfile
@@ -80,14 +80,14 @@ OPTIONS
         DRace Options
             -c, --config <config>
                     config file (default: drace.ini)
-
+            -d, --detector <detector>
+                    race detector (default: tsan)
             sampling options
                 -s, --sample-rate <sample-rate>
                     sample each nth instruction (default: no sampling)
 
                 -i, --instr-rate <instr-rate>
                     instrument each nth instruction (default: no sampling, 0: no instrumentation)
-
             analysis scope
                 --lossy
                     dynamically exclude fragments using lossy counting
@@ -122,7 +122,6 @@ OPTIONS
             --suplevel <level>
                     suppress similar races (0=detector-default, 1=unique top-of-callstack entry,
                     default: 1)
-
             data race reporting
                 --xml-file, -x <filename>
                     log races in valkyries xml format in this file
@@ -144,8 +143,7 @@ OPTIONS
 
             -h, --usage
                     display help
-
-        Detector (TSAN) Options
+        Detector Options
             --heap-only
                     only analyze heap memory
 ```

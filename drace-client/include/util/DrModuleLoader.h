@@ -31,7 +31,7 @@ namespace drace {
             bool load(const char * filename) {
                 if (_lib == nullptr)
                 {
-                    _lib = dr_load_aux_library("drace.detector.tsan.dll", NULL, NULL);
+                    _lib = dr_load_aux_library(filename, NULL, NULL);
                     return _lib != nullptr;
                 }
                 return false;
@@ -45,6 +45,10 @@ namespace drace {
                     return true;
                 }
                 return false;
+            }
+
+            bool loaded() {
+                return _lib != nullptr;
             }
 
             ::util::ProcedurePtr operator[](const char * proc_name) const {

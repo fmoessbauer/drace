@@ -17,8 +17,10 @@ namespace util {
     */
     class ProcedurePtr {
     public:
+        /// Wrap a void ptr that represents a function ptr
         explicit ProcedurePtr(void * ptr) : _ptr(ptr) {}
 
+        /// Conversion operator to extract native function pointer
         template <typename T, typename = std::enable_if_t<std::is_function_v<T>>>
         operator T *() const {
             return reinterpret_cast<T *>(_ptr);
