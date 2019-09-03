@@ -18,7 +18,7 @@
 #include <dr_tools.h>
 #include <hashtable.h>
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 #include "memory-tracker.h"
 #include "Module.h"

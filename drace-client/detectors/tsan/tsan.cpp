@@ -18,7 +18,7 @@
 #include <iostream>
 #include <cassert>
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 #include <ipc/spinlock.h>
 #include <tsan-if.h>

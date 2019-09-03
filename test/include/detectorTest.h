@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 #include <string>
 #include <iostream>
 #include <Windows.h>

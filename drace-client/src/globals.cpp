@@ -20,7 +20,7 @@
 #include "ipc/MtSyncSHMDriver.h"
 #include "util/DrModuleLoader.h"
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 namespace drace {
 	/**

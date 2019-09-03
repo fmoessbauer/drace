@@ -42,7 +42,7 @@
 #include "MSR.h"
 
 #include <clipp.h>
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 #include <version/version.h>
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])

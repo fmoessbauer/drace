@@ -10,7 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <drmgr.h>
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
