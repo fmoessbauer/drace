@@ -334,8 +334,8 @@ namespace drace {
 			}
 		}
 
-		// Do not instrument if block is frequent
-		if (for_trace && instrument_bb) {
+		// Do not instrument if block is frequent TODO: check correctness
+		if (params.lossy_flush && for_trace && instrument_bb) {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			if (pc_in_freq(data, bb_addr)) {
 		        instrument_bb = INSTR_FLAGS::NONE;
@@ -343,7 +343,7 @@ namespace drace {
 		}
 
 		// Avoid temporary allocation by using ptr-value directly
-		*user_data = (void*)instrument_bb;
+        *user_data = (void*) instrument_bb;
 		return DR_EMIT_DEFAULT;
 	}
 
@@ -355,7 +355,7 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
-		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint8_t>(user_data));
+		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint64_t>(user_data));
 		// we treat all atomic accesses as reads
 		bool instr_is_atomic{ false };
 
@@ -366,9 +366,9 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		if (instrument_instr & INSTR_FLAGS::STACK) {
-			// Instrument ShadowStack
+			// Instrument ShadowStack TODO: This sometimes crashes in Dotnet modules
             if (ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data))
-                return DR_EMIT_DEFAULT;
+                return DR_EMIT_MUST_END_TRACE;
 		}
 
 		if (!(instrument_instr & INSTR_FLAGS::MEMORY))
