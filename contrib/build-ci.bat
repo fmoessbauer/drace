@@ -14,9 +14,3 @@ cmake --build .
 cmake --build . --target install
 cd ..
 
-echo "=== Build drace-Dummy ==="
-cd build-dummy
-cmake --build .
-cmake --build . --target install
-cd ..
-
