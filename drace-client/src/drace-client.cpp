@@ -347,7 +347,7 @@ namespace drace {
             "< External Ctrl:\t%s\n"
             "< Log Target:\t\t%s\n"
             "< Private Caches:\t%s\n",
-            params.detector,
+            params.detector.c_str(),
             params.sampling_rate,
             params.instr_rate,
             params.lossy ? "ON" : "OFF",
