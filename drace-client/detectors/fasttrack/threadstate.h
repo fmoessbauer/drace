@@ -9,8 +9,12 @@
 #include "xmap.h"
 #include "xvector.h"
 
+namespace drace {
+    namespace detector{
+        class Fasttrack;
+    }
+}
 
-class Fasttrack;
 
 class ThreadState : public VectorClock{
 private:
@@ -20,14 +24,14 @@ private:
     ///contains 'historic' stack traces of a r/w of a variable
     xmap<size_t, xvector<size_t>> read_write_traces;
 
-    Fasttrack* ft;
+    drace::detector::Fasttrack* ft = nullptr;
 
 public:
     ///own thread id
     uint32_t tid;
        
     ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
-    ThreadState::ThreadState(Fasttrack* ft_inst,  uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr) {
+    ThreadState::ThreadState(drace::detector::Fasttrack* ft_inst,  uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr) {
         tid = own_tid;
         ft = ft_inst;
         uint32_t clock = 0;
