@@ -31,7 +31,6 @@ cmake:
     paths:
     - build-tsan-dr791
     - build-legacy-tsan-dr791
-    - build-dummy
         
 compile:
   <<: *globals
@@ -45,7 +44,6 @@ compile:
     paths:
     - build-tsan-dr791
     - build-legacy-tsan-dr791
-    - build-dummy
   dependencies:
   - cmake
 
@@ -55,7 +53,6 @@ cppcheck:
   script:
   - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   - cd ../build-legacy-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
-  - cd ../build-dummy; C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
   - cmake
 

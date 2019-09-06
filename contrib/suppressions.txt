@@ -15,4 +15,7 @@ unmatchedSuppression:*
 // specific suppressions
 variableScope:*/bench/apps/stream/*
 unusedFunction:*/drace-client/src/drace-client.cpp
+unusedFunction:*/drace-client/detectors/*
+unusedFunction:*/drace-client/src/util.cpp
+unusedFunction:*/drace-client/include/util.h
 cstyleCast:*/ManagedResolver/src/ManagedResolver.cpp

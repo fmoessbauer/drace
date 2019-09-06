@@ -11,51 +11,72 @@
 
 #include <string>
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
-bool detector::init(int argc, const char **argv, Callback rc_clb) {
-    return true;
+namespace drace
+{
+    namespace detector
+    {
+        /// Fake detector that stubs the \ref Detector interface
+        class Dummy : public Detector
+        {
+        public:
+            virtual bool init(int argc, const char **argv, Callback rc_clb) {
+                return true;
+            }
+
+            virtual void finalize() { }
+
+            virtual void map_shadow(void* startaddr, size_t size_in_bytes) { };
+
+            virtual void func_enter(tls_t tls, void* pc) { }
+
+            virtual void func_exit(tls_t tls) { }
+
+            virtual void acquire(
+                tls_t tls,
+                void* mutex,
+                int recursive,
+                bool write) { }
+
+            virtual void release(
+                tls_t tls,
+                void* mutex,
+                bool write) { }
+
+            virtual void happens_before(tls_t tls, void* identifier) { }
+
+            virtual void happens_after(tls_t tls, void* identifier) { }
+
+            virtual void read(tls_t tls, void* pc, void* addr, size_t size) { }
+
+            virtual void write(tls_t tls, void* pc, void* addr, size_t size) { }
+
+            virtual void allocate(tls_t tls, void* pc, void* addr, size_t size) { }
+
+            virtual void deallocate(tls_t tls, void* addr) { }
+
+            virtual void fork(tid_t parent, tid_t child, tls_t * tls) {
+                *tls = (void*)(42ull + child);
+            }
+
+            virtual void join(tid_t parent, tid_t child) { }
+
+            virtual void detach(tls_t tls, tid_t thread_id) { };
+
+            virtual void finish(tls_t tls, tid_t thread_id) { };
+
+            virtual const char * name() {
+                return "Dummy";
+            }
+
+            virtual const char * version() {
+                return "1.0.0";
+            }
+        };
+    }
 }
 
-void detector::finalize() { }
-
-void detector::func_enter(tls_t tls, void* pc) { }
-
-void detector::func_exit(tls_t tls) { }
-
-void detector::acquire(
-    tls_t tls,
-    void* mutex,
-    int recursive,
-    bool write) { }
-
-void detector::release(
-    tls_t tls,
-    void* mutex,
-    bool write) { }
-
-void detector::happens_before(tls_t tls, void* identifier) { }
-
-void detector::happens_after(tls_t tls, void* identifier) { }
-
-void detector::read(tls_t tls, void* pc, void* addr, size_t size) { }
-
-void detector::write(tls_t tls, void* pc, void* addr, size_t size) { }
-
-void detector::allocate(tls_t tls, void* pc, void* addr, size_t size) { }
-
-void detector::deallocate(tls_t tls, void* addr) { }
-
-void detector::fork(tid_t parent, tid_t child, tls_t * tls) {
-    *tls = (void*)child;
-}
-
-void detector::join(tid_t parent, tid_t child) { }
-
-const char * detector::name() {
-    return "Dummy";
-}
-
-const char * detector::version() {
-    return "1.0.0";
+extern "C" __declspec(dllexport) Detector * CreateDetector() {
+    return new drace::detector::Dummy();
 }

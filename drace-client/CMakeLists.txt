@@ -29,13 +29,11 @@ use_DynamoRIO_extension("drace-client" drwrap)
 use_DynamoRIO_extension("drace-client" drsyms)
 
 # Bind detectors
-message("Use detector: ${DRACE_DETECTOR}")
-add_subdirectory("detectors/${DRACE_DETECTOR}")
+add_subdirectory("detectors")
 target_link_libraries(
 	"drace-client"   # main drace-libs
 	"drace-common"   # drace and msr common libs
 	"jtilly-inih"    # ini parser
-	"drace-detector" # race-detector
 	"hh-date"        # C++ date lib
 	"clipp"          # option parser
 )
@@ -59,7 +57,6 @@ endif()
 # Copy settings ini to root dir
 add_custom_target(copy_files ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
-    DEPENDS "$<TARGET_FILE:drace-detector>"
 )
 
 add_custom_command(TARGET copy_files POST_BUILD
@@ -74,22 +71,6 @@ if(${DRACE_XML_EXPORTER})
 			"$<TARGET_FILE:tinyxml2>"
 			"$<TARGET_FILE_DIR:drace-client>"
 		DEPENDS "tinyxml2")
-endif()
-
-# copy detector dlls to drace-client binary dir
-add_custom_command(TARGET copy_files POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"$<TARGET_FILE:drace-detector>"
-		"$<TARGET_FILE_DIR:drace-client>"
-	DEPENDS "drace-detector")
-
-# copy transitive depends for tsan detector
-if("${DRACE_DETECTOR}" STREQUAL "tsan")
-	# Copy tsan-common
-	add_custom_command(TARGET copy_files POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
-			"$<TARGET_FILE_DIR:drace-client>")
 endif()
 
 if(${DRACE_ENABLE_CPPCHECK})

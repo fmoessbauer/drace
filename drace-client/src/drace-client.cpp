@@ -28,11 +28,13 @@
 #include "drace-client.h"
 #include "race-collector.h"
 #include "memory-tracker.h"
+#include "shadow-stack.h"
 #include "function-wrapper.h"
 #include "Module.h"
 #include "symbols.h"
 #include "statistics.h"
 #include "DrFile.h"
+#include "util/DrModuleLoader.h"
 
 #include "sink/hr-text.h"
 #ifdef XML_EXPORTER
@@ -41,7 +43,7 @@
 #include "MSR.h"
 
 #include <clipp.h>
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 #include <version/version.h>
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
@@ -102,7 +104,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     register_report_sinks();
 
     // Initialize Detector
-    detector::init(argc, argv, race_collector_add_race);
+    register_detector(argc, argv, params.detector);
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
@@ -117,6 +119,27 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 }
 
 namespace drace {
+
+    static void register_detector(
+        int argc,
+        const char ** argv,
+        const std::string & detector_name)
+    {
+        std::string detector_lib("drace.detector." + detector_name + ".dll");
+
+        module_loader = std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
+        if (!module_loader->loaded())
+        {
+            LOG_ERROR(0, "could not load library %s", detector_lib.c_str());
+            dr_abort();
+        }
+
+        decltype(CreateDetector)* create_detector = (*module_loader)["CreateDetector"];
+
+        detector = std::unique_ptr<Detector>(create_detector());
+        detector->init(argc, argv, race_collector_add_race);
+        LOG_INFO(0, "Detector %s initialized", detector_lib.c_str());
+    }
 
     static void register_report_sinks() {
         if (drace::log_target != NULL) {
@@ -191,7 +214,9 @@ namespace drace {
         drmgr_exit();
 
         // Finalize Detector
-        detector::finalize();
+        detector->finalize();
+
+        module_loader.reset();
 
         dr_mutex_destroy(th_mutex);
         dr_rwlock_destroy(tls_rw_mutex);
@@ -233,6 +258,7 @@ namespace drace {
         bool display_help = false;
         auto drace_cli = clipp::group(
             (clipp::option("-c", "--config") & clipp::value("config", params.config_file)) % ("config file (default: " + params.config_file + ")"),
+            (clipp::option("-d", "--detector") & clipp::value("detector", params.detector)) % ("race detector (default: " + params.detector + ")"),
             (
             (clipp::option("-s", "--sample-rate") & clipp::integer("sample-rate", params.sampling_rate)) % "sample each nth instruction (default: no sampling)",
                 (clipp::option("-i", "--instr-rate")  & clipp::integer("instr-rate", params.instr_rate)) % "instrument each nth instruction (default: no sampling, 0: no instrumentation)"
@@ -245,7 +271,7 @@ namespace drace {
                     clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
                     ) % "analysis scope",
                     (clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) %
-            ("size of callstack used for race-detection (must be in [1,16], default: " + std::to_string(params.stack_size) + ")"),
+            ("size of callstack used for race-detection (must be in [1," + std::to_string(ShadowStack::max_size) + "], default: " + std::to_string(params.stack_size) + ")"),
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
@@ -304,6 +330,7 @@ namespace drace {
     static void print_config() {
         dr_fprintf(drace::log_target,
             "< Runtime Configuration:\n"
+            "< Race Detector:\t%s\n"
             "< Sampling Rate:\t%i\n"
             "< Instr. Rate:\t\t%i\n"
             "< Lossy:\t\t%s\n"
@@ -320,6 +347,7 @@ namespace drace {
             "< External Ctrl:\t%s\n"
             "< Log Target:\t\t%s\n"
             "< Private Caches:\t%s\n",
+            params.detector.c_str(),
             params.sampling_rate,
             params.instr_rate,
             params.lossy ? "ON" : "OFF",

@@ -12,12 +12,12 @@
 
 #include "ResolvedAccess.h"
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 namespace drace {
     namespace race {
         /**
-         * Single data-race with two access entries
+         * \brief Single data-race with two access entries
          */
         class DecoratedRace {
         public:
@@ -27,7 +27,7 @@ namespace drace {
             bool           is_resolved{ false };
 
             DecoratedRace(
-                const detector::Race & r,
+                const Detector::Race & r,
                 /// elapsed time since program start
                 const std::chrono::milliseconds & ttr)
                 : first(r.first),

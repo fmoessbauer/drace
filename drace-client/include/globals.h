@@ -36,9 +36,13 @@ constexpr int MUTEX_MAP_SIZE = 128;
 */
 constexpr uint64_t PROC_ADDR_LIMIT = 0x7FF'FFFFFFFF;
 
+// forward decls
+class Detector;
+
 /// DRace instrumentation framework
 namespace drace {
-	/** Runtime parameters */
+
+	/// Runtime parameters
 	struct params_t {
 		unsigned sampling_rate{ 1 };
 		unsigned instr_rate{ 1 };
@@ -60,6 +64,7 @@ namespace drace {
 		std::string  out_file;
 		std::string  xml_file;
 		std::string  logfile{ "stderr" };
+        std::string  detector{ "tsan" };
 
 		// Raw arguments
 		int          argc;
@@ -69,11 +74,12 @@ namespace drace {
 
 	class Statistics;
 
-	/** Per Thread data (thread-private)
-	* \warning This struct is not default-constructed
-	*          but just allocated as a memory block and casted
-	*          Initialisation is done in the thread-creation event
-	*          in memory_instr.
+	/**
+    * \brief Per Thread data (thread-private)
+    *
+	* \warning Initialisation is done in the thread-creation event
+	*          in \see MemoryTracker.
+    *          Prior thread-creation events must not use this data
 	*/
 	struct per_thread_t {
 		byte *        buf_ptr;
@@ -154,6 +160,15 @@ namespace drace {
 
 	// Global Statistics Collector
 	extern std::unique_ptr<Statistics> stats;
+
+    // Detector instance
+    extern std::unique_ptr<Detector> detector;
+
+    // Module loader
+    namespace util {
+        class DrModuleLoader;
+    }
+    extern std::unique_ptr<util::DrModuleLoader> module_loader;
 
 } // namespace drace
 

@@ -15,13 +15,18 @@
 #include <functional>
 
  /// Interface for a DRace compatible race detector
-namespace detector {
+class Detector {
+public:
+
+    /// Type of a thread-id
     typedef unsigned long tid_t;
+
+    /// type of a pointer to an entry in the thread local storage
     typedef void*         tls_t;
 
     static constexpr int max_stack_size = 16;
 
-    /** A single memory access */
+    /// A single memory access
     struct AccessEntry {
         unsigned thread_id;
         bool     write;
@@ -35,33 +40,42 @@ namespace detector {
         uint64_t stack_trace[max_stack_size];
     };
 
-    /** A Data-Race is a tuple of two Accesses */
+    /// A Data-Race is a tuple of two Accesses
     using Race = std::pair<AccessEntry, AccessEntry>;
 
-    using Callback = void(*)(const detector::Race*);
+    /**
+     * \brief signature of the callback function
+     *
+     * The callback is executed on each detected race
+     */
+    using Callback = void(*)(const Race*);
 
     /**
+    * \brief initialize detector
+    *
     * Takes command line arguments and a callback to process a data-race.
     * Type of callback is (const detector::Race*) -> void
     */
-    bool init(int argc, const char **argv, Callback rc_clb);
+    virtual bool init(int argc, const char **argv, Callback rc_clb) = 0;
 
     /**
-    * Maps a new block of shadow memory.
+    * \brief Maps a new block of shadow memory.
+    *
     * All memory accesses have to be inside a mapped block.
     * \note the mapped shadow region has to be in a memory range that is shadowable
     * \todo rework memory mapping, i#11
     */
-    void map_shadow(void* startaddr, size_t size_in_bytes);
+    virtual void map_shadow(void* startaddr, size_t size_in_bytes) = 0;
 
     /**
-     * Finalizes the detector.
+     * \brief Finalizes the detector.
+     *
      * After a finalize, a later init must be possible
      */
-    void finalize();
+    virtual void finalize() = 0;
 
-    /** Acquire a mutex  */
-    void acquire(
+    /// Acquire a mutex
+    virtual void acquire(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// ptr to mutex location
@@ -70,31 +84,31 @@ namespace detector {
         int   recursive,
         /// true, for RW-mutexes in read-mode false
         bool  write
-    );
+    ) = 0;
 
-    /** Release a mutex */
-    void release(
+    /// Release a mutex
+    virtual void release(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// ptr to mutex location
         void* mutex,
         /// true, for RW-mutexes in read-mode false
         bool  write
-    );
+    ) = 0;
 
-    /** Enter a function (push stack entry) */
-    void func_enter(tls_t tls, void* pc);
+    /// Enter a function (push stack entry)
+    virtual void func_enter(tls_t tls, void* pc) = 0;
 
-    /** Leave a function (pop stack entry) */
-    void func_exit(tls_t tls);
+    /// Leave a function (pop stack entry)
+    virtual void func_exit(tls_t tls) = 0;
 
-    /** Draw a happens-before edge between thread and identifier (optional) */
-    void happens_before(tls_t tls, void* identifier);
-    /** Draw a happens-after edge between thread and identifier (optional) */
-    void happens_after(tls_t tls, void* identifier);
+    /// Draw a happens-before edge between thread and identifier (can be stubbed)
+    virtual void happens_before(tls_t tls, void* identifier) = 0;
+    /// Draw a happens-after edge between thread and identifier (can be stubbed)
+    virtual void happens_after(tls_t tls, void* identifier) = 0;
 
-    /** Log a read access */
-    void read(
+    /// Log a read access
+    virtual void read(
         /// ptr to thread-local storage of calling thread
         tls_t    tls,
         /// current program counter
@@ -103,10 +117,10 @@ namespace detector {
         void*    addr,
         /// access size log2 (bytes)
         size_t   size
-    );
+    ) = 0;
 
-    /** Log a write access */
-    void write(
+    /// Log a write access
+    virtual void write(
         /// ptr to thread-local storage of calling thread
         tls_t    tls,
         /// current program counter
@@ -115,10 +129,10 @@ namespace detector {
         void*    addr,
         /// access size log2 (bytes)
         size_t   size
-    );
+    ) = 0;
 
-    /** Log a memory allocation */
-    void allocate(
+    /// Log a memory allocation
+    virtual void allocate(
         /// ptr to thread-local storage of calling thread
         tls_t  tls,
         /// current instruction pointer
@@ -127,43 +141,46 @@ namespace detector {
         void*  addr,
         /// size of memory block
         size_t size
-    );
+    ) = 0;
 
-    /** Log a memory deallocation*/
-    void deallocate(
+    /// Log a memory deallocation
+    virtual void deallocate(
         /// ptr to thread-local storage of calling thread
         tls_t tls,
         /// begin of memory block
         void* addr
-    );
+    ) = 0;
 
-    /** Log a thread-creation event */
-    void fork(
+    /// Log a thread-creation event
+    virtual void fork(
         /// id of parent thread
         tid_t parent,
         /// id of child thread
         tid_t child,
         /// out parameter for tls data
         tls_t * tls
-    );
+    ) = 0;
 
-    /** Log a thread join event */
-    void join(
+    /// Log a thread join event
+    virtual void join(
         /// id of parent thread
         tid_t parent,
         /// id of child thread
         tid_t child
-    );
+    ) = 0;
 
-    /** Log a thread detach event */
-    void detach(tls_t tls, tid_t thread_id);
-    /** Log a thread exit event (detached thread) */
-    void finish(tls_t tls, tid_t thread_id);
+    /// Log a thread detach event
+    virtual void detach(tls_t tls, tid_t thread_id) = 0;
 
-    /** Return name of detector */
-    const char * name();
+    /// Log a thread exit event (detached thread)
+    virtual void finish(tls_t tls, tid_t thread_id) = 0;
 
-    /** Return version of detector */
-    const char * version();
+    /// Return name of detector
+    virtual const char * name() = 0;
 
-}
+    /// Return version of detector
+    virtual const char * version() = 0;
+};
+
+/// create a new detector instance
+extern "C" __declspec(dllexport) Detector * CreateDetector();

@@ -15,10 +15,10 @@
 
 namespace drace {
 	namespace module {
-		/** Encapsulates and enriches a dynamorio module_data_t struct */
+		/// Encapsulates and enriches a dynamorio module_data_t struct
 		class Metadata {
 		public:
-			/* Flags describing characteristics of a module */
+			/// Flags describing characteristics of a module
 			enum MOD_TYPE_FLAGS : uint8_t {
 				/// no information available
 				UNKNOWN = 0x0,
@@ -30,7 +30,7 @@ namespace drace {
 				SYNC = 0x4 | MANAGED
 			};
 
-			/** Instrumentation Level Flags */
+			/// Instrumentation Level Flags
 			enum INSTR_FLAGS : uint8_t {
 				NONE = 0,
 				SYMBOLS = 1,
@@ -49,8 +49,7 @@ namespace drace {
 
 		private:
 			/**
-			* Determines if the module is a managed-code module
-			* using the PE header
+			* \brief Determines if the module is a managed-code module using the PE header
 			*/
 			void tag_module();
 
@@ -70,7 +69,7 @@ namespace drace {
 				}
 			}
 
-			/** Copy constructor, duplicates dr module data */
+			/// Copy constructor, duplicates dr module data
 			Metadata(const Metadata & other) :
 				base(other.base),
 				end(other.end),
@@ -82,7 +81,7 @@ namespace drace {
 				info = dr_copy_module_data(other.info);
 			}
 
-			/** Move constructor, moves dr module data */
+			/// Move constructor, moves dr module data
 			Metadata(Metadata && other) :
 				base(other.base),
 				end(other.end),

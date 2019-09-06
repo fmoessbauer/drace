@@ -14,11 +14,13 @@
 #include "ipc/SMData.h"
 
 namespace drace {
-	/** Provides routines to perform communication with MSR */
+
+	/// Provides routines to perform communication with MSR
 	class MSR {
 	public:
-		/** Wait using a heart_beat until the result is returned */
+		/// Wait using a heart_beat until the result is returned
 		static void wait_heart_beat();
+
 		static bool connect();
 		static bool attach(const module_data_t * mod);
 		static bool request_symbols(const module_data_t * mod);

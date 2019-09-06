@@ -18,6 +18,7 @@
 #include "ringbuffer.hpp"
 
 namespace ipc {
+    /// Wrapped detector event for serializing
 	namespace event {
 		enum class Type : uint8_t {
 			NONE,

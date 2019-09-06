@@ -16,8 +16,10 @@ namespace drace {
 	struct per_thread_t;
 
 	namespace funwrap {
+
+        /// Provides callbacks for certain events, triggered by DRace
 		class event {
-			/* Arguments of a WaitForMultipleObjects call */
+			/// Arguments of a WaitForMultipleObjects call
 			struct wfmo_args_t {
 				DWORD          ncount;
 				BOOL           waitall;
@@ -57,7 +59,7 @@ namespace drace {
 			// Mutex Events
 			// ------------
 
-			/** Get addr of mutex and flush the mem-ref buffer */
+			/// Get addr of mutex and flush the mem-ref buffer
 			static void get_arg(void *wrapctx, OUT void **user_data);
 			static void get_arg_dotnet(void *wrapctx, OUT void **user_data);
 
@@ -74,7 +76,8 @@ namespace drace {
 			static void mutex_read_unlock(void *wrapctx, OUT void **user_data);
 
 #ifdef WINDOWS
-			/** WaitForSingleObject Windows API call (experimental)
+			/**
+            * \brief WaitForSingleObject Windows API call (experimental)
 			* \warning the mutex parameter is the Handle ID of the mutex and not
 			*          a memory location
 			* \warning the return value is a DWORD (aka 32bit unsigned integer)
@@ -84,21 +87,26 @@ namespace drace {
 			static void wait_for_single_obj(void *wrapctx, void *mutex);
 
 			static void wait_for_mo_getargs(void *wrapctx, OUT void **user_data);
-			/** WaitForMultipleObjects Windows API call (experimental) */
+
+			/// WaitForMultipleObjects Windows API call (experimental)
 			static void wait_for_mult_obj(void *wrapctx, void *user_data);
-            /** Thread start event on caller side*/
+
+            /// Thread start event on caller side
             static void thread_start(void *wrapctx, void *user_data);
 #endif
-			/** Call this function before a thread-barrier is entered */
+			/// Call this function before a thread-barrier is entered */
 			static void barrier_enter(void *wrapctx, void **user_data);
-			/** Call this function after a thread-barrier is passed */
+
+			/// Call this function after a thread-barrier is passed */
 			static void barrier_leave(void *wrapctx, void *user_data);
-			/** Call this function after a thread-barrier is passed or the waiting was cancelled */
+
+			/// Call this function after a thread-barrier is passed or the waiting was cancelled
 			static void barrier_leave_or_cancel(void *wrapctx, void *user_data);
 
-			/** Custom annotated happens before */
+			/// Custom annotated happens before
 			static void happens_before(void *wrapctx, void *identifier);
-			/** Custom annotated happens after */
+
+			/// Custom annotated happens after
 			static void happens_after(void *wrapctx, void *identifier);
 		};
 	}

@@ -28,14 +28,16 @@
 
 namespace drace {
 	/**
-	* Covers application memory tracing.
+	* \brief Covers application memory tracing.
+    *
 	* Responsible for adding all instrumentation code (except function wrapping).
 	* Callbacks from the code-cache are handled in this class.
 	* Memory-Reference analysis is done here.
 	*/
 	class MemoryTracker {
 	public:
-		/** Single memory reference */
+
+		/// Single memory reference
 		struct mem_ref_t {
 			void    *addr;
             app_pc   pc;
@@ -43,13 +45,14 @@ namespace drace {
             bool     write;
 		};
 
-		/** Maximum number of references between clean calls */
+		/// Maximum number of references between clean calls
 		static constexpr int MAX_NUM_MEM_REFS = 64;
 		static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
 
-		/** aggregate frequent pc's on this granularity (2^n bytes)*/
+		/// aggregate frequent pc's on this granularity (2^n bytes)
 		static constexpr unsigned HIST_PC_RES = 10;
-		/** update code-cache after this number of flushes (must be power of two) */
+
+		/// update code-cache after this number of flushes (must be power of two)
 		static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
 		std::atomic<int> flush_active{ false };
@@ -57,10 +60,12 @@ namespace drace {
 	private:
 		size_t page_size;
 
-		/** Code Caches */
+		/// Code Caches
 		app_pc cc_flush;
 
-		/** Number of instrumented calls, used for sampling
+		/**
+         * \brief Number of instrumented calls, used for sampling
+         *
 		 * \Warning This number is racily incremented by design.
 		 *          Hence, use the largest native type to avoid partial loads
 		 */
@@ -71,7 +76,7 @@ namespace drace {
 
 		module::Cache mc;
 
-		// fast random numbers for sampling
+		/// fast random numbers for sampling
 		std::mt19937 _prng;
 
 		/// maximum length of period
@@ -109,7 +114,7 @@ namespace drace {
 			instr_t *instr, bool for_trace,
 			bool translating, void *user_data);
 
-		/** Returns true if this reference should be sampled */
+		/// Returns true if this reference should be sampled
 		inline bool sample_ref(per_thread_t * data) {
 			--data->sampling_pos;
 			if (params.sampling_rate == 1)
@@ -121,7 +126,7 @@ namespace drace {
 			return false;
 		}
 
-		/** Sets the detector state based on the sampling condition */
+		/// Sets the detector state based on the sampling condition
 		inline void switch_sampling(per_thread_t * data) {
 			if (!sample_ref(data)) {
 				data->enabled = false;
@@ -134,31 +139,34 @@ namespace drace {
 			}
 		}
 
-		/** enable the detector (does not affect sampling) */
+		/// enable the detector (does not affect sampling)
 		static inline void enable(per_thread_t * data) {
 			// access the lower part of the 64bit uint
 			*((uint32_t*)(&(data->enabled))) = true;
 		}
 
-		/** disable the detector (does not affect sampling) */
+		/// disable the detector (does not affect sampling)
 		static inline void disable(per_thread_t * data) {
 			// access the lower part of the 64bit uint
 			*((uint32_t*)(&(data->enabled))) = false;
 		}
 
-		/** enable the detector during this scope */
+		/// enable the detector during this scope
 		static inline void enable_scope(per_thread_t * data) {
 			if (--data->event_cnt <= 0) {
 				enable(data);
 			}
 		}
-		/** disable the detector during this scope */
+
+		/// disable the detector during this scope
 		static inline void disable_scope(per_thread_t * data) {
 			disable(data);
 			data->event_cnt++;
 		}
 
-		/** Update the code cache and remove items where the instrumentation should change.
+		/**
+         * \brief Update the code cache and remove items where the instrumentation should change.
+         *
 		 * We only consider traces, as other parts are not performance critical
 		 */
 		static void update_cache(per_thread_t * data);
@@ -171,17 +179,19 @@ namespace drace {
 		void code_cache_exit(void);
 
 		// Instrumentation
-		/** Inserts a jump to clean call if a flush is pending */
+		/// Inserts a jump to clean call if a flush is pending
 		void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
 			reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
 
-		/** Instrument all memory accessing instructions */
+		/// Instrument all memory accessing instructions
 		void instrument_mem_full(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
-		/** Instrument all memory accessing instructions (fast-mode)*/
+
+		/// Instrument all memory accessing instructions (fast-mode)
 		void instrument_mem_fast(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref, bool write);
 
 		/**
-		* instrument_mem is called whenever a memory reference is identified.
+		* \brief instrument_mem is called whenever a memory reference is identified.
+        *
 		* It inserts code before the memory reference to to fill the memory buffer
 		* and jump to our own code cache to call the clean_call when the buffer is full.
 		*/
@@ -189,7 +199,7 @@ namespace drace {
 			instrument_mem_fast(drcontext, ilist, where, ref, write);
 		}
 
-		/** Read data from external CB and modify instrumentation / detection accordingly */
+		/// Read data from external CB and modify instrumentation / detection accordingly
 		void handle_ext_state(per_thread_t * data);
 
 		void update_sampling();

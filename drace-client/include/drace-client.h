@@ -23,6 +23,13 @@ namespace drace {
 
     /// parse CLI arguments
     static void parse_args(int argc, const char **argv);
+
+    /// load and initialize detector
+    static void register_detector(
+        int argc,
+        const char **argv,
+        const std::string & detector_name);
+
     /// register sinks for race reporting
     static void register_report_sinks();
     /// output current runtime configuration

@@ -20,9 +20,14 @@
 namespace drace {
 	/// application function wrapping
 	namespace funwrap {
+
+        /// type of the pre-call callback
 		using wrapcb_pre_t = void(void *, void **);
+
+        /// type of the post-call callback
 		using wrapcb_post_t = void(void *, void *);
 
+        /// information that is passed to a function wrapper
 		struct wrap_info_t {
 			const module_data_t * mod;
 			wrapcb_pre_t        * pre;

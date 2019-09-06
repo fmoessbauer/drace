@@ -19,7 +19,7 @@
 
 namespace drace {
 	namespace sink {
-		/** A race exporter which creates a valgrind valkyrie compatible xml output */
+		/// A race exporter which creates a valgrind valkyrie compatible xml output
 		class Valkyrie : public Sink {
 		public:
 			using TimePoint = std::chrono::system_clock::time_point;

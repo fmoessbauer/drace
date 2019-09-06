@@ -12,16 +12,18 @@
 
 #include <atomic>
 #include <thread>
+#include <mutex>
 #ifdef DEBUG
 #include <iostream>
 #endif
 
 namespace ipc {
     /**
-    * Simple mutex implemented as a spinlock
-    * implements interface of std::mutex
+    * \brief Simple mutex implemented as a spinlock
+    *
+    * implements interface of \ref std::mutex
     */
-    class spinlock {
+    class spinlock : public std::mutex {
         std::atomic_flag _flag{ false };
     public:
         inline void lock() noexcept

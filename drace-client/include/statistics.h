@@ -24,7 +24,8 @@
 
 namespace drace {
 	/**
-	* Stores and processes per-thread and global statistics.
+	* \brief Stores and processes per-thread and global statistics.
+    *
 	* Instrumentation classes can use this information
 	* to adapt to workload.
 	*/
