@@ -6,7 +6,7 @@
 DRace is a data-race detector for windows applications which uses DynamoRIO
 to dynamically instrument a binary at runtime.
 It does not require any preparations like instrumentation of the binary to check.
-While the detector should work with all binaries that use the POSIX synchronization API,
+While the detector should work with all binaries that use the Windows synchronization API,
 we focus on applications written in C and C++.
 Experimental support for hybrid applications containing native and Dotnet parts
 is implemented as well.
@@ -70,84 +70,61 @@ drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- applic
 
 ```
 SYNOPSIS
-        drace-client.dll [-c <config>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
+        drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
-                         <stacksz>] [--delay-syms] [--sync-mode] [--fast-mode] [--suplevel
-                         <sample-rate>] [--xml-file <filename>] [--out-file <filename>] [--logfile
-                         <filename>] [--extctrl] [--brkonrace] [--version] [-h] [--heap-only]
-
+                         <stacksz>] [--no-annotations] [--delay-syms] [--suplevel <level>]
+                         [--xml-file <filename>] [--out-file <filename>] [--logfile <filename>]
+                         [--extctrl] [--brkonrace] [--stats] [--version] [-h] [--heap-only]
 OPTIONS
         DRace Options
             -c, --config <config>
                     config file (default: drace.ini)
-
+            -d, --detector <detector>
+                    race detector (default: tsan)
             sampling options
                 -s, --sample-rate <sample-rate>
                     sample each nth instruction (default: no sampling)
-
                 -i, --instr-rate <instr-rate>
                     instrument each nth instruction (default: no sampling, 0: no instrumentation)
-
             analysis scope
                 --lossy
                     dynamically exclude fragments using lossy counting
-
                 --lossy-flush
                     de-instrument flushed segments (only with --lossy)
-
                 --excl-traces
                     exclude dynamorio traces
-
                 --excl-stack
                     exclude stack accesses
-
                 --excl-master
                     exclude first thread
-
             --stacksz <stacksz>
-                    size of callstack used for race-detection (must be in [1,16], default: 10)
-
+                    size of callstack used for race-detection (must be in [1,31], default: 31)
             --no-annotations
                     disable code annotation support
-
             --delay-syms
                     perform symbol lookup after application shutdown
-
-            --sync-mode
-                    flush all buffers on a sync event (instead of participating only)
-
-            --fast-mode
-                    DEPRECATED: inverse of sync-mode
-
             --suplevel <level>
                     suppress similar races (0=detector-default, 1=unique top-of-callstack entry,
                     default: 1)
-
             data race reporting
                 --xml-file, -x <filename>
                     log races in valkyries xml format in this file
-
                 --out-file, -o <filename>
                     log races in human readable format in this file
-
             --logfile, -l <filename>
                     write all logs to this file (can be null, stdout, stderr, or filename)
-
             --extctrl
                     use second process for symbol lookup and state-controlling (required for Dotnet)
-
             --brkonrace
                     abort execution after first race is found (for testing purpose only)
-
+            --stats display per-thread statistics on thread-exit
             --version
                     display version information
-
             -h, --usage
                     display help
-
-        Detector (TSAN) Options
+        Detector Options
             --heap-only
-                    only analyze heap memory
+                    only analyze heap memory (not supported currently)
 ```
 
 ### Externally Controlling DRace
@@ -246,7 +223,7 @@ A sample VisualStudio `CMakeSettings.json` is given here:
   "inheritEnvironments": [ "msvc_x64_x64" ],
   "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
   "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake -DDRACE_DETECTOR=tsan",
+  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake",
   "buildCommandArgs": "-v",
   "ctestCommandArgs": ""
 }
@@ -270,8 +247,6 @@ DRace is shipped with the following detector backends:
 - tsan (internal ThreadSanitizer)
 - extsan (external ThreadSanitizer, WIP)
 - dummy (no detection at all)
-
-To select which detector is build, set the `-DDRACE_DETECTOR=<value>` CMake flag.
 
 **tsan**
 

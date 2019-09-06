@@ -1,13 +1,17 @@
-#  /*
-#   * DRace-GUI: A graphical report generator for DRace
-#   *
-#   * Copyright 2019 Siemens AG
-#   *
-#   * Authors:
-#   *   <Philip Harr> <philip.harr@siemens.com>
-#   *
-#   * SPDX-License-Identifier: MIT
-# */
+# 
+# DRace-GUI: A graphical report generator for DRace
+# 
+# Copyright 2019 Siemens AG
+# 
+# Authors:
+#   <Philip Harr> <philip.harr@siemens.com>
+# 
+# SPDX-License-Identifier: MIT
+#
+
+## \package draceGUIUnitTest
+## \brief Unit tests for draceGUI
+
 import unittest
 import pathlib
 import draceGUI as gui

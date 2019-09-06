@@ -19,7 +19,7 @@
 #include <string>
 #include <functional>
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 #include <dr_api.h>
 #include <drwrap.h>
 #include <drutil.h>

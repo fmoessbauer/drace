@@ -19,7 +19,7 @@
 namespace drace {
 	/// data-race exporter
 	namespace sink {
-		/** A Race exporter which creates human readable output */
+		/// A Race exporter which creates human readable output
 		class HRText : public Sink {
 		public:
 			using self_t = HRText;

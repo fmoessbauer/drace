@@ -18,7 +18,7 @@
 #include <dr_tools.h>
 #include <hashtable.h>
 
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 #include "memory-tracker.h"
 #include "Module.h"
@@ -136,12 +136,12 @@ namespace drace {
 			// 1. Flush all threads (except this thread)
 			// 2. Fork thread
 			LOG_TRACE(data->tid, "Missed a fork, do it now");
-			detector::fork(
+			detector->fork(
                 runtime_tid.load(std::memory_order_relaxed),
-                static_cast<detector::tid_t>(data->tid),
+                static_cast<Detector::tid_t>(data->tid),
                 &(data->detector_data));
             // arc between parent thread and this thread
-            detector::happens_after(data->detector_data, (void*)data->tid);
+            detector->happens_after(data->detector_data, (void*)data->tid);
             clear_buffer();
             return;
 		}
@@ -183,11 +183,11 @@ namespace drace {
 					}
 
 					if (mem_ref->write) {
-						detector::write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					else {
-						detector::read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++(data->stats->proc_refs);
@@ -256,7 +256,7 @@ namespace drace {
 
         flush_all_threads(data, true, false);
 
-        detector::join(runtime_tid.load(std::memory_order_relaxed), static_cast<detector::tid_t>(data->tid));
+        detector->join(runtime_tid.load(std::memory_order_relaxed), static_cast<Detector::tid_t>(data->tid));
 
         // as this is a exclusive lock and this is the only place
         // where stats are combined, we use it
@@ -334,8 +334,8 @@ namespace drace {
 			}
 		}
 
-		// Do not instrument if block is frequent
-		if (for_trace && instrument_bb) {
+		// Do not instrument if block is frequent TODO: check correctness
+		if (params.lossy_flush && for_trace && instrument_bb) {
 			per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 			if (pc_in_freq(data, bb_addr)) {
 		        instrument_bb = INSTR_FLAGS::NONE;
@@ -343,7 +343,7 @@ namespace drace {
 		}
 
 		// Avoid temporary allocation by using ptr-value directly
-		*user_data = (void*)instrument_bb;
+        *user_data = (void*) instrument_bb;
 		return DR_EMIT_DEFAULT;
 	}
 
@@ -355,7 +355,7 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
-		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint8_t>(user_data));
+		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint64_t>(user_data));
 		// we treat all atomic accesses as reads
 		bool instr_is_atomic{ false };
 
@@ -366,9 +366,9 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		if (instrument_instr & INSTR_FLAGS::STACK) {
-			// Instrument ShadowStack
+			// Instrument ShadowStack TODO: This sometimes crashes in Dotnet modules
             if (ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data))
-                return DR_EMIT_DEFAULT;
+                return DR_EMIT_MUST_END_TRACE;
 		}
 
 		if (!(instrument_instr & INSTR_FLAGS::MEMORY))

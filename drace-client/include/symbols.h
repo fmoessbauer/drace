@@ -18,6 +18,7 @@
 
 namespace drace {
 
+    /// Information related to a symbol
 	class SymbolLocation {
 	public:
 		app_pc          pc{ 0 };
@@ -71,7 +72,7 @@ namespace drace {
 		}
 	};
 
-	/** Symbol Access Lib Functions */
+	/// Symbol Access Lib Functions
 	class Symbols {
 		/* Maximum distance between a pc and the first found symbol */
 		static constexpr std::ptrdiff_t max_distance = 32;

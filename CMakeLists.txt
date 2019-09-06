@@ -104,8 +104,11 @@ if(${Doxygen_FOUND})
 		"${PROJECT_SOURCE_DIR}/ManagedResolver/include/prebuild/*"
 		"${PROJECT_SOURCE_DIR}/test/*"
 		"${PROJECT_SOURCE_DIR}/bench/*"
-		"${PROJECT_SOURCE_DIR}/vendor/*")
-	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "README.md")
+		"${PROJECT_SOURCE_DIR}/vendor/*"
+        "${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
+        "${PROJECT_SOURCE_DIR}/tools/drace-gui/draceGUIUnitTest.py"
+        "${PROJECT_SOURCE_DIR}/node_modules/*")
+	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 	
 	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
 	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)

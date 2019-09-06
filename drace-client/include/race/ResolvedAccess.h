@@ -13,19 +13,19 @@
 #include <vector>
 
 #include "symbols.h"
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 namespace drace {
     namespace race {
         /**
-         * Race access entry with symbolized callstack information
+         * \brief Race access entry with symbolized callstack information
          */
-        class ResolvedAccess : public detector::AccessEntry {
+        class ResolvedAccess : public Detector::AccessEntry {
         public:
             std::vector<SymbolLocation> resolved_stack;
 
-            ResolvedAccess(const detector::AccessEntry & e)
-                : detector::AccessEntry(e)
+            ResolvedAccess(const Detector::AccessEntry & e)
+                : Detector::AccessEntry(e)
             {
                 std::copy(e.stack_trace, e.stack_trace + e.stack_size, this->stack_trace);
             }

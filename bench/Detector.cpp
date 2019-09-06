@@ -10,7 +10,7 @@
  */
 
 #include <benchmark/benchmark.h>
-#include <detector/detector_if.h>
+#include <detector/Detector.h>
 
 #include <iostream>
 

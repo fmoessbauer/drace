@@ -1,13 +1,16 @@
-# /*
-#  * DRace-GUI: A graphical report generator for DRace
-#  *
-#  * Copyright 2019 Siemens AG
-#  *
-#  * Authors:
-#  *   <Philip Harr> <philip.harr@siemens.com>
-#  *
-#  * SPDX-License-Identifier: MIT
-#  */
+# 
+# DRace-GUI: A graphical report generator for DRace
+# 
+# Copyright 2019 Siemens AG
+# 
+# Authors:
+#   <Philip Harr> <philip.harr@siemens.com>
+# 
+# SPDX-License-Identifier: MIT
+#
+
+## \package draceGUI
+## \brief Python XML to HTML report converter for the better visualization of drace result data
 
 
 
