@@ -478,10 +478,16 @@ void detector::deallocate(
 
 
 
-//TODO
-void detector::detach(tls_t tls, tid_t thread_id){}
-/** Log a thread exit event (detached thread) */
-void detector::finish(tls_t tls, tid_t thread_id){}
+void detector::detach(tls_t tls, tid_t thread_id){
+    /// \todo This is currently not supported
+    return;
+}
+/** Log a thread exit event of a detached thread) */
+void detector::finish(tls_t tls, tid_t thread_id){
+    ///just delete thread from list, no backward sync needed
+    std::lock_guard<ipc::spinlock>lg_t(fasttrack::t_lock);
+    fasttrack::threads.erase(thread_id);
+}
 
 
 
@@ -494,3 +500,6 @@ const char * detector::version() {
 }
 
 
+//extern "C" __declspec(dllexport) Detector * CreateDetector() {
+//    return new drace::detector::Fasttrack();
+//}

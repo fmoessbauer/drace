@@ -135,7 +135,7 @@
         </stack>
     </error>
     <error>
-        <unique>0x00</unique>
+        <unique>0x01</unique>
         <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
@@ -248,7 +248,7 @@
         </stack>
     </error>
     <error>
-        <unique>0x00</unique>
+        <unique>0x02</unique>
         <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
@@ -261,7 +261,7 @@
             <frame>
                 <ip>0x00007ff7dc682a30</ip>
                 <obj>gp-concurrent-inc.exe</obj>
-                <fn>inc</fn>
+                <fn>getStatus</fn>
                 <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>26</line>
@@ -314,7 +314,7 @@
             <frame>
                 <ip>0x00007ff7dc682947</ip>
                 <obj>gp-concurrent-inc.exe</obj>
-                <fn>dec</fn>
+                <fn>setValue</fn>
                 <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>32</line>
@@ -361,7 +361,7 @@
         </stack>
     </error>
     <error>
-        <unique>0x00</unique>
+        <unique>0x03</unique>
         <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
@@ -374,7 +374,7 @@
             <frame>
                 <ip>0x00007ff7dc682a30</ip>
                 <obj>gp-concurrent-inc.exe</obj>
-                <fn>inc</fn>
+                <fn>eval</fn>
                 <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>26</line>
@@ -427,7 +427,7 @@
             <frame>
                 <ip>0x00007ff7dc682947</ip>
                 <obj>gp-concurrent-inc.exe</obj>
-                <fn>dec</fn>
+                <fn>getPointer</fn>
                 <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>32</line>
@@ -474,7 +474,7 @@
         </stack>
     </error>
     <error>
-        <unique>0x00</unique>
+        <unique>0x04</unique>
         <tid>7308</tid>
         <threadname>Thread</threadname>
         <kind>Race</kind>
@@ -487,7 +487,7 @@
             <frame>
                 <ip>0x00007ff7dc682a30</ip>
                 <obj>gp-concurrent-inc.exe</obj>
-                <fn>inc</fn>
+                <fn>eval</fn>
                 <dir>c:\users\z00435hk\dev\drace\test\mini-apps\concurrent-inc</dir>
                 <file>main.cpp</file>
                 <line>26</line>

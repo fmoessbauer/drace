@@ -25,8 +25,8 @@
     - A read or write will never contain a tid which was not forked
     - A read can happen before a write
     - A happens after may arrive before a corresponding happens beore arrives
-    - A lock always will be acquired first, before it will be released
-
+    - A lock may be be released, before it will be acquired 
+    -> the last three bullet points must not cause a crash
 */
 
 
