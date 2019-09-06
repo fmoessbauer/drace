@@ -1,9 +1,16 @@
+#pragma once
+#ifndef THREADSTATE_H
+#define THREADSTATE_H
+
+
 #include <string>
 #include <vector>
 #include "vectorclock.h"
 #include "xmap.h"
 #include "xvector.h"
 
+
+class Fasttrack;
 
 class ThreadState : public VectorClock{
 private:
@@ -13,21 +20,30 @@ private:
     ///contains 'historic' stack traces of a r/w of a variable
     xmap<size_t, xvector<size_t>> read_write_traces;
 
+    Fasttrack* ft;
+
 public:
     ///own thread id
     uint32_t tid;
        
     ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
-    ThreadState::ThreadState(uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr) {
+    ThreadState::ThreadState(Fasttrack* ft_inst,  uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr) {
         tid = own_tid;
+        ft = ft_inst;
         uint32_t clock = 0;
+
         vc.insert(vc.end(), std::pair<uint32_t, uint32_t>(tid, clock));
         if (parent != nullptr) {
             //if parent exists vector clock
             vc = parent->vc;
         }
-    };
- 
+    }
+
+    ThreadState::~ThreadState() {
+        ///TODO bring this to work!!!
+        //ft->cleanup(tid);
+    }
+
     void pop_stack_element() {
        global_stack.pop_back();
     }
@@ -74,3 +90,4 @@ public:
     }
 
 };
+#endif // !THREADSTATE_H
