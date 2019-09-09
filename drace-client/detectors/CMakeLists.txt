@@ -10,3 +10,4 @@
 
 add_subdirectory("dummy")
 add_subdirectory("tsan")
+add_subdirectory("fasttrack")
