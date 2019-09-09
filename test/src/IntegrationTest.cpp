@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "DrIntegrationTest.h"
+#include "IntegrationTest.h"
 
 #include <iostream>
 #include <string>
@@ -20,25 +20,25 @@
 #include <cstdio>
 #endif
 
-std::string DrIntegration::drrun = "drrun.exe";
-std::string DrIntegration::drclient = "drace-client/drace-client.dll";
-bool DrIntegration::verbose = false;
+std::string Integration::drrun = "drrun.exe";
+std::string Integration::drclient = "drace-client/drace-client.dll";
+bool Integration::verbose = false;
 
 // Test cases
 
-TEST_P(FlagMode, ConcurrentInc) {
+TEST_P(DR, ConcurrentInc) {
 	run(GetParam(), "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
 }
-TEST_P(FlagMode, IncMutex) {
+TEST_P(DR, IncMutex) {
 	run(GetParam(), "mini-apps/inc-mutex/gp-inc-mutex.exe", 0, 0);
 }
-TEST_P(FlagMode, LockKinds) {
+TEST_P(DR, LockKinds) {
 	run(GetParam(), "mini-apps/lock-kinds/gp-lock-kinds.exe", 0, 0);
 }
-TEST_P(FlagMode, EmptyMain) {
+TEST_P(DR, EmptyMain) {
 	run(GetParam(), "mini-apps/empty-main/gp-empty-main.exe", 0, 0);
 }
-TEST_P(FlagMode, Atomics) {
+TEST_P(DR, Atomics) {
 	run(GetParam(), "mini-apps/atomics/gp-atomics.exe", 0, 0);
 }
 // TODO: Redesign test:
@@ -47,55 +47,55 @@ TEST_P(FlagMode, Atomics) {
 //TEST_P(FlagMode, RacyAtomics) {
 //	run(GetParam(), "mini-apps/atomics/gp-atomics.exe racy", 1, 10);
 //}
-TEST_P(FlagMode, Annotations) {
+TEST_P(DR, Annotations) {
 	run(GetParam(), "mini-apps/annotations/gp-annotations.exe", 0, 0);
 }
-TEST_P(FlagMode, DisabledAnnotations) {
+TEST_P(DR, DisabledAnnotations) {
 	run(GetParam(), "mini-apps/annotations/gp-annotations-racy.exe", 1, 5);
 }
 
 // Individual tests
 
-TEST_F(DrIntegration, DelayedLookup) {
+TEST_P(DR, DelayedLookup) {
     // with delayed lookup all races have to be cached,
     // hence make test more difficult by disabling suppressions
-    run("--delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 50);
+    run(std::string(GetParam()) + " --delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 50);
 }
 
-TEST_F(DrIntegration, ExclStack) {
-	run("--excl-stack", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+TEST_P(DR, ExclStack) {
+	run(std::string(GetParam()) + " --excl-stack", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
 }
 
-TEST_F(DrIntegration, ExcludeRaces) {
-	run("-c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
+TEST_P(DR, ExcludeRaces) {
+	run(std::string(GetParam()) + " -c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
 
 // Dotnet Tests
-TEST_F(DrIntegration, DotnetClrRacy) {
+TEST_P(DR, DotnetClrRacy) {
     // TODO: start msr
     auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
-    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
     msr_task.join();
 }
 
-TEST_F(DrIntegration, DotnetClrMonitor) {
+TEST_P(DR, DotnetClrMonitor) {
     // TODO: start msr
     auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
-    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe monitor", 0, 0);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe monitor", 0, 0);
     msr_task.join();
 }
 
-TEST_F(DrIntegration, DotnetClrMutex) {
+TEST_P(DR, DotnetClrMutex) {
     // TODO: start msr
     auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
-    run("--extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
     msr_task.join();
 }
 
 #ifdef XML_EXPORTER
-TEST_F(DrIntegration, ReportXML) {
+TEST_P(DR, ReportXML) {
     std::string filename("reportXML.xml");
-    run("--xml-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+    run(std::string(GetParam()) + " --xml-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
     {
         tinyxml2::XMLDocument doc;
         ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
@@ -114,9 +114,9 @@ TEST_F(DrIntegration, ReportXML) {
 }
 #endif
 
-TEST_F(DrIntegration, ReportText) {
+TEST_P(DR, ReportText) {
     std::string filename("reportText.txt");
-    run("--out-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
+    run(std::string(GetParam()) + " --out-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
     {
         std::ifstream fstr(filename);
         if (fstr.good()) {
@@ -131,6 +131,6 @@ TEST_F(DrIntegration, ReportText) {
 }
 
 // Setup value-parameterized tests
-INSTANTIATE_TEST_CASE_P(DrIntegration,
-	FlagMode,
-	::testing::Values(""));
+INSTANTIATE_TEST_CASE_P(Integration,
+    DR,
+	::testing::Values("-d tsan"));
