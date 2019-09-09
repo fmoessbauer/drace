@@ -1,5 +1,11 @@
-add_library("drace.detector.fasttrack" SHARED "fasttrack")
-target_link_libraries("drace.detector.fasttrack" "drace-common")
+set(SOURCES
+"src/fasttrack"
+"src/threadstate"
+"src/varstate")
+
+add_library("drace.detector.fasttrack" SHARED ${SOURCES})
+target_include_directories("drace.detector.fasttrack" PRIVATE "include")
+target_link_libraries("drace.detector.fasttrack" PRIVATE "drace-common")
 install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
 
 # copy detector dlls to drace-client binary dir

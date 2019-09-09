@@ -13,7 +13,7 @@ class VectorClock {
 
 public:
     ///vector clock which contains multiple thread ids, clocks
-    xmap<uint32_t, uint32_t> vc;
+    xmap<size_t, uint32_t> vc;
 
  
     ///return the thread id of the position pos of the vector clock
