@@ -55,8 +55,7 @@ public:
 
     ///deletes a vector clock entry, checks existance before
     void delete_vc(uint32_t tid) {
-        if (vc.find(tid) != vc.end())
-            vc.erase(tid);
+        vc.erase(tid);
     }
 
     ///returns known vector clock of tid

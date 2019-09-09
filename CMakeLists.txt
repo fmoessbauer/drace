@@ -115,7 +115,7 @@ if(${Doxygen_FOUND})
 
 	doxygen_add_docs(
 	    doc
-	    ${PROJECT_SOURCE_DIR}
+	    #${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
 
     if(${DRACE_INSTALL_DOCS})

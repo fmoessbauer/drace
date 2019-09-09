@@ -28,9 +28,10 @@
     - A lock may be be released, before it will be acquired 
     -> the last three bullet points must not cause a crash
 */
+/// Interface for a DRace compatible race detector
+class Detector {
+public:
 
-
-namespace detector {
     typedef unsigned long tid_t;
 
     /// type of a pointer to an entry in the thread local storage
