@@ -12,10 +12,12 @@
 #include "gtest/gtest.h"
 #include "detectorTest.h"
 
-HMODULE DetectorTest::detector_lib;
-Detector * DetectorTest::detector;
+util::WindowsLibLoader DetectorTest::_libtsan;
+util::WindowsLibLoader DetectorTest::_libdummy;
+Detector * DetectorTest::_dettsan;
+Detector * DetectorTest::_detdummy;
 
-TEST_F(DetectorTest, WR_Race) {
+TEST_P(DetectorTest, WR_Race) {
 	Detector::tls_t tls10;
 	Detector::tls_t tls11;
 
@@ -28,7 +30,7 @@ TEST_F(DetectorTest, WR_Race) {
 	EXPECT_EQ(num_races, 1);
 }
 
-TEST_F(DetectorTest, Mutex) {
+TEST_P(DetectorTest, Mutex) {
     Detector::tls_t tls20;
     Detector::tls_t tls21;
 
@@ -49,7 +51,7 @@ TEST_F(DetectorTest, Mutex) {
 	EXPECT_EQ(num_races, 0);
 }
 
-TEST_F(DetectorTest, ThreadExit) {
+TEST_P(DetectorTest, ThreadExit) {
 	Detector::tls_t tls30;
 	Detector::tls_t tls31;
 
@@ -65,7 +67,7 @@ TEST_F(DetectorTest, ThreadExit) {
 	EXPECT_EQ(num_races, 0);
 }
 
-TEST_F(DetectorTest, MultiFork) {
+TEST_P(DetectorTest, MultiFork) {
 	Detector::tls_t tls40;
 	Detector::tls_t tls41;
 	Detector::tls_t tls42;
@@ -77,7 +79,7 @@ TEST_F(DetectorTest, MultiFork) {
 	EXPECT_EQ(num_races, 0);
 }
 
-TEST_F(DetectorTest, HappensBefore) {
+TEST_P(DetectorTest, HappensBefore) {
 	Detector::tls_t tls50;
 	Detector::tls_t tls51;
 
@@ -92,7 +94,7 @@ TEST_F(DetectorTest, HappensBefore) {
 	EXPECT_EQ(num_races, 0);
 }
 
-TEST_F(DetectorTest, ForkInitialize) {
+TEST_P(DetectorTest, ForkInitialize) {
 	Detector::tls_t tls60;
 	Detector::tls_t tls61;
 
@@ -104,7 +106,7 @@ TEST_F(DetectorTest, ForkInitialize) {
 	EXPECT_EQ(num_races, 0);
 }
 
-TEST_F(DetectorTest, Barrier) {
+TEST_P(DetectorTest, Barrier) {
 	Detector::tls_t tls70;
 	Detector::tls_t tls71;
 	Detector::tls_t tls72;
@@ -141,7 +143,7 @@ TEST_F(DetectorTest, Barrier) {
 	EXPECT_EQ(num_races, 1);
 }
 
-TEST_F(DetectorTest, ResetRange) {
+TEST_P(DetectorTest, ResetRange) {
 	Detector::tls_t tls80;
 	Detector::tls_t tls81;
 
@@ -163,7 +165,7 @@ TEST_F(DetectorTest, ResetRange) {
 void callstack_funA() {};
 void callstack_funB() {};
 
-TEST_F(DetectorTest, RaceInspection) {
+TEST_P(DetectorTest, RaceInspection) {
     Detector::tls_t tls90, tls91;
 
     detector->fork(1, 90, &tls90);
@@ -226,3 +228,8 @@ TEST_F(DetectorTest, ShadowMemory) {
     detector->write(tls100, (void*)0x0100, (void*)(shadow_beg + 0xF), 8);
 }
 #endif
+
+// Setup value-parameterized tests
+INSTANTIATE_TEST_CASE_P(Interface,
+    DetectorTest,
+    ::testing::Values("tsan"));
