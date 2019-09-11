@@ -215,6 +215,7 @@ namespace drace {
 
         // Finalize Detector
         detector->finalize();
+        detector.reset();
 
         module_loader.reset();
 

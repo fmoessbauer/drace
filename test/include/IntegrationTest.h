@@ -20,7 +20,7 @@
 
 #include "globals.h"
 
-class DrIntegration : public ::testing::Test {
+class Integration : public ::testing::Test {
 private:
 	static std::string drrun;
 	static std::string drclient;
@@ -29,13 +29,13 @@ private:
 	std::string logfile;
 
 public:
-	DrIntegration() {
+	Integration() {
 		logfile = ::testing::UnitTest::GetInstance()->current_test_info()->name();
 		std::replace(logfile.begin(), logfile.end(), '/', '_');
 		logfile += ".log";
 	}
 
-	~DrIntegration() {
+	~Integration() {
 		std::remove(logfile.c_str());
 	}
 
@@ -111,6 +111,6 @@ public:
 	}
 };
 
-class FlagMode : public DrIntegration, public ::testing::WithParamInterface<const char*> {
+class DR : public Integration, public ::testing::WithParamInterface<const char*> {
 
 };

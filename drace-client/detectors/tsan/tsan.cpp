@@ -332,7 +332,7 @@ namespace drace {
             }
         };
     } // namespace detector
-} // namespace detector
+} // namespace drace
 
 extern "C" __declspec(dllexport) Detector * CreateDetector() {
     return new drace::detector::Tsan();
