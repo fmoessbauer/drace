@@ -59,6 +59,15 @@ public:
     virtual bool init(int argc, const char **argv, Callback rc_clb) = 0;
 
     /**
+    * \brief destruct detector
+    *
+    * The destructor might be implemented by sub-class to free resources
+    *
+    * \note before destruction, \ref finalize has to be called
+    */
+    virtual ~Detector() {}
+
+    /**
     * \brief Maps a new block of shadow memory.
     *
     * All memory accesses have to be inside a mapped block.
