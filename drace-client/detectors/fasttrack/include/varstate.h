@@ -4,7 +4,7 @@
 #include "vectorclock.h"
 #include "xmap.h"
 #include "threadstate.h"
-#include <memory>
+//#include <memory>
 
 class VarState  {
 
@@ -15,7 +15,7 @@ class VarState  {
     std::shared_ptr<ThreadState> r_tid;
 
     ///contains read_shared case all involved threads and clocks
-    std::unique_ptr <xmap< std::shared_ptr<ThreadState>, uint32_t >> vc;
+    std::unique_ptr <xmap< std::shared_ptr<ThreadState>, size_t >> vc;
    
 
 public:
@@ -26,15 +26,15 @@ public:
     size_t address;
 
     /// var size
-    uint32_t size;
+    size_t size;
 
     /// local clock of last write
-    int32_t w_clock;
+    size_t w_clock;
 
     /// local clock of last read
-    int32_t r_clock;
+    size_t r_clock;
 
-    VarState::VarState(size_t addr, uint32_t var_size);
+    VarState::VarState(size_t addr, size_t var_size);
 
 
     ///evaluates for write/write races through this and and access through t

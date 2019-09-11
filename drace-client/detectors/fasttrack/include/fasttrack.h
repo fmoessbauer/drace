@@ -5,6 +5,7 @@
 #include <iostream>
 #include <detector/Detector.h>
 #include <ipc/spinlock.h>
+#include <ipc/DrLock.h>
 #include "threadstate.h"
 #include "varstate.h"
 #include "xmap.h"
@@ -27,18 +28,25 @@ namespace drace {
             static constexpr int max_stack_size = 16;
 
             xmap<size_t, size_t> allocs;
-            xmap<size_t, VarState*> vars;
-            xmap<void*, VectorClock*> locks;
+            xmap<size_t, std::shared_ptr<VarState>> vars;
+            xmap<void*, std::shared_ptr<VectorClock>> locks;
             xmap<tid_ft, std::shared_ptr<ThreadState>> threads;
-            xmap<void*, VectorClock*> happens_states;
+            xmap<void*, std::shared_ptr<VectorClock>> happens_states;
             void * clb;
 
             //declaring order is also the acquiring order of the locks
-            ipc::spinlock t_lock;
+            /*ipc::spinlock t_lock;
             ipc::spinlock v_lock;
             ipc::spinlock l_lock;
             ipc::spinlock h_lock;
-            ipc::spinlock a_lock;
+            ipc::spinlock a_lock;*/
+
+            DrLock t_lock;
+            //DrLock v_lock;
+            //DrLock l_lock;
+            //DrLock h_lock;
+            //DrLock a_lock;
+
 
             void report_race(
                 tid_ft thr1, tid_ft thr2,
@@ -48,9 +56,9 @@ namespace drace {
 
 
 
-            void read(std::shared_ptr<ThreadState> t, VarState* v);
+            void read(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v);
 
-            void write(std::shared_ptr<ThreadState> t, VarState* v);
+            void write(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v);
 
             void create_var(size_t addr, size_t size);
 
@@ -66,34 +74,34 @@ namespace drace {
 
             void cleanup(size_t tid);
 
-            bool init(int argc, const char **argv, Callback rc_clb);
+            bool init(int argc, const char **argv, Callback rc_clb) override;
 
-            void finalize();
+            void finalize() override;
 
-            void read(tls_t tls, void* pc, void* addr, size_t size);
+            void read(tls_t tls, void* pc, void* addr, size_t size) override;
 
-            void write(tls_t tls, void* pc, void* addr, size_t size);
-
-
-            void func_enter(tls_t tls, void* pc);
-
-            void func_exit(tls_t tls);
+            void write(tls_t tls, void* pc, void* addr, size_t size) override;
 
 
-            void fork(tid_t parent, tid_t child, tls_t * tls);
+            void func_enter(tls_t tls, void* pc) override;
 
-            void join(tid_t parent, tid_t child);
-
-
-            void acquire(tls_t tls, void* mutex, int recursive, bool write);
-
-            void release(tls_t tls, void* mutex, bool write);
+            void func_exit(tls_t tls) override;
 
 
-            void happens_before(tls_t tls, void* identifier);
+            void fork(tid_t parent, tid_t child, tls_t * tls) override;
+
+            void join(tid_t parent, tid_t child) override;
+
+
+            void acquire(tls_t tls, void* mutex, int recursive, bool write) override;
+
+            void release(tls_t tls, void* mutex, bool write) override;
+
+
+            void happens_before(tls_t tls, void* identifier) override;
 
             /** Draw a happens-after edge between thread and identifier (optional) */
-            void happens_after(tls_t tls, void* identifier);
+            void happens_after(tls_t tls, void* identifier) override;
 
             void allocate(
                 /// ptr to thread-local storage of calling thread
@@ -104,7 +112,7 @@ namespace drace {
                 void*  addr,
                 /// size of memory block
                 size_t size
-            );
+            ) override;
 
             /** Log a memory deallocation*/
             void deallocate(
@@ -112,19 +120,19 @@ namespace drace {
                 tls_t tls,
                 /// begin of memory block
                 void* addr
-            );
+            ) override;
 
-            void detach(tls_t tls, tid_t thread_id);
+            void detach(tls_t tls, tid_t thread_id) override;
             /** Log a thread exit event of a detached thread) */
 
-            void finish(tls_t tls, tid_t thread_id);
+            void finish(tls_t tls, tid_t thread_id) override;
 
-            void map_shadow(void* startaddr, size_t size_in_bytes);
+            void map_shadow(void* startaddr, size_t size_in_bytes) override;
 
 
-            const char * name();
+            const char * name() override;
 
-            const char * version();
+            const char * version() override;
         };
 
     }

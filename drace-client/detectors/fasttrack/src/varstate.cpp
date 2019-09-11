@@ -1,6 +1,6 @@
 #include "varstate.h"
 
-VarState::VarState(size_t addr, uint32_t var_size)
+VarState::VarState(size_t addr, size_t var_size)
 :address(addr),
 size(var_size),
 w_clock(VAR_NOT_INIT),
@@ -101,7 +101,7 @@ void VarState::update(bool is_write, std::shared_ptr<ThreadState> thread) {
 
 ///sets read state to shared
 void VarState::set_read_shared(std::shared_ptr<ThreadState> thread) {
-    vc = std::make_unique<xmap<std::shared_ptr<ThreadState>, uint32_t>>();
+    vc = std::make_unique<xmap<std::shared_ptr<ThreadState>, size_t>>();
 
 
     vc->insert(vc->end(), { r_tid, r_clock });

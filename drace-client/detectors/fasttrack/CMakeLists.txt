@@ -5,8 +5,10 @@ set(SOURCES
 
 add_library("drace.detector.fasttrack" SHARED ${SOURCES})
 target_include_directories("drace.detector.fasttrack" PRIVATE "include")
-target_link_libraries("drace.detector.fasttrack" PRIVATE "drace-common")
+target_link_libraries("drace.detector.fasttrack" "drace-common")
 install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
+
+configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
 # copy detector dlls to drace-client binary dir
 add_custom_command(TARGET "drace.detector.fasttrack" POST_BUILD

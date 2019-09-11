@@ -1,7 +1,7 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
 #include "xmap.h"
-
+#include <memory>
 /**
     Implements a VectorClock.
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
@@ -35,6 +35,15 @@ public:
 
     ///updates this.vc with values of other.vc, if they're larger -> one way update
     void update(VectorClock* other) {
+        for (auto it = other->vc.begin(); it != other->vc.end(); it++)
+        {
+            if (it->second > get_vc_by_id(it->first)) {
+                update(it->first, it->second);
+            }
+        }
+    };
+
+    void update(std::shared_ptr<VectorClock> other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
             if (it->second > get_vc_by_id(it->first)) {

@@ -1,3 +1,14 @@
+/*
+*
+* - All create-functions are threadsafe
+*
+*
+*
+*
+*
+*
+*/
+
 #include "fasttrack.h"
 
 
@@ -8,15 +19,16 @@ namespace drace {
 
     namespace detector {
 
+        //function is not thread safe!
         void Fasttrack::report_race(
             Fasttrack::tid_ft thr1, Fasttrack::tid_ft thr2,
             bool wr1, bool wr2,
             size_t var,
             uint32_t clk1, uint32_t clk2)
         {
-            uint32_t var_size = 0;
+            size_t var_size = 0;
 
-            VarState* var_object = vars[var];
+            std::shared_ptr<VarState> var_object = vars[var];
             var_size = var_object->size;
 
             std::shared_ptr<ThreadState> thread1 = threads[thr1];
@@ -73,14 +85,20 @@ namespace drace {
         }
 
 
-
-        void Fasttrack::read(std::shared_ptr<ThreadState> t, VarState* v) {
+        ///function is thread_safe
+        void Fasttrack::read(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v) {
             //cannot happen in current implementation as rw increments clock, discuss
+            t_lock.write_lock();            
+
             if (t->get_self() == v->r_clock && t->tid == v->get_r_tid()) {//read same epoch, sane thread
+                
+                t_lock.write_unlock();
                 return;
             }
 
             if (v->r_clock == VarState::READ_SHARED && v->get_vc_by_id(t) == t->get_self() && v->get_vc_by_id(t) != 0) { //read shared same epoch
+                
+                t_lock.write_unlock();
                 return;
             }
 
@@ -96,28 +114,40 @@ namespace drace {
                     (v->get_r_tid() == t->tid     &&
                         v->r_clock < t->get_vc_by_id(v->get_r_tid())))//read exclusive
                 {
+                   
                     v->update(false, t);
                 }
                 else { // read gets shared
+                    
                     v->set_read_shared(t);
                 }
             }
             else {//read shared
+              
                 v->update(false, t);
-            }
 
+            }
+            t_lock.write_unlock();
         }
 
-        void Fasttrack::write(std::shared_ptr<ThreadState> t, VarState* v) {
+        ///function is thread safe
+        void Fasttrack::write(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v) {
+            t_lock.write_lock();
 
             if (v->w_clock == VarState::VAR_NOT_INIT) { //initial write, update var
+
+              
                 v->update(true, t);
+                t_lock.write_unlock();
+                
                 return;
             }
 
-            if (t->get_self() == v->w_clock &&
+          if (t->get_self() == v->w_clock &&
                 t->tid == v->get_w_tid())
             {//write same epoch
+                
+                t_lock.write_unlock();
                 return;
             }
 
@@ -141,22 +171,25 @@ namespace drace {
                 }
             }
             v->update(true, t);
+            t_lock.write_unlock();
         }
 
+
         void Fasttrack::create_var(size_t addr, size_t size) {
-            VarState* var = new VarState(addr, size);
-            v_lock.lock();
-            vars.insert(vars.end(), std::pair<size_t, VarState*>(addr, var));
-            v_lock.unlock();
+            auto var = std::make_shared<VarState>(addr, size);
+
+            vars.insert(vars.end(), { addr, var });
+
         }
 
         void Fasttrack::create_lock(void* mutex) {
-            VectorClock* lock = new VectorClock();
-            std::lock_guard<ipc::spinlock>lg_v(v_lock);
-            locks.insert(locks.end(), std::pair<void*, VectorClock*>(mutex, lock));
+           auto lock = std::make_shared<VectorClock>();
+            
+           // l_lock.write_lock();
+           locks.insert(locks.end(), { mutex, lock });
+           // l_lock.write_unlock();
         }
 
- 
 
         void Fasttrack::create_thread(Detector::tid_t tid, std::shared_ptr<ThreadState> parent) {
 
@@ -165,44 +198,48 @@ namespace drace {
                 new_thread = std::make_shared<ThreadState>(this, tid);
             }
             else {
-                std::lock_guard<ipc::spinlock>lg_t(t_lock);
+                t_lock.read_lock();
                 new_thread = std::make_shared<ThreadState>(this, tid, parent);
+                t_lock.read_unlock();
             }
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
+          //  t_lock.write_lock();
             threads.insert(threads.end(), { tid, new_thread });
-
+          //  t_lock.write_unlock();
         }
 
-
         void Fasttrack::create_happens(void* identifier) {
-            VectorClock * new_hp = new VectorClock();
-            std::lock_guard<ipc::spinlock>lg_h(h_lock);
-            happens_states.insert(happens_states.end(), std::pair<void*, VectorClock*>(identifier, new_hp));
+            auto new_hp = std::make_shared<VectorClock>();
+          //  h_lock.write_lock();
+            happens_states.insert(happens_states.end(), { identifier, new_hp });
+          //  h_lock.write_unlock();
         }
 
         void Fasttrack::create_alloc(size_t addr, size_t size) {
-            std::lock_guard<ipc::spinlock>lg_a(a_lock);
+         //   a_lock.write_lock();
             allocs.insert(allocs.end(), { addr, size });
+          //  a_lock.write_unlock();
         }
 
 
         void Fasttrack::cleanup(size_t tid) {
             //as ThreadState is destroyed delete all the entries from all vectorclocks
-            l_lock.lock();
+            t_lock.write_lock();
             for (auto it = locks.begin(); it != locks.end(); ++it) {
                 it->second->delete_vc(tid);
             }
-            l_lock.unlock();
-            t_lock.lock();
+            t_lock.write_unlock();
+
+            t_lock.write_lock();
             for (auto it = threads.begin(); it != threads.end(); ++it) {
                 it->second->delete_vc(tid);
             }
-            t_lock.unlock();
-            h_lock.lock();
+            t_lock.write_unlock();
+
+            t_lock.write_lock();
             for (auto it = happens_states.begin(); it != happens_states.end(); ++it) {
                 it->second->delete_vc(tid);
             }
-            h_lock.unlock();
+            t_lock.write_unlock();
         }
 
         bool Fasttrack::init(int argc, const char **argv, Callback rc_clb) {
@@ -211,25 +248,10 @@ namespace drace {
         }
 
         void Fasttrack::finalize() {
-
-            while (vars.size() > 0) {
-                auto it = vars.begin();
-                delete it->second;
-                vars.erase(it);
-            }
-            while (locks.size() > 0) {
-                auto it = locks.begin();
-                delete it->second;
-                locks.erase(it);
-            }
-            while (threads.size() > 0) {
-                threads.erase(threads.begin());
-            }
-            while (happens_states.size() > 0) {
-                auto it = happens_states.begin();
-                delete it->second;
-                happens_states.erase(it);
-            }
+            vars.clear();
+            locks.clear();
+            happens_states.clear();
+            threads.clear();
         }
 
 
@@ -245,13 +267,13 @@ namespace drace {
 
             auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            {
-                std::lock_guard<ipc::spinlock>lg_v(v_lock);
-
-                thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
-                read(thr, vars[var_address]);
-            }
+            /*
+            t_lock.write_lock();
+            thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
+            t_lock.write_unlock();
+            */
+            read(thr, vars[var_address]);
+            
         }
 
         void Fasttrack::write(tls_t tls, void* pc, void* addr, size_t size) {
@@ -261,14 +283,12 @@ namespace drace {
                 create_var(var_address, size);
             }
             auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
-
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            {
-                std::lock_guard<ipc::spinlock>lg_v(v_lock);
-
-                thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
-                write(thr, vars[var_address]);
-            }
+            /*
+            t_lock.write_lock();
+            thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
+            t_lock.write_unlock();
+            */
+            write(thr, vars[var_address]); //func is thread_safe     
         }
 
 
@@ -276,16 +296,17 @@ namespace drace {
             std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             size_t stack_element = reinterpret_cast<size_t>(pc);
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
+            t_lock.write_lock();
             thr->push_stack_element(stack_element);
-
+            t_lock.write_unlock();
         }
 
         void Fasttrack::func_exit(tls_t tls) {
             std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
+            t_lock.write_lock();
             thr->pop_stack_element(); //pops last stack element of current clock
+            t_lock.write_unlock();
         }
 
 
@@ -294,9 +315,9 @@ namespace drace {
             *tls = reinterpret_cast<void*>(child_size_t);
 
             if (threads.find(parent) != threads.end()) {
-                t_lock.lock();
+                t_lock.write_lock();
                 threads[parent]->inc_vc(); //inc vector clock for creation of new thread
-                t_lock.unlock();
+                t_lock.write_unlock();
                 create_thread(child, threads[parent]);
             }
             else {
@@ -306,13 +327,15 @@ namespace drace {
         }
 
         void Fasttrack::join(tid_t parent, tid_t child) {
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
             std::shared_ptr<ThreadState> del_thread = threads[child];
+
+            t_lock.write_lock();
             del_thread->inc_vc();
 
             //pass incremented clock of deleted thread to parent
-            auto ptr = del_thread.get();
+            auto ptr = del_thread;
             threads[parent]->update(ptr);
+            t_lock.write_unlock();
 
             threads.erase(child);
         }
@@ -323,16 +346,15 @@ namespace drace {
             if (locks.find(mutex) == locks.end()) {
                 create_lock(mutex);
             }
-
             auto id = reinterpret_cast<Fasttrack::tid_ft>(tls);
+            auto thr = threads.find(id);
+            auto lock = locks.find(mutex);
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            {
-                std::lock_guard<ipc::spinlock>lg_l(l_lock);
-                //propagate sync data from lock to thread
-                (threads[id])->update(locks[mutex]);
-            }
-
+            t_lock.write_lock();
+            
+            (thr->second)->update(lock->second);
+            
+            t_lock.write_unlock();
         }
 
         void Fasttrack::release(tls_t tls, void* mutex, bool write) {
@@ -342,18 +364,20 @@ namespace drace {
                 std::cerr << "lock is released but was never acquired by any thread" << std::endl;
 #endif
                 create_lock(mutex);
+                return;//as lock is empty (was never acquired), we can return here
             }
 
             auto id = reinterpret_cast<Fasttrack::tid_ft>(tls);
+            auto thr = threads.find(id);
+            auto lock = locks.find(mutex);
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            {
-                std::lock_guard<ipc::spinlock>lg_l(l_lock);
-                //increase vector clock and propagate to lock
-                threads[id]->inc_vc();
-                auto ptr = (threads[id]).get();
-                (locks[mutex])->update(ptr);
-            }
+            t_lock.write_lock();
+            (thr->second)->inc_vc();
+            
+             //increase vector clock and propagate to lock    
+            (lock->second)->update((thr->second));
+            t_lock.write_unlock();
+
         }
 
 
@@ -362,32 +386,31 @@ namespace drace {
                 create_happens(identifier);
             }
 
-            VectorClock* hp = happens_states[identifier];
+            std::shared_ptr<VectorClock> hp = happens_states[identifier];
             std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
-            {
-                std::lock_guard<ipc::spinlock>lg_h(h_lock);
-                //increment clock of thread and update happens state
-                thr->inc_vc();
-                hp->update(thr->tid, thr->get_self());
-            }
+            t_lock.write_lock();
+            (thr)->inc_vc();//increment clock of thread and update happens state
+
+            hp->update(thr->tid, thr->get_self());
+            t_lock.write_unlock();
+
+            
         }
 
         /** Draw a happens-after edge between thread and identifier (optional) */
         void Fasttrack::happens_after(tls_t tls, void* identifier) {
 
             if (happens_states.find(identifier) != happens_states.end()) {
-                VectorClock* hp = happens_states[identifier];
+                std::shared_ptr<VectorClock> hp = happens_states[identifier];
                 std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-                std::lock_guard<ipc::spinlock>lg_t(t_lock);
-                {
-                    std::lock_guard<ipc::spinlock>lg_h(h_lock);
-                    //update vector clock of thread with happened before clocks
-                    thr->update(hp);
-                }
+                t_lock.write_lock();
 
+                //update vector clock of thread with happened before clocks
+                thr->update(hp);
+
+                t_lock.write_unlock();
             }
             else {//create -> no happens_before can be synced
                 create_happens(identifier);
@@ -430,22 +453,20 @@ namespace drace {
             //variable is deallocated so varstate objects can be destroyed
             while (address < end_addr) {
                 if (vars.find(address) != vars.end()) {
-                    std::lock_guard<ipc::spinlock> lg_v(v_lock);
-                    {
-                        VarState* var = vars.find(address)->second;
-                        size_t var_size = var->size;
-                        address += var_size;
-                        delete var;
-                        vars.erase(address);
-                    }
+                    std::shared_ptr<VarState> var = vars.find(address)->second;
+
+                    t_lock.read_lock();
+                    size_t var_size = var->size;
+                    t_lock.read_unlock();
+                    address += var_size;
+
+                    vars.erase(address);
                 }
                 else {
                     address++;
                 }
             }
-            std::lock_guard<ipc::spinlock> lg_a(a_lock);
             allocs.erase(address);
-
 #endif  
         }
 
@@ -457,7 +478,6 @@ namespace drace {
         /** Log a thread exit event of a detached thread) */
         void Fasttrack::finish(tls_t tls, tid_t thread_id) {
             ///just delete thread from list, no backward sync needed
-            std::lock_guard<ipc::spinlock>lg_t(t_lock);
             threads.erase(thread_id);
         }
 
