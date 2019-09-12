@@ -8,13 +8,15 @@
 #include "xvector.h"
 
 namespace drace {
-    namespace detector{
+    namespace detector {
         class Fasttrack;
     }
 }
 
-class ThreadState : public VectorClock{
+
+class ThreadState : public VectorClock {
 private:
+
 
     ///contains the current stack trace of the thread
     xvector<size_t> global_stack;
@@ -25,11 +27,11 @@ private:
 
 public:
     ///own thread id
-    size_t tid;
+    uint64_t id;
        
     ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
     ThreadState::ThreadState(   drace::detector::Fasttrack* ft_inst,
-                                size_t own_tid, std::shared_ptr<ThreadState> parent = nullptr); 
+                                uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr); 
 
     ThreadState::~ThreadState(); 
 
@@ -44,8 +46,12 @@ public:
     ///increases own clock value
     void inc_vc();
 
-    ///returns own clock value
-    uint32_t get_self();
+    ///returns own clock value (upper bits) & thread (lower bits)
+    size_t return_own_id() const;
+
+    uint32_t get_tid() const;
+
+    uint32_t get_clock() const;
 
     ///returns a stack trace of a clock for handing it over to drace
     xvector<size_t> return_stack_trace(size_t address);

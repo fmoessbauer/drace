@@ -2,13 +2,12 @@
 #include "fasttrack.h"
 
 
-ThreadState::ThreadState(drace::detector::Fasttrack* ft_inst, size_t own_tid, std::shared_ptr<ThreadState> parent)
-:ft(ft_inst),
-tid(own_tid)
+ThreadState::ThreadState(drace::detector::Fasttrack* ft_inst, uint32_t own_tid, std::shared_ptr<ThreadState> parent)
+:ft(ft_inst)
 {
-    uint32_t clock = 0;
+    id = own_tid << 0xFFFFFFFFULL ;
 
-    vc.insert(vc.end(), std::pair<size_t, uint32_t>(tid, clock));
+    
     if (parent != nullptr) {
         //if parent exists vector clock
         vc = parent->vc;
@@ -16,6 +15,7 @@ tid(own_tid)
 }
 
 ThreadState::~ThreadState() {
+    uint32_t tid = id & VectorClock::bit_mask_64;
     ft->cleanup(tid);
 }
 
@@ -41,12 +41,21 @@ void ThreadState::set_read_write(size_t addr, size_t pc) {
 }
 
 void ThreadState::inc_vc() {
-    vc[tid]++;
+    id++; //as the lower 32 bits are clock just increase it by ine
 }
 
-uint32_t ThreadState::get_self() {
-    return vc[tid];
+size_t ThreadState::return_own_id() const{
+    return id;
 };
+
+uint32_t ThreadState::get_tid() const {
+    return id / ~(VectorClock::bit_mask_64);
+}
+
+uint32_t ThreadState::get_clock() const {
+    return id % VectorClock::bit_mask_64;
+}
+
 
 xvector<size_t> ThreadState::return_stack_trace(size_t address) {
 

@@ -35,14 +35,9 @@ namespace drace {
             void * clb;
 
             //declaring order is also the acquiring order of the locks
-            /*ipc::spinlock t_lock;
-            ipc::spinlock v_lock;
-            ipc::spinlock l_lock;
-            ipc::spinlock h_lock;
-            ipc::spinlock a_lock;*/
 
             DrLock t_lock;
-            //DrLock v_lock;
+            DrLock v_lock;
             //DrLock l_lock;
             //DrLock h_lock;
             //DrLock a_lock;
@@ -137,6 +132,7 @@ namespace drace {
 
     }
 }
+
 
 
 #endif // !FASTTRACK_H

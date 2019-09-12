@@ -7,6 +7,7 @@
 
 #define _DR_API_ true
 #define _STD_LOCK_ false
+#define _NO_LOCK_ false
 
 #if _DR_API_
 #define _STD_LOCK_ false
@@ -81,8 +82,25 @@ public:
        
     }
 #endif // _STD_LOCK_
+#if _NO_LOCK_
+public:
+    DrLock::DrLock() {}
 
+    DrLock::~DrLock() {    }
 
+    void read_lock() {
+        return;
+    }
+
+    void read_unlock() { return; }
+
+    void write_lock() { return; }
+
+    void write_unlock() { return; }
+
+    void write_trylock() { return; }
+#endif
 };
+
 
 #endif // !_DR_LOCK_H

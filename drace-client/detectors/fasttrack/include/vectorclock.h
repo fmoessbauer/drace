@@ -1,5 +1,6 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
+
 #include "xmap.h"
 #include <memory>
 /**
@@ -9,9 +10,8 @@
 
 
 class VectorClock {
-
-
 public:
+    static constexpr size_t bit_mask_64 = 0xFFFFFFFF00000000;
     ///vector clock which contains multiple thread ids, clocks
     xmap<size_t, uint32_t> vc;
 
@@ -37,7 +37,7 @@ public:
     void update(VectorClock* other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
-            if (it->second > get_vc_by_id(it->first)) {
+            if (it->second > get_clock_by_tid(it->first)) {
                 update(it->first, it->second);
             }
         }
@@ -46,7 +46,7 @@ public:
     void update(std::shared_ptr<VectorClock> other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
-            if (it->second > get_vc_by_id(it->first)) {
+            if (it->second > get_clock_by_tid(it->first)) {
                 update(it->first, it->second);
             }
         }
@@ -67,15 +67,25 @@ public:
         vc.erase(tid);
     }
 
+    size_t get_clock_by_tid(size_t tid) {
+        if (vc.find(tid) != vc.end()) {
+            return vc[tid] % bit_mask_64;
+        }
+        else {
+            return 0;
+        }
+    }
+
+
     ///returns known vector clock of tid
-    uint32_t get_vc_by_id(uint32_t tid) {
+    size_t get_id_by_tid(size_t tid) {
         if (vc.find(tid) != vc.end()) {
             return vc[tid];
         }
         else {
             return 0;
         }
-    };
+    }
 
 };
 
