@@ -11,6 +11,7 @@
  */
 
 #include <detector/Detector.h>
+#include <util/WindowsLibLoader.h>
 #include <string>
 #include <iostream>
 #include <Windows.h>
@@ -18,13 +19,17 @@
 static unsigned        num_races = 0;
 static Detector::Race  last_race;
 
-class DetectorTest : public ::testing::Test {
+class DetectorTest : public ::testing::TestWithParam<const char*>{
 
 protected:
-    static HMODULE detector_lib;
+    static util::WindowsLibLoader _libtsan;
+    static util::WindowsLibLoader _libdummy;
+
+    static Detector * _dettsan;
+    static Detector * _detdummy;
 
 public:
-    static Detector * detector;
+    Detector * detector;
 
 	// each callback-call increases num_races by two
 	static void callback(const Detector::Race* race) {
@@ -37,37 +42,35 @@ public:
 		num_races = 0;
         last_race = {};
 
-		if (std::string(detector->name()) != "TSAN") {
-			const char * _argv = "drace-tests.exe";
-			detector->init(1, &_argv, callback);
-		}
+        if (std::string(GetParam()).compare("tsan") == 0) {
+            detector = _dettsan;
+        }
+        else if (std::string(GetParam()).compare("dummy") == 0) {
+            detector = _detdummy;
+        }
 	}
+    ~DetectorTest() {
+        detector = nullptr;
+    }
 
-	~DetectorTest() {
-		if (std::string(detector->name()) != "TSAN") {
-			detector->finalize();
-		}
-	}
-
-protected:
 	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
-        detector_lib = LoadLibrary("drace.detector.tsan.dll");
-        auto create_detector = reinterpret_cast<decltype(CreateDetector)*>(GetProcAddress(detector_lib, "CreateDetector"));
-        detector = create_detector();
+        _libtsan.load("drace.detector.tsan.dll");
+        _libdummy.load("drace.detector.dummy.dll");
 
-		std::cout << "Detector: " << detector->name() << std::endl;
-		if (std::string(detector->name()) == "TSAN") {
-			const char * _argv = "drace-tests-tsan.exe";
-			detector->init(1, &_argv, callback);
-		}
+        decltype(CreateDetector)* create_tsan = _libtsan["CreateDetector"];
+        decltype(CreateDetector)* create_dummy = _libdummy["CreateDetector"];
+
+        _dettsan = create_tsan();
+        _detdummy = create_dummy();
+
+    	const char * _argv = "drace-tests.exe";
+		_dettsan->init(1, &_argv, callback);
+        _detdummy->init(1, &_argv, callback);
 	}
 
 	static void TearDownTestCase() {
-		if (std::string(detector->name()) == "TSAN") {
-			detector->finalize();
-		}
-        detector = nullptr;
-        FreeLibrary(detector_lib);
+        _dettsan->finalize();
+        _detdummy->finalize();
 	}
 };
