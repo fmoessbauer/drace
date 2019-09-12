@@ -44,20 +44,22 @@ add_custom_command(TARGET copy_files_testing POST_BUILD
 		"${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini"
 		"$<TARGET_FILE_DIR:drace-tests>/data/drace_excl.ini")
 
-if("${DRACE_DETECTOR}" STREQUAL "tsan")
-	# Copy tsan-common
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
-			"$<TARGET_FILE_DIR:drace-tests>")
-endif()
-
-# copy detector dll
+# copy tsan dll
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"$<TARGET_FILE:drace.detector.tsan>"
-		"$<TARGET_FILE_DIR:drace-tests>"
-	DEPENDS "drace.detector.tsan")
+		"$<TARGET_FILE_DIR:drace-tests>")
+
+# Copy tsan-common
+add_custom_command(TARGET copy_files_testing POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
+		"$<TARGET_FILE_DIR:drace-tests>")
+
+add_custom_command(TARGET copy_files_testing POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"$<TARGET_FILE:drace.detector.dummy>"
+		"$<TARGET_FILE_DIR:drace-tests>")
 
 # copy gtest shared lib
 add_custom_command(TARGET copy_files_testing POST_BUILD

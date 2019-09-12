@@ -194,7 +194,7 @@ Both the detector and a fully integrated DR-Client can be tested using the follo
 
 ```
 # Detector Tests
-./test/drace-tests.exe --dr <path-to-drrun.exe> --gtest_filter="Detector*"
+./test/drace-tests.exe --dr <path-to-drrun.exe> --gtest_filter="Interface*"
 # Integration Tests
 ./test/drace-tests.exe --dr <path-to-drrun.exe> --gtest_filter="Integration*"
 ```
