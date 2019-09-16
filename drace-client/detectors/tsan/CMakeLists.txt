@@ -1,5 +1,7 @@
 add_library("drace.detector.tsan" SHARED "tsan")
-target_link_libraries("drace.detector.tsan" "tsan-common" "drace-common")
+target_link_libraries("drace.detector.tsan"
+    PRIVATE "tsan-common"
+    PRIVATE "drace-common")
 install(TARGETS "drace.detector.tsan" RUNTIME DESTINATION bin COMPONENT Runtime)
 
 # copy detector dlls to drace-client binary dir
