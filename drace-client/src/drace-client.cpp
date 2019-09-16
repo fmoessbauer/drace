@@ -37,7 +37,7 @@
 #include "util/DrModuleLoader.h"
 
 #include "sink/hr-text.h"
-#ifdef XML_EXPORTER
+#ifdef DRACE_XML_EXPORTER
 #include "sink/valkyrie.h"
 #endif
 #include "MSR.h"
@@ -151,7 +151,7 @@ namespace drace {
 
         // when using direct lookup, we stream the races
         if (!params.delayed_sym_lookup) {
-#ifdef XML_EXPORTER
+#ifdef DRACE_XML_EXPORTER
             if (params.xml_file != "") {
                 auto target = std::make_shared<DrFile>(params.xml_file, DR_FILE_WRITE_OVERWRITE);
                 if (target->good()) {
@@ -277,7 +277,7 @@ namespace drace {
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
             (
-#ifndef DRACE_USE_LEGACY_API
+#ifdef DRACE_XML_EXPORTER
             (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
 #endif
                 (clipp::option("--out-file", "-o") & clipp::value("filename", params.out_file)) % "log races in human readable format in this file"
@@ -291,9 +291,6 @@ namespace drace {
             dr_printf("DRace, a dynamic data race detector\nVersion: %s\nHash: %s\n",
                 DRACE_BUILD_VERSION,
                 DRACE_BUILD_HASH);
-#ifdef DRACE_USE_LEGACY_API
-            dr_printf("Note:    Windows 7 compatible build with limited feature set\n");
-#endif
             dr_abort(); }) % "display version information"),
             clipp::option("-h", "--usage").set(display_help) % "display help"
                 );
@@ -360,10 +357,10 @@ namespace drace {
             params.delayed_sym_lookup ? "ON" : "OFF",
             params.config_file.c_str(),
             params.out_file != "" ? params.out_file.c_str() : "OFF",
-#ifdef DRACE_USE_LEGACY_API
-            "Unsupported (legacy build)",
-#else
+#ifdef DRACE_XML_EXPORTER
             params.xml_file != "" ? params.xml_file.c_str() : "OFF",
+#else
+            "Unsupported (build without XML exporter)",
 #endif
             params.stack_size,
             params.extctrl ? "ON" : "OFF",
@@ -389,7 +386,7 @@ namespace drace {
                     LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
                 }
             }
-#ifdef XML_EXPORTER
+#ifdef DRACE_XML_EXPORTER
             // Write XML output
             if (params.xml_file != "") {
                 auto race_xml_report = std::make_shared<DrFile>(params.xml_file, DR_FILE_WRITE_OVERWRITE);

@@ -49,11 +49,7 @@ target_compile_options("drace-client" PRIVATE -EHsc)
 # TinyXML2
 if(${DRACE_XML_EXPORTER})
 	target_link_libraries("drace-client" "tinyxml2")
-	target_compile_definitions("drace-client" PRIVATE -DXML_EXPORTER)
-endif()
-
-if(${DRACE_USE_LEGACY_API})
-    target_compile_definitions("drace-client" PRIVATE -DDRACE_USE_LEGACY_API)
+	target_compile_definitions("drace-client" PRIVATE -DDRACE_XML_EXPORTER)
 endif()
 
 # Copy settings ini to root dir
