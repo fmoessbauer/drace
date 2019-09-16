@@ -20,10 +20,10 @@ private:
 
 
     ///contains the current stack trace of the thread
-    xvector<size_t> global_stack;
+    //xvector<size_t> global_stack;
     ///contains 'historic' stack traces of a r/w of a variable
     //xmap<size_t, xvector<size_t>> read_write_traces;
-    xmap<size_t, size_t> read_write_traces;
+    //xmap<size_t, size_t> read_write_traces;
 
     drace::detector::Fasttrack* ft = nullptr;
 

@@ -7,8 +7,8 @@
 
 
 
-#define _DR_API_ false
-#define _STD_LOCK_ true
+#define _DR_API_ true
+#define _STD_LOCK_ false
 
 #if _DR_API_
 #define _STD_LOCK_ false

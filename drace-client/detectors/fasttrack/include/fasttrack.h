@@ -13,8 +13,8 @@
 #include "xvector.h"
 
 
-#define MAKE_OUTPUT false
-#define REGARD_ALLOCS true
+#define MAKE_OUTPUT true
+#define REGARD_ALLOCS false
 
 namespace drace {
 
@@ -40,6 +40,7 @@ namespace drace {
 
             DrLock t_lock;
             DrLock v_lock;
+            DrLock s_lock;
 
             //DrLock h_lock;
             //DrLock a_lock;

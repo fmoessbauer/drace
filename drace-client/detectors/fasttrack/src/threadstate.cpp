@@ -16,6 +16,7 @@ id(VectorClock::make_id(own_tid))
 ThreadState::~ThreadState() {
     uint32_t tid = VectorClock::make_tid(id);
     ft->cleanup(tid);
+    ft = nullptr;
 }
 
 

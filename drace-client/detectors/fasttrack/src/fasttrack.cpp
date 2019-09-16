@@ -34,12 +34,14 @@ namespace drace {
             var_size = var_object->size;
             v_lock.read_unlock();
 
+            s_lock.write_lock();
             std::shared_ptr<StackTrace> s1 = traces[thr1];
             std::shared_ptr<StackTrace> s2 = traces[thr2];
             xvector<size_t> stack1, stack2;
 
             stack1 = s1->return_stack_trace(var);
             stack2 = s2->return_stack_trace(var);
+            s_lock.write_unlock();
 
             if (stack1.size() > 16) {
                 auto end_stack = stack1.end();
@@ -242,8 +244,11 @@ namespace drace {
             vars.clear();
             locks.clear();
             happens_states.clear();
-            threads.clear();
+            allocs.clear();
             traces.clear();
+            while (threads.size() != 0) {
+                threads.erase(threads.begin());
+            }
         }
 
 
@@ -256,9 +261,10 @@ namespace drace {
 #endif
                 create_var(var_address, size);
             }
-
+            //s_lock.write_lock();
             auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             stack->set_read_write(var_address, reinterpret_cast<size_t>(pc));
+            //s_lock.write_unlock();
 
             auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             auto var = vars[var_address];
@@ -273,9 +279,10 @@ namespace drace {
             if (vars.find(var_address) == vars.end()) {
                 create_var(var_address, size);
             }
-
+            //s_lock.write_lock();
             auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             stack->set_read_write(var_address, reinterpret_cast<size_t>(pc));
+            //s_lock.write_unlock();
 
             auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             auto var = vars[var_address];
@@ -290,13 +297,16 @@ namespace drace {
             auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             size_t stack_element = reinterpret_cast<size_t>(pc);
 
+            s_lock.write_lock();
             stack->push_stack_element(stack_element);
+            s_lock.write_unlock();
         }
 
         void Fasttrack::func_exit(tls_t tls) {
             auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            s_lock.write_lock();
             stack->pop_stack_element(); //pops last stack element of current clock
-
+            s_lock.write_unlock();
         }
 
 
