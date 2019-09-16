@@ -15,6 +15,10 @@ set(SOURCES
 
 find_package(DynamoRIO 7.0 REQUIRED)
 
+# Bind detectors prior to first "configure_DynamoRIO_client"
+# as DR changes global vars
+add_subdirectory("detectors")
+
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories("drace-client" PRIVATE "include")
 
@@ -28,8 +32,6 @@ use_DynamoRIO_extension("drace-client" drreg)
 use_DynamoRIO_extension("drace-client" drwrap)
 use_DynamoRIO_extension("drace-client" drsyms)
 
-# Bind detectors
-add_subdirectory("detectors")
 target_link_libraries(
 	"drace-client"   # main drace-libs
 	"drace-common"   # drace and msr common libs
