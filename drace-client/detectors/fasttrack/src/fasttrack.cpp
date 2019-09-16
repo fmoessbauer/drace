@@ -34,12 +34,12 @@ namespace drace {
             var_size = var_object->size;
             v_lock.read_unlock();
 
-            std::shared_ptr<ThreadState> thread1 = threads[thr1];
-            std::shared_ptr<ThreadState> thread2 = threads[thr2];
+            std::shared_ptr<StackTrace> s1 = traces[thr1];
+            std::shared_ptr<StackTrace> s2 = traces[thr2];
             xvector<size_t> stack1, stack2;
 
-            stack1 = thread1->return_stack_trace(var);
-            stack2 = thread2->return_stack_trace(var);
+            stack1 = s1->return_stack_trace(var);
+            stack2 = s2->return_stack_trace(var);
 
             if (stack1.size() > 16) {
                 auto end_stack = stack1.end();
@@ -97,12 +97,13 @@ namespace drace {
                 return;
             }
 
-            //check!!!!
-            if (v->is_read_shared() == true && v->get_vc_by_thr(t) == t->return_own_id() && v->get_vc_by_thr(t) != 0) { //read shared same epoch
+            t_lock.read_lock();            
+            //check!!!! change double look-up!
+            if (v->is_read_shared()  && v->get_vc_by_thr(t) == t->return_own_id()) { //read shared same epoch
+                t_lock.read_unlock();
                 return;
             }
 
-            t_lock.read_lock();            
             if (v->is_wr_race(t))
             { // write-read race
                 report_race(v->get_w_tid(), t->get_tid(), true, false, v->address, v->get_w_clock(), t->get_clock());
@@ -147,7 +148,6 @@ namespace drace {
                 return;
             }
 
-
             //tids are different && and write epoch greater or equal than known epoch of other thread
             if (v->is_ww_race(t)) // write-write race
             {
@@ -176,16 +176,13 @@ namespace drace {
 
         void Fasttrack::create_var(size_t addr, size_t size) {
             auto var = std::make_shared<VarState>(addr, size);
-
             vars.insert(vars.end(), { addr, var });
-
         }
 
         void Fasttrack::create_lock(void* mutex) {
            auto lock = std::make_shared<VectorClock>();
            locks.insert(locks.end(), { mutex, lock });
         }
-
 
         void Fasttrack::create_thread(Detector::tid_t tid, std::shared_ptr<ThreadState> parent) {
 
@@ -199,6 +196,10 @@ namespace drace {
                 t_lock.read_unlock();
             }
             threads.insert(threads.end(), { tid, new_thread });
+
+            //creaate also a object to save the stack traces
+            traces.insert(traces.end(), { tid, std::make_shared<StackTrace>() });
+
         }
 
         void Fasttrack::create_happens(void* identifier) {
@@ -242,6 +243,7 @@ namespace drace {
             locks.clear();
             happens_states.clear();
             threads.clear();
+            traces.clear();
         }
 
 
@@ -255,14 +257,13 @@ namespace drace {
                 create_var(var_address, size);
             }
 
-            auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            stack->set_read_write(var_address, reinterpret_cast<size_t>(pc));
 
-            
-            t_lock.write_lock();
-            thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
-            t_lock.write_unlock();
-            
-            read(thr, vars[var_address]);
+            auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            auto var = vars[var_address];
+    
+            read(thr, var);
             
         }
 
@@ -272,35 +273,30 @@ namespace drace {
             if (vars.find(var_address) == vars.end()) {
                 create_var(var_address, size);
             }
+
+            auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            stack->set_read_write(var_address, reinterpret_cast<size_t>(pc));
+
             auto thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
-            
-            t_lock.write_lock();
-            thr->set_read_write(var_address, reinterpret_cast<size_t>(pc));
-            t_lock.write_unlock();
-            
-            write(thr, vars[var_address]); //func is thread_safe     
+            auto var = vars[var_address];
+
+
+            write(thr, var); //func is thread_safe     
         }
 
 
         void Fasttrack::func_enter(tls_t tls, void* pc) {
-            return;
 
-            std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             size_t stack_element = reinterpret_cast<size_t>(pc);
 
-            t_lock.write_lock();
-            thr->push_stack_element(stack_element);
-            t_lock.write_unlock();
+            stack->push_stack_element(stack_element);
         }
 
         void Fasttrack::func_exit(tls_t tls) {
-            return;
+            auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            stack->pop_stack_element(); //pops last stack element of current clock
 
-            std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
-
-            t_lock.write_lock();
-            thr->pop_stack_element(); //pops last stack element of current clock
-            t_lock.write_unlock();
         }
 
 
@@ -330,7 +326,7 @@ namespace drace {
             auto ptr = del_thread;
             threads[parent]->update(ptr);
             t_lock.write_unlock();
-
+            traces.erase(child);
             threads.erase(child);
         }
 
@@ -386,7 +382,7 @@ namespace drace {
             t_lock.write_lock();
             (thr)->inc_vc();//increment clock of thread and update happens state
 
-            hp->update(thr->get_tid(), thr->get_clock());
+            hp->update(thr->get_tid(), thr->return_own_id());
             t_lock.write_unlock();
 
             

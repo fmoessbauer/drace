@@ -11,9 +11,9 @@
 
 class VectorClock {
 public:
-    static constexpr size_t bit_mask_64 = 0xFFFFFFFF00000000;
+    static constexpr size_t multplier_64 = 0x100000000ull;
     ///vector clock which contains multiple thread ids, clocks
-    xmap<size_t, uint32_t> vc;
+    xmap<size_t, size_t> vc;
 
  
     ///return the thread id of the position pos of the vector clock
@@ -37,7 +37,7 @@ public:
     void update(VectorClock* other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
-            if (it->second > get_clock_by_tid(it->first)) {
+            if (it->second > get_id_by_tid(it->first)) {
                 update(it->first, it->second);
             }
         }
@@ -46,19 +46,19 @@ public:
     void update(std::shared_ptr<VectorClock> other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
-            if (it->second > get_clock_by_tid(it->first)) {
+            if (it->second > get_id_by_tid(it->first)) {
                 update(it->first, it->second);
             }
         }
     };
 
     ///updates vector clock entry or creates entry if non-existant
-    void update(uint32_t id, uint32_t clock) {
-        if (vc.find(id) == vc.end()) {
-            vc.insert(vc.end(), std::pair<uint32_t, uint32_t>(id, clock));
+    void update(size_t tid, size_t id) {
+        if (vc.find(tid) == vc.end()) {
+            vc.insert(vc.end(), { tid, id });
         }
         else {
-            if (vc[id] < clock) { vc[id] = clock; }
+            if (vc[tid] < id) { vc[tid] = id; }
         }
     };
 
@@ -69,7 +69,7 @@ public:
 
     size_t get_clock_by_tid(size_t tid) {
         if (vc.find(tid) != vc.end()) {
-            return vc[tid] % bit_mask_64;
+            return make_clock(vc[tid]);
         }
         else {
             return 0;
@@ -85,6 +85,18 @@ public:
         else {
             return 0;
         }
+    }
+
+    static const uint32_t make_tid(size_t id) {
+        return id / multplier_64;
+    }
+
+    static const uint32_t make_clock(size_t id) {
+        return id % multplier_64;
+    }
+
+    static const size_t make_id(size_t tid) {
+        return tid * VectorClock::multplier_64;
     }
 
 };

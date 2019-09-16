@@ -3,11 +3,12 @@
 
 
 #include<ipc/spinlock.h>
-#include "dr_api.h"
 
-#define _DR_API_ true
-#define _STD_LOCK_ false
-#define _NO_LOCK_ false
+
+
+
+#define _DR_API_ false
+#define _STD_LOCK_ true
 
 #if _DR_API_
 #define _STD_LOCK_ false
@@ -16,8 +17,11 @@
 #undef min
 #undef max
 
+#if _DR_API_
+#include "dr_api.h"
+#endif
 
-
+//implement  shared_timed_mutex if
 class DrLock {
 #if _DR_API_
 private:
@@ -82,24 +86,6 @@ public:
        
     }
 #endif // _STD_LOCK_
-#if _NO_LOCK_
-public:
-    DrLock::DrLock() {}
-
-    DrLock::~DrLock() {    }
-
-    void read_lock() {
-        return;
-    }
-
-    void read_unlock() { return; }
-
-    void write_lock() { return; }
-
-    void write_unlock() { return; }
-
-    void write_trylock() { return; }
-#endif
 };
 
 

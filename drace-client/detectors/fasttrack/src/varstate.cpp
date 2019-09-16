@@ -21,9 +21,10 @@ bool VarState::is_ww_race(std::shared_ptr<ThreadState> t) {
 
 ///evaluates for write/read races through this and and access through t
 bool VarState::is_wr_race(std::shared_ptr<ThreadState> t) {
+    auto var_tid = get_w_tid();
     if (get_write_id() != VAR_NOT_INIT &&
-        get_w_tid() != t->get_tid()       &&
-        get_w_clock() >= t->get_clock_by_tid(get_w_tid()))
+        var_tid != t->get_tid()       &&
+        get_w_clock() >= t->get_clock_by_tid(var_tid))
     {
         return true;
     }
@@ -66,42 +67,21 @@ size_t VarState::get_read_id() const {
 
 
 ///return tid of thread which last wrote this var
-size_t VarState::get_w_tid() const {
-    size_t mask;
-    if (sizeof(size_t) == 8) {
-        mask = VectorClock::bit_mask_64;
-    }
-/*    if (sizeof(size_t) == 4) {
-        mask = bit_mask_32;
-    }*/
-    return w_id / ~(mask);
+size_t VarState::get_w_tid() const {   
+    return VectorClock::make_tid(w_id);
 }
 
 ///return tid of thread which last read this var, if not read shared
 size_t VarState::get_r_tid() const{
-    size_t mask;
-    if (sizeof(size_t) == 8) {
-        mask = VectorClock::bit_mask_64;
-    }
- /*   if (sizeof(size_t) == 4) {
-        mask = bit_mask_32;
-    }*/
-    return r_id / ~(mask);
+    return VectorClock::make_tid(r_id);
 }
 
 size_t VarState::get_w_clock() const {
-    size_t mask;
-    if (sizeof(size_t) == 8) {
-        mask = VectorClock::bit_mask_64;
-    }
-    return w_id % mask;
+    return VectorClock::make_clock(w_id);
 }
+
 size_t VarState::get_r_clock() const {
-    size_t mask;
-    if (sizeof(size_t) == 8) {
-        mask = VectorClock::bit_mask_64;
-    }
-    return r_id % mask;
+    return VectorClock::make_clock(r_id);
 }
 
 ///updates the var state because of an new read or write access through an thread
@@ -173,7 +153,7 @@ size_t VarState::get_vc_by_thr(std::shared_ptr<ThreadState> t) const {
 
 size_t VarState::get_clock_by_thr(std::shared_ptr<ThreadState> t) const {
     if (vc->find(t) != vc->end()) {
-        return (*vc)[t] % VectorClock::bit_mask_64;
+        return VectorClock::make_clock((*vc)[t]);
     }
     return 0;
 }

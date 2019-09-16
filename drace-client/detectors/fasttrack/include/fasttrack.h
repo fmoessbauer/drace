@@ -8,6 +8,7 @@
 #include <ipc/DrLock.h>
 #include "threadstate.h"
 #include "varstate.h"
+#include "stacktrace.h"
 #include "xmap.h"
 #include "xvector.h"
 
@@ -32,13 +33,14 @@ namespace drace {
             xmap<void*, std::shared_ptr<VectorClock>> locks;
             xmap<tid_ft, std::shared_ptr<ThreadState>> threads;
             xmap<void*, std::shared_ptr<VectorClock>> happens_states;
+            xmap<size_t, std::shared_ptr<StackTrace>> traces;
             void * clb;
 
             //declaring order is also the acquiring order of the locks
 
             DrLock t_lock;
             DrLock v_lock;
-            //DrLock l_lock;
+
             //DrLock h_lock;
             //DrLock a_lock;
 
@@ -66,6 +68,7 @@ namespace drace {
             void create_alloc(size_t addr, size_t size);
 
         public:
+            Fasttrack() {};
 
             void cleanup(size_t tid);
 
