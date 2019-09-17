@@ -7,10 +7,3 @@ cd build-tsan-dr791
 cmake --build .
 cmake --build . --target install
 cd ..
-
-echo "=== Build drace-LEGACY-TSAN DR 7.91.x ==="
-cd build-legacy-tsan-dr791
-cmake --build .
-cmake --build . --target install
-cd ..
-

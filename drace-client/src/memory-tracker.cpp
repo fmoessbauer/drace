@@ -233,7 +233,6 @@ namespace drace {
         data->stats = (Statistics*) dr_thread_alloc(drcontext, sizeof(Statistics));
         new (data->stats) Statistics(data->tid);
 
-#ifndef DRACE_USE_LEGACY_API
         // TODO: emulate this for windows 7
 		// determin stack range of this thread
         if (runtime_tid.load(std::memory_order_relaxed) != data->tid) {
@@ -247,7 +246,6 @@ namespace drace {
             // TODO: this lookup cannot be performed on master thread, as state is not valid. See drmem#xxx
             LOG_NOTICE(data->tid, "stack range cannot be detected");
         }
-#endif
 	}
 
     void MemoryTracker::event_thread_exit(void *drcontext)
