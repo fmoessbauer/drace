@@ -1,20 +1,21 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
 
-#include "xmap.h"
+#include <unordered_map>
+#include <map>
 #include <memory>
 /**
     Implements a VectorClock.
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
 */
-
+template <class _al = std::allocator<std::pair<const size_t, size_t>>>
 
 class VectorClock {
 public:
     static constexpr size_t multplier_64 = 0x100000000ull;
     ///vector clock which contains multiple thread ids, clocks
-    xmap<size_t, size_t> vc;
 
+    std::unordered_map<size_t, size_t> vc;
  
     ///return the thread id of the position pos of the vector clock
     uint32_t get_thr(uint32_t pos) {
@@ -43,6 +44,7 @@ public:
         }
     };
 
+    ///updates this.vc with values of other.vc, if they're larger -> one way update
     void update(std::shared_ptr<VectorClock> other) {
         for (auto it = other->vc.begin(); it != other->vc.end(); it++)
         {
@@ -54,11 +56,12 @@ public:
 
     ///updates vector clock entry or creates entry if non-existant
     void update(size_t tid, size_t id) {
-        if (vc.find(tid) == vc.end()) {
-            vc.insert(vc.end(), { tid, id });
+        auto it = vc.find(tid);
+        if (it == vc.end()) {
+            vc.insert({ tid, id });
         }
         else {
-            if (vc[tid] < id) { vc[tid] = id; }
+            if (it->second < id) { it->second = id; }
         }
     };
 
@@ -68,8 +71,9 @@ public:
     }
 
     size_t get_clock_by_tid(size_t tid) {
-        if (vc.find(tid) != vc.end()) {
-            return make_clock(vc[tid]);
+        auto it = vc.find(tid);
+        if (it != vc.end()) {
+            return make_clock(it->second);
         }
         else {
             return 0;
@@ -79,8 +83,9 @@ public:
 
     ///returns known vector clock of tid
     size_t get_id_by_tid(size_t tid) {
-        if (vc.find(tid) != vc.end()) {
-            return vc[tid];
+        auto it = vc.find(tid);
+        if (it != vc.end()) {
+            return it->second;
         }
         else {
             return 0;

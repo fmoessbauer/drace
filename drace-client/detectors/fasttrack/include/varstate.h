@@ -16,30 +16,28 @@ class VarState  {
     std::shared_ptr<ThreadState> r_tid;
 
     ///contains read_shared case all involved threads and clocks
-    std::unique_ptr <xmap< std::shared_ptr<ThreadState>, size_t >> vc;
+    std::unique_ptr <xvector<std::pair<std::shared_ptr<ThreadState>, size_t >>> vc = nullptr;
 
-    bool read_shared = false;
+
+    /// the upper half of the bits are the thread id the lower half is the clock of the thread
+    std::atomic<size_t> w_id;
+    /// local clock of last read
+    std::atomic<size_t> r_id;
+
+    auto find_in_vec(std::shared_ptr<ThreadState>) const;
 
 public:
     //static constexpr int READ_SHARED = -2;
     static constexpr int VAR_NOT_INIT = 0;
-    //static constexpr size_t bit_mask_64 = 0xFFFFFFFF00000000;//32 ones & 32 zeros
-    //static constexpr size_t bit_mask_32 = 0xFFFF0000; //16 ones & 16 zeros
+
 
     ///var address
     const size_t address;
 
-    /// var size
-    const size_t size;
-
-    /// the upper half of the bits are the thread id the lower half is the clock of the thread
-    std::atomic<size_t> w_id;
-
-    /// local clock of last read
-    std::atomic<size_t> r_id;
+    /// var size //TO DO make smaller
+    const uint16_t size;
 
     VarState::VarState(size_t addr, size_t var_size);
-
 
     ///evaluates for write/write races through this and and access through t
     bool is_ww_race(std::shared_ptr<ThreadState> t);

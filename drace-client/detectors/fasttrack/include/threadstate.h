@@ -7,6 +7,7 @@
 #include "xmap.h"
 #include "xvector.h"
 #include <atomic>
+#include "tl_alloc.h"
 
 namespace drace {
     namespace detector {
@@ -15,21 +16,13 @@ namespace drace {
 }
 
 
-class ThreadState : public VectorClock {
+class ThreadState : public VectorClock<>{//tl_alloc<std::pair<const size_t, size_t>>> {
 private:
-
-
-    ///contains the current stack trace of the thread
-    //xvector<size_t> global_stack;
-    ///contains 'historic' stack traces of a r/w of a variable
-    //xmap<size_t, xvector<size_t>> read_write_traces;
-    //xmap<size_t, size_t> read_write_traces;
-
+    std::atomic<uint64_t> id;
     drace::detector::Fasttrack* ft = nullptr;
 
 public:
     ///own thread id
-    std::atomic<uint64_t> id;
        
     ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
     ThreadState::ThreadState(   drace::detector::Fasttrack* ft_inst,
@@ -48,6 +41,10 @@ public:
 
     uint32_t get_clock() const;
 
+    ///may be called after exitting of thread
+    void delete_vector() {
+        vc.clear();
+    }
 
 
 };

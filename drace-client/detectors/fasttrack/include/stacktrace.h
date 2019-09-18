@@ -1,10 +1,11 @@
 #include "xvector.h"
-#include "xmap.h"
+#include <unordered_map>
 #include <ipc/DrLock.h>
 
 class StackTrace {
     xvector<size_t> global_stack;
-    xmap<size_t,  std::pair<size_t, size_t>> read_write;
+    //holds var_address, pc, stack_length
+    std::unordered_map<size_t,  std::pair<size_t, size_t>> read_write;
 
 
     xvector<size_t> make_trace(std::pair<size_t, size_t> data) {
@@ -12,22 +13,26 @@ class StackTrace {
         this_stack.push_back(data.first);
         return this_stack;
 
-        /* len = data.second;
+        /*size_t len = data.second;
         xvector<size_t> this_stack(global_stack.begin(), (global_stack.begin() + len));
-        while (unsigned int pos = contains_zero(this_stack)) {
+
+        unsigned int pos = contains_zero(this_stack);
+        while (pos) {
             this_stack.erase(this_stack.begin() + pos);
             this_stack.erase(this_stack.begin() + pos - 1);
+            pos = contains_zero(this_stack);
         }
         this_stack.push_back(data.first);
         return this_stack;*/
     }
 
     unsigned int contains_zero(xvector<size_t> vec) {
-
+        unsigned int position = 0;
         for (auto it = vec.begin(); it != vec.end(); it++) {
             if (*it == 0) {
-                return std::distance(vec.begin(), it);
+                return position;
             }
+            position++;
         }
         return 0;
     }
@@ -35,12 +40,13 @@ class StackTrace {
 public:
 
     void pop_stack_element() {
-
+        return;
         global_stack.push_back(0);
 
     }
 
     void push_stack_element(size_t element) {
+        return;
         global_stack.push_back(element);
     }
 
@@ -50,7 +56,7 @@ public:
         uint32_t len = global_stack.size();
 
         if (read_write.find(addr) == read_write.end()) {
-            read_write.insert(read_write.end(), { addr, {pc, len} });
+            read_write.insert({ addr, {pc, len} });
         }
         else {
             read_write.find(addr)->second = { pc, len };

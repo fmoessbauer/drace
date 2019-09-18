@@ -2,90 +2,51 @@
 #define _DR_LOCK_H
 
 
-#include<ipc/spinlock.h>
-
-
-
-
-#define _DR_API_ true
-#define _STD_LOCK_ false
-
-#if _DR_API_
-#define _STD_LOCK_ false
-#endif
-
-#undef min
-#undef max
-
-#if _DR_API_
 #include "dr_api.h"
-#endif
+#include <shared_mutex>
+
+
+
 
 //implement  shared_timed_mutex if
-class DrLock {
-#if _DR_API_
+class DrLock : public std::shared_mutex {
 private:
-    void * lock;
-
+    void * this_lock;
 
 public:
-
-    DrLock::DrLock():lock(dr_rwlock_create()) {}
-
-    DrLock::~DrLock() {
-        dr_rwlock_destroy(lock);
+    inline DrLock() {
+        this_lock = dr_rwlock_create();
     }
 
-    void read_lock() {
-        dr_rwlock_read_lock(lock);
+    inline ~DrLock() {
+        dr_rwlock_destroy(this_lock);
     }
 
-    void read_unlock(){
-        dr_rwlock_read_unlock(lock);
+    inline void lock_shared() {
+        dr_rwlock_read_lock(this_lock);
     }
 
-    void write_lock(){
-        dr_rwlock_write_lock(lock);
+    inline bool try_lock_shared() {
+        //no dynamrio api function available
+        return false;
     }
 
-    void write_unlock(){
-        dr_rwlock_write_unlock(lock);
+    inline void unlock_shared() {
+        dr_rwlock_read_unlock(this_lock);
     }
 
-    void write_trylock(){
-        dr_rwlock_write_trylock(lock);
-    }
-#endif // _DR_API_
-
-#if _STD_LOCK_
-private:
-    ipc::spinlock lock;
-
-public:
-    DrLock::DrLock(){}
-
-    DrLock::~DrLock() {    }
-
-    void read_lock() {
-        lock.lock();
+    inline void lock() {
+        dr_rwlock_write_lock(this_lock);
     }
 
-    void read_unlock() {
-        lock.unlock();
+    inline void unlock() {
+        dr_rwlock_write_unlock(this_lock);
     }
 
-    void write_lock() {
-        lock.lock();
+    inline bool try_lock() {
+        return dr_rwlock_write_trylock(this_lock);
     }
 
-    void write_unlock() {
-        lock.unlock();
-    }
-
-    void write_trylock() {
-       
-    }
-#endif // _STD_LOCK_
 };
 
 

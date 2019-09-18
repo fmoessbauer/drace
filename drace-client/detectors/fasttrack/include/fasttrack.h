@@ -11,7 +11,8 @@
 #include "stacktrace.h"
 #include "xmap.h"
 #include "xvector.h"
-
+#include "ipc/xlock.h"
+#include <unordered_map>
 
 #define MAKE_OUTPUT true
 #define REGARD_ALLOCS false
@@ -23,27 +24,31 @@ namespace drace {
         class Fasttrack : public Detector {
         public:
             typedef size_t tid_ft;
+            typedef DrLock rwlock;
+            //typedef DrLock xlock;
+            
+
 
         private:    
             /// globals ///
             static constexpr int max_stack_size = 16;
 
-            xmap<size_t, size_t> allocs;
-            xmap<size_t, std::shared_ptr<VarState>> vars;
-            xmap<void*, std::shared_ptr<VectorClock>> locks;
-            xmap<tid_ft, std::shared_ptr<ThreadState>> threads;
-            xmap<void*, std::shared_ptr<VectorClock>> happens_states;
-            xmap<size_t, std::shared_ptr<StackTrace>> traces;
+            std::unordered_map<size_t, size_t> allocs;
+            std::unordered_map<size_t, std::shared_ptr<VarState>> vars;
+            std::unordered_map<void*, std::shared_ptr<VectorClock<>>> locks;
+            std::unordered_map<tid_ft, std::shared_ptr<ThreadState>> threads;
+            std::unordered_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
+            std::unordered_map<size_t, std::shared_ptr<StackTrace>> traces;
             void * clb;
 
             //declaring order is also the acquiring order of the locks
 
-            DrLock t_lock;
-            DrLock v_lock;
-            DrLock s_lock;
+            xlock t_lock;
+            rwlock a_lock;
+            //DrLock v_lock;
+            rwlock s_lock;
 
             //DrLock h_lock;
-            //DrLock a_lock;
 
 
             void report_race(
