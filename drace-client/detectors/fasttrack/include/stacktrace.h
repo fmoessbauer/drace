@@ -13,40 +13,41 @@ class StackTrace {
         this_stack.push_back(data.first);
         return this_stack;
 
-        /*size_t len = data.second;
-        xvector<size_t> this_stack(global_stack.begin(), (global_stack.begin() + len));
+       /* size_t len = data.second;
+        const auto begin = global_stack.begin();
+        const auto end = begin + len;
+        xvector<size_t> this_stack(global_stack);
 
-        unsigned int pos = contains_zero(this_stack);
-        while (pos) {
-            this_stack.erase(this_stack.begin() + pos);
-            this_stack.erase(this_stack.begin() + pos - 1);
-            pos = contains_zero(this_stack);
-        }
+
+        unsigned int flag = 1; // contains_zero(*this_stack);
+        unsigned int last_pos = 1;
+        do{
+            flag = 1;
+            for (auto it = this_stack.begin() ; it != this_stack.end(); it++) {
+                if (*it == 0 && this_stack.size() > 2) {
+                    auto e_it = this_stack.begin();
+                    this_stack.erase(e_it + (last_pos - 1), e_it + (last_pos +1));
+                    //last_pos -= 2;
+                    flag = 0;
+                    break;
+                }
+                last_pos++;
+            }
+        } while (flag == 0 && this_stack.size() > 0);
+
         this_stack.push_back(data.first);
         return this_stack;*/
     }
 
-    unsigned int contains_zero(xvector<size_t> vec) {
-        unsigned int position = 0;
-        for (auto it = vec.begin(); it != vec.end(); it++) {
-            if (*it == 0) {
-                return position;
-            }
-            position++;
-        }
-        return 0;
-    }
 
 public:
 
     void pop_stack_element() {
-        return;
         global_stack.push_back(0);
 
     }
 
     void push_stack_element(size_t element) {
-        return;
         global_stack.push_back(element);
     }
 

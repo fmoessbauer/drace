@@ -13,6 +13,7 @@
 #include "xvector.h"
 #include "ipc/xlock.h"
 #include <unordered_map>
+#include "parallel_hashmap/phmap.h"
 
 #define MAKE_OUTPUT true
 #define REGARD_ALLOCS false
@@ -25,30 +26,48 @@ namespace drace {
         public:
             typedef size_t tid_ft;
             typedef DrLock rwlock;
-            //typedef DrLock xlock;
             
 
 
         private:    
+          
             /// globals ///
             static constexpr int max_stack_size = 16;
 
-            std::unordered_map<size_t, size_t> allocs;
-            std::unordered_map<size_t, std::shared_ptr<VarState>> vars;
-            std::unordered_map<void*, std::shared_ptr<VectorClock<>>> locks;
-            std::unordered_map<tid_ft, std::shared_ptr<ThreadState>> threads;
-            std::unordered_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
-            std::unordered_map<size_t, std::shared_ptr<StackTrace>> traces;
+            ///these maps hold the various state objects together with the identifiers
+           
+
+            phmap::parallel_node_hash_map<size_t, size_t> allocs;
+            phmap::parallel_node_hash_map<size_t, std::shared_ptr<VarState>> vars;
+            phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
+
+            phmap::parallel_node_hash_map<tid_ft, std::shared_ptr<ThreadState>> threads;
+
+            phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
+            phmap::parallel_node_hash_map<size_t, std::shared_ptr<StackTrace>> traces;
+
+            ///holds the callback address to report a race to the drace-main 
             void * clb;
 
-            //declaring order is also the acquiring order of the locks
+            
 
+            ///those locks secure the .find and .insert actions to the according lists
+            xlock t_insert;
+            xlock v_insert;
+            xlock s_insert;
+            xlock l_insert;
+            xlock h_insert;
+
+            ///lock for the accesses of the var and thread objects
             xlock t_lock;
+
+            ///locks for the accesses of the allocation objects
             rwlock a_lock;
-            //DrLock v_lock;
+
+            ///locks for the accesses of the stacktrace objects
             rwlock s_lock;
 
-            //DrLock h_lock;
+            ///locks for the accesses of the happens_before and lock objects
 
 
             void report_race(
@@ -63,18 +82,20 @@ namespace drace {
 
             void write(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v);
 
-            void create_var(size_t addr, size_t size);
+            auto create_var(size_t addr, size_t size);
 
-            void create_lock(void* mutex);
+            auto create_lock(void* mutex);
 
             void create_thread(Detector::tid_t tid, std::shared_ptr<ThreadState> parent = nullptr);
 
-            void create_happens(void* identifier);
+            auto create_happens(void* identifier);
 
             void create_alloc(size_t addr, size_t size);
 
         public:
             Fasttrack() {};
+
+            //public functions are explained in the detector base class
 
             void cleanup(size_t tid);
 
