@@ -16,8 +16,8 @@ class VarState  {
     //std::shared_ptr<ThreadState> r_tid;
 
     ///contains read_shared case all involved threads and clocks
-    //std::unique_ptr <xvector<std::pair<std::shared_ptr<ThreadState>, size_t >>> vc = nullptr;
-    xvector<size_t> vc;
+    std::unique_ptr <xvector<size_t >> vc = nullptr;
+    //xvector<size_t> vc;
 
 
     /// the upper half of the bits are the thread id the lower half is the clock of the thread
@@ -58,14 +58,14 @@ public:
     size_t get_read_id() const;
 
     ///return tid of thread which last wrote this var
-    size_t get_w_tid() const;
+    uint32_t get_w_tid() const;
 
     ///return tid of thread which last read this var, if not read shared
-    size_t get_r_tid() const;
+    uint32_t get_r_tid() const;
 
-    size_t get_w_clock() const;
+    uint32_t get_w_clock() const;
 
-    size_t get_r_clock() const;
+    uint32_t get_r_clock() const;
 
     bool is_read_shared() const;
 
@@ -75,13 +75,13 @@ public:
     ///sets read state to shared
     void set_read_shared(size_t id);
 
-    ///if in read_shared state, then returns thread id of position pos in vector clock
-    uint32_t get_thr(uint32_t pos) const;
+    ///if in read_shared state, then returns id of position pos in vector clock
+    size_t get_sh_id(uint32_t pos) const;
 
     ///return stored clock value, which belongs to ThreadState t, 0 if not available
     size_t get_vc_by_thr(size_t t) ;
 
-    size_t get_clock_by_thr(size_t t) ;
+    uint32_t get_clock_by_thr(size_t t) ;
 
 
 };

@@ -12,7 +12,7 @@
 #include "xmap.h"
 #include "xvector.h"
 #include "ipc/xlock.h"
-#include <unordered_map>
+//#include <unordered_map>
 #include "parallel_hashmap/phmap.h"
 
 #define MAKE_OUTPUT true
@@ -28,14 +28,12 @@ namespace drace {
             typedef DrLock rwlock;
             
 
-
         private:    
           
             /// globals ///
             static constexpr int max_stack_size = 16;
 
             ///these maps hold the various state objects together with the identifiers
-           
 
             phmap::parallel_node_hash_map<size_t, size_t> allocs;
             phmap::parallel_node_hash_map<size_t, std::shared_ptr<VarState>> vars;
@@ -45,11 +43,9 @@ namespace drace {
 
             phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
             phmap::parallel_node_hash_map<size_t, std::shared_ptr<StackTrace>> traces;
-
+        
             ///holds the callback address to report a race to the drace-main 
             void * clb;
-
-            
 
             ///those locks secure the .find and .insert actions to the according lists
             xlock t_insert;
@@ -67,16 +63,12 @@ namespace drace {
             ///locks for the accesses of the stacktrace objects
             rwlock s_lock;
 
-            ///locks for the accesses of the happens_before and lock objects
-
 
             void report_race(
-                tid_ft thr1, tid_ft thr2,
+                uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
                 size_t var,
                 uint32_t clk1, uint32_t clk2);
-
-
 
             void read(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v);
 
@@ -97,7 +89,7 @@ namespace drace {
 
             //public functions are explained in the detector base class
 
-            void cleanup(size_t tid);
+            void cleanup(uint32_t tid);
 
             bool init(int argc, const char **argv, Callback rc_clb) override;
 
@@ -128,24 +120,10 @@ namespace drace {
             /** Draw a happens-after edge between thread and identifier (optional) */
             void happens_after(tls_t tls, void* identifier) override;
 
-            void allocate(
-                /// ptr to thread-local storage of calling thread
-                tls_t  tls,
-                /// current instruction pointer
-                void*  pc,
-                /// begin of allocated memory block
-                void*  addr,
-                /// size of memory block
-                size_t size
-            ) override;
+            void allocate(tls_t  tls, void*  pc, void*  addr, size_t size) override;
 
             /** Log a memory deallocation*/
-            void deallocate(
-                /// ptr to thread-local storage of calling thread
-                tls_t tls,
-                /// begin of memory block
-                void* addr
-            ) override;
+            void deallocate( tls_t tls, void* addr) override;
 
             void detach(tls_t tls, tid_t thread_id) override;
             /** Log a thread exit event of a detached thread) */
