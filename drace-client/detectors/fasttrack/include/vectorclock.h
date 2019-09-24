@@ -1,9 +1,9 @@
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
 
+#include "parallel_hashmap/phmap.h"
 #include <unordered_map>
-#include <map>
-#include <memory>
+
 /**
     Implements a VectorClock.
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
@@ -12,10 +12,11 @@ template <class _al = std::allocator<std::pair<const size_t, size_t>>>
 
 class VectorClock {
 public:
+    ///by dividing the id with the multiplier one gets the tid, with modulo one gets the clock
     static constexpr size_t multplier_64 = 0x100000000ull;
-    ///vector clock which contains multiple thread ids, clocks
 
-    std::unordered_map<size_t, size_t> vc;
+    ///vector clock which contains multiple thread ids, clocks
+    std::unordered_map<uint32_t, size_t> vc;
  
     ///return the thread id of the position pos of the vector clock
     uint32_t get_thr(uint32_t pos) {

@@ -2,10 +2,14 @@
 #include <unordered_map>
 #include <ipc/DrLock.h>
 
+
 class StackTrace {
+
     xvector<size_t> global_stack;
     //holds var_address, pc, stack_length
-    std::unordered_map<size_t,  std::pair<size_t, size_t>> read_write;
+    std::unordered_map<size_t,
+        std::pair<size_t, size_t>> read_write;
+
 
 
     xvector<size_t> make_trace(std::pair<size_t, size_t> data) {
@@ -54,7 +58,7 @@ public:
     ///when a var is written or read, it copies the stack and adds the pc of the
     ///r/w operation to be able to return the stack trace if a race was detected
     void set_read_write(size_t addr, size_t pc) {
-        uint32_t len = global_stack.size();
+        size_t len = global_stack.size();
 
         if (read_write.find(addr) == read_write.end()) {
             read_write.insert({ addr, {pc, len} });

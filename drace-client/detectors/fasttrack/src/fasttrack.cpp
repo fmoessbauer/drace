@@ -12,24 +12,21 @@
 #include "fasttrack.h"
 
 
-#define MAKE_OUTPUT false
-#define REGARD_ALLOCS true
-
 namespace drace {
 
     namespace detector {
 
         //function is not thread safe!
         void Fasttrack::report_race(
-            Fasttrack::tid_ft thr1, Fasttrack::tid_ft thr2,
+            uint32_t thr1, uint32_t thr2,
             bool wr1, bool wr2,
             size_t var,
             uint32_t clk1, uint32_t clk2)
         {
             xvector<size_t> stack1, stack2;
             {
-                std::shared_ptr<StackTrace> s1;// = traces[thr1];
-                std::shared_ptr<StackTrace> s2;// = traces[thr2];
+                std::shared_ptr<StackTrace> s1;
+                std::shared_ptr<StackTrace> s2;
                 std::lock_guard<rwlock> ex_l(s_lock);
                 auto it = traces.find(thr1);
                 if (it != traces.end()) {
@@ -50,14 +47,8 @@ namespace drace {
                 stack2 = s2->return_stack_trace(var);
             }
             
-            
-            
-            
-           
-
             size_t var_size = 0;
             var_size = vars[var]->size; //size is const member -> thread safe
-
 
             if (stack1.size() > 16) {
                 auto end_stack = stack1.end();
@@ -175,7 +166,7 @@ namespace drace {
                 }
             }
             else {//come here in read shared case
-                size_t act_tid = v->is_rw_sh_race(t);
+                uint32_t act_tid = v->is_rw_sh_race(t);
                 if (act_tid != 0) //read shared read-write race       
                 {
                     report_race(act_tid, tid, false, true, v->address, v->get_clock_by_thr(act_tid), t->get_clock());
@@ -224,7 +215,7 @@ namespace drace {
         }
 
 
-        void Fasttrack::cleanup(size_t tid) {
+        void Fasttrack::cleanup(uint32_t tid) {
             //as ThreadState is destroyed delete all the entries from all vectorclocks
             {
                 std::lock_guard<xlock> ex_l(t_lock);
