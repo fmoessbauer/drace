@@ -31,7 +31,7 @@ add_custom_target(copy_files_testing ALL
 )
 
 if(${DRACE_XML_EXPORTER})
-    target_compile_definitions(${TEST_TARGET} PRIVATE -DXML_EXPORTER)
+    target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
     target_link_libraries(${TEST_TARGET} "tinyxml2")
 	add_custom_command(TARGET copy_files_testing POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different

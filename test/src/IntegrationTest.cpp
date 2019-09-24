@@ -15,7 +15,7 @@
 #include <string>
 #include <future>
 
-#ifdef XML_EXPORTER
+#ifdef DRACE_XML_EXPORTER
 #include <tinyxml2.h>
 #include <cstdio>
 #endif
@@ -92,7 +92,7 @@ TEST_P(DR, DotnetClrMutex) {
     msr_task.join();
 }
 
-#ifdef XML_EXPORTER
+#ifdef DRACE_XML_EXPORTER
 TEST_P(DR, ReportXML) {
     std::string filename("reportXML.xml");
     run(std::string(GetParam()) + " --xml-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
