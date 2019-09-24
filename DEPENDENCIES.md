@@ -34,6 +34,13 @@ All submodules are located in the `vendor` directory.
 - [google/benchmark](https://github.com/google/benchmark)
 - [greq7mdp/parallel-hashmap](https://github.com/greg7mdp/parallel-hashmap)
 
+#### Detectors
+
+**Fasttrack**
+
+- Boost > 1.65
+
+
 ### Managed Symbol Resolver (MSR)
 
 **Mandatory:**
