@@ -13,13 +13,14 @@ if(${DRACE_ENABLE_CPPCHECK})
         CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
 endif()
 
+# TODO: remove extsan support or re-enable it
 # Link with tsan if detector is Extsan
-if(${DRACE_DETECTOR} STREQUAL "extsan")
+if("${DRACE_DETECTOR}" STREQUAL "extsan")
 	message("use tsan in msr")
 	target_compile_definitions("msr" PRIVATE -DEXTSAN)
 
 	target_sources("msr" PRIVATE "src/QueueHandler.cpp")
-	target_link_libraries("msr" "tsan-common" "sparsepp")
+	target_link_libraries("msr" "tsan-common" "parallel-hashmap")
 
 	add_custom_command(TARGET "msr" POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different

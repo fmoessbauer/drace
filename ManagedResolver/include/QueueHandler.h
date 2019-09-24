@@ -15,12 +15,12 @@
 
 #include "ipc/ExtsanData.h"
 #include "LoggerTypes.h"
-#include "sparsepp/spp.h"
+#include "parallel_hashmap/phmap.h"
 
 namespace msr {
 	class QueueHandler {
 		using Queue_t = ipc::queue_t;
-		using Map_t = spp::sparse_hash_map<uint64_t, void*>;
+		using Map_t = phmap::parallel_node_hash_map<uint64_t, void*>;
 
 		ipc::QueueMetadata & _qmeta;
 

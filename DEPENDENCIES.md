@@ -32,13 +32,13 @@ All submodules are located in the `vendor` directory.
 - [leethomason/tinyxml2](https://github.com/leethomason/tinyxml2)
 - [google/googletest](https://github.com/google/googletest)
 - [google/benchmark](https://github.com/google/benchmark)
+- [greq7mdp/parallel-hashmap](https://github.com/greg7mdp/parallel-hashmap)
 
 ### Managed Symbol Resolver (MSR)
 
 **Mandatory:**
 
 - [gabime/spdlog](https://github.com/gabime/spdlog)
-- [greq7mdp/sparsepp](https://github.com/greg7mdp/sparsepp)
 
 
 ## Internal Dependencies
