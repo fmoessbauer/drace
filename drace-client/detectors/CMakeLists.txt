@@ -10,4 +10,7 @@
 
 add_subdirectory("dummy")
 add_subdirectory("tsan")
-add_subdirectory("fasttrack")
+
+if(TARGET "parallel-hashmap")
+    add_subdirectory("fasttrack")
+endif()

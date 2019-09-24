@@ -60,14 +60,13 @@ target_include_directories("clipp" INTERFACE
 file(READ "muellan/clipp/LICENSE" LIC_FILE_CLIPP)
 file(APPEND ${LIC_FILE} "${LIC_SEP}muellan/clipp\n\n${LIC_FILE_CLIPP}")
 
-if(${DRACE_DETECTOR} STREQUAL "extsan")
-	# greg7mdp sparsepp
-	add_library("sparsepp" INTERFACE)
-	target_include_directories("sparsepp" INTERFACE
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greg7mdp/sparsepp>)
-	file(READ "greg7mdp/sparsepp/LICENSE" LIC_FILE_SPARSEPP)
-	file(APPEND ${LIC_FILE} "${LIC_SEP}greg7mdp/sparsepp\n\n${LIC_FILE_SPARSEPP}")
-endif()
+# Used in FastTrack2 detector backend
+# greg7mdp parallel-hashmap
+add_library("parallel-hashmap" INTERFACE)
+target_include_directories("parallel-hashmap" INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greg7mdp/parallel-hashmap>)
+file(READ "greg7mdp/parallel-hashmap/LICENSE" LIC_FILE_SPARSEPP)
+file(APPEND ${LIC_FILE} "${LIC_SEP}greg7mdp/parallel-hashmap\n\n${LIC_FILE_SPARSEPP}")
 
 # gabime/spdlog for logging
 add_library("spdlog" INTERFACE)

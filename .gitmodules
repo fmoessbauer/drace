@@ -22,3 +22,6 @@
 [submodule "vendor/muellan/clipp"]
 	path = vendor/muellan/clipp
 	url = https://github.com/muellan/clipp.git
+[submodule "vendor/greg7mdp/parallel-hashmap"]
+	path = vendor/greg7mdp/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git
