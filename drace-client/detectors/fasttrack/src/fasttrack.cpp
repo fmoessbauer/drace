@@ -23,7 +23,7 @@ namespace drace {
             size_t var,
             uint32_t clk1, uint32_t clk2)
         {
-            xvector<size_t> stack1, stack2;
+            std::list<size_t> stack1, stack2;
             {
                 std::shared_ptr<StackTrace> s1;
                 std::shared_ptr<StackTrace> s2;
@@ -50,17 +50,11 @@ namespace drace {
             size_t var_size = 0;
             var_size = vars[var]->size; //size is const member -> thread safe
 
-            if (stack1.size() > 16) {
-                auto end_stack = stack1.end();
-                auto begin_stack = stack1.end() - 16;
-
-                stack1 = xvector<size_t>(begin_stack, end_stack);
+            while(stack1.size() > 16) {
+                stack1.pop_front();
             }
             if (stack2.size() > 16) {
-                auto end_stack = stack2.end();
-                auto begin_stack = stack2.end() - 16;
-
-                stack2 = xvector<size_t>(begin_stack, end_stack);
+                stack2.pop_front();
             }
 
             Detector::AccessEntry access1;
@@ -91,7 +85,6 @@ namespace drace {
             Detector::Race race;
             race.first = access1;
             race.second = access2;
-
 
             ((void(*)(const Detector::Race*))clb)(&race);
         }

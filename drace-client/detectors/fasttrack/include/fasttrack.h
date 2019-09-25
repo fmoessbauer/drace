@@ -18,6 +18,7 @@
 #define MAKE_OUTPUT true
 #define REGARD_ALLOCS false
 
+
 namespace drace {
 
     namespace detector {
@@ -27,7 +28,6 @@ namespace drace {
             typedef size_t tid_ft;
             typedef DrLock rwlock;
             
-
         private:    
           
             /// globals ///
