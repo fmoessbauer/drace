@@ -1,11 +1,11 @@
-#include "mainwindow.h"
+#include "draceGUI.h"
 
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    MainWindow w;
+    DRaceGUI w;
     w.show();
     return a.exec();
 }

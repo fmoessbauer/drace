@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef DRACE_GUI_H
+#define DRACE_GUI_H
 
 #include <QMainWindow>
 #include <string>
@@ -9,16 +9,16 @@
 #include <QApplication>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui { class DRaceGUI; }
 QT_END_NAMESPACE
 
-class MainWindow : public QMainWindow
+class DRaceGUI : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    DRaceGUI(QWidget *parent = nullptr);
+    ~DRaceGUI();
 
 private slots:
     void on_dr_path_btn_clicked();
@@ -47,7 +47,7 @@ private slots:
     void on_tsan_btn_clicked();
 
 private:
-    Ui::MainWindow *ui;
+    Ui::DRaceGUI *ui;
     QString command[5];
     QString entire_command;
     QClipboard *clipboard = QApplication::clipboard();
