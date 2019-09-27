@@ -1,8 +1,17 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #ifndef VARSTATE_H
 #define VARSTATE_H
 
 #include "vectorclock.h"
-#include "xmap.h"
 #include "threadstate.h"
 #include <atomic>
 //#include <memory>
@@ -16,7 +25,7 @@ class VarState  {
     //std::shared_ptr<ThreadState> r_tid;
 
     ///contains read_shared case all involved threads and clocks
-    std::unique_ptr <xvector<size_t >> vc = nullptr;
+    std::unique_ptr <xvector<size_t >> shared_vc = nullptr;
     //xvector<size_t> vc;
 
 
@@ -25,6 +34,7 @@ class VarState  {
     /// local clock of last read
     std::atomic<size_t> r_id;
 
+    ///finds the entry with the tid in the shared vectorclock
     auto find_in_vec(size_t tid) ;
 
 public:
@@ -53,8 +63,10 @@ public:
     ///evaluates for read-shared/write races through this and and access through t
     uint32_t is_rw_sh_race(std::shared_ptr<ThreadState> t);
 
+    ///returns id of last write access
     size_t get_write_id() const;
 
+    ///returns id of last read access (when read is not shared)
     size_t get_read_id() const;
 
     ///return tid of thread which last wrote this var
@@ -63,10 +75,13 @@ public:
     ///return tid of thread which last read this var, if not read shared
     uint32_t get_r_tid() const;
 
+    ///returns clock value of thread of last write access
     uint32_t get_w_clock() const;
 
+    ///returns clock value of thread of last read access (returns 0 when read is shared)
     uint32_t get_r_clock() const;
 
+    ///returns true when read is shared
     bool is_read_shared() const;
 
     ///updates the var state because of an new read or write access through an thread

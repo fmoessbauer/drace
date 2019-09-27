@@ -1,13 +1,13 @@
 /*
-*
-*
-*
-*
-*
-*
-*
-*
-*/
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 #include "fasttrack.h"
 
@@ -50,10 +50,10 @@ namespace drace {
             size_t var_size = 0;
             var_size = vars[var]->size; //size is const member -> thread safe
 
-            while(stack1.size() > 16) {
+            while(stack1.size() > Detector::max_stack_size) {
                 stack1.pop_front();
             }
-            if (stack2.size() > 16) {
+            while (stack2.size() > Detector::max_stack_size) {
                 stack2.pop_front();
             }
 

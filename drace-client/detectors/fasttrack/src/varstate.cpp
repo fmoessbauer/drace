@@ -1,3 +1,13 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #include "varstate.h"
 
 VarState::VarState(size_t addr, size_t var_size)
@@ -43,7 +53,7 @@ bool VarState::is_rw_ex_race(std::shared_ptr<ThreadState> t) {
 
 ///evaluates for read-shared/write races through this and and access through t
 uint32_t VarState::is_rw_sh_race(std::shared_ptr<ThreadState> t) {
-    for (int i = 0; i < vc->size(); ++i) {
+    for (int i = 0; i < shared_vc->size(); ++i) {
         size_t act_id = get_sh_id(i);
         uint32_t act_tid = VectorClock<>::make_tid(act_id);
 
@@ -67,13 +77,13 @@ size_t VarState::get_read_id() const {
 
 
 auto VarState::find_in_vec(size_t tid)  {
-    for (auto it = vc->begin(); it != vc->end(); ++it) {
+    for (auto it = shared_vc->begin(); it != shared_vc->end(); ++it) {
         if (VectorClock<>::make_tid(*it)== tid) {
             return it;
         }
     }
 
-    return vc->end();
+    return shared_vc->end();
 }
 
 
@@ -101,17 +111,17 @@ void VarState::update(bool is_write, size_t id) {
     if (is_write) {
         
         r_id = VAR_NOT_INIT;      
-        vc.reset();;
+        shared_vc.reset();;
 
         w_id = id;
     }
     else {
-        if (vc != nullptr) {
+        if (shared_vc != nullptr) {
             auto it = find_in_vec(id);
-            if (it != vc->end()) {
-                vc->erase(it);
+            if (it != shared_vc->end()) {
+                shared_vc->erase(it);
             }
-            vc->push_back(id);
+            shared_vc->push_back(id);
         }
         else {
             r_id = id;
@@ -122,9 +132,9 @@ void VarState::update(bool is_write, size_t id) {
 ///sets read state to shared
 void VarState::set_read_shared(size_t id)
 {
-    vc = std::make_unique<xvector<size_t>>();
-    vc->push_back(r_id);
-    vc->push_back(id);
+    shared_vc = std::make_unique<xvector<size_t>>();
+    shared_vc->push_back(r_id);
+    shared_vc->push_back(id);
 
     r_id = VAR_NOT_INIT;
 
@@ -132,8 +142,8 @@ void VarState::set_read_shared(size_t id)
 
 ///if in read_shared state, then returns thread id of position pos in vector clock
 size_t VarState::get_sh_id(uint32_t pos) const {
-    if (pos < vc->size()) {
-        auto it = vc->begin();
+    if (pos < shared_vc->size()) {
+        auto it = shared_vc->begin();
         std::advance(it, pos);
         return *it;
     }
@@ -143,7 +153,7 @@ size_t VarState::get_sh_id(uint32_t pos) const {
 }
 
 bool VarState::is_read_shared() const{
-    return (vc ==  nullptr) ? false : true;
+    return (shared_vc ==  nullptr) ? false : true;
 }
 
 
@@ -151,7 +161,7 @@ bool VarState::is_read_shared() const{
 size_t VarState::get_vc_by_thr(size_t tid)  {
     auto it = find_in_vec(tid);
 
-    if (it != vc->end()) {
+    if (it != shared_vc->end()) {
         return *it;
     }
     return 0;
@@ -161,7 +171,7 @@ size_t VarState::get_vc_by_thr(size_t tid)  {
 uint32_t VarState::get_clock_by_thr(size_t tid)  {
 
     auto it = find_in_vec(tid);
-    if (it != vc->end()) {
+    if (it != shared_vc->end()) {
         return VectorClock<>::make_clock(*it);
     }
     return 0;

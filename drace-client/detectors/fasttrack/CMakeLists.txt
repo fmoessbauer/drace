@@ -19,6 +19,7 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     add_library("drace.detector.fasttrack" SHARED ${SOURCES})
+
     target_include_directories("drace.detector.fasttrack"
         PRIVATE "include"
         PRIVATE "${Boost_INCLUDE_DIR}")

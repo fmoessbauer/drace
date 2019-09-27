@@ -1,3 +1,13 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #ifndef VECTORCLOCK_H
 #define VECTORCLOCK_H
 
@@ -55,6 +65,8 @@ public:
         }
     };
 
+
+
     ///updates vector clock entry or creates entry if non-existant
     void update(size_t tid, size_t id) {
         auto it = vc.find(tid);
@@ -71,6 +83,8 @@ public:
         vc.erase(tid);
     }
 
+    ///returns known clock of tid
+    ///returns 0 if vc does not hold the tid
     size_t get_clock_by_tid(size_t tid) {
         auto it = vc.find(tid);
         if (it != vc.end()) {
@@ -82,7 +96,7 @@ public:
     }
 
 
-    ///returns known vector clock of tid
+    ///returns known whole id in vectorclock of tid
     size_t get_id_by_tid(size_t tid) {
         auto it = vc.find(tid);
         if (it != vc.end()) {
@@ -93,14 +107,18 @@ public:
         }
     }
 
+    ///returns the tid of the id
     static const uint32_t make_tid(size_t id) {
         return id / multplier_64;
     }
 
+    ///returns the clock of the id
     static const uint32_t make_clock(size_t id) {
         return id % multplier_64;
     }
 
+
+    ///creates an id with clock=0 from an tid
     static const size_t make_id(size_t tid) {
         return tid * VectorClock::multplier_64;
     }

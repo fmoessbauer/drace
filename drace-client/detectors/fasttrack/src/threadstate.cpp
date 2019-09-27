@@ -1,3 +1,13 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #include "threadstate.h"
 #include "fasttrack.h"
 
@@ -6,7 +16,7 @@ ThreadState::ThreadState(drace::detector::Fasttrack* ft_inst, uint32_t own_tid, 
 :ft(ft_inst),
 id(VectorClock::make_id(own_tid))
 {
-    vc.insert(vc.end(), { own_tid, id });
+    vc.insert({ own_tid, id });
     if (parent != nullptr) {
         //if parent exists vector clock
         vc = parent->vc;
@@ -36,3 +46,5 @@ uint32_t ThreadState::get_tid() const {
 uint32_t ThreadState::get_clock() const {
     return VectorClock::make_clock(id);
 }
+
+

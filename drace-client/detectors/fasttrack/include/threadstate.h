@@ -1,10 +1,19 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #ifndef THREADSTATE_H
 #define THREADSTATE_H
 
 #include <vector>
 #include <memory>
 #include "vectorclock.h"
-#include "xmap.h"
 #include "xvector.h"
 #include <atomic>
 #include "tl_alloc.h"
@@ -27,11 +36,16 @@ private:
 
 public:
        
-    ///constructor of ThreadState object, initializes tid and clock, copies the vector of parent thread, if a parent thread exists
+    ///constructor of ThreadState object, initializes tid and clock
+    ///copies the vector of parent thread, if a parent thread exists
     ThreadState::ThreadState(   drace::detector::Fasttrack* ft_inst,
                                 uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr); 
 
     ThreadState::~ThreadState(); 
+
+    void update(VectorClock* other);
+    void update(std::shared_ptr<VectorClock> other);
+
 
 
     ///increases own clock value

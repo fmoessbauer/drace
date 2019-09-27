@@ -1,21 +1,50 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #ifndef _STACKTRAC_H_
 #define _STACKTRAC_H_
 
 #include "xvector.h"
 #include <unordered_map>
+//#include "tl_alloc.h"
 #include <ipc/DrLock.h>
 #include <boost/graph/adjacency_list.hpp>
 
+
+template <class Allocator>
+struct tl_list { };
+namespace boost {
+    template <class Alloc, class ValueType>
+    struct container_gen<tl_list<Alloc>, ValueType>
+    {
+        typedef typename Alloc::template rebind<ValueType>::other Allocator;
+        typedef std::list<ValueType, Allocator> type;
+    };
+}
+
+
 class StackTrace {
+
     typedef boost::property<boost::vertex_name_t, size_t> VertexProperty;
-    typedef boost::adjacency_list<boost::listS, boost::listS, boost::directedS, VertexProperty> stack_tree;
+    typedef boost::adjacency_list <boost::listS, boost::listS, boost::bidirectionalS, VertexProperty > stack_tree;
 
 
-    //holds var_address, pc, stack_length
+    ///holds var_address, pc, stack_length
     std::unordered_map<size_t, std::pair<size_t,
         stack_tree::vertex_descriptor>> read_write;
 
+    ///holds to complete stack tree
+    ///is needed to create the stack trace in case of a race
     stack_tree local_stack;
+
+    ///holds the current stack element
     stack_tree::vertex_descriptor ce;
 
     std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data)
@@ -44,6 +73,38 @@ class StackTrace {
 public:
     StackTrace():ce(boost::add_vertex(0, local_stack)){}
     
+
+    void cut_tree(stack_tree::vertex_descriptor to_cut) {
+
+        while (boost::in_degree(to_cut, local_stack) != 0) {
+            stack_tree::in_edge_iterator edge = (boost::in_edges(to_cut, local_stack)).first;
+            stack_tree::vertex_descriptor lower_vertex = boost::source(*(edge), local_stack);
+            cut_tree(lower_vertex);
+        }
+        boost::clear_vertex(to_cut, local_stack);
+        boost::remove_vertex(to_cut, local_stack);
+    }
+
+    void clean() {
+        bool delete_flag = true;
+        for (auto it = local_stack.m_vertices.begin(); it != local_stack.m_vertices.end(); it++) {
+            if (boost::in_degree(*it, local_stack) == 0 && *it != ce) {
+                delete_flag = true;
+                for (auto jt = read_write.begin(); jt != read_write.end(); jt++) {
+                    if (jt->second.second == *it) {
+                        delete_flag = false;
+                        break;
+                    }
+                }
+                if (delete_flag) {
+                    boost::clear_vertex(*it, local_stack);
+                    boost::remove_vertex(*it, local_stack);
+                }
+            }
+
+        }
+        
+    }
 
     void pop_stack_element() {
         auto edge = boost::out_edges(ce, local_stack);
@@ -84,5 +145,11 @@ public:
         }
         
     }
+
+
+
+    /*void clean(size_t address) {
+
+    }*/
 };
 #endif
