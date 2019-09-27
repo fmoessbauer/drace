@@ -1,17 +1,18 @@
 set(SOURCES
-	"src/globals"
-	"src/drace-client"
-	"src/function-wrapper.cpp"
-	"src/function-wrapper/internal"
-	"src/function-wrapper/event"
-	"src/memory-tracker"
-	"src/instr/instr-mem-fast"
-	"src/instr/instr-mem-full"
-	"src/module/Metadata"
-	"src/module/Tracker"
-	"src/MSR"
-	"src/symbols"
-	"src/util")
+    "src/globals"
+    "src/drace-client"
+    "src/function-wrapper.cpp"
+    "src/function-wrapper/internal"
+    "src/function-wrapper/event"
+    "src/memory-tracker"
+    "src/instr/instr-mem-fast"
+    "src/instr/instr-mem-full"
+    "src/module/Metadata"
+    "src/module/Tracker"
+    "src/MSR"
+    "src/symbols"
+    "src/util"
+    "src/config")
 
 find_package(DynamoRIO 7.0 REQUIRED)
 

@@ -34,48 +34,24 @@ namespace drace {
 		Config & operator=(const Config&) = delete;
 		Config & operator=(Config&&) = default;
 
-		explicit Config(std::string filename) :
-			_reader(std::make_unique<INIReader>(filename))
-		{
-			_sections = _reader->Sections();
-		}
+        explicit Config(std::string filename);
 
-		inline bool loadfile(const std::string & filename) {
-			_reader = std::make_unique<INIReader>(filename);
-			if (_reader->ParseError() < 0) {
-				return false;
-			}
-			_sections = _reader->Sections();
-			return true;
-		}
+        bool loadfile(
+            const std::string & filename,
+            const std::string & hint);
 
-		inline void set(
-			const std::string & key,
-			const std::string & val) {
-			_kvstore[key] = val;
-		}
+        void set(
+            const std::string & key,
+            const std::string & val);
 
-		inline std::string get(
-			const std::string & section,
-			const std::string & key,
-			const std::string & default) const
-		{
-			if (_kvstore.count(key) > 0) {
-				return _kvstore.at(key);
-			}
-			return _reader->Get(section, key, default);
-		}
+        std::string get(
+            const std::string & section,
+            const std::string & key,
+            const std::string & default) const;
 
 		/// returns multiline ini-items as a vector
-		inline std::vector<std::string> get_multi(
-			const std::string & section,
-			const std::string & key) const
-		{
-			const auto & val = _reader->Get(section, key, "");
-			if (val == "") {
-				return std::vector<std::string>();
-			}
-			return util::split(val, "\n");
-		}
+        std::vector<std::string> get_multi(
+            const std::string & section,
+            const std::string & key) const;
 	};
 }
