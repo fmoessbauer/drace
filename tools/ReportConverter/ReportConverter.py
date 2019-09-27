@@ -601,10 +601,12 @@ def main():
             exit(-1)
 
     strDate = returnDateString()
-    if args.outputDirectory != None:
-        targetDirectory = pathlib.Path(args.outputDirectory+'/draceGUI_output_'+strDate)
-    else:
-        targetDirectory = pathlib.Path('./draceGUI_output_'+strDate)
+
+    if not args.Debug:
+        if args.outputDirectory != None:
+            targetDirectory = pathlib.Path(args.outputDirectory+'/draceGUI_output_'+strDate)
+        else:
+            targetDirectory = pathlib.Path('./draceGUI_output_'+strDate)
 
     if args.blacklist != None:
         parseArgumentString(SOURCEFILE_BL, args.blacklist)
