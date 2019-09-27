@@ -41,7 +41,7 @@ else:
         resourcesPath = pathlib.Path(SCRIPTPATH / 'resources')
     else:
         print("path of resources not found")
-        exit(-1)
+        sys.exit(-1)
 
 #Paths
 g_HTMLTEMPLATES = resourcesPath / "entries.xml"
@@ -58,7 +58,7 @@ NUMBEROFCODELINES = 400
 if NUMBEROFCODELINES % 2:
     print('Number of maximum of displayed code lines must be even, but is:')
     print(str(NUMBEROFCODELINES))
-    exit(-1)
+    sys.exit(-1)
 
 class ReportCreator:
     _htmlTemplatesPath = str(g_HTMLTEMPLATES)
@@ -593,12 +593,12 @@ def main():
             print("You must specify an input file")
             print()
             parser.print_help()
-            exit(-1)
+            sys.exit(-1)
 
         if not inFile.is_file():
             print("Your input file does not exist")
             parser.print_help()
-            exit(-1)
+            sys.exit(-1)
 
     strDate = returnDateString()
 
