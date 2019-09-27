@@ -11,8 +11,6 @@
 #ifndef XVECTOR_H
 #define XVECTOR_H
 
-#include <map>
-
 
 template<class _Ty, class _Ax = std::allocator<_Ty>>
 

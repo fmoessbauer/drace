@@ -43,10 +43,6 @@ public:
 
     ThreadState::~ThreadState(); 
 
-    void update(VectorClock* other);
-    void update(std::shared_ptr<VectorClock> other);
-
-
 
     ///increases own clock value
     void inc_vc();

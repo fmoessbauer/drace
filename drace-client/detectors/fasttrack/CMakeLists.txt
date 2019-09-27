@@ -11,6 +11,7 @@
 set(SOURCES
 "src/fasttrack"
 "src/threadstate"
+"src/stacktrace"
 "src/varstate")
 
 # we just need BGL which is header only, hence avoid errors by not importing as a target

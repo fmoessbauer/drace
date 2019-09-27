@@ -92,9 +92,7 @@ namespace drace {
 
         ///function is thread_safe
         void Fasttrack::read(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v) {
-            //cannot happen in current implementation as rw increments clock, discuss
-
-            
+                        
             if (t->return_own_id() == v->get_read_id()) {//read same epoch, same thread;
                 return;
             }
