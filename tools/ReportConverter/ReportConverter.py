@@ -1,5 +1,5 @@
 # 
-# DRace-GUI: A graphical report generator for DRace
+# ReportConverter: A graphical report generator for DRace
 # 
 # Copyright 2019 Siemens AG
 # 
@@ -9,7 +9,7 @@
 # SPDX-License-Identifier: MIT
 #
 
-## \package draceGUI
+## \package ReportConverter
 ## \brief Python XML to HTML report converter for the better visualization of drace result data
 
 
@@ -101,12 +101,15 @@ class ReportCreator:
             self.succesfullReportCreation = False
 
     def _inputValidation(self):
+
+        
         try:
             self._reportContent = ET.parse(self._pathOfReport)
-            self._reportRoot = self._reportContent.getroot()
-        except:
+        except ET.ParseError:
             return 0
 
+        self._reportRoot = self._reportContent.getroot()
+        
         if self._reportRoot.find('protocolversion') != None and \
             self._reportRoot.find('protocoltool') != None and \
             self._reportRoot.find('preamble') != None and \
@@ -298,25 +301,28 @@ class ReportCreator:
     def _countTopStackOccurences(self, target):
         topStackOccurences = dict()
         errors = self._reportRoot.findall('error')
+        
         for error in errors:
             stacks = error.findall('stack')
             for stack in stacks:
-                topFrame = stack.find('frame') #returns first element of type frame
-                try: 
+                topFrame = stack.find('frame') #returns first element of with frame tag
+                
+                if(topFrame != None):
                     tmp1 = topFrame.find('file').text
                     tmp2 = topFrame.find('fn').text
 
-                    if(len(tmp2) > 20):
-                        tmp2 = tmp2[:len(tmp2)//2] + '\n' + tmp2[len(tmp2)//2:]
-                    identifier = tmp1 + ":\n" + tmp2
+                    if(tmp1 != None and tmp2 != None):
+                        if(len(tmp2) > 20): #split function name in half if it is too long
+                            tmp2 = tmp2[:len(tmp2)//2] + '\n' + tmp2[len(tmp2)//2:]
+                        identifier = tmp1 + ":\n" + tmp2
 
-                    if topStackOccurences.get(identifier) != None:
-                        value = topStackOccurences.pop(identifier)
-                        topStackOccurences.update({identifier: int(value)+1})
-                    else:
-                        topStackOccurences.update({identifier: 1})
-                except AttributeError:#if xml node is not available, just skip
-                    pass
+                        if topStackOccurences.get(identifier) != None:
+                            value = topStackOccurences.pop(identifier)
+                            topStackOccurences.update({identifier: int(value)+1})
+                        else:
+                            topStackOccurences.update({identifier: 1})
+
+        
         #sort dict
         sortedOccurences = sorted(topStackOccurences.items(), key=lambda kv: kv[1])
         x=list()
@@ -422,9 +428,9 @@ class SourceCodeManagement:
         
     def _returnCode(self, fullPath, justExistance, line = 0):
         returnSrc = False
-        try:
+        try: #may throw an an exception in earlier version (until 3.6), therefore try-catch 
             fp = pathlib.Path(fullPath).resolve() #returns absolute path
-        except:
+        except FileNotFoundError:
             return -1
 
         if fp.is_file():
@@ -567,8 +573,8 @@ def returnDateString():
 def main():
     global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, DEBUG
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--inputFile", help='input file', type=str)
-    parser.add_argument("-o", "--outputDirectory", help='output directory', type=str)
+    parser.add_argument("-i", "--inputFile", help='define <input_file>', type=str)
+    parser.add_argument("-o", "--outputDirectory", help='define <output_directory>', type=str)
     parser.add_argument("-b", "--blacklist", help='add blacklist entries <entry1,entry2 ...>', type=str)
     parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
     parser.add_argument("--Debug", help='Debug Mode', action="store_true")
@@ -577,12 +583,22 @@ def main():
     ###args handling
     if args.Debug:
         print("Debug Mode is on")
-        DEBUG = True
-    
-    if args.inputFile != None:
-        inFile = pathlib.Path(args.inputFile)
+        inFile = pathlib.Path(SCRIPTPATH / 'test_files/test.xml')    
+        targetDirectory = pathlib.Path(SCRIPTPATH / 'test_files/output')    
+
     else:
-        inFile = None
+        if args.inputFile != None:
+            inFile = pathlib.Path(args.inputFile)
+        else:
+            print("You must specify an input file")
+            print()
+            parser.print_help()
+            exit(-1)
+
+        if not inFile.is_file():
+            print("Your input file does not exist")
+            parser.print_help()
+            exit(-1)
 
     strDate = returnDateString()
     if args.outputDirectory != None:
@@ -598,27 +614,12 @@ def main():
         WHITELISTING = True
     #end of args handling
 
-
-    if DEBUG:
-        if inFile == None:
-            inFile = pathlib.Path(SCRIPTPATH / 'test_files/test.xml')    
-       
-        targetDirectory = pathlib.Path(SCRIPTPATH / 'test_files/output')
-        
-
-    try:
-        if not inFile.is_file():
-            print("Your input file does not exist")
-            exit(-1)
-    except:
-        print("You must specify an input file")
-        exit(-1)
     
     if not targetDirectory.is_dir():
         targetDirectory.mkdir()
 
+    #report gets generated here
     report = ReportCreator(str(inFile), str(targetDirectory))
-
 
     if report.succesfullReportCreation:
 
@@ -646,6 +647,7 @@ def main():
         return 0
 
     else:
+        print("Report creation was NOT successfull")
         targetDirectory.rmdir()
         return -1
 
