@@ -9,5 +9,5 @@
 # the LICENSE file in the top-level directory.
 
 # Install drace gui
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/drace-gui/draceGUI.py DESTINATION bin)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/drace-gui/resources/ DESTINATION resources)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ReportConverter/ReportConverter.py DESTINATION bin)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ReportConverter/resources/ DESTINATION resources)
