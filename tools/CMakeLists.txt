@@ -8,6 +8,4 @@
 # This work is licensed under the terms of the MIT license.  See
 # the LICENSE file in the top-level directory.
 
-# Install drace gui
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/drace-gui/draceGUI.py DESTINATION bin)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/drace-gui/resources/ DESTINATION resources)
+add_subdirectory(ReportConverter)
