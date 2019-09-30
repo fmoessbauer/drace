@@ -53,6 +53,9 @@ if(Qt5_FOUND)
     install(TARGETS drace-gui DESTINATION bin)
 
     # append licensing information to global license file
-    file(READ "LICENSE.md" LIC_FILE_QT)
-    file(APPEND ${LIC_FILE} "${LIC_SEP}DRace GUI\n\n${LIC_FILE_QT}")
+    if(LIC_FILE)
+        file(READ "LICENSE.md" LIC_FILE_QT)
+        file(APPEND ${LIC_FILE} "${LIC_SEP}DRace GUI\n\n${LIC_FILE_QT}")
+    endif()
+
 endif()
