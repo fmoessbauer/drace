@@ -29,6 +29,7 @@ if(PythonInterp_FOUND)
       FOUND_VAR PyInstaller_FOUND
       REQUIRED_VARS
         PyInstaller_EXECUTABLE
-      VERSION_VAR Foo_VERSION
     )
+
+    mark_as_advanced(PyInstaller_EXECUTABLE)
 endif()

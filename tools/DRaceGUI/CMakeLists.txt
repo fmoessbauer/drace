@@ -28,16 +28,25 @@ if(Qt5_FOUND)
     
     target_link_libraries(drace-gui PRIVATE Qt5::Widgets)
 
+    find_package(WindeployQt)
+
+    if(WindeployQt_FOUND)
+        windeployqt(drace-gui bin)
+    else()
+        message(WARN "Could not find windeployqt. Please deploy manually!")
+    endif()
+
+    # just for convenience we copy the Qt dlls to the build folder
+    # to be able to run the drace-gui from there
     add_custom_command(TARGET drace-gui POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:drace-gui>
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:drace-gui>
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:drace-gui> )
 
-    # TODO: also copy license and add note in global license file
+    # install the GUI executable itself (without Qt shared modules)
     install(TARGETS drace-gui DESTINATION bin)
-    install(
-        FILES $<TARGET_FILE:Qt5::Core>
-        $<TARGET_FILE:Qt5::Gui>
-        $<TARGET_FILE:Qt5::Widgets>
-        DESTINATION bin)
+
+    # append licensing information to global license file
+    file(READ "LICENSE.md" LIC_FILE_QT)
+    file(APPEND ${LIC_FILE} "${LIC_SEP}DRace GUI\n\n${LIC_FILE_QT}")
 endif()
