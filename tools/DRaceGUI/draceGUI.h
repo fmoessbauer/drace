@@ -7,6 +7,10 @@
 #include <QTextEdit>
 #include <QClipboard>
 #include <QApplication>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include "about_dialog.h"
+#include "report_config.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class DRaceGUI; }
@@ -72,6 +76,15 @@ private slots:
     void on_dr_debug_stateChanged(int arg1);
 
     QString make_command();
+
+    void on_actionAbout_triggered();
+
+    void on_actionLoad_Config_triggered();
+
+    void on_actionSave_Config_triggered();
+
+    void on_actionConfigure_Report_triggered();
+
 private:
 
     QString DEFAULT_PTH =  "C:\\";
