@@ -24,12 +24,14 @@ if(Qt5_FOUND)
       draceGUI.cpp
       draceGUI.h
       draceGUI.ui
-      about_dialog.cpp
-      about_dialog.ui
-      about_dialog.h
-      report_config.cpp
-      report_config.h
-      report_config.ui
+      About_Dialog.cpp
+      About_Dialog.ui
+      About_Dialog.h
+      Report_Config.cpp
+      Report_Config.h
+      Report_Config.ui
+      Load_Save.h
+      Load_Save.cpp
       )
     
     target_link_libraries(drace-gui PRIVATE Qt5::Widgets)

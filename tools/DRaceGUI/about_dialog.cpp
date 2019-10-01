@@ -1,14 +1,26 @@
-#include "about_dialog.h"
-#include "ui_about_dialog.h"
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
-about_dialog::about_dialog(QWidget *parent) :
+
+#include "About_Dialog.h"
+#include "ui_About_Dialog.h"
+
+About_Dialog::About_Dialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::about_dialog)
+    ui(new Ui::About_Dialog)
 {
     ui->setupUi(this);
 }
 
-about_dialog::~about_dialog()
+About_Dialog::~About_Dialog()
 {
     delete ui;
 }

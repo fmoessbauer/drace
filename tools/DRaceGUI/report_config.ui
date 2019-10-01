@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>report_config</class>
+ <class>Report_Config</class>
  <widget class="QDialog" name="report_config">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>328</width>
-    <height>149</height>
+    <height>178</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,26 +17,26 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
+     <y>11</y>
      <width>311</width>
-     <height>131</height>
+     <height>155</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_4">
     <item>
-     <widget class="QLabel" name="label">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Report Configuration</string>
-      </property>
-     </widget>
-    </item>
-    <item>
      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Report Configuration</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
@@ -49,14 +49,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <widget class="QLineEdit" name="dr_path_input">
+           <widget class="QLineEdit" name="report_conv_input">
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="dr_path_btn">
+           <widget class="QPushButton" name="report_conv_path">
             <property name="text">
              <string>Browse</string>
             </property>
@@ -76,11 +76,18 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="drace_path_input"/>
+         <widget class="QLineEdit" name="report_name"/>
         </item>
        </layout>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

@@ -1,3 +1,14 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef DRACE_GUI_H
 #define DRACE_GUI_H
 #include <windows.h>
@@ -11,6 +22,9 @@
 #include <QMessageBox>
 #include "about_dialog.h"
 #include "report_config.h"
+#include <fstream>
+#include <QDirIterator>
+#include "Load_Save.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class DRaceGUI; }
@@ -20,6 +34,8 @@ QT_END_NAMESPACE
 
 class DRaceGUI : public QMainWindow
 {
+    static constexpr char* report_converter_name = "ReportConverter";
+
     static constexpr uint dr_pos = 0;
     static constexpr uint dr_debug_pos = 1;
     static constexpr uint drace_pos = 2;
@@ -87,6 +103,10 @@ private slots:
 
 private:
 
+    void find_report_converter();
+    void save_configuration(QString path);
+    void load_configuration(QString path);
+
     QString DEFAULT_PTH =  "C:\\";
     QString drace_pth_cache = DEFAULT_PTH;
     QString dr_pth_cache = DEFAULT_PTH;
@@ -94,8 +114,16 @@ private:
     QString config_pth_cache = DEFAULT_PTH;
 
     Ui::DRaceGUI *ui;
+
     QString command[(exe_pos+1)];
     QString entire_command;
+    QString report_converter_path;
+    QString report_name = "test_report.xml";
+
     QClipboard *clipboard = QApplication::clipboard();
+    Report_Config* report_window;
+
+    static Load_Save ls_handler;
+
 };
 #endif // MAINWINDOW_H

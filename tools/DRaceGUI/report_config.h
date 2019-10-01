@@ -1,22 +1,33 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef REPORT_CONFIG_H
 #define REPORT_CONFIG_H
 
 #include <QDialog>
 
 namespace Ui {
-class report_config;
+class Report_Config;
 }
 
-class report_config : public QDialog
+class Report_Config : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit report_config(QWidget *parent = nullptr);
-    ~report_config();
+    explicit Report_Config(QWidget *parent = nullptr);
+    ~Report_Config();
 
 private:
-    Ui::report_config *ui;
+    Ui::Report_Config *ui;
 };
 
 #endif // REPORT_CONFIG_H

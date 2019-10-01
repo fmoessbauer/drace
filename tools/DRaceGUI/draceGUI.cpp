@@ -1,3 +1,14 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include "draceGUI.h"
 #include "./ui_draceGUI.h"
 
@@ -6,6 +17,7 @@ DRaceGUI::DRaceGUI(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::DRaceGUI)
 {
+    find_report_converter();
     ui->setupUi(this);
 
 
@@ -63,6 +75,7 @@ void DRaceGUI::on_copy_button_clicked()
 void DRaceGUI::on_tsan_btn_clicked()
 {
     make_entry("tsan", detector_pos, "-d");
+    auto call = "trac";
 }
 
 void DRaceGUI::on_extsan_btn_clicked()
@@ -87,6 +100,24 @@ void DRaceGUI::on_dr_debug_stateChanged(int arg1)
 
 
 ///helper functions
+void DRaceGUI::find_report_converter(){
+    QDirIterator it(QDir::currentPath());
+    while(it.hasNext()) {
+        if(it.next().toStdString() == (std::string(report_converter_name) + ".py")){
+            if(system("python -V") == 0) {  //check for python 3 version
+                std::string path = std::string(report_converter_name) + ".py";
+                report_converter_path = QString(path.c_str());
+                break;
+            }
+        }
+        if(it.next().toStdString() == (std::string(report_converter_name) + ".exe")){
+            std::string path = std::string(report_converter_name) + ".exe";
+            report_converter_path = QString(path.c_str());
+            break;
+        }
+    }
+}
+
 void DRaceGUI::make_entry(const QString &path, uint position, QString prefix)
 {
     if(path != ""){
@@ -193,27 +224,42 @@ void DRaceGUI::on_config_file_input_textChanged(const QString & arg1)
 ///action button functions
 void DRaceGUI::on_actionAbout_triggered()
 {
-    about_dialog newWindow;
+    About_Dialog newWindow;
     newWindow.exec();
 }
 
 void DRaceGUI::on_actionLoad_Config_triggered()
 {
     QString path = QFileDialog::getOpenFileName(this, "Open File", "C:\\");
-
-    //open file here
+    load_configuration(path);
 
 }
 
 void DRaceGUI::on_actionSave_Config_triggered()
 {
       QString path = QFileDialog::getSaveFileName(this, "Save file", "C:\\");
-
-     //save file here
+      save_configuration(path);
 }
+
+void DRaceGUI::save_configuration(QString path){
+
+    std::string serialized;
+    //serialize data here
+
+
+
+}
+
+void DRaceGUI::load_configuration(QString path){
+
+
+
+}
+
 
 void DRaceGUI::on_actionConfigure_Report_triggered()
 {
-    report_config newWindow;
-    newWindow.exec();
+    report_window = new Report_Config();
+    //QObject::connect();
+    report_window->show();
 }
