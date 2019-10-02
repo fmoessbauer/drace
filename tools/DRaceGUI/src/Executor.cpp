@@ -15,17 +15,17 @@ Executor::Executor()
 {
 }
 
-void Executor::execute(QObject* parent, Command_Handler * ch)
+void Executor::execute(QObject* parent, Command_Handler * ch, Report_Handler * rh)
 {
-  /*  QString command = "powershell";
-    QStringList args;
-    args << "-NoExit" << ("\"" + ch->make_command() + "\"");
+    std::string dr_command = (ch->make_command()).toStdString();
+    std::string rep_command = "";
+    if (rh->command_valid()) {
+        rep_command = rh->get_report_command();
+    }
 
-    QProcess proc;
+    std::string cmd = "start powershell -NoExit " + dr_command + ";" + rep_command;
+    system(cmd.c_str());
 
-    proc.setProgram(command);
-    proc.setArguments(args);
-    proc.startDetached();*/
 }
 
 void Executor::exe_custom(std::string cmd, QObject* parent)

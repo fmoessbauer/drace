@@ -19,7 +19,7 @@ Report_Config::Report_Config(Report_Handler* rh, QWidget *parent) :
     r_handler(rh)
 {
     ui->setupUi(this);
-    ui->report_conv_input->setText(r_handler->get_rep_conv_path());
+    ui->report_conv_input->setText(r_handler->get_rep_conv_cmd());
     ui->report_name->setText(r_handler->get_rep_name());
 }
 

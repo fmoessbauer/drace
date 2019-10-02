@@ -78,6 +78,8 @@ private slots:
     void on_actionConfigure_Report_triggered();
 
 
+    void on_report_creation_stateChanged(int arg1);
+
 private:
     Ui::DRaceGUI *ui;
 

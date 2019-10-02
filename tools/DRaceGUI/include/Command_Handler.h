@@ -1,5 +1,17 @@
+/*
+ * DRace, a dynamic data race detector
+ *
+ * Copyright 2018 Siemens AG
+ *
+ * Authors:
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef COMMAND_HANDLER_H
 #define COMMAND_HANDLER_H
+
 #include <QString>
 #include <QRegExp>
 #include <QList>

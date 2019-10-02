@@ -83,7 +83,7 @@ void DRaceGUI::on_config_browse_btn_clicked()
 //push button functions
 void DRaceGUI::on_run_button_clicked()
 {
-    exe->execute(this, ch);
+    exe->execute(this, ch, rh);
 }
 
 void DRaceGUI::on_copy_button_clicked()
@@ -227,28 +227,11 @@ void DRaceGUI::on_actionConfigure_Report_triggered()
 {
     Report_Config* report_window;
     report_window = new Report_Config(rh);
-
-    //QObject::connect(report_window, SIGNAL(SIG_converter_path(QString)), this, SLOT(dh->set_report_converter(QString)));
-    //QObject::connect(report_window, SIGNAL(SIG_report_name(QString)), this, SLOT(dh->set_report_name(QString)));
     report_window->exec();
-
 }
 
 
+void DRaceGUI::on_report_creation_stateChanged(int arg1)
+{
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
