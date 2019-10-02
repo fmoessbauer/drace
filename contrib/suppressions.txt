@@ -19,3 +19,7 @@ unusedFunction:*/drace-client/detectors/*
 unusedFunction:*/drace-client/src/util.cpp
 unusedFunction:*/drace-client/include/util.h
 cstyleCast:*/ManagedResolver/src/ManagedResolver.cpp
+
+// Qt5 DRace-GUI
+*:*/tools/DRaceGUI/drace-gui_autogen/*
+unusedFunction:*/tools/DRaceGUI/qt/*

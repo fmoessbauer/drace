@@ -44,7 +44,7 @@ class DRaceGUI : public QMainWindow
 
 public:
     
-    DRaceGUI(QWidget *parent = nullptr);
+    explicit DRaceGUI(QWidget *parent = nullptr);
     ~DRaceGUI();
 
 private slots:
