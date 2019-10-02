@@ -1,22 +1,3 @@
-set(SOURCES
-    "src/Load_Save.cpp"
-    "src/Report_Handler.cpp"
-    "src/Executor.cpp"
-    "src/Command_Handler.cpp"
-    "qt/main.cpp"
-    "qt/draceGUI.cpp"
-    "qt/draceGUI.h"
-    "qt/draceGUI.ui"
-    "qt/About_Dialog.cpp"
-    "qt/About_Dialog.ui"
-    "qt/About_Dialog.h"
-    "qt/Report_Config.cpp"
-    "qt/Report_Config.h"
-    "qt/Report_Config.ui"
-)
-
-set(TEST_TARGET "drace-gui")
-
 cmake_minimum_required(VERSION 3.5)
 
 project(drace-gui LANGUAGES CXX)
@@ -38,10 +19,26 @@ find_package(Qt5 COMPONENTS Widgets)
 
 if(Qt5_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
-
-    add_executable(${TEST_TARGET} WIN32 ${SOURCES})
-
-    target_include_directories(${TEST_TARGET} PRIVATE "include")
+    add_executable(drace-gui WIN32
+      main.cpp
+      draceGUI.cpp
+      draceGUI.h
+      draceGUI.ui
+      About_Dialog.cpp
+      About_Dialog.ui
+      About_Dialog.h
+      Report_Config.cpp
+      Report_Config.h
+      Report_Config.ui
+      Load_Save.h
+      Load_Save.cpp
+      Report_Handler.cpp
+      Report_Handler.h
+      Command_Handler.cpp
+      Command_Handler.h
+      Executor.cpp
+      Executor.h
+      )
     
     target_link_libraries(drace-gui PRIVATE Qt5::Widgets)
 

@@ -13,6 +13,8 @@
 #define REPORT_CONFIG_H
 
 #include <QDialog>
+#include <QFileDialog>
+#include "Report_Handler.h"
 
 namespace Ui {
 class Report_Config;
@@ -23,11 +25,28 @@ class Report_Config : public QDialog
     Q_OBJECT
 
 public:
-    explicit Report_Config(QWidget *parent = nullptr);
+    explicit Report_Config(Report_Handler * rh,  QWidget *parent = nullptr);
+
+
     ~Report_Config();
+
+private slots:
+    void on_buttonBox_rejected();
+
+    void on_buttonBox_accepted();
+
+    void on_report_conv_path_clicked();
+
+public slots:
+
+//signals:
+   //void SIG_report_name(QString path);
+   //void SIG_converter_path(QString path);
+
 
 private:
     Ui::Report_Config *ui;
+    Report_Handler* r_handler;
 };
 
 #endif // REPORT_CONFIG_H
