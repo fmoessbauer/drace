@@ -16,6 +16,10 @@
 #include <QString>
 #include <vector>
 
+#ifdef USE_BOOST
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#endif
 
 class DRaceGUI;
 
