@@ -10,7 +10,7 @@
  */
 
 #include "Load_Save.h"
-
+#include "qt/draceGUI.h"
 
 Load_Save::Load_Save()
 {

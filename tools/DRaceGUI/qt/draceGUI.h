@@ -31,6 +31,7 @@
 #include "Executor.h"
 
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class DRaceGUI; }
 QT_END_NAMESPACE
@@ -80,7 +81,7 @@ private slots:
 private:
     Ui::DRaceGUI *ui;
 
-    QString DEFAULT_PTH =  "C:\\";
+    QString DEFAULT_PTH = "C:\\";
     QString drace_pth_cache = DEFAULT_PTH;
     QString dr_pth_cache = DEFAULT_PTH;
     QString exe_pth_cache = DEFAULT_PTH;
@@ -88,12 +89,12 @@ private:
 
     QClipboard *clipboard = QApplication::clipboard();
 
-///Handler classes
-    Load_Save ls_handler;
+    ///Handler classes
+    Load_Save *ls;
     Report_Handler *rh;
     Command_Handler *ch;
-    Executor* exe;
-   
+    Executor *exe;
+
 
 };
 #endif // MAINWINDOW_H

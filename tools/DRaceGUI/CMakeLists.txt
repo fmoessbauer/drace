@@ -1,3 +1,15 @@
+#
+ # DRace, a dynamic data race detector
+ #
+ # Copyright 2018 Siemens AG
+ #
+ # Authors:
+ #   Felix Moessbauer <felix.moessbauer@siemens.com>
+ #
+ # SPDX-License-Identifier: MIT
+ #
+
+
 set(SOURCES
     "src/Load_Save.cpp"
     "src/Report_Handler.cpp"
@@ -15,11 +27,11 @@ set(SOURCES
     "qt/Report_Config.ui"
 )
 
-set(TEST_TARGET "drace-gui")
+set(GUI_TARGET "drace-gui")
 
 cmake_minimum_required(VERSION 3.5)
 
-project(drace-gui LANGUAGES CXX)
+project(${GUI_TARGET} LANGUAGES CXX)
 
 list(APPEND CMAKE_PREFIX_PATH "C:\\Qt\\Qt5.13.1\\5.13.1")
 if(NOT Qt5_DIR)
@@ -39,29 +51,28 @@ find_package(Qt5 COMPONENTS Widgets)
 if(Qt5_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
 
-    add_executable(${TEST_TARGET} WIN32 ${SOURCES})
-
-    target_include_directories(${TEST_TARGET} PRIVATE "include")
+    add_executable(${GUI_TARGET} WIN32 ${SOURCES})
+    target_include_directories(${GUI_TARGET} PRIVATE "include")
     
-    target_link_libraries(drace-gui PRIVATE Qt5::Widgets)
+    target_link_libraries(${GUI_TARGET} PRIVATE Qt5::Widgets)
 
     find_package(WindeployQt)
 
     if(WindeployQt_FOUND)
-        windeployqt(drace-gui bin)
+        windeployqt(${GUI_TARGET} bin)
     else()
         message(WARN "Could not find windeployqt. Please deploy manually!")
     endif()
 
     # just for convenience we copy the Qt dlls to the build folder
     # to be able to run the drace-gui from there
-    add_custom_command(TARGET drace-gui POST_BUILD
+    add_custom_command(TARGET ${GUI_TARGET} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:drace-gui>
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:drace-gui>
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:drace-gui> )
 
     # install the GUI executable itself (without Qt shared modules)
-    install(TARGETS drace-gui DESTINATION bin)
+    install(TARGETS ${GUI_TARGET} DESTINATION bin)
 
     # append licensing information to global license file
     if(LIC_FILE)

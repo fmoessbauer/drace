@@ -15,7 +15,7 @@
 #include <fstream>
 #include <QString>
 #include <vector>
-#include "qt/draceGUI.h"
+
 
 class DRaceGUI;
 

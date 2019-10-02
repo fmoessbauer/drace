@@ -18,8 +18,9 @@ DRaceGUI::DRaceGUI(QWidget *parent)
     , ui(new Ui::DRaceGUI)
 {
     rh = new Report_Handler();
-    ch = new Command_Handler;
+    ch = new Command_Handler();
     exe = new Executor();
+    ls = new Load_Save();
     ui->setupUi(this);
 
     ui->dr_path_input->setText("drrun.exe");
@@ -192,7 +193,7 @@ void DRaceGUI::on_actionLoad_Config_triggered()
 {
     QString path = QFileDialog::getOpenFileName(this, "Open File", QDir::currentPath());
 
-    if(ls_handler.load(path.toStdString(), this)){
+    if(ls->load(path.toStdString(), this)){
         QMessageBox msg;
         msg.setText("Loading was successfull");
         msg.exec();
@@ -209,7 +210,7 @@ void DRaceGUI::on_actionSave_Config_triggered()
 {
       QString path = QFileDialog::getSaveFileName(this, "Save file", QDir::currentPath());
 
-      if(ls_handler.save(path.toStdString(), this)){
+      if(ls->save(path.toStdString(), this)){
           QMessageBox msg;
           msg.setText("Saving was successfull");
           msg.exec();
