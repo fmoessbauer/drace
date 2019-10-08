@@ -15,6 +15,8 @@
 #include <QDialog>
 #include <QFileDialog>
 #include "Report_Handler.h"
+#include "boost/filesystem.hpp"
+#include <QMessagebox>
 
 namespace Ui {
 class Report_Config;
@@ -36,6 +38,11 @@ private slots:
     void on_buttonBox_accepted();
 
     void on_report_conv_path_clicked();
+
+    void on_report_name_textChanged(const QString &arg1);
+
+
+    void on_report_conv_input_textChanged(const QString &arg1);
 
 public slots:
 

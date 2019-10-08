@@ -21,7 +21,7 @@ bool Load_Save::set_data(std::vector<std::string> content, DRaceGUI *instance){
 }
 
 std::string Load_Save::return_serialized_data(DRaceGUI *instance){
-    return "truetrue";
+    return "";
 }
 
 bool Load_Save::save(std::string path, DRaceGUI* instance){

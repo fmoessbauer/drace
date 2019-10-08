@@ -16,11 +16,11 @@ Command_Handler::Command_Handler(QString default_detector) {
     make_entry(default_detector, DETECTOR, "-d");
 }
 
-QString Command_Handler::make_entry(const QString &path, uint position, QString prefix)
+QString Command_Handler::make_entry(const QString &path, uint position, QString prefix, bool no_quotes)
 {
     if (path != "") {
         QString temp = path;
-        if (temp.contains(QRegExp("\\s+"))) {
+        if (temp.contains(QRegExp("\\s+")) && !no_quotes) {
             temp = "\"" + temp + "\"";
         }
         if (prefix != "") {
@@ -34,7 +34,13 @@ QString Command_Handler::make_entry(const QString &path, uint position, QString 
 }
 
 QString Command_Handler::updateCommand(const QString &arg1, uint position) {
-    command[position] = arg1;
+    if (position == REPORT_CMD && arg1 != "") {
+        QString cmd = "; " + arg1;
+        command[position] = cmd;
+    }
+    else {
+        command[position] = arg1;
+    }
 
     entire_command = make_command();
     return entire_command;
@@ -42,12 +48,13 @@ QString Command_Handler::updateCommand(const QString &arg1, uint position) {
 
 QString Command_Handler::make_command() {
     entire_command = "";
-    for (int it = 0; it < (EXECUTABLE + 1); it++) {
+    for (int it = 0; it <= (REPORT_CMD); it++) {
         if (command[it] != "") {
             entire_command.append(command[it]);
             entire_command.append(" ");
         }
     }
+    auto cmd = entire_command.toStdString();
     return entire_command;
 }
 
@@ -71,3 +78,45 @@ QString Command_Handler::make_flag_entry(const QString &arg1) {
 }
 
 
+
+
+bool Command_Handler::validate_and_set_msr(bool on, QObject* parent) {
+    QString cmd = "";
+    if(on){
+        QString str_dir = command[DRACE];
+        
+        if (str_dir != "") {
+            str_dir.remove(0, 3); //remove leading "-c" of drace client command
+            QDir dir(str_dir);
+            dir.cd("..");
+            cmd = dir.absolutePath() + "/msr.exe";
+            if (!Executor::exe_msr(cmd, parent)) {
+                make_entry("", MSR);
+                return false;
+            }
+            cmd += " --once;";
+        }
+        else {
+            return false;
+        }
+    }
+    make_entry(cmd, MSR);
+    return true;
+}
+
+bool Command_Handler::command_is_valid() {
+    bool ret = true;
+    if (command[DYNAMORIO] == "") {
+        return false;
+    }
+    if (command[DRACE] == "") {
+        return false;
+    }
+    if (command[DETECTOR] == "") {
+        return false;
+    }
+    if (command[EXECUTABLE] == "") {
+        return false;
+    }
+    return true;
+}

@@ -17,9 +17,8 @@ DRaceGUI::DRaceGUI(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::DRaceGUI)
 {
-    rh = new Report_Handler();
     ch = new Command_Handler();
-    exe = new Executor();
+    rh = new Report_Handler(ch, this);
     ls = new Load_Save();
     ui->setupUi(this);
 
@@ -31,7 +30,6 @@ DRaceGUI::~DRaceGUI()
 {
     delete rh;
     delete ch;
-    delete exe;
     delete ui;
 }
 
@@ -83,7 +81,14 @@ void DRaceGUI::on_config_browse_btn_clicked()
 //push button functions
 void DRaceGUI::on_run_button_clicked()
 {
-    exe->execute(this, ch, rh);
+    if (ch->command_is_valid()) {
+        Executor::execute(this, (ch->get_command()).toStdString());
+        return;
+    }
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("The command is not valid!");
+    temp.exec();
 }
 
 void DRaceGUI::on_copy_button_clicked()
@@ -120,6 +125,35 @@ void DRaceGUI::on_dr_debug_stateChanged(int arg1)
     }
 }
 
+void DRaceGUI::on_report_creation_stateChanged(int arg1)
+{
+    rh->set_create_state(arg1);
+    if (rh->set_report_command() || !arg1) {
+        ui->command_output->setText(ch->get_command());
+        return;
+    }
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("ReportConverter is path not set correctly");
+    temp.exec();
+    ui->msr_box->setChecked(false);
+    ui->msr_box->setCheckState(Qt::Unchecked);
+}
+
+void DRaceGUI::on_msr_box_stateChanged(int arg1)
+{
+    if (!(ch->validate_and_set_msr(arg1, this)) && arg1) {
+        QMessageBox temp;
+        temp.setIcon(QMessageBox::Warning);
+        temp.setText("DRace client path is not set or \"msr.exe\" is not at DRace path.");
+        temp.exec();
+        ui->msr_box->setChecked(false);
+        ui->msr_box->setCheckState(Qt::Unchecked);
+    }
+    ui->command_output->setText(ch->get_command());
+}
+
+
 
 //textbox functions
 void DRaceGUI::on_dr_path_input_textChanged(const QString &arg1)
@@ -128,7 +162,7 @@ void DRaceGUI::on_dr_path_input_textChanged(const QString &arg1)
     QPalette pal;
     pal.setColor(QPalette::Base, Qt::red);
 
-    if (exe->exe_drrun(arg1, this)) { //if drrun is found set green, otherwise set red    
+    if (Executor::exe_drrun(arg1, this)) { //if drrun is found set green, otherwise set red    
         pal.setColor(QPalette::Base, Qt::green);
     }
 
@@ -142,7 +176,8 @@ void DRaceGUI::on_drace_path_input_textChanged(const QString &arg1)
     QPalette pal;
     if (arg1.endsWith("drace-client.dll")) {
         pal.setColor(QPalette::Base, Qt::green);
-        if (ui->config_file_input->text().isEmpty()) {
+        
+        if (ui->config_file_input->text().isEmpty() || ui->config_file_input->palette().color(QPalette::Base) == QColor(Qt::red)){//try to set config file, when empty or red (=wrong)
             auto path_to_config = arg1;
             path_to_config.replace(QString("drace-client.dll"), QString("drace.ini"));
             ui->config_file_input->setText(path_to_config);
@@ -191,36 +226,43 @@ void DRaceGUI::on_actionAbout_triggered()
 
 void DRaceGUI::on_actionLoad_Config_triggered()
 {
+    QMessageBox temp;
+    temp.setText("Feature not implemented");
+    temp.exec();
+    return;
+
     QString path = QFileDialog::getOpenFileName(this, "Open File", QDir::currentPath());
 
+    QMessageBox msg;
     if(ls->load(path.toStdString(), this)){
-        QMessageBox msg;
         msg.setText("Loading was successfull");
-        msg.exec();
     }
     else{
-        QMessageBox msg;
         msg.setIcon(QMessageBox::Warning);
         msg.setText("Loading was not successfull");
-        msg.exec();
     }
+    msg.exec();
 }
 
 void DRaceGUI::on_actionSave_Config_triggered()
 {
-      QString path = QFileDialog::getSaveFileName(this, "Save file", QDir::currentPath());
+    QMessageBox temp;
+    temp.setText("Feature not implemented");
+    temp.exec();
+    return;
 
-      if(ls->save(path.toStdString(), this)){
-          QMessageBox msg;
-          msg.setText("Saving was successfull");
-          msg.exec();
-      }
-      else{
-          QMessageBox msg;
-          msg.setIcon(QMessageBox::Warning);
-          msg.setText("Saving was not successfull");
-          msg.exec();
-      }
+    QString path = QFileDialog::getSaveFileName(this, "Save file", QDir::currentPath());
+
+    QMessageBox msg;
+    if(ls->save(path.toStdString(), this)){
+        msg.setText("Saving was successfull");
+        msg.exec();
+    }
+    else{
+        msg.setIcon(QMessageBox::Warning);
+        msg.setText("Saving was not successfull");
+    }
+    msg.exec();
 }
 
 void DRaceGUI::on_actionConfigure_Report_triggered()
@@ -228,10 +270,7 @@ void DRaceGUI::on_actionConfigure_Report_triggered()
     Report_Config* report_window;
     report_window = new Report_Config(rh);
     report_window->exec();
+    ui->command_output->setText(ch->get_command());
 }
 
 
-void DRaceGUI::on_report_creation_stateChanged(int arg1)
-{
-
-}

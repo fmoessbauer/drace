@@ -14,8 +14,6 @@
 #include <string>
 #include <QString>
 #include <QProcess>
-#include "Command_Handler.h"
-#include "Report_Handler.h"
 
 
 class Executor {
@@ -23,11 +21,11 @@ class Executor {
 
 public:
     Executor();
-    void execute(QObject* parent, Command_Handler * ch, Report_Handler * exe);
-    void exe_custom(std::string cmd, QObject* parent);
-    bool exe_drrun(QString cmd, QObject* parent);
-
-
+    static void execute(QObject* parent, std::string cmd);//, Report_Handler * exe);
+    static void exe_custom(std::string cmd, QObject* parent);
+    static bool exe_drrun(QString cmd, QObject* parent);
+    static bool exe_python3(QObject* parent);
+    static bool exe_msr(QString path, QObject * parent);
 };
 
 

@@ -15,16 +15,10 @@ Executor::Executor()
 {
 }
 
-void Executor::execute(QObject* parent, Command_Handler * ch, Report_Handler * rh)
+void Executor::execute(QObject* parent, std::string cmd)//, Report_Handler * rh)
 {
-    std::string dr_command = (ch->make_command()).toStdString();
-    std::string rep_command = "";
-    if (rh->command_valid()) {
-        rep_command = rh->get_report_command();
-    }
-
-    std::string cmd = "start powershell -NoExit " + dr_command + ";" + rep_command;
-    system(cmd.c_str());
+    std::string ps_cmd = "start powershell -NoExit " + cmd;
+    system(ps_cmd.c_str());
 
 }
 
@@ -51,4 +45,36 @@ bool Executor::exe_drrun(QString cmd, QObject* parent)
     return false;
 }
 
+bool Executor::exe_python3(QObject* parent) {
+   
+    QProcess *proc_ovpn = new QProcess(parent);
+    proc_ovpn->start("python", QStringList() << "-V");
+    proc_ovpn->setProcessChannelMode(QProcess::MergedChannels);
 
+    if (proc_ovpn->waitForFinished()) {
+        QString str(proc_ovpn->readAllStandardOutput());
+
+        if (str.contains("Python 3.", Qt::CaseInsensitive)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+bool Executor::exe_msr(QString path, QObject* parent) {
+
+    QProcess *proc_ovpn = new QProcess(parent);
+    proc_ovpn->start(path, QStringList() << "--version");
+    proc_ovpn->setProcessChannelMode(QProcess::MergedChannels);
+
+    if (proc_ovpn->waitForFinished()) {
+        QString str(proc_ovpn->readAllStandardOutput());
+
+        if (str.contains("Managed Symbol Resolver", Qt::CaseInsensitive)) {
+            return true;
+        }
+    }
+
+    return false;
+}

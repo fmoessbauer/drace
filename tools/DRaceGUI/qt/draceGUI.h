@@ -63,8 +63,11 @@ private slots:
     void on_exe_input_textChanged(const QString &arg1);
     void on_flag_input_textChanged(const QString &arg1);
     void on_config_file_input_textChanged(const QString &arg1);
-    void on_dr_debug_stateChanged(int arg1);
 
+///check boxes
+    void on_dr_debug_stateChanged(int arg1);
+    void on_report_creation_stateChanged(int arg1);
+    void on_msr_box_stateChanged(int arg1);
 
 ///Radio Buttons
     void on_tsan_btn_clicked();
@@ -76,9 +79,6 @@ private slots:
     void on_actionLoad_Config_triggered();
     void on_actionSave_Config_triggered();
     void on_actionConfigure_Report_triggered();
-
-
-    void on_report_creation_stateChanged(int arg1);
 
 private:
     Ui::DRaceGUI *ui;
@@ -95,7 +95,6 @@ private:
     Load_Save *ls;
     Report_Handler *rh;
     Command_Handler *ch;
-    Executor *exe;
 
 
 };
