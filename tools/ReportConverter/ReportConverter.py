@@ -19,6 +19,7 @@ import shutil
 import argparse
 import pathlib
 import datetime
+import sys
 from subprocess import check_call, STDOUT, DEVNULL
 
 
@@ -31,7 +32,12 @@ except ImportError:
     noMatplotLib = True
 
 #look for resources path
-SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
+if getattr(sys, 'frozen', False):
+    SCRIPTPATH = pathlib.Path(sys.executable)
+    SCRIPTPATH = pathlib.Path(SCRIPTPATH / "..")
+else :
+    SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
+
 
 if pathlib.Path(SCRIPTPATH / '../resources').is_dir():
     resourcesPath = pathlib.Path(SCRIPTPATH / '../resources')
@@ -604,9 +610,9 @@ def main():
 
     if not args.Debug:
         if args.outputDirectory != None:
-            targetDirectory = pathlib.Path(args.outputDirectory+'/draceGUI_output_'+strDate)
+            targetDirectory = pathlib.Path(args.outputDirectory+'/drace_report_'+strDate)
         else:
-            targetDirectory = pathlib.Path('./draceGUI_output_'+strDate)
+            targetDirectory = pathlib.Path('./drace_report_'+strDate)
 
     if args.blacklist != None:
         parseArgumentString(SOURCEFILE_BL, args.blacklist)
