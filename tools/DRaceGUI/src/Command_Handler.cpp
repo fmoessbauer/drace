@@ -54,7 +54,6 @@ QString Command_Handler::make_command() {
             entire_command.append(" ");
         }
     }
-    auto cmd = entire_command.toStdString();
     return entire_command;
 }
 
@@ -124,7 +123,6 @@ void Command_Handler::make_extctrl(bool set) {
 }
 
 bool Command_Handler::command_is_valid() {
-    bool ret = true;
     if (command[DYNAMORIO] == "") {
         return false;
     }
