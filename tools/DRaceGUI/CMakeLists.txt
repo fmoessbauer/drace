@@ -52,7 +52,7 @@ set(Boost_USE_MULTITHREADED ON)
 find_package(Qt5 COMPONENTS Widgets)
 find_package(Boost 1.65.0 COMPONENTS system filesystem serialization)
 
-if(Qt5_FOUND)
+if(Qt5_FOUND AND Boost_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
 
     add_executable(${GUI_TARGET} WIN32 ${SOURCES})
@@ -60,13 +60,11 @@ if(Qt5_FOUND)
     target_link_libraries(${GUI_TARGET} PRIVATE
         Qt5::Widgets )
 
-    if(Boost_FOUND)
-        target_link_libraries(${GUI_TARGET} PRIVATE
-            Boost::system
-            Boost::filesystem
-            Boost::serialization )
-        target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST )
-    endif()
+    target_link_libraries(${GUI_TARGET} PRIVATE
+        Boost::system
+        Boost::filesystem
+        Boost::serialization )
+    target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST )
 
     find_package(WindeployQt)
 
