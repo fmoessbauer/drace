@@ -19,7 +19,6 @@ void Executor::execute(QObject* parent, std::string cmd)//, Report_Handler * rh)
 {
     std::string ps_cmd = "start powershell -NoExit " + cmd;
     system(ps_cmd.c_str());
-
 }
 
 void Executor::exe_custom(std::string cmd, QObject* parent)
@@ -77,4 +76,11 @@ bool Executor::exe_msr(QString path, QObject* parent) {
     }
 
     return false;
+}
+
+void Executor::launch_msr(std::string path) {
+
+    std::string cmd = "start powershell -NoExit " + path + " --once";
+    system(cmd.c_str());
+    QThread::sleep(1);
 }

@@ -83,7 +83,7 @@ private slots:
 private:
     Ui::DRaceGUI *ui;
 
-    QString DEFAULT_PTH = "C:\\";
+    QString DEFAULT_PTH = QDir::currentPath();
     QString drace_pth_cache = DEFAULT_PTH;
     QString dr_pth_cache = DEFAULT_PTH;
     QString exe_pth_cache = DEFAULT_PTH;

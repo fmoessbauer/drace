@@ -86,7 +86,6 @@ bool Report_Handler::set_report_command() {
     else {
         ch->make_entry("", Command_Handler::REPORT_FLAG);
     }
-
     ch->make_entry(cmd, Command_Handler::REPORT_CMD, prefix, true);
     return is_valid;
 }

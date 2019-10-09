@@ -82,6 +82,10 @@ void DRaceGUI::on_config_browse_btn_clicked()
 void DRaceGUI::on_run_button_clicked()
 {
     if (ch->command_is_valid()) {
+        QString msr = ch->get_msr_path();
+        if (msr != "") {
+            Executor::launch_msr(msr.toStdString());
+        }
         Executor::execute(this, (ch->get_command()).toStdString());
         return;
     }

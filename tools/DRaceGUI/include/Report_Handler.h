@@ -30,7 +30,7 @@ class Report_Handler
     QString rep_name = "test_report.xml";
 
     ///holds the state of the report check box
-    bool create_report;
+    bool create_report = false;
 
     ///true when Python script of report converter is set
     bool is_python;

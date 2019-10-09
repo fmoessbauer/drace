@@ -82,26 +82,45 @@ QString Command_Handler::make_flag_entry(const QString &arg1) {
 
 bool Command_Handler::validate_and_set_msr(bool on, QObject* parent) {
     QString cmd = "";
+    make_extctrl(false);
+
     if(on){
-        QString str_dir = command[DRACE];
-        
-        if (str_dir != "") {
-            str_dir.remove(0, 3); //remove leading "-c" of drace client command
-            QDir dir(str_dir);
-            dir.cd("..");
-            cmd = dir.absolutePath() + "/msr.exe";
-            if (!Executor::exe_msr(cmd, parent)) {
-                make_entry("", MSR);
-                return false;
-            }
-            cmd += " --once;";
+        cmd = eval_msr_path(parent);
+        if (cmd != "") {
+            make_extctrl(true);
         }
         else {
+            msr_path = cmd;
             return false;
         }
     }
-    make_entry(cmd, MSR);
+    msr_path = cmd;
     return true;
+}
+
+QString Command_Handler::eval_msr_path(QObject* parent) {
+    QString str_dir = command[DRACE], cmd = ""; //search for msr in drace path
+  
+    if (str_dir != "") {
+        str_dir.remove(0, 3); //remove leading "-c " of drace client command
+        QDir dir(str_dir);
+        dir.cd("..");
+        cmd = dir.absolutePath() + "/msr.exe";
+        if (!Executor::exe_msr(cmd, parent)) {
+            cmd = "";
+        }
+    }
+    return cmd;
+}
+
+void Command_Handler::make_extctrl(bool set) {
+    if (set) {//set case
+        command[EXT_CTRL] = "--extctrl";
+    }
+    else {//reset case
+        command[EXT_CTRL] = "";
+    }
+    make_command();
 }
 
 bool Command_Handler::command_is_valid() {

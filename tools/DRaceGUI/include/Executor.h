@@ -14,7 +14,7 @@
 #include <string>
 #include <QString>
 #include <QProcess>
-
+#include <QThread>
 
 class Executor {
 
@@ -26,6 +26,7 @@ public:
     static bool exe_drrun(QString cmd, QObject* parent);
     static bool exe_python3(QObject* parent);
     static bool exe_msr(QString path, QObject * parent);
+    static void launch_msr(std::string path);
 };
 
 
