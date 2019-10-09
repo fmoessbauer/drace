@@ -40,6 +40,10 @@ All submodules are located in the `vendor` directory.
 - [gabime/spdlog](https://github.com/gabime/spdlog)
 - [greq7mdp/sparsepp](https://github.com/greg7mdp/sparsepp)
 
+### DRace GUI
+
+- [Qt5](https://doc.qt.io/qt-5/)
+- [Boost](https://www.boost.org/) > 1.65
 
 ## Internal Dependencies
 
