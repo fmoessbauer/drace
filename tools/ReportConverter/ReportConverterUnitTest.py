@@ -14,7 +14,7 @@
 
 import unittest
 import pathlib
-import draceGUI as gui
+import ReportConverter as gui
 
 SCRIPTPATH = pathlib.Path(pathlib.Path(__file__).resolve().parents[0])
 STRREPORTPATH = SCRIPTPATH / 'test_files/output/index.html'
@@ -97,7 +97,7 @@ class TestMethods(unittest.TestCase):
             self.fail()
 
     def testCodeReturn(self):
-        path = pathlib.Path(SCRIPTPATH / 'draceGUI.py')
+        path = pathlib.Path(SCRIPTPATH / 'ReportConverter.py')
         scm = gui.SourceCodeManagement()._returnCode(path, justExistance=1)
         self.assertEqual(0, scm)
 

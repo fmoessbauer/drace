@@ -62,7 +62,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // time app start
     app_start = std::chrono::system_clock::now();
 
-    bool success = config.loadfile(params.config_file);
+    bool success = config.loadfile(params.config_file, argv[0]);
     if (!success) {
         LOG_ERROR(-1, "error loading config file");
         dr_flush_file(stdout);

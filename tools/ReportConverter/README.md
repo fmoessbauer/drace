@@ -1,4 +1,4 @@
-# DRace-GUI
+# ReportConverter
 
 A Python XML to HTML report converter for the better visualization of drace result data.
 
@@ -7,17 +7,20 @@ Takes an existing drace xml report searches for the mentioned source files on th
 ## How to use
 
 ### Installation
-The tool itself does not need any installation, just a Python3 installation is needed.
-Beside the script the folder '/templates' is also needed for execution.
+One can either use directly the python script, which is the faster option, but requires a Python3 installation or one can use the ReportConverter.exe, which is also built, but exexcutes pretty slow.
+Beside the script the folder '/resources is also needed for execution.
+
 
 ### Example
 Windows:
 ```bash
-    python draceGUI.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+
+    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
 ```
 Linux:
 ```bash
-    python3 draceGUI.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
 ```
 ### needed parameter:
 ```bash

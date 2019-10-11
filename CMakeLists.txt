@@ -16,6 +16,7 @@ set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
+set(BUILD_TOOLS ON CACHE BOOL "Build Tooling Support (e.g. Qt5 GUI)")
 set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
 set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
@@ -29,7 +30,9 @@ set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(${DRACE_ENABLE_CPPCHECK})
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
+
+if(DRACE_ENABLE_CPPCHECK)
     if(CMAKE_VERSION VERSION_GREATER 3.10.0)
         if(EXISTS "${DRACE_CPPCHECK_BIN}")
             message(STATUS "Enable support for cppcheck")
@@ -74,22 +77,24 @@ add_subdirectory("drace-client")
 # Managed Stack Resolver
 add_subdirectory("ManagedResolver")
 
-if(${DRACE_ENABLE_TESTING})
+if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
 	add_subdirectory("test")
 endif()
 
-if(${DRACE_ENABLE_BENCH})
+if(DRACE_ENABLE_BENCH)
 	message(STATUS "Build Benchmarks")
 	add_subdirectory("bench")
 endif()
 
-# install tooling scripts
-add_subdirectory("tools")
+if(BUILD_TOOLS)
+    message(STATUS "Build Tools")
+    add_subdirectory("tools")
+endif()
 
 # Build documentation
 find_package(Doxygen)
-if(${Doxygen_FOUND})
+if(Doxygen_FOUND)
 	message(STATUS "Build Documentation")
 	set(DOXYGEN_GENERATE_HTML YES)
 	set(DOXYGEN_GENERATE_MAN NO)

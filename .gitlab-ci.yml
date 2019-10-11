@@ -78,8 +78,8 @@ gui-test:
   - AWS
   script:
   - echo "Start test..."
-  - python3 tools/drace-gui/draceGUI.py --Debug
-  - python3 tools/drace-gui/draceGUIUnitTest.py
+  - python3 tools/ReportConverter/ReportConverter.py --Debug
+  - python3 tools/ReportConverter/ReportConverterUnitTest.py
   
 
 # Package
