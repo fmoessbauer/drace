@@ -11,18 +11,11 @@
 
 #include "Executor.h"
 
-Executor::Executor()
-{
-}
 
-void Executor::execute(QObject* parent, std::string cmd)//, Report_Handler * rh)
+void Executor::execute(std::string cmd, QObject* parent)
 {
     std::string ps_cmd = "start powershell -NoExit " + cmd;
     system(ps_cmd.c_str());
-}
-
-void Executor::exe_custom(std::string cmd, QObject* parent)
-{
 }
 
 bool Executor::exe_drrun(QString cmd, QObject* parent)
@@ -61,10 +54,10 @@ bool Executor::exe_python3(QObject* parent) {
     return false;
 }
 
-bool Executor::exe_msr(QString path, QObject* parent) {
+bool Executor::exe_msr(QString cmd, QObject* parent) {
 
     QProcess *proc_ovpn = new QProcess(parent);
-    proc_ovpn->start(path, QStringList() << "--version");
+    proc_ovpn->start(cmd, QStringList() << "--version");
     proc_ovpn->setProcessChannelMode(QProcess::MergedChannels);
 
     if (proc_ovpn->waitForFinished()) {
@@ -78,9 +71,10 @@ bool Executor::exe_msr(QString path, QObject* parent) {
     return false;
 }
 
-void Executor::launch_msr(std::string path) {
+void Executor::launch_msr(std::string cmd) {
 
-    std::string cmd = "start powershell -NoExit " + path + " --once";
-    system(cmd.c_str());
-    QThread::sleep(1);
+    std::string exe_cmd = "start powershell -NoExit " + cmd + " --once";
+    system(exe_cmd.c_str());
+    //wait for msr to set up, because drace is started directly afterwards and must connect to msr
+    QThread::sleep(1); 
 }

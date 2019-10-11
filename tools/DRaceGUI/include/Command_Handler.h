@@ -32,24 +32,46 @@ public:
     static constexpr uint REPORT_CMD = 9;
 
 private:
-    QString command[(REPORT_CMD + 1)];
     QString entire_command;
+
     QString msr_path;
+
+    ///evaluates and returns the msr command when valid
     QString eval_msr_path(QObject* parent);
+
+    ///sets the external control flag (needed for msr execution)
     void make_extctrl(bool set);
+
+    ///sets the QString at the position in command array and returns the updated command
+    QString updateCommand(const QString &arg1, uint position);
 
 public:
     Command_Handler(QString default_detector = "tsan");
 
-    QString updateCommand(const QString &arg1, uint position);
+    ///the command array holds each part of the command as a QString
+    QString command[(REPORT_CMD + 1)];
+
+
+    ///sets the flag entry
     QString make_flag_entry(const QString & arg1);
+
+    ///makes a command entry into the command array and updates the entire_command
     QString make_entry(const QString & path, uint postion, QString prefix = "", bool no_quotes = false);
+
+    ///updates the entire command  and returns it
     QString make_command();
+
     QString get_command() { return entire_command; }
     QString get_msr_path() { return msr_path; }
+    QString* get_command_array() { return command; }
 
+    void set_msr(QString path) { msr_path = path; }
+
+    ///returns true when command is not found invalid
     bool command_is_valid();
 
+    ///searches in the drace path for the msr
+    ///if found returns true and sets msr path
     bool validate_and_set_msr(bool on, QObject* parent);
 
 };

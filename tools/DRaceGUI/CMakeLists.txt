@@ -15,6 +15,7 @@ set(SOURCES
     "src/Report_Handler.cpp"
     "src/Executor.cpp"
     "src/Command_Handler.cpp"
+    "src/Data_Handler.cpp"
     "qt/main.cpp"
     "qt/draceGUI.cpp"
     "qt/draceGUI.h"
