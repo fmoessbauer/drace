@@ -72,30 +72,34 @@ private slots:
 ///Radio Buttons
     void on_tsan_btn_clicked();
     void on_fasttrack_btn_clicked();
-    void on_extsan_btn_clicked();
+    void on_dummy_btn_clicked();
 
 ///Action Buttons
     void on_actionAbout_triggered();
     void on_actionLoad_Config_triggered();
     void on_actionSave_Config_triggered();
     void on_actionConfigure_Report_triggered();
+    void on_actionHelp_triggered();
 
 private:
     Ui::DRaceGUI *ui;
 
+    ///path caches for all the browse buttons
     QString DEFAULT_PTH = QDir::currentPath();
     QString drace_pth_cache = DEFAULT_PTH;
     QString dr_pth_cache = DEFAULT_PTH;
     QString exe_pth_cache = DEFAULT_PTH;
     QString config_pth_cache = DEFAULT_PTH;
+    QString load_save_path = DEFAULT_PTH;
 
     QClipboard *clipboard = QApplication::clipboard();
 
     ///Handler classes
-    Load_Save *ls;
     Report_Handler *rh;
     Command_Handler *ch;
 
+    ///restores the GUI with the data of the loaded config file
+    void set_boxes_after_load();
 
 };
 #endif // MAINWINDOW_H

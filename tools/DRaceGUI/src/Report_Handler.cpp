@@ -55,7 +55,6 @@ bool Report_Handler::eval_rep_conv(QString name, QObject* parent) {
         }
 
         if (split_point.last() == "py") {
-            //Note: change to proper call with QProcess -> check for python 3 version
             if (Executor::exe_python3(parent)) {
                 rep_conv_cmd = name;
                 is_python = true;
@@ -70,6 +69,16 @@ bool Report_Handler::eval_rep_conv(QString name, QObject* parent) {
 void Report_Handler::set_report_name(QString name) {
     //function is and must be only called with valid names
     rep_name = name;
+}
+
+void Report_Handler::set_report_converter(QString path)
+{
+    rep_conv_cmd = path;
+}
+
+void Report_Handler::set_is_python(bool state)
+{
+    is_python = state;
 }
 
 ///sets, when the actual report creation command is valid, the current command in the command handler class

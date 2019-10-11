@@ -198,7 +198,7 @@ p, li { white-space: pre-wrap; }
      </widget>
     </item>
     <item row="7" column="1">
-     <widget class="QRadioButton" name="extsan_btn">
+     <widget class="QRadioButton" name="dummy_btn">
       <property name="text">
        <string>Dummy</string>
       </property>
@@ -291,7 +291,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>drace_path_input</tabstop>
   <tabstop>drace_path_btn</tabstop>
   <tabstop>tsan_btn</tabstop>
-  <tabstop>extsan_btn</tabstop>
+  <tabstop>dummy_btn</tabstop>
   <tabstop>fasttrack_btn</tabstop>
   <tabstop>config_file_input</tabstop>
   <tabstop>config_browse_btn</tabstop>

@@ -19,7 +19,6 @@ DRaceGUI::DRaceGUI(QWidget *parent)
 {
     ch = new Command_Handler();
     rh = new Report_Handler(ch, this);
-    ls = new Load_Save();
     ui->setupUi(this);
 
     ui->dr_path_input->setText("drrun.exe");
@@ -28,9 +27,7 @@ DRaceGUI::DRaceGUI(QWidget *parent)
 
 DRaceGUI::~DRaceGUI()
 {
-    delete rh;
-    delete ch;
-    delete ui;
+    delete rh, ch, ui;
 }
 
 //Browse button functions
@@ -58,6 +55,7 @@ void DRaceGUI::on_exe_path_btn_clicked()
     QString path = QFileDialog::getOpenFileName(
         this, "Open File", exe_pth_cache,
         tr("All files (*.*);;Executable (*.exe)"), &selfilter);
+
     if (!path.isEmpty()) {
         exe_pth_cache = path;
         ui->exe_input->setText(path);
@@ -84,11 +82,12 @@ void DRaceGUI::on_run_button_clicked()
     if (ch->command_is_valid()) {
         QString msr = ch->get_msr_path();
         if (msr != "") {
-            Executor::launch_msr(msr.toStdString());
+            Executor::launch_msr(msr.toStdString()); //returns when msr is (should be :D) set up
         }
-        Executor::execute(this, (ch->get_command()).toStdString());
+        Executor::execute((ch->get_command()).toStdString(), this);
         return;
     }
+
     QMessageBox temp;
     temp.setIcon(QMessageBox::Warning);
     temp.setText("The command is not valid!");
@@ -107,7 +106,7 @@ void DRaceGUI::on_tsan_btn_clicked()
     ui->command_output->setText(ch->make_entry("tsan", Command_Handler::DETECTOR, "-d"));
 }
 
-void DRaceGUI::on_extsan_btn_clicked()
+void DRaceGUI::on_dummy_btn_clicked()
 {
     ui->command_output->setText(ch->make_entry("dummy", Command_Handler::DETECTOR, "-d"));
 }
@@ -122,10 +121,10 @@ void DRaceGUI::on_fasttrack_btn_clicked()
 void DRaceGUI::on_dr_debug_stateChanged(int arg1)
 {
     if(arg1 == 0){
-        ui->command_output->setText(ch->updateCommand("", Command_Handler::DR_DEBUG));
+        ui->command_output->setText(ch->make_entry("", Command_Handler::DR_DEBUG));
     }
     else{
-        ui->command_output->setText(ch->updateCommand("-debug", Command_Handler::DR_DEBUG));
+        ui->command_output->setText(ch->make_entry("-debug", Command_Handler::DR_DEBUG));
     }
 }
 
@@ -136,9 +135,10 @@ void DRaceGUI::on_report_creation_stateChanged(int arg1)
         ui->command_output->setText(ch->get_command());
         return;
     }
+
     QMessageBox temp;
     temp.setIcon(QMessageBox::Warning);
-    temp.setText("ReportConverter is path not set correctly");
+    temp.setText("ReportConverter is not set correctly");
     temp.exec();
     ui->msr_box->setChecked(false);
     ui->msr_box->setCheckState(Qt::Unchecked);
@@ -178,6 +178,8 @@ void DRaceGUI::on_drace_path_input_textChanged(const QString &arg1)
     ui->command_output->setText(ch->make_entry(arg1, Command_Handler::DRACE, "-c"));
 
     QPalette pal;
+    pal.setColor(QPalette::Base, Qt::red);
+
     if (arg1.endsWith("drace-client.dll")) {
         pal.setColor(QPalette::Base, Qt::green);
         
@@ -187,11 +189,8 @@ void DRaceGUI::on_drace_path_input_textChanged(const QString &arg1)
             ui->config_file_input->setText(path_to_config);
         }
     }
-    else {
-        pal.setColor(QPalette::Base, Qt::red);
-    }
-    ui->drace_path_input->setPalette(pal);
 
+    ui->drace_path_input->setPalette(pal);
 }
 
 void DRaceGUI::on_exe_input_textChanged(const QString &arg1)
@@ -230,43 +229,30 @@ void DRaceGUI::on_actionAbout_triggered()
 
 void DRaceGUI::on_actionLoad_Config_triggered()
 {
-    QMessageBox temp;
-    temp.setText("Feature not implemented");
-    temp.exec();
-    return;
-
-    QString path = QFileDialog::getOpenFileName(this, "Open File", QDir::currentPath());
-
-    QMessageBox msg;
-    if(ls->load(path.toStdString(), this)){
-        msg.setText("Loading was successfull");
+    QString path = QFileDialog::getOpenFileName(this, "Open File", load_save_path);
+    if (path != "") {
+        load_save_path = path;
+        Load_Save ls(rh, ch);
+        if (ls.load(path.toStdString())) {
+            set_boxes_after_load();//restore all the data to the boxes
+        }
+        else {
+            QMessageBox temp;
+            temp.setIcon(QMessageBox::Warning);
+            temp.setText("File is not valid!");
+            temp.exec();
+        }
     }
-    else{
-        msg.setIcon(QMessageBox::Warning);
-        msg.setText("Loading was not successfull");
-    }
-    msg.exec();
 }
 
 void DRaceGUI::on_actionSave_Config_triggered()
 {
-    QMessageBox temp;
-    temp.setText("Feature not implemented");
-    temp.exec();
-    return;
-
-    QString path = QFileDialog::getSaveFileName(this, "Save file", QDir::currentPath());
-
-    QMessageBox msg;
-    if(ls->save(path.toStdString(), this)){
-        msg.setText("Saving was successfull");
-        msg.exec();
+    QString path = QFileDialog::getSaveFileName(this, "Save file", load_save_path);
+    if (path != "") {
+        load_save_path = path;
+        Load_Save ls(rh, ch);
+        ls.save(path.toStdString());
     }
-    else{
-        msg.setIcon(QMessageBox::Warning);
-        msg.setText("Saving was not successfull");
-    }
-    msg.exec();
 }
 
 void DRaceGUI::on_actionConfigure_Report_triggered()
@@ -275,6 +261,83 @@ void DRaceGUI::on_actionConfigure_Report_triggered()
     report_window = new Report_Config(rh);
     report_window->exec();
     ui->command_output->setText(ch->get_command());
+}
+
+void DRaceGUI::on_actionHelp_triggered() {
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("This feature is not avaliable!");
+    temp.exec();
+}
+
+
+///after a load all necessary data is restored in the handler classes
+///this functions puts the data bacak in the text and check boxes
+void DRaceGUI::set_boxes_after_load()
+{
+    //reset text boxes
+    ui->dr_path_input->setText(ch->command[Command_Handler::DYNAMORIO]);
+
+    QString drace_cl = ch->command[Command_Handler::DRACE];
+    drace_cl.remove(0, 3); //drace cmd is -c DRACECLIENT -> remove "-c "
+    ui->drace_path_input->setText(drace_cl);
+
+    QString config = ch->command[Command_Handler::CONFIGURATION];
+    config.remove(0, 3); //config cmd is -c CONFIGFILE -> remove "-c "
+    ui->config_file_input->setText(config);
+
+    QString exe = ch->command[Command_Handler::EXECUTABLE];
+    exe.remove(0, 3); //exe cmd is -- EXECUTEABLE -> remove "-- "
+    ui->exe_input->setText(exe);
+    
+    ui->flag_input->setText(ch->command[Command_Handler::FLAGS]);
+
+
+    //set debug check box
+    if (ch->command[Command_Handler::DR_DEBUG] != ""){
+        ui->dr_debug->setChecked(true);
+        ui->dr_debug->setCheckState(Qt::Checked);
+    }
+    else {
+        ui->dr_debug->setChecked(false);
+        ui->dr_debug->setCheckState(Qt::Unchecked);
+    }
+
+
+    //set report check box
+    if(rh->command_valid()){
+        ui->report_creation->setChecked(true);
+        ui->report_creation->setCheckState(Qt::Checked);
+    }
+    else {
+        ui->report_creation->setChecked(false);
+        ui->report_creation->setCheckState(Qt::Unchecked);
+    }
+
+    //set msr check box
+    if (ch->get_msr_path() != "") {
+        ui->msr_box->setChecked(true);
+        ui->msr_box->setCheckState(Qt::Checked);
+    }
+    else {
+        ui->msr_box->setChecked(false);
+        ui->msr_box->setCheckState(Qt::Unchecked);
+    }
+
+    //set detector back end
+    QString detector = ch->command[Command_Handler::DETECTOR];
+    if (detector.contains("tsan", Qt::CaseInsensitive)) {
+        ui->tsan_btn->setChecked(true);
+    }
+    if (detector.contains("dummy", Qt::CaseInsensitive)) {
+        ui->dummy_btn->setChecked(true);
+    }
+    if (detector.contains("fasttrack", Qt::CaseInsensitive)) {
+        ui->fasttrack_btn->setChecked(true);
+    }
+
+
+    ui->command_output->setText(ch->make_command());
 }
 
 

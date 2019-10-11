@@ -10,57 +10,39 @@
  */
 
 #include "Load_Save.h"
-#include "qt/draceGUI.h"
 
-Load_Save::Load_Save()
-{
-}
+Load_Save::Load_Save(Report_Handler* r, Command_Handler* c)
+:rh(r), ch(c){}
 
-bool Load_Save::set_data(std::vector<std::string> content, DRaceGUI *instance){
-    return false;
-}
 
-std::string Load_Save::return_serialized_data(DRaceGUI *instance){
-    return "";
-}
+void Load_Save::save(std::string path){
 
-bool Load_Save::save(std::string path, DRaceGUI* instance){
+    Data_Handler data;
+    //the data handler fetches all data from the other handler classes
+    data.get_data(rh, ch); 
 
-    std::string do_save = return_serialized_data(instance);
-
-    if(do_save != ""){
-        std::ofstream save_to_file;
-        save_to_file.open(path);
-        if(save_to_file.is_open()){
-            save_to_file << do_save << std::endl;
-            save_to_file.close();
-            return true;
-        }
-        else{
-            return false;
-        }
+    std::ofstream save_to_file(path);
+    {
+        boost::archive::text_oarchive oa(save_to_file);
+        oa << data; ///just save all the members as serialized stream to the file
     }
-    return false;
 
 }
 
-bool Load_Save::load(std::string path, DRaceGUI* instance){
+bool Load_Save::load(std::string path){
+    Data_Handler data;
+    std::ifstream load_file(path);
 
-    std::ifstream load_file;
-    load_file.open(path);
-    std::vector<std::string> content;
-    if(load_file.is_open()){
-        for( std::string line; getline( load_file, line );){
-            content.push_back(line);
-        }
-        load_file.close();
+    try {
+        boost::archive::text_iarchive ia(load_file);
+        ia >> data;
     }
-    else{
+    catch(boost::archive::archive_exception){
         return false;
     }
 
-    if(set_data(content, instance)){
-        return true;
-    }
-    return false;
+    //the data handler restores all the data from the file to the other handler classes
+    data.set_data(rh, ch);
+    return true;
 }
+

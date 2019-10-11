@@ -18,12 +18,15 @@
 #include "Command_Handler.h"
 #include <QProcess>
 #include "Executor.h"
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 class Report_Handler
 {
     ///Name of report converter
     static constexpr char* REP_CONV_DEFAULT = "ReportConverter";
 
+    ///member which holds the path to the report converter
     QString rep_conv_cmd = "";
 
     ///default report name
@@ -42,16 +45,22 @@ class Report_Handler
 
     QString make_command();
 
+ 
 public:
     Report_Handler(Command_Handler* c_handler, QObject* parent);
 
     QString get_rep_conv_cmd() { return rep_conv_cmd; }
     QString get_rep_name() { return rep_name; }
+    bool get_is_python() { return is_python; }
+    bool get_create_report() { return create_report; }
 
     void set_report_name(QString name);
-
+    ///sets the report converter without validity check
+    void set_report_converter(QString path);
+    void set_is_python(bool state);
     bool set_report_command();
 
+    ///evaluates if the report cnoverter is valid, and sets it if so
     bool eval_rep_conv(QString name, QObject* parent);
 
     bool command_valid();
