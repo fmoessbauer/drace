@@ -57,8 +57,12 @@ void Report_Config::on_buttonBox_accepted()
 
 void Report_Config::on_report_conv_path_clicked()
 {
-    QString path = QFileDialog::getOpenFileName(this, "Open File", QDir::currentPath());
-    ui->report_conv_input->setText(path);
+    QString selfilter = tr("Executable (*.exe);;Python (*.py)");
+    QString path = QFileDialog::getOpenFileName(this, "Open File", path_cache, tr("All files(*.*);; Executable (*.exe);;Python (*.py)"), &selfilter);
+    if (path != "") {
+        path_cache = path;
+        ui->report_conv_input->setText(path);
+    }
 }
 
 void Report_Config::on_report_name_textChanged(const QString &arg1)

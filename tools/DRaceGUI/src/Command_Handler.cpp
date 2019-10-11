@@ -35,15 +35,15 @@ QString Command_Handler::make_entry(const QString &path, uint position, QString 
 
 QString Command_Handler::updateCommand(const QString &arg1, uint position) {
     if (position == REPORT_CMD && arg1 != "") {
-        QString cmd = "; " + arg1;
+        //set a semicolon before the report command -> must be executed after the drace finished
+        QString cmd = "; " + arg1; 
         command[position] = cmd;
     }
     else {
         command[position] = arg1;
     }
 
-    entire_command = make_command();
-    return entire_command;
+    return make_command();
 }
 
 QString Command_Handler::make_command() {

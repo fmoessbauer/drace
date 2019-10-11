@@ -27,33 +27,21 @@ class Report_Config : public QDialog
     Q_OBJECT
 
 public:
+    ///ui box to set the path of the report converter
     explicit Report_Config(Report_Handler * rh,  QWidget *parent = nullptr);
-
-
     ~Report_Config();
 
 private slots:
     void on_buttonBox_rejected();
-
     void on_buttonBox_accepted();
-
     void on_report_conv_path_clicked();
-
     void on_report_name_textChanged(const QString &arg1);
-
-
     void on_report_conv_input_textChanged(const QString &arg1);
-
-public slots:
-
-//signals:
-   //void SIG_report_name(QString path);
-   //void SIG_converter_path(QString path);
-
 
 private:
     Ui::Report_Config *ui;
     Report_Handler* r_handler;
+    QString path_cache;
 };
 
 #endif // REPORT_CONFIG_H

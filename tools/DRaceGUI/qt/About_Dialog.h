@@ -23,6 +23,7 @@ class About_Dialog : public QDialog
     Q_OBJECT
 
 public:
+    ///displays the about dialog when called
     explicit About_Dialog(QWidget *parent = nullptr);
     ~About_Dialog();
 

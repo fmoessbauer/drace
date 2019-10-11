@@ -14,24 +14,24 @@
 #include <string>
 #include <fstream>
 #include <QString>
-#include <vector>
+#include "Report_Handler.h"
+#include "Command_Handler.h"
+#include "Data_Handler.h"
 
-#ifdef USE_BOOST
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#endif
 
-class DRaceGUI;
 
 class Load_Save
 {
-    std::string return_serialized_data(DRaceGUI* instance);
-    bool set_data(std::vector<std::string> content, DRaceGUI* instance);
-public:
-    Load_Save();
+    Report_Handler* rh;
+    Command_Handler* ch;
 
-    bool load(std::string path, DRaceGUI* instance);
-    bool save(std::string path, DRaceGUI* instance);
+public:
+    Load_Save(Report_Handler* r, Command_Handler* c);
+
+    bool load(std::string path);
+    void save(std::string path);
 };
 
 #endif // LOAD_SAVE_H

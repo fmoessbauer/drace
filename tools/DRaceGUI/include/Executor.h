@@ -20,13 +20,20 @@ class Executor {
 
 
 public:
-    Executor();
-    static void execute(QObject* parent, std::string cmd);//, Report_Handler * exe);
-    static void exe_custom(std::string cmd, QObject* parent);
+    ///executes the cmd in a powershell, which  will stay open after finishing
+    static void execute(std::string cmd, QObject* parent);
+
+    ///checks if cmd is a valid dynamorio cmd
     static bool exe_drrun(QString cmd, QObject* parent);
+
+    ///checks if python3 is installed 
     static bool exe_python3(QObject* parent);
-    static bool exe_msr(QString path, QObject * parent);
-    static void launch_msr(std::string path);
+
+    ///checks if cmd is a valid ManagedSymbol Resolver cmd
+    static bool exe_msr(QString cmd, QObject * parent);
+
+    ///launches a powershell with the MSR which will stay open after finishing the command
+    static void launch_msr(std::string cmd);
 };
 
 
