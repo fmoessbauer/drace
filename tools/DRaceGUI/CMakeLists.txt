@@ -33,10 +33,6 @@ cmake_minimum_required(VERSION 3.5)
 
 project(${GUI_TARGET} LANGUAGES CXX)
 
-list(APPEND CMAKE_PREFIX_PATH "C:\\Qt\\Qt5.13.1\\5.13.1")
-if(NOT Qt5_DIR)
-    set(Qt5_DIR "C:\\Qt\\Qt5.13.1\\5.13.1\\msvc2017_64\\lib\\cmake\\Qt5")
-endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC ON)
