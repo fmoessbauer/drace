@@ -317,7 +317,6 @@ namespace drace {
             std::lock_guard<xlock> ex_l(t_insert);
             if (threads.find(parent) != threads.end()) {
                 {
-                    std::lock_guard<xlock> ex_l(t_lock);
                     threads[parent]->inc_vc(); //inc vector clock for creation of new thread
                 }
                 create_thread(child, threads[parent]);
@@ -438,6 +437,7 @@ namespace drace {
 
             std::lock_guard<xlock> ex_l(t_lock);
             //update vector clock of thread with happened before clocks
+            thr->update(hp);
 
         }
 

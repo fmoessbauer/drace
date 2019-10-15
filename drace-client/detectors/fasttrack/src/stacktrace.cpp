@@ -55,7 +55,6 @@ void StackTrace::clean() {
     do {
         sth_was_deleted = false;
         for (auto it = local_stack.m_vertices.begin(); it != local_stack.m_vertices.end(); it++) {
-            delete_flag = false;
             if (boost::in_degree(*it, local_stack) == 0 && *it != ce) {
                 delete_flag = true;
                 for (auto jt = read_write.begin(); jt != read_write.end(); jt++) {
