@@ -163,7 +163,7 @@ namespace drace {
                     report_race(act_tid, tid, false, true, v->address, v->get_clock_by_thr(act_tid), t->get_clock());
                 }
             }
-            v->update(true, tid);
+            v->update(true, t->return_own_id());
         }
 
         ///returns iterator to inserted element
