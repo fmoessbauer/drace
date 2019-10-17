@@ -109,24 +109,24 @@ uint32_t VarState::get_r_clock() const {
 ///updates the var state because of an new read or write access through an thread
 void VarState::update(bool is_write, size_t id) {
     if (is_write) {
-        
         r_id = VAR_NOT_INIT;      
-        shared_vc.reset();;
-
+        shared_vc.reset();
         w_id = id;
+
+        return;
     }
-    else {
-        if (shared_vc != nullptr) {
-            auto it = find_in_vec(id);
-            if (it != shared_vc->end()) {
-                shared_vc->erase(it);
-            }
-            shared_vc->push_back(id);
-        }
-        else {
-            r_id = id;
-        }
+
+    if (shared_vc == nullptr) {
+        r_id = id;
+        return;
     }
+
+    auto it = find_in_vec(VectorClock<>::make_tid(id));
+    if (it != shared_vc->end()) {
+        shared_vc->erase(it);
+    }
+    shared_vc->push_back(id);
+
 }
 
 ///sets read state to shared
