@@ -68,7 +68,7 @@ public:
 
 
     ///updates vector clock entry or creates entry if non-existant
-    void update(size_t tid, size_t id) {
+    void update(uint32_t tid, size_t id) {
         auto it = vc.find(tid);
         if (it == vc.end()) {
             vc.insert({ tid, id });
@@ -85,7 +85,7 @@ public:
 
     ///returns known clock of tid
     ///returns 0 if vc does not hold the tid
-    size_t get_clock_by_tid(size_t tid) {
+    size_t get_clock_by_tid(uint32_t tid) {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return make_clock(it->second);
@@ -97,7 +97,7 @@ public:
 
 
     ///returns known whole id in vectorclock of tid
-    size_t get_id_by_tid(size_t tid) {
+    size_t get_id_by_tid(uint32_t tid) {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return it->second;
@@ -109,12 +109,12 @@ public:
 
     ///returns the tid of the id
     static const uint32_t make_tid(size_t id) {
-        return id / multplier_64;
+        return static_cast<uint32_t>(id / multplier_64);
     }
 
     ///returns the clock of the id
     static const uint32_t make_clock(size_t id) {
-        return id % multplier_64;
+        return static_cast<uint32_t>(id % multplier_64);
     }
 
 

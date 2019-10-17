@@ -168,7 +168,9 @@ namespace drace {
 
         ///returns iterator to inserted element
         auto Fasttrack::create_var(size_t addr, size_t size) {
-            auto var = std::make_shared<VarState>(addr, size);
+            uint16_t u16_size = static_cast<uint16_t>(size);
+
+            auto var = std::make_shared<VarState>(addr, u16_size);
             return vars.insert({ addr, var }).first;
         }
 
@@ -231,6 +233,7 @@ namespace drace {
 
         void Fasttrack::finalize() {
             vars.clear();
+
             locks.clear();
             happens_states.clear();
             allocs.clear();

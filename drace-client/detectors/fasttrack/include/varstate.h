@@ -49,7 +49,7 @@ public:
     /// var size //TO DO make smaller
     const uint16_t size;
 
-    VarState::VarState(size_t addr, size_t var_size);
+    VarState::VarState(size_t addr, uint16_t var_size);
 
     ///evaluates for write/write races through this and and access through t
     bool is_ww_race(std::shared_ptr<ThreadState> t);

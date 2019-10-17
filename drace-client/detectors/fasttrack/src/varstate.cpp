@@ -10,7 +10,7 @@
  */
 #include "varstate.h"
 
-VarState::VarState(size_t addr, size_t var_size)
+VarState::VarState(size_t addr, uint16_t var_size)
 :address(addr),
 size(var_size),
 w_id(VAR_NOT_INIT),

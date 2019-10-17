@@ -8,6 +8,15 @@
 # This work is licensed under the terms of the MIT license.  See
 # the LICENSE file in the top-level directory.
 
+function(target_link_libraries_system target)
+  set(libs ${ARGN})
+  foreach(lib ${libs})
+    get_target_property(lib_include_dirs ${lib} INTERFACE_INCLUDE_DIRECTORIES)
+    target_include_directories(${target} SYSTEM PRIVATE ${lib_include_dirs})
+    target_link_libraries(${target} ${lib})
+  endforeach(lib)
+endfunction(target_link_libraries_system)
+
 set(SOURCES
 "src/fasttrack"
 "src/threadstate"
@@ -24,8 +33,12 @@ if(Boost_FOUND)
     target_include_directories("drace.detector.fasttrack"
         PRIVATE "include"
         PRIVATE "${Boost_INCLUDE_DIR}")
-    target_link_libraries("drace.detector.fasttrack" "drace-common" "parallel-hashmap")
+    target_link_libraries("drace.detector.fasttrack" "drace-common")
+    
+    target_link_libraries("drace.detector.fasttrack" "parallel-hashmap")
+
     target_link_libraries("drace.detector.fasttrack")
+
     install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
 
     configure_DynamoRIO_standalone("drace.detector.fasttrack")
