@@ -21,7 +21,7 @@ QString Command_Handler::make_entry(const QString &path, uint position, QString 
     if (path != "") {
         QString temp = path;
         if (temp.contains(QRegExp("\\s+")) && !no_quotes) {
-            temp = "\"" + temp + "\"";
+            temp = "\'" + temp + "\'";
         }
         if (prefix != "") {
             temp = prefix + " " + temp;

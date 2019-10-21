@@ -10,12 +10,14 @@
  */
 
 #include "Executor.h"
-
+#include <Windows.h>
 
 void Executor::execute(std::string cmd, QObject* parent)
 {
-    std::string ps_cmd = "start powershell -NoExit " + cmd;
-    system(ps_cmd.c_str());
+    std::string shell = "powershell.exe";
+    std::string ps_args = "-NoExit " + cmd;
+
+    ShellExecute(NULL, NULL, shell.c_str(), ps_args.c_str(), NULL, SW_SHOWDEFAULT);
 }
 
 bool Executor::exe_drrun(QString cmd, QObject* parent)
