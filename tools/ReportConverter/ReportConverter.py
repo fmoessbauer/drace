@@ -99,7 +99,8 @@ class ReportCreator:
         self._pathOfReport = pathOfReport
         if self._inputValidation():
             self._createReport()
-            if not noMatplotLib:
+            hasErrors = self._reportRoot.find('error') != None
+            if not noMatplotLib and hasErrors:
                 self._makeHistogramm(target)
                 self._countTopStackOccurences(target)
         else:
@@ -387,6 +388,7 @@ class ReportCreator:
             self._strErrors += newError
 
     def _createHeader(self):
+        hasErrors = self._reportRoot.find('error') != None
         headerInformation = self._getHeader()
         self.htmlReport = self._htmlTemplates.find('base_entry').text
         self.htmlReport = self.htmlReport.replace('*DATE*', headerInformation[0])
@@ -399,7 +401,7 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*PROTOCOLTOOL*', headerInformation[7])
         self.htmlReport = self.htmlReport.replace('*NUMBER_OF_ERRORS*', str(self._numberOfErrors))
         self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self._strErrors)
-        if not noMatplotLib:
+        if not noMatplotLib and hasErrors:
             self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self._topStackGraphFileName)
             self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self._errorTimesPlot)
         else:
