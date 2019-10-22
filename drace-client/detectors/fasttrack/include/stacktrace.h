@@ -13,11 +13,7 @@
 
 
 #include <unordered_map>
-//#include "tl_alloc.h"
-#include <ipc/DrLock.h>
 #include <boost/graph/adjacency_list.hpp>
-
-
 
 class StackTrace {
 
@@ -31,6 +27,7 @@ class StackTrace {
 
     ///holds to complete stack tree
     ///is needed to create the stack trace in case of a race
+    ///leafs of the tree which do not have pointer pointing to them may be deleted 
     stack_tree local_stack;
 
     ///holds the current stack element
@@ -38,11 +35,12 @@ class StackTrace {
 
     std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data);
 
+    uint16_t pop_count = 0;
 
 public:
     StackTrace();
 
-    void cut_tree(stack_tree::vertex_descriptor to_cut);
+    //void cut_tree(stack_tree::vertex_descriptor to_cut);
 
     void clean();
 

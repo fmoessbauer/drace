@@ -307,8 +307,9 @@ namespace drace {
 
         void Fasttrack::func_exit(tls_t tls) {
             auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+            
             //shared lock is enough as a single thread cannot do more than one action (r,w,enter,exit...) at a time
-            std::shared_lock<rwlock> sh_l(s_lock); 
+            std::shared_lock<rwlock> sh_l(s_lock);
             stack->pop_stack_element(); //pops last stack element of current clock
         }
 

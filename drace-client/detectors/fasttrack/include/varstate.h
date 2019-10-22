@@ -14,7 +14,8 @@
 #include "vectorclock.h"
 #include "threadstate.h"
 #include <atomic>
-//#include <memory>
+#include <memory>
+#include "xvector.h"
 
 class VarState  {
 

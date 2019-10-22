@@ -8,6 +8,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
+/*
 #include "dr_api.h"
 
 template <class T>
@@ -48,3 +49,4 @@ operator!=(tl_alloc<T> const& x, tl_alloc<U> const& y) noexcept
 {
     return !(x == y);
 }
+*/

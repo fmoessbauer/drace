@@ -15,7 +15,7 @@
 #include <iostream>
 #include <detector/Detector.h>
 #include <ipc/spinlock.h>
-#include <ipc/DrLock.h>
+//#include <ipc/DrLock.h>
 #include "threadstate.h"
 #include "varstate.h"
 #include "stacktrace.h"
@@ -35,7 +35,8 @@ namespace drace {
         class Fasttrack : public Detector {
         public:
             typedef size_t tid_ft;
-            typedef DrLock rwlock;
+            //typedef DrLock rwlock;
+            typedef xlock rwlock;
             
         private:    
 

@@ -22,7 +22,6 @@ std::list<size_t> StackTrace::make_trace(std::pair<size_t, stack_tree::vertex_de
     auto map = boost::get(boost::vertex_name_t(), local_stack);
     this_stack.push_front(map[act_item]);
 
-
     while (boost::out_degree(act_item, local_stack) != 0) {
         auto edge = boost::out_edges(act_item, local_stack);
         act_item = (boost::target(*(edge.first), local_stack));
@@ -38,27 +37,19 @@ std::list<size_t> StackTrace::make_trace(std::pair<size_t, stack_tree::vertex_de
 StackTrace::StackTrace() :ce(boost::add_vertex(0, local_stack)){}
 
 
-void StackTrace::cut_tree(stack_tree::vertex_descriptor to_cut) {
-
-    while (boost::in_degree(to_cut, local_stack) != 0) {
-        stack_tree::in_edge_iterator edge = (boost::in_edges(to_cut, local_stack)).first;
-        stack_tree::vertex_descriptor lower_vertex = boost::source(*(edge), local_stack);
-        cut_tree(lower_vertex);
-    }
-    boost::clear_vertex(to_cut, local_stack);
-    boost::remove_vertex(to_cut, local_stack);
-}
 
 void StackTrace::clean() {
+    return;
+//not working so far
     bool delete_flag, sth_was_deleted;
-
     do {
         sth_was_deleted = false;
         for (auto it = local_stack.m_vertices.begin(); it != local_stack.m_vertices.end(); it++) {
-
-            if (boost::in_degree(*it, local_stack) == 0 && *it != ce) {
-                delete_flag = true;
-                for (auto jt = read_write.begin(); jt != read_write.end(); jt++) {
+            
+            //if and only if the vertex is not  the current element, and it has no in_edges must be a top of stack
+            if (*it != ce && boost::in_degree(*it, local_stack) == 0) {
+                delete_flag = true; 
+                for (auto jt = read_write.begin(); jt != read_write.end(); jt++) {//step through the read_write list to make sure no element is refering to it
                     if (jt->second.second == *it) {
                         delete_flag = false;
                         break;
@@ -78,12 +69,35 @@ void StackTrace::clean() {
 void StackTrace::pop_stack_element() {
     auto edge = boost::out_edges(ce, local_stack);
     ce = (boost::target(*(edge.first), local_stack));
+    
+    pop_count++;
+    if(pop_count > 1){
+        pop_count = 0;
+        clean();
+    } 
 }
 
 void StackTrace::push_stack_element(size_t element) {
-    auto temp = boost::add_vertex(VertexProperty(element), local_stack);
-    boost::add_edge(temp, ce, local_stack);
-    ce = temp;
+    stack_tree::vertex_descriptor tmp;
+
+    if(boost::in_degree(ce, local_stack) > 0){
+        auto in_edges = boost::in_edges(ce, local_stack);
+        for(auto it = in_edges.first; it != in_edges.second; it++){
+            //check here if such a node is already existant and use it if so
+            tmp = boost::source(*it, local_stack);
+            auto desc = boost::get(boost::vertex_name_t(), local_stack, tmp);
+            
+            if(element == desc){
+                ce = tmp; //node is already there, use it
+                return;
+            }
+        }
+    }
+
+    tmp = boost::add_vertex(VertexProperty(element), local_stack);
+    boost::add_edge(tmp, ce, local_stack);
+    ce = tmp;
+
 }
 
 ///when a var is written or read, it copies the stack and adds the pc of the
