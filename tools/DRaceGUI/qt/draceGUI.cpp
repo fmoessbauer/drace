@@ -140,8 +140,8 @@ void DRaceGUI::on_report_creation_stateChanged(int arg1)
     temp.setIcon(QMessageBox::Warning);
     temp.setText("ReportConverter is not set correctly");
     temp.exec();
-    ui->msr_box->setChecked(false);
-    ui->msr_box->setCheckState(Qt::Unchecked);
+    ui->report_creation->setChecked(false);
+    ui->report_creation->setCheckState(Qt::Unchecked);
 }
 
 void DRaceGUI::on_msr_box_stateChanged(int arg1)
@@ -183,7 +183,7 @@ void DRaceGUI::on_drace_path_input_textChanged(const QString &arg1)
     if (arg1.endsWith("drace-client.dll")) {
         pal.setColor(QPalette::Base, Qt::green);
         
-        if (ui->config_file_input->text().isEmpty() || ui->config_file_input->palette().color(QPalette::Base) == QColor(Qt::red)){//try to set config file, when empty or red (=wrong)
+        if (ui->config_file_input->text().isEmpty()){//try to set config file, when empty 
             auto path_to_config = arg1;
             path_to_config.replace(QString("drace-client.dll"), QString("drace.ini"));
             ui->config_file_input->setText(path_to_config);
@@ -271,24 +271,34 @@ void DRaceGUI::on_actionHelp_triggered() {
 }
 
 
+QString DRaceGUI::remove_quotes(QString str){
+    if( (*(str.begin()) == "'" && *(str.begin()) == "'" ) ||
+        (*(str.begin()) == "\"" && *(str.begin()) == "\"")){
+            str.remove(0, 1);
+            str.remove(str.length()-1, 1);
+        }
+        return str;
+}
+
 ///after a load all necessary data is restored in the handler classes
 ///this functions puts the data bacak in the text and check boxes
 void DRaceGUI::set_boxes_after_load()
 {
     //reset text boxes
-    ui->dr_path_input->setText(ch->command[Command_Handler::DYNAMORIO]);
+    ui->dr_path_input->setText(remove_quotes(ch->command[Command_Handler::DYNAMORIO]));
+
+    QString config = ch->command[Command_Handler::CONFIGURATION]; //should be set before drace_client, to not interfere with the automatic set of the config file
+    config.remove(0, 3); //config cmd is -c CONFIGFILE -> remove "-c "
+    ui->config_file_input->setText(remove_quotes(config));
 
     QString drace_cl = ch->command[Command_Handler::DRACE];
     drace_cl.remove(0, 3); //drace cmd is -c DRACECLIENT -> remove "-c "
-    ui->drace_path_input->setText(drace_cl);
+    ui->drace_path_input->setText(remove_quotes(drace_cl));
 
-    QString config = ch->command[Command_Handler::CONFIGURATION];
-    config.remove(0, 3); //config cmd is -c CONFIGFILE -> remove "-c "
-    ui->config_file_input->setText(config);
 
     QString exe = ch->command[Command_Handler::EXECUTABLE];
     exe.remove(0, 3); //exe cmd is -- EXECUTEABLE -> remove "-- "
-    ui->exe_input->setText(exe);
+    ui->exe_input->setText(remove_quotes(exe));
     
     ui->flag_input->setText(ch->command[Command_Handler::FLAGS]);
 

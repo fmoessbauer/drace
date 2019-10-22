@@ -53,12 +53,7 @@
 <div class="row"><div class="col s4">
 <img src="legend.png"  width=100% >
 </div>
-<div class="vl col s4">
-<img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
-</div>
-<div class="col s4">
-<img src="*ERROR_TIMES_PLOT*"  width=100%  >
-</div></div>
+*MATPLOTLIB_PICTURES*</div>
 <hr />
 
 <h4>Errors</h4>
@@ -176,6 +171,13 @@ $("button").click(function() {
 *CODE_TAG*`;]]>
 </snippet_entry>
 <!-- &#129068 is a left arrow,  &#129066 is a right arrow-->
+<matplotlib_entries><![CDATA[<div class="vl col s4">
+<img src="*TOP_OF_STACK_GRAPH*"  width=100%  >
+</div>
+<div class="col s4">
+<img src="*ERROR_TIMES_PLOT*"  width=100%  >
+</div>]]>
+</matplotlib_entries>
 
 </entries>
 
