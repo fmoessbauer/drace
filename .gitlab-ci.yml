@@ -18,7 +18,6 @@ stages:
   - validate
   - build
   - test
-  - gui-test
   - package
 
 cmake:
@@ -57,7 +56,7 @@ cppcheck:
 # Test all builds
 #
 
-test-tsan-dr791:
+detector-test:
   <<: *globals
   <<: *testing
   stage: test
@@ -72,7 +71,7 @@ test-tsan-dr791:
   dependencies:
   - compile
 
-gui-test:
+report-converter-test:
   stage: test 
   tags: 
   - AWS
