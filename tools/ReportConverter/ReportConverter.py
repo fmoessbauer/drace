@@ -402,10 +402,12 @@ class ReportCreator:
         self.htmlReport = self.htmlReport.replace('*NUMBER_OF_ERRORS*', str(self._numberOfErrors))
         self.htmlReport = self.htmlReport.replace('*ERROR_ENTRIES*', self._strErrors)
         if not noMatplotLib and hasErrors:
-            self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', self._topStackGraphFileName)
-            self.htmlReport = self.htmlReport.replace('*ERROR_TIMES_PLOT*', self._errorTimesPlot)
+            matplotlib_snippet =  self._htmlTemplates.find('matplotlib_entries').text
+            matplotlib_snippet = matplotlib_snippet.replace('*TOP_OF_STACK_GRAPH*', self._topStackGraphFileName)
+            matplotlib_snippet = matplotlib_snippet.replace('*ERROR_TIMES_PLOT*', self._errorTimesPlot)
+            self.htmlReport = self.htmlReport.replace('*MATPLOTLIB_PICTURES*', matplotlib_snippet)
         else:
-            self.htmlReport = self.htmlReport.replace('*TOP_OF_STACK_GRAPH*', '')
+            self.htmlReport = self.htmlReport.replace('*MATPLOTLIB_PICTURES*', '')
 
     def _createReport(self):
         self._createErrorList()
