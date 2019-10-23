@@ -10,7 +10,7 @@
  */
 
 #include "fasttrack.h"
-
+#include "fasttrack_export.h"
 
 namespace drace {
 
@@ -532,6 +532,6 @@ namespace drace {
     }
 
 }
-extern "C" __declspec(dllexport) Detector * CreateDetector() {
+extern "C" FASTTRACK_EXPORT Detector * CreateDetector() {
     return new drace::detector::Fasttrack();
 }

@@ -21,10 +21,23 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     add_library("drace.detector.fasttrack" SHARED ${SOURCES})
+    include(GenerateExportHeader)
+    generate_export_header(
+        "drace.detector.fasttrack"
+        BASE_NAME fasttrack)
+
+    set_target_properties(
+        "drace.detector.fasttrack" PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED OFF
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN ON)
 
     target_include_directories("drace.detector.fasttrack"
         PRIVATE "include"
         PRIVATE "${Boost_INCLUDE_DIR}")
+    # include exports header
+    target_include_directories("drace.detector.fasttrack" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack>)
     target_link_libraries("drace.detector.fasttrack" "drace-common")
     
     target_link_libraries("drace.detector.fasttrack" "parallel-hashmap")
@@ -32,6 +45,8 @@ if(Boost_FOUND)
     target_link_libraries("drace.detector.fasttrack")
 
     install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
+
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_export.h DESTINATION include)
 
     configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
