@@ -21,6 +21,7 @@
 #include "fasttrack_export.h"
 #include "parallel_hashmap/phmap.h"
 
+
 #ifndef STD_MUTEX
 #include <ipc/DrLock.h>
 #endif
@@ -232,7 +233,7 @@ namespace drace {
             }
 
             ///creates a new thread object (is called when fork() called)
-            void create_thread(Detector::tid_t tid, std::shared_ptr<ThreadState> parent = nullptr){
+            void create_thread(VectorClock<>::TID tid, std::shared_ptr<ThreadState> parent = nullptr){
 
                 std::shared_ptr<ThreadState> new_thread;
                 if (parent == nullptr) {
@@ -378,7 +379,7 @@ namespace drace {
 
 
             void fork(tid_t parent, tid_t child, tls_t * tls) final{
-                 Fasttrack::tid_ft child_size_t = child;
+                Fasttrack::tid_ft child_size_t = child;
                 *tls = reinterpret_cast<void*>(child_size_t);
 
                 std::lock_guard<_L> ex_l(t_insert);

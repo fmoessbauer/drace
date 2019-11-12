@@ -12,7 +12,7 @@
 #include "fasttrack.h"
 
 
-ThreadState::ThreadState(drace::detector::Fasttrack<_mutex>* ft_inst, uint32_t own_tid, std::shared_ptr<ThreadState> parent)
+ThreadState::ThreadState(drace::detector::Fasttrack<_mutex>* ft_inst, VectorClock::TID own_tid, std::shared_ptr<ThreadState> parent)
 :ft(ft_inst),
 id(VectorClock::make_id(own_tid))
 {
@@ -36,15 +36,15 @@ void ThreadState::inc_vc() {
     vc[VectorClock::make_tid(id)] = id;
 }
 
-size_t ThreadState::return_own_id() const{
+VectorClock<>::VC_ID ThreadState::return_own_id() const{
     return id;
 };
 
-uint32_t ThreadState::get_tid() const {
+VectorClock<>::TID ThreadState::get_tid() const {
     return VectorClock::make_tid(id);
 }
 
-uint32_t ThreadState::get_clock() const {
+VectorClock<>::Clock ThreadState::get_clock() const {
     return VectorClock::make_clock(id);
 }
 

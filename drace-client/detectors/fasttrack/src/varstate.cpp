@@ -52,10 +52,11 @@ bool VarState::is_rw_ex_race(std::shared_ptr<ThreadState> t) {
 }
 
 ///evaluates for read-shared/write races through this and and access through t
-uint32_t VarState::is_rw_sh_race(std::shared_ptr<ThreadState> t) {
+VectorClock<>::TID VarState::is_rw_sh_race(std::shared_ptr<ThreadState> t) {
     for (int i = 0; i < shared_vc->size(); ++i) {
-        size_t act_id = get_sh_id(i);
-        uint32_t act_tid = VectorClock<>::make_tid(act_id);
+        VectorClock<>::VC_ID act_id = get_sh_id(i);
+        
+        VectorClock<>::TID act_tid = VectorClock<>::make_tid(act_id);
 
         if (act_id != 0            &&
             t->get_tid() != act_tid &&
@@ -67,18 +68,18 @@ uint32_t VarState::is_rw_sh_race(std::shared_ptr<ThreadState> t) {
     return 0;
 }
 
-size_t  VarState::get_write_id() const {
+VectorClock<>::VC_ID VarState::get_write_id() const {
     return w_id;
 }
 
-size_t VarState::get_read_id() const {
+VectorClock<>::VC_ID VarState::get_read_id() const {
     return r_id;
 }
 
 
-auto VarState::find_in_vec(size_t tid)  {
+auto VarState::find_in_vec(VectorClock<>::TID tid)  {
     for (auto it = shared_vc->begin(); it != shared_vc->end(); ++it) {
-        if (VectorClock<>::make_tid(*it)== tid) {
+        if (VectorClock<>::make_tid(*it) == tid) {
             return it;
         }
     }
@@ -89,25 +90,25 @@ auto VarState::find_in_vec(size_t tid)  {
 
 
 ///return tid of thread which last wrote this var
-uint32_t VarState::get_w_tid() const {   
+VectorClock<>::TID VarState::get_w_tid() const {   
     return VectorClock<>::make_tid(w_id);
 }
 
 ///return tid of thread which last read this var, if not read shared
-uint32_t VarState::get_r_tid() const{
+VectorClock<>::TID VarState::get_r_tid() const{
     return VectorClock<>::make_tid(r_id);
 }
 
-uint32_t VarState::get_w_clock() const {
+VectorClock<>::Clock VarState::get_w_clock() const {
     return VectorClock<>::make_clock(w_id);
 }
 
-uint32_t VarState::get_r_clock() const {
+VectorClock<>::Clock VarState::get_r_clock() const {
     return VectorClock<>::make_clock(r_id);
 }
 
 ///updates the var state because of an new read or write access through an thread
-void VarState::update(bool is_write, size_t id) {
+void VarState::update(bool is_write, VectorClock<>::VC_ID id) {
     if (is_write) {
         r_id = VAR_NOT_INIT;      
         shared_vc.reset();
@@ -130,7 +131,7 @@ void VarState::update(bool is_write, size_t id) {
 }
 
 ///sets read state to shared
-void VarState::set_read_shared(size_t id)
+void VarState::set_read_shared(VectorClock<>::VC_ID id)
 {
     shared_vc = std::make_unique<xvector<size_t>>();
     shared_vc->push_back(r_id);
@@ -141,7 +142,7 @@ void VarState::set_read_shared(size_t id)
 }
 
 ///if in read_shared state, then returns thread id of position pos in vector clock
-size_t VarState::get_sh_id(uint32_t pos) const {
+VectorClock<>::VC_ID VarState::get_sh_id(uint32_t pos) const {
     if (pos < shared_vc->size()) {
         auto it = shared_vc->begin();
         std::advance(it, pos);
@@ -158,7 +159,7 @@ bool VarState::is_read_shared() const{
 
 
 ///return stored clock value, which belongs to ThreadState t, 0 if not available
-size_t VarState::get_vc_by_thr(size_t tid)  {
+VectorClock<>::VC_ID VarState::get_vc_by_thr(VectorClock<>::TID tid)  {
     auto it = find_in_vec(tid);
 
     if (it != shared_vc->end()) {
@@ -168,7 +169,7 @@ size_t VarState::get_vc_by_thr(size_t tid)  {
 }
 
 
-uint32_t VarState::get_clock_by_thr(size_t tid)  {
+VectorClock<>::Clock VarState::get_clock_by_thr(VectorClock<>::TID tid)  {
 
     auto it = find_in_vec(tid);
     if (it != shared_vc->end()) {
