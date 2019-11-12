@@ -15,13 +15,13 @@
 #include <iostream>
 #include <detector/Detector.h>
 #include <ipc/spinlock.h>
-#include <ipc/DrLock.h>
+//#include <ipc/DrLock.h>
 #include "threadstate.h"
 #include "varstate.h"
 #include "stacktrace.h"
 #include "xvector.h"
 #include "ipc/xlock.h"
-
+//#include <unordered_map>
 #include "parallel_hashmap/phmap.h"
 
 #define MAKE_OUTPUT true
@@ -32,11 +32,11 @@ namespace drace {
 
     namespace detector {
 
-        //template here
         class Fasttrack : public Detector {
         public:
             typedef size_t tid_ft;
-            typedef DrLock rwlock;
+            //typedef DrLock rwlock;
+            typedef xlock rwlock;
             
         private:    
 
@@ -106,48 +106,48 @@ namespace drace {
             void cleanup(uint32_t tid);
 
             //public functions are explained in the detector base class
-            bool init(int argc, const char **argv, Callback rc_clb) override;
+            bool init(int argc, const char **argv, Callback rc_clb) final;
 
-            void finalize() override;
+            void finalize() final;
 
-            void read(tls_t tls, void* pc, void* addr, size_t size) override;
+            void read(tls_t tls, void* pc, void* addr, size_t size) final;
 
-            void write(tls_t tls, void* pc, void* addr, size_t size) override;
-
-
-            void func_enter(tls_t tls, void* pc) override;
-
-            void func_exit(tls_t tls) override;
+            void write(tls_t tls, void* pc, void* addr, size_t size) final;
 
 
-            void fork(tid_t parent, tid_t child, tls_t * tls) override;
+            void func_enter(tls_t tls, void* pc) final;
 
-            void join(tid_t parent, tid_t child) override;
-
-
-            void acquire(tls_t tls, void* mutex, int recursive, bool write) override;
-
-            void release(tls_t tls, void* mutex, bool write) override;
+            void func_exit(tls_t tls) final;
 
 
-            void happens_before(tls_t tls, void* identifier) override;
+            void fork(tid_t parent, tid_t child, tls_t * tls) final;
 
-            void happens_after(tls_t tls, void* identifier) override;
-
-            void allocate(tls_t  tls, void*  pc, void*  addr, size_t size) override;
-
-            void deallocate( tls_t tls, void* addr) override;
-
-            void detach(tls_t tls, tid_t thread_id) override;
-
-            void finish(tls_t tls, tid_t thread_id) override;
-
-            void map_shadow(void* startaddr, size_t size_in_bytes) override;
+            void join(tid_t parent, tid_t child) final;
 
 
-            const char * name() override;
+            void acquire(tls_t tls, void* mutex, int recursive, bool write) final;
 
-            const char * version() override;
+            void release(tls_t tls, void* mutex, bool write) final;
+
+
+            void happens_before(tls_t tls, void* identifier) final;
+
+            void happens_after(tls_t tls, void* identifier) final;
+
+            void allocate(tls_t  tls, void*  pc, void*  addr, size_t size) final;
+
+            void deallocate( tls_t tls, void* addr) final;
+
+            void detach(tls_t tls, tid_t thread_id) final;
+
+            void finish(tls_t tls, tid_t thread_id) final;
+
+            void map_shadow(void* startaddr, size_t size_in_bytes) final;
+
+
+            const char * name() final;
+
+            const char * version() final;
         };
 
     }
