@@ -12,7 +12,7 @@
 #include "fasttrack.h"
 
 
-ThreadState::ThreadState(drace::detector::Fasttrack* ft_inst, uint32_t own_tid, std::shared_ptr<ThreadState> parent)
+ThreadState::ThreadState(drace::detector::Fasttrack<_mutex>* ft_inst, uint32_t own_tid, std::shared_ptr<ThreadState> parent)
 :ft(ft_inst),
 id(VectorClock::make_id(own_tid))
 {
@@ -25,6 +25,7 @@ id(VectorClock::make_id(own_tid))
 
 ThreadState::~ThreadState() {
     uint32_t tid = VectorClock::make_tid(id);
+
     ft->cleanup(tid);
     ft = nullptr;
 }

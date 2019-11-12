@@ -11,15 +11,22 @@
 #ifndef THREADSTATE_H
 #define THREADSTATE_H
 
-#include <vector>
+
 #include <memory>
 #include "vectorclock.h"
 #include "xvector.h"
 #include <atomic>
-//#include "tl_alloc.h"
 
-namespace drace {
-    namespace detector {
+#ifdef STD_MUTEX
+    typedef std::shared_mutex _mutex; 
+#else
+    #include "ipc/DrLock.h"
+    typedef DrLock _mutex;
+#endif
+
+namespace drace{
+    namespace detector{
+        template<class _L>
         class Fasttrack;
     }
 }
@@ -31,14 +38,15 @@ private:
     ///holds the tid and the actual clock value -> lower 32 bits are clock, upper 32 are the tid
     std::atomic<uint64_t> id;
 
-    ///fasttrack* is needed to call the ft-cleanup function with the own tid, when destructing
-    drace::detector::Fasttrack* ft = nullptr;
+    ///void* for fasttrack instance is needed to call the ft-cleanup function with the own tid, when destructing
+    drace::detector::Fasttrack<_mutex>* ft = nullptr;
+
 
 public:
        
     ///constructor of ThreadState object, initializes tid and clock
     ///copies the vector of parent thread, if a parent thread exists
-    ThreadState::ThreadState(   drace::detector::Fasttrack* ft_inst,
+    ThreadState::ThreadState(    drace::detector::Fasttrack<_mutex>* ft_inst,
                                 uint32_t own_tid, std::shared_ptr<ThreadState> parent = nullptr); 
 
     ThreadState::~ThreadState(); 
