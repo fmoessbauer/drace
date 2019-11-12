@@ -533,5 +533,6 @@ namespace drace {
 
 }
 extern "C" __declspec(dllexport) Detector * CreateDetector() {
+    //ifdef std::mutex, drmutex
     return new drace::detector::Fasttrack();
 }

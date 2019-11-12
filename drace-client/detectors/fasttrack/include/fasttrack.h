@@ -15,13 +15,13 @@
 #include <iostream>
 #include <detector/Detector.h>
 #include <ipc/spinlock.h>
-//#include <ipc/DrLock.h>
+#include <ipc/DrLock.h>
 #include "threadstate.h"
 #include "varstate.h"
 #include "stacktrace.h"
 #include "xvector.h"
 #include "ipc/xlock.h"
-//#include <unordered_map>
+
 #include "parallel_hashmap/phmap.h"
 
 #define MAKE_OUTPUT true
@@ -32,11 +32,11 @@ namespace drace {
 
     namespace detector {
 
+        //template here
         class Fasttrack : public Detector {
         public:
             typedef size_t tid_ft;
-            //typedef DrLock rwlock;
-            typedef xlock rwlock;
+            typedef DrLock rwlock;
             
         private:    
 
