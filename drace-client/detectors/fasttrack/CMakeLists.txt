@@ -12,9 +12,7 @@
 set(SOURCES
 "src/stacktrace"
 "src/varstate"
-"src/threadstate"
-)
-
+"src/threadstate")
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target
@@ -24,7 +22,6 @@ if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     
     add_library("drace.detector.fasttrack.generic" SHARED ${SOURCES})
-
 
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
@@ -36,7 +33,6 @@ if(Boost_FOUND)
     target_include_directories("drace.detector.fasttrack.generic"
         PUBLIC "include"
         PUBLIC "${Boost_INCLUDE_DIR}")
-    
    
     target_link_libraries("drace.detector.fasttrack.generic" "drace-common")
     target_link_libraries("drace.detector.fasttrack.generic" "parallel-hashmap")
@@ -50,13 +46,10 @@ if(Boost_FOUND)
     add_library("drace.detector.fasttrack" SHARED ${SOURCES} "src/fasttrack_dr.cpp")
     configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
-    generate_export_header(
-        "drace.detector.fasttrack"
-        BASE_NAME fasttrack_dr)
+    generate_export_header("drace.detector.fasttrack" BASE_NAME fasttrack_dr)
 
     # include exports header
     target_include_directories("drace.detector.fasttrack" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack>)
-    target_include_directories("drace.detector.fasttrack" PRIVATE "include")
     target_link_libraries("drace.detector.fasttrack" "drace.detector.fasttrack.generic")
 
     install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
@@ -71,13 +64,8 @@ if(Boost_FOUND)
 
     ###########standalone Version#####################
     add_library("drace.detector.fasttrack.standalone" SHARED ${SOURCES} "src/fasttrack_st.cpp")
-    
-    target_include_directories("drace.detector.fasttrack.standalone"
-    PRIVATE "include")
 
-    generate_export_header(
-        "drace.detector.fasttrack.standalone"
-        BASE_NAME fasttrack_st)
+    generate_export_header("drace.detector.fasttrack.standalone" BASE_NAME fasttrack_st)
 
     # include exports header
     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
