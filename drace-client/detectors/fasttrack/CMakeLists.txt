@@ -48,8 +48,7 @@ if(Boost_FOUND)
 
     ###########DRACE Version#####################
     add_library("drace.detector.fasttrack" SHARED ${SOURCES} "src/fasttrack_dr.cpp")
-    target_include_directories("drace.detector.fasttrack"
-    PRIVATE "include")
+    configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
     generate_export_header(
         "drace.detector.fasttrack"
@@ -57,15 +56,11 @@ if(Boost_FOUND)
 
     # include exports header
     target_include_directories("drace.detector.fasttrack" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack>)
-
+    target_include_directories("drace.detector.fasttrack" PRIVATE "include")
     target_link_libraries("drace.detector.fasttrack" "drace.detector.fasttrack.generic")
 
     install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
-
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_export.h DESTINATION include)
-    
-    configure_DynamoRIO_standalone("drace.detector.fasttrack")
-   
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_dr_export.h DESTINATION include)
 
     # copy detector dlls to drace-client binary dir
     add_custom_command(TARGET "drace.detector.fasttrack" POST_BUILD
@@ -84,13 +79,13 @@ if(Boost_FOUND)
         "drace.detector.fasttrack.standalone"
         BASE_NAME fasttrack_st)
 
-     # include exports header
-     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
-
-
+    # include exports header
+    target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
     target_compile_definitions("drace.detector.fasttrack.standalone" PUBLIC -DSTD_MUTEX)
-
     target_link_libraries("drace.detector.fasttrack.standalone" "drace.detector.fasttrack.generic")
+
+    install(TARGETS "drace.detector.fasttrack.standalone" RUNTIME DESTINATION bin COMPONENT Runtime)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_st_export.h DESTINATION include)
 
     # copy detector dlls to drace-client binary dir
     add_custom_command(TARGET "drace.detector.fasttrack.standalone" POST_BUILD
