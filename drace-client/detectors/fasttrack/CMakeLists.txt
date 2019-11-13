@@ -69,7 +69,6 @@ if(Boost_FOUND)
 
     # include exports header
     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
-    target_compile_definitions("drace.detector.fasttrack.standalone" PUBLIC -DSTD_MUTEX)
     target_link_libraries("drace.detector.fasttrack.standalone" "drace.detector.fasttrack.generic")
 
     install(TARGETS "drace.detector.fasttrack.standalone" RUNTIME DESTINATION bin COMPONENT Runtime)

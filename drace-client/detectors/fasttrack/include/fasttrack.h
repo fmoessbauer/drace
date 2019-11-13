@@ -64,7 +64,6 @@ namespace drace {
             ///locks for the accesses of the stacktrace objects
             _L s_lock;
 
-
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
@@ -315,7 +314,7 @@ namespace drace {
                 }
 
                 {
-                    std::shared_lock<_L> ex_l(v_insert);
+                    std::lock_guard<_L> ex_l(v_insert);
                     auto it = vars.find((size_t)(addr));
                     if (it == vars.end()) { //create new variable if new
         #if MAKE_OUTPUT
@@ -342,7 +341,7 @@ namespace drace {
                     stack->set_read_write((size_t)addr, reinterpret_cast<size_t>(pc));
                 }
                 {
-                    std::shared_lock<_L> ex_l(v_insert);
+                    std::lock_guard<_L> ex_l(v_insert);
                     auto it = vars.find((size_t)addr);//vars[(size_t)addr];
                     if (it == vars.end()) {
                         var = (create_var((size_t)(addr), size))->second;

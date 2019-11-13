@@ -39,11 +39,10 @@ StackTrace::StackTrace() :ce(boost::add_vertex(0, local_stack)){}
 
 
 void StackTrace::clean() {
-    return;
-//not working so far
     bool delete_flag, sth_was_deleted;
     do {
         sth_was_deleted = false;
+
         for (auto it = local_stack.m_vertices.begin(); it != local_stack.m_vertices.end(); it++) {
             
             //if and only if the vertex is not  the current element, and it has no in_edges must be a top of stack
@@ -59,9 +58,11 @@ void StackTrace::clean() {
                     boost::clear_vertex(*it, local_stack);
                     boost::remove_vertex(*it, local_stack);
                     sth_was_deleted = true;
+                    break;
                 }
             }
         }
+
     } while (sth_was_deleted);
 
 }
@@ -71,7 +72,7 @@ void StackTrace::pop_stack_element() {
     ce = (boost::target(*(edge.first), local_stack));
     
     pop_count++;
-    if(pop_count > 1){
+    if(pop_count > 1000){
         pop_count = 0;
         clean();
     } 
