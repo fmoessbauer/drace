@@ -234,12 +234,12 @@ namespace drace {
 
                 ts_ptr new_thread;
                 if (parent == nullptr) {
-                    new_thread = std::make_shared<ThreadState>(this, tid);
+                    new_thread = std::make_shared<ThreadState>(tid);
                     threads.insert( { tid, new_thread });
                 }
                 else {
                     std::lock_guard<_L> ex_l(t_lock);
-                    new_thread = std::make_shared<ThreadState>( this, tid, parent);
+                    new_thread = std::make_shared<ThreadState>(tid, parent);
                     threads.insert({ tid, new_thread });
                 }
 
