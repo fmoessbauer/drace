@@ -18,13 +18,7 @@
 #include "varstate.h"
 #include "stacktrace.h"
 #include "xvector.h"
-#include "fasttrack_export.h"
 #include "parallel_hashmap/phmap.h"
-
-
-#ifndef STD_MUTEX
-#include <ipc/DrLock.h>
-#endif
 
 #define MAKE_OUTPUT false
 #define REGARD_ALLOCS false
@@ -34,17 +28,20 @@ namespace drace {
 
         template<class _L>
         class Fasttrack : public Detector {
+        
         public:
             typedef size_t tid_ft;
+            //make threadstate pointer a bit more handy
+            typedef std::shared_ptr<ThreadState> ts_ptr;
             
-        private:    
+        private:
 
             ///these maps hold the various state objects together with the identifiers
 
             phmap::parallel_node_hash_map<size_t, size_t> allocs;
             phmap::parallel_node_hash_map<size_t, std::shared_ptr<VarState>> vars;
             phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
-            phmap::parallel_node_hash_map<tid_ft, std::shared_ptr<ThreadState>> threads;
+            phmap::parallel_node_hash_map<tid_ft, ts_ptr> threads;
             phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
             phmap::parallel_node_hash_map<size_t, std::shared_ptr<StackTrace>> traces;
         
@@ -141,7 +138,7 @@ namespace drace {
             }
 
             ///function takes care of a read access (works only on thread and var object, not on any list)
-            void read(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v){
+            void read(ts_ptr t, std::shared_ptr<VarState> v){
                         
                 if (t->return_own_id() == v->get_read_id()) {//read same epoch, same thread;
                     return;
@@ -178,7 +175,7 @@ namespace drace {
             }
 
             ///function takes care of a write access (works only on thread and var object, not on any list)
-            void write(std::shared_ptr<ThreadState> t, std::shared_ptr<VarState> v){
+            void write(ts_ptr t, std::shared_ptr<VarState> v){
 
                 if (t->return_own_id() == v->get_write_id()){//write same epoch
                     return;
@@ -233,9 +230,9 @@ namespace drace {
             }
 
             ///creates a new thread object (is called when fork() called)
-            void create_thread(VectorClock<>::TID tid, std::shared_ptr<ThreadState> parent = nullptr){
+            void create_thread(VectorClock<>::TID tid, ts_ptr parent = nullptr){
 
-                std::shared_ptr<ThreadState> new_thread;
+                ts_ptr new_thread;
                 if (parent == nullptr) {
                     new_thread = std::make_shared<ThreadState>(this, tid);
                     threads.insert( { tid, new_thread });
@@ -310,7 +307,7 @@ namespace drace {
             void read(tls_t tls, void* pc, void* addr, size_t size) final
             {
                 std::shared_ptr<VarState> var;
-                std::shared_ptr<ThreadState> thr;
+                ts_ptr thr;
                 {
                     std::shared_lock<_L> sh_l(s_lock);
                     auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
@@ -337,7 +334,7 @@ namespace drace {
 
             void write(tls_t tls, void* pc, void* addr, size_t size) final {
                 std::shared_ptr<VarState> var;
-                std::shared_ptr<ThreadState> thr;
+                ts_ptr thr;
 
                 {
                     std::shared_lock<_L> sh_l(s_lock);
@@ -395,7 +392,7 @@ namespace drace {
             }
 
             void join(tid_t parent, tid_t child) final{
-                std::shared_ptr<ThreadState> del_thread = threads[child];
+                ts_ptr del_thread = threads[child];
 
                 {
                     std::lock_guard<_L> ex_l(t_lock);
@@ -407,6 +404,7 @@ namespace drace {
                 {
                     std::lock_guard<_L> ex_l(t_insert);
                     threads.erase(child);
+                    cleanup(child);
                 }
                 std::lock_guard<_L> ex_l(s_insert);
                 traces.erase(child);
@@ -476,7 +474,7 @@ namespace drace {
                     }
                 }
             
-                std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+                ts_ptr thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
                 std::lock_guard<_L> ex_l(t_lock);
                 (thr)->inc_vc();//increment clock of thread and update happens state
@@ -496,7 +494,7 @@ namespace drace {
                         hp = it->second;
                     }
                 }
-                std::shared_ptr<ThreadState> thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
+                ts_ptr thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
                 std::lock_guard<_L> ex_l(t_lock);
                 //update vector clock of thread with happened before clocks
@@ -555,6 +553,7 @@ namespace drace {
                 {
                     std::lock_guard<_L> ex_l(t_insert);
                     threads.erase(thread_id);
+                    cleanup(thread_id);
                 }
                 std::lock_guard<_L> ex_l(s_insert);
                 traces.erase(thread_id);
@@ -573,16 +572,7 @@ namespace drace {
                 return "0.0.1";
             }
         };
-
     }
-}
-
-extern "C" FASTTRACK_EXPORT Detector * CreateDetector() {
-#ifdef STD_MUTEX
-    return new drace::detector::Fasttrack<std::shared_mutex>();
-#else
-    return new drace::detector::Fasttrack<DrLock>();
-#endif
 }
 
 #endif // !FASTTRACK_H

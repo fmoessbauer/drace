@@ -17,20 +17,6 @@
 #include "xvector.h"
 #include <atomic>
 
-#ifdef STD_MUTEX
-    typedef std::shared_mutex _mutex; 
-#else
-    #include "ipc/DrLock.h"
-    typedef DrLock _mutex;
-#endif
-
-namespace drace{
-    namespace detector{
-        template<class _L>
-        class Fasttrack;
-    }
-}
-
 ///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock), as well as pointer to the fasttrack class
 class ThreadState : public VectorClock<>{//tl_alloc<std::pair<const size_t, size_t>>> {
 private:
@@ -38,19 +24,13 @@ private:
     ///holds the tid and the actual clock value -> lower 32 bits are clock, upper 32 are the tid
     std::atomic<VectorClock::VC_ID> id;
 
-    ///void* for fasttrack instance is needed to call the ft-cleanup function with the own tid, when destructing
-    drace::detector::Fasttrack<_mutex>* ft = nullptr;
-
-
 public:
        
     ///constructor of ThreadState object, initializes tid and clock
     ///copies the vector of parent thread, if a parent thread exists
-    ThreadState::ThreadState(    drace::detector::Fasttrack<_mutex>* ft_inst,
-                                VectorClock::TID own_tid, std::shared_ptr<ThreadState> parent = nullptr); 
-
-    ThreadState::~ThreadState(); 
-
+    ThreadState::ThreadState(/*drace::detector::Fasttrack<_mutex>* ft_inst,*/
+                            VectorClock::TID own_tid,
+                            std::shared_ptr<ThreadState> parent = nullptr);
 
     ///increases own clock value
     void inc_vc();
@@ -65,10 +45,7 @@ public:
     VectorClock::Clock get_clock() const;
 
     ///may be called after exitting of thread
-    void delete_vector() {
-        vc.clear();
-    }
-
+    void delete_vector();
 
 };
 
