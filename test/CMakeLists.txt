@@ -67,6 +67,16 @@ COMMAND ${CMAKE_COMMAND} -E copy_if_different
 	"$<TARGET_FILE:drace.detector.fasttrack>"
 	"$<TARGET_FILE_DIR:drace-tests>")
 
+add_custom_command(TARGET copy_files_testing POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE:drace.detector.fasttrack.standalone>"
+	"$<TARGET_FILE_DIR:drace-tests>")
+
+add_custom_command(TARGET copy_files_testing POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE:drace.detector.fasttrack.generic>"
+	"$<TARGET_FILE_DIR:drace-tests>")
+
 # copy gtest shared lib
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
