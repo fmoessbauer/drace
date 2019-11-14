@@ -204,4 +204,4 @@ public:
 };
 
 /// create a new detector instance
-extern "C" __declspec(dllimport) Detector * CreateDetector();
+extern "C" __declspec(dllexport) Detector * CreateDetector();
