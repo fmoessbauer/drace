@@ -71,8 +71,11 @@ if(Boost_FOUND)
     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
     target_link_libraries("drace.detector.fasttrack.standalone" "drace.detector.fasttrack.generic")
 
-    install(TARGETS "drace.detector.fasttrack.standalone" RUNTIME DESTINATION bin COMPONENT Runtime)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_st_export.h DESTINATION include)
+    install(TARGETS "drace.detector.fasttrack.standalone"
+        RUNTIME DESTINATION bin/fasttrack COMPONENT Runtime
+        LIBRARY DESTINATION lib/fasttrack COMPONENT Runtime
+        ARCHIVE DESTINATION lib/fasttrack COMPONENT Development)
+    install(FILES ${PROJECT_SOURCE_DIR}/common/detector/Detector.h DESTINATION include/fasttrack)
 
     # copy detector dlls to drace-client binary dir
     add_custom_command(TARGET "drace.detector.fasttrack.standalone" POST_BUILD

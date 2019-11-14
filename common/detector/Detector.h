@@ -10,10 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <string>
-#include <vector>
-#include <functional>
-
+#include <utility>
 
 /**
     Interface for a DRace compatible race detector
@@ -28,8 +25,9 @@
     - A happens after may arrive before a corresponding happens beore arrives
     - A lock may be be released, before it will be acquired 
     -> the last three bullet points must not cause a crash
+
+    \brief Interface for a DRace compatible race detector
 */
-/// Interface for a DRace compatible race detector
 class Detector {
 public:
 
@@ -206,4 +204,4 @@ public:
 };
 
 /// create a new detector instance
-extern "C" __declspec(dllexport) Detector * CreateDetector();
+extern "C" __declspec(dllimport) Detector * CreateDetector();

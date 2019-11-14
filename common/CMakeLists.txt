@@ -5,7 +5,6 @@ include(${PROJECT_SOURCE_DIR}/CMakeExt/git_watcher.cmake)
 
 # Common header-only target
 add_library("drace-common" INTERFACE)
-target_include_directories("drace-common" INTERFACE
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_include_directories("drace-common" INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_compile_options("drace-common" INTERFACE -EHsc)
 add_dependencies("drace-common" check_git_repository)
