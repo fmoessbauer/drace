@@ -66,7 +66,7 @@ namespace drace
                 tls_t tls,
                 void* mutex,
                 bool write) {
-                    ipc::event::BufferEntry buf{Type::ACQUIRE};
+                    ipc::event::BufferEntry buf{Type::RELEASE};
                     buf.payload.mutex = {(uint32_t)tls, (uint64_t)mutex, (int)0, write, false};
                     write_log_sync(buf);
                 }

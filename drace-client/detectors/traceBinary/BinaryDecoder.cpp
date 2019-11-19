@@ -42,6 +42,33 @@ int main(int argc, char** argv){
             case Type::ACQUIRE:
                 logger->debug("aquire, addr {}", buf->payload.mutex.addr);
                 break;
+            case Type::RELEASE:
+                logger->debug("release, addr {}", buf->payload.mutex.addr);
+                break;
+            case Type::HAPPENSBEFORE:
+                logger->debug("happensbefore, id {}", buf->payload.happens.id);
+                break;
+            case Type::HAPPENSAFTER:
+                logger->debug("happensafter, id {}", buf->payload.happens.id);
+                break;
+            case Type::ALLOCATION:
+                logger->debug("alloc, addr {}", buf->payload.allocation.addr);
+                break;
+            case Type::FREE:
+                logger->debug("dealloc, addr {}", buf->payload.allocation.addr);
+                break;
+            case Type::FORK:
+                logger->debug("fork, threadid {}", buf->payload.forkjoin.child);
+                break;
+            case Type::JOIN:
+                logger->debug("join, threadid {}", buf->payload.forkjoin.child);
+                break;
+            case Type::DETACH:
+                logger->debug("detach, threadid {}", buf->payload.detachfinish.thread_id);
+                break;
+            case Type::FINISH:
+                logger->debug("finish, threadid {}", buf->payload.detachfinish.thread_id);
+                break;
         }
     }
 
