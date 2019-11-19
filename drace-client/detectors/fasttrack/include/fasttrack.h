@@ -21,7 +21,7 @@
 #include "parallel_hashmap/phmap.h"
 
 #define MAKE_OUTPUT false
-#define REGARD_ALLOCS false
+#define REGARD_ALLOCS true
 
 namespace drace {
     namespace detector {
@@ -31,15 +31,16 @@ namespace drace {
         
         public:
             typedef size_t tid_ft;
-            //make threadstate pointer a bit more handy
+            //make some shared pointers a bit more handy
             typedef std::shared_ptr<ThreadState> ts_ptr;
+            typedef std::shared_ptr<VarState> vs_ptr;
             
         private:
 
             ///these maps hold the various state objects together with the identifiers
 
             phmap::parallel_node_hash_map<size_t, size_t> allocs;
-            phmap::parallel_node_hash_map<size_t, std::shared_ptr<VarState>> vars;
+            phmap::parallel_node_hash_map<size_t, vs_ptr> vars;
             phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
             phmap::parallel_node_hash_map<tid_ft, ts_ptr> threads;
             phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
@@ -47,6 +48,21 @@ namespace drace {
         
             ///holds the callback address to report a race to the drace-main 
             void * clb;
+
+            ///switch logging of read/write operations
+            bool log_flag = false;
+
+            ///
+            struct log_counters{
+                uint32_t read_ex_same_epoch = 0;
+                uint32_t read_sh_same_epoch = 0;
+                uint32_t read_shared = 0;
+                uint32_t read_exclusive = 0;
+                uint32_t read_share = 0;
+                uint32_t write_same_epoch = 0;
+                uint32_t write_exclusive = 0;
+                uint32_t write_shared = 0;
+            } log_count;
 
             ///those locks secure the .find and .insert actions to the according hashmaps
             LockT t_insert; ///belongs to thread map
@@ -56,13 +72,11 @@ namespace drace {
             LockT h_insert; ///belongs to happens map
 
             ///lock for the accesses of the var and thread objects
-            LockT tLockTock;
-
+            LockT t_LockT;
             ///locks for the accesses of the allocation objects
-            LockT aLockTock;
-
+            LockT a_LockT;
             ///locks for the accesses of the stacktrace objects
-            LockT sLockTock;
+            LockT s_LockT;
 
             void report_race(
                 uint32_t thr1, uint32_t thr2,
@@ -74,7 +88,7 @@ namespace drace {
                 {
                     std::shared_ptr<StackTrace> s1;
                     std::shared_ptr<StackTrace> s2;
-                    std::lock_guard<LockT> exLockT(sLockTock);
+                    std::lock_guard<LockT> exLockT(s_LockT);
                     auto it = traces.find(thr1);
                     if (it != traces.end()) {
                         s1 = it->second;
@@ -140,17 +154,23 @@ namespace drace {
              * \brief takes care of a read access 
              * \note works only on thread and var object, not on any list
              */
-            void read(ts_ptr t, std::shared_ptr<VarState> v){
+            void read(ts_ptr t, vs_ptr v){
                         
                 if (t->return_own_id() == v->get_read_id()) {//read same epoch, same thread;
+                    if(log_flag){
+                        log_count.read_ex_same_epoch++;
+                    }
                     return;
                 }
 
-                std::lock_guard<LockT> exLockT(tLockTock);
+                std::lock_guard<LockT> exLockT(t_LockT);
                 size_t id = t->return_own_id();
                 uint32_t tid = t->get_tid();
                 
                 if (v->is_read_shared()  && v->get_vc_by_thr(tid) == id) { //read shared same epoch
+                    if(log_flag){
+                        log_count.read_sh_same_epoch++;
+                    }
                     return;
                 }
 
@@ -165,13 +185,22 @@ namespace drace {
                     if (v->get_read_id() == VarState::VAR_NOT_INIT ||
                     (v->get_r_tid() == tid )) //read exclusive->read of same thread but newer epoch
                     {
+                        if(log_flag){
+                            log_count.read_exclusive++;
+                        }
                         v->update(false, id);
                     }
                     else { // read gets shared
+                        if(log_flag){
+                            log_count.read_share++;
+                        }
                         v->set_read_shared(id);
                     }
                 }
-                else {//read share
+                else {//read shared
+                    if(log_flag){
+                        log_count.read_shared++;
+                    }
                     v->update(false, id);
                 }
             }
@@ -180,16 +209,22 @@ namespace drace {
              * \brief takes care of a write access 
              * \note works only on thread and var object, not on any list
              */
-            void write(ts_ptr t, std::shared_ptr<VarState> v){
+            void write(ts_ptr t, vs_ptr v){
 
                 if (t->return_own_id() == v->get_write_id()){//write same epoch
+                    if(log_flag){
+                        log_count.write_same_epoch++;
+                    }
                     return;
                 }
 
 
-                std::lock_guard<LockT> exLockT(tLockTock);
+                std::lock_guard<LockT> exLockT(t_LockT);
 
-                if (v->get_write_id() == VarState::VAR_NOT_INIT) { //initial write, update var   
+                if (v->get_write_id() == VarState::VAR_NOT_INIT) { //initial write, update var
+                    if(log_flag){
+                        log_count.write_exclusive++;
+                    }
                     v->update(true, t->return_own_id());
                     return;
                 }
@@ -203,12 +238,18 @@ namespace drace {
                 }
 
                 if (! v->is_read_shared()) {
+                    if(log_flag){
+                        log_count.write_exclusive++;
+                    }
                     if (v->is_rw_ex_race(t))// read-write race
                     {
                         report_race(v->get_r_tid(), t->get_tid(), false, true, v->address, v->get_r_clock(), t->get_clock());
                     }
                 }
                 else {//come here in read shared case
+                    if(log_flag){
+                        log_count.write_shared++;
+                    }
                     uint32_t act_tid = v->is_rw_sh_race(t);
                     if (act_tid != 0) //read shared read-write race       
                     {
@@ -243,7 +284,7 @@ namespace drace {
                     threads.insert( { tid, new_thread });
                 }
                 else {
-                    std::lock_guard<LockT> exLockT(tLockTock);
+                    std::lock_guard<LockT> exLockT(t_LockT);
                     new_thread = std::make_shared<ThreadState>(tid, parent);
                     threads.insert({ tid, new_thread });
                 }
@@ -273,13 +314,11 @@ namespace drace {
             /**
              * \brief deletes all data which is related to the tid
              * 
-             * is called when a thread finishes (either \ref join() or \ref finish())
-             * is actually called from the threadstate destrutor
+             * is called when a thread finishes (either from \ref join() or from \ref finish())
              */
             void cleanup(uint32_t tid) {
-            //as ThreadState is destroyed delete all the entries from all vectorclocks
                 {
-                    std::lock_guard<LockT> exLockT(tLockTock);
+                    std::lock_guard<LockT> exLockT(t_LockT);
                     for (auto it = locks.begin(); it != locks.end(); ++it) {
                         it->second->delete_vc(tid);
                     }
@@ -294,16 +333,28 @@ namespace drace {
                 }
             }
 
-            //public functions are explained in the detector base class
+            void parse_args(int argc, const char ** argv) {
+                int processed = 1;
+                while (processed < argc) {
+                    if (strcmp(argv[processed], "--stats") == 0) {
+                        log_flag = true;
+                        return;
+                    }
+                    else {
+                        ++processed;
+                    }
+                }
+            }
 
             bool init(int argc, const char **argv, Callback rc_clb) final{
+                parse_args(argc, argv);
                 clb = rc_clb; //init callback
                 return true;
             }
 
             void finalize() final {
+                
                 vars.clear();
-
                 locks.clear();
                 happens_states.clear();
                 allocs.clear();
@@ -311,14 +362,26 @@ namespace drace {
                 while (threads.size() != 0) {
                     threads.erase(threads.begin());
                 }
+                
+                if(log_flag){
+                    std::cout << "read excl. same epoch: " << log_count.read_ex_same_epoch << std::endl;
+                    std::cout << "read shared same epoch: " << log_count.read_sh_same_epoch << std::endl;
+                    std::cout << "read exclusive: " << log_count.read_exclusive << std::endl;
+                    std::cout << "read share: " << log_count.read_share << std::endl;
+                    std::cout << "read shared: " << log_count.read_shared << std::endl;
+                    std::cout << "write same epoch: " << log_count.write_same_epoch << std::endl;
+                    std::cout << "write exclusive: " << log_count.write_exclusive << std::endl;
+                    std::cout << "write shared: " << log_count.write_shared << std::endl;
+                }
+
             }
 
             void read(tls_t tls, void* pc, void* addr, size_t size) final
             {
-                std::shared_ptr<VarState> var;
+                vs_ptr var;
                 ts_ptr thr;
                 {
-                    std::shared_lock<LockT> shLockT(sLockTock);
+                    std::shared_lock<LockT> shLockT(s_LockT);
                     auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
                     stack->set_read_write((size_t)(addr), reinterpret_cast<size_t>(pc));
                 }
@@ -327,9 +390,9 @@ namespace drace {
                     std::lock_guard<LockT> exLockT(v_insert);
                     auto it = vars.find((size_t)(addr));
                     if (it == vars.end()) { //create new variable if new
-        #if MAKE_OUTPUT
+                    #if MAKE_OUTPUT
                         std::cout << "variable is read before written" << std::endl;//warning
-        #endif
+                    #endif
                         var = (create_var((size_t)(addr), size))->second;
                     }
                     else {
@@ -342,11 +405,10 @@ namespace drace {
             }
 
             void write(tls_t tls, void* pc, void* addr, size_t size) final {
-                std::shared_ptr<VarState> var;
+                vs_ptr var;
                 ts_ptr thr;
-
                 {
-                    std::shared_lock<LockT> shLockT(sLockTock);
+                    std::shared_lock<LockT> shLockT(s_LockT);
                     auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
                     stack->set_read_write((size_t)addr, reinterpret_cast<size_t>(pc));
                 }
@@ -367,11 +429,10 @@ namespace drace {
 
 
             void func_enter(tls_t tls, void* pc) final {
-
                 auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
                 size_t stack_element = reinterpret_cast<size_t>(pc);
                 //shared lock is enough as a single thread cannot do more than one action (r,w,enter,exit...) at a time
-                std::shared_lock<LockT> shLockT(sLockTock);
+                std::shared_lock<LockT> shLockT(s_LockT);
                 stack->push_stack_element(stack_element);
             }
 
@@ -379,7 +440,7 @@ namespace drace {
                 auto stack = traces[reinterpret_cast<Fasttrack::tid_ft>(tls)];
             
                 //shared lock is enough as a single thread cannot do more than one action (r,w,enter,exit...) at a time
-                std::shared_lock<LockT> shLockT(sLockTock);
+                std::shared_lock<LockT> shLockT(s_LockT);
                 stack->pop_stack_element(); //pops last stack element of current clock
             }
 
@@ -404,7 +465,7 @@ namespace drace {
                 ts_ptr del_thread = threads[child];
 
                 {
-                    std::lock_guard<LockT> exLockT(tLockTock);
+                    std::lock_guard<LockT> exLockT(t_LockT);
                     del_thread->inc_vc();
                     //pass incremented clock of deleted thread to parent
                     threads[parent]->update(del_thread);
@@ -419,10 +480,14 @@ namespace drace {
                 traces.erase(child);
             }
 
-
+            //sync thread vc to lock vc 
             void acquire(tls_t tls, void* mutex, int recursive, bool write) final{
-                std::shared_ptr<VectorClock<>> lock;
 
+                if(recursive > 1){ //lock haven't been updated by another thread (by definition) 
+                    return;        //therefore no action needed here as only the invoking thread may have updated the lock
+                }
+                
+                std::shared_ptr<VectorClock<>> lock;
                 {
                     std::lock_guard<LockT> exLockT(l_insert);
                     auto it = locks.find(mutex);
@@ -436,7 +501,7 @@ namespace drace {
                 auto id = reinterpret_cast<Fasttrack::tid_ft>(tls);
                 auto thr = threads[id];
 
-                std::lock_guard<LockT> exLockT(tLockTock);            
+                std::lock_guard<LockT> exLockT(t_LockT);            
                 (thr)->update(lock);
             }
 
@@ -448,9 +513,9 @@ namespace drace {
                     std::lock_guard<LockT> exLockT(l_insert);
                     auto it = locks.find(mutex);
                     if (it == locks.end()) {
-        #if MAKE_OUTPUT
+                    #if MAKE_OUTPUT
                         std::cerr << "lock is released but was never acquired by any thread" << std::endl;
-        #endif
+                    #endif
                         createLockTock(mutex)->second;
                         return;//as lock is empty (was never acquired), we can return here
                     }
@@ -461,13 +526,12 @@ namespace drace {
                 tid_ft id = reinterpret_cast<tid_ft>(tls);
                 auto thr = threads[id];
                 
-                std::lock_guard<LockT> exLockT(tLockTock);
+                std::lock_guard<LockT> exLockT(t_LockT);
                 (thr)->inc_vc();
                 
                 //increase vector clock and propagate to lock    
                 (lock)->update(thr);
             }
-
 
             void happens_before(tls_t tls, void* identifier) final {
                 std::shared_ptr<VectorClock<>> hp;
@@ -485,7 +549,7 @@ namespace drace {
             
                 ts_ptr thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-                std::lock_guard<LockT> exLockT(tLockTock);
+                std::lock_guard<LockT> exLockT(t_LockT);
                 thr->inc_vc();//increment clock of thread and update happens state
                 hp->update(thr->get_tid(), thr->return_own_id());
             }
@@ -505,7 +569,7 @@ namespace drace {
                 }
                 ts_ptr thr = threads[reinterpret_cast<Fasttrack::tid_ft>(tls)];
 
-                std::lock_guard<LockT> exLockT(tLockTock);
+                std::lock_guard<LockT> exLockT(t_LockT);
                 //update vector clock of thread with happened before clocks
                 thr->update(hp);                
             }
@@ -513,7 +577,7 @@ namespace drace {
             void allocate(tls_t  tls, void*  pc, void*  addr, size_t size) final{
                 #if REGARD_ALLOCS
                 size_t address = reinterpret_cast<size_t>(addr);
-                std::lock_guard<LockT> exLockT(aLockTock);
+                std::lock_guard<LockT> exLockT(a_LockT);
                 if (allocs.find(address) == allocs.end()) {
                     create_alloc(address, size);
                 }
@@ -526,15 +590,15 @@ namespace drace {
                 size_t address = reinterpret_cast<size_t>(addr);
                 size_t end_addr;
                 {
-                    std::sharedLockTock<LockT> shLockT(aLockTock);
+                    std::shared_lock<LockT> shLockT(a_LockT);
                     end_addr = address + allocs[address];
                 }
 
                 //variable is deallocated so varstate objects can be destroyed
                 while (address < end_addr) {
-                    std::lock_guard<LockT> exLockT(tLockTock);
+                    std::lock_guard<LockT> exLockT(t_LockT);
                     if (vars.find(address) != vars.end()) {
-                        std::shared_ptr<VarState> var = vars.find(address)->second;
+                        vs_ptr var = vars.find(address)->second;
                         vars.erase(address);
                         address++;
                     }
@@ -542,7 +606,7 @@ namespace drace {
                         address++;
                     }
                 }
-                std::lock_guard<LockT> exLockT(aLockTock);
+                std::lock_guard<LockT> exLockT(a_LockT);
                 allocs.erase(address);
                 #endif
             }
@@ -556,7 +620,7 @@ namespace drace {
             {
                 ///just delete thread from list, no backward sync needed
                 {
-                    std::lock_guard<LockT> exLockT(tLockTock);
+                    std::lock_guard<LockT> exLockT(t_LockT);
                     threads[thread_id]->delete_vector();
                 }
                 {
