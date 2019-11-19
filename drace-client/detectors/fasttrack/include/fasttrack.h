@@ -13,6 +13,7 @@
 
 #include <mutex> // for lock_guard
 #include <iostream>
+#include <iomanip>
 #include <detector/Detector.h>
 #include "threadstate.h"
 #include "varstate.h"
@@ -307,6 +308,44 @@ namespace drace {
                 allocs.insert({ addr, size });
             }
 
+            void process_log_output(){
+                double read_actions, write_actions;
+                //percentages
+                double read, write, r_ex_se, r_sh_se, r_ex, r_share, r_shared, w_se, w_ex, w_sh;
+                
+                read_actions  = log_count.read_ex_same_epoch + log_count.read_sh_same_epoch + log_count.read_exclusive + log_count.read_share + log_count.read_shared;
+                write_actions = log_count.write_same_epoch + log_count.write_exclusive + log_count.write_shared;
+                
+                read    = (read_actions/(read_actions + write_actions))*100;
+                write   = 100 - read;
+                r_ex_se = (log_count.read_ex_same_epoch / read_actions)*100;
+                r_sh_se = (log_count.read_sh_same_epoch / read_actions)*100;
+                r_ex = (log_count.read_exclusive / read_actions)*100;
+                r_share = (log_count.read_share / read_actions)*100;
+                r_shared = (log_count.read_shared / read_actions)*100;
+                w_se = (log_count.write_same_epoch / write_actions)*100;
+                w_ex = (log_count.write_exclusive / write_actions)*100;
+                w_sh = (log_count.write_shared / write_actions)*100;
+
+
+
+                std::cout << "FASTTRACK_STATISTICS: All values are percentages!" << std::endl;                
+                std::cout << std::fixed << std::setprecision(2) << "Read Actions: " << read << std::endl;
+                std::cout << "Of which: " << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read exclusive same epoch: " << r_ex_se << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read shared same epoch: " << r_sh_se<< std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read exclusive: " << r_ex << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read share: " << r_share << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read shared: " << r_shared << std::endl;
+                std::cout << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Write Actions: " << write << std::endl; 
+                std::cout << "Of which: " << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Write same epoch: " << w_se << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Write exclusive: " << w_ex << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Write shared: " << w_sh << std::endl;
+
+            }
+
         public:
             Fasttrack() = default;
 
@@ -364,14 +403,7 @@ namespace drace {
                 }
                 
                 if(log_flag){
-                    std::cout << "read excl. same epoch: " << log_count.read_ex_same_epoch << std::endl;
-                    std::cout << "read shared same epoch: " << log_count.read_sh_same_epoch << std::endl;
-                    std::cout << "read exclusive: " << log_count.read_exclusive << std::endl;
-                    std::cout << "read share: " << log_count.read_share << std::endl;
-                    std::cout << "read shared: " << log_count.read_shared << std::endl;
-                    std::cout << "write same epoch: " << log_count.write_same_epoch << std::endl;
-                    std::cout << "write exclusive: " << log_count.write_exclusive << std::endl;
-                    std::cout << "write shared: " << log_count.write_shared << std::endl;
+                    process_log_output();
                 }
 
             }

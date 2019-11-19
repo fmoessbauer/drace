@@ -329,4 +329,4 @@ TEST_F(DetectorTest, ShadowMemory) {
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(Interface,
     DetectorTest,
-    ::testing::Values("fasttrack"));
+    ::testing::Values("fasttrack", "tsan"));

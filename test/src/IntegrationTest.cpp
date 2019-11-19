@@ -133,4 +133,4 @@ TEST_P(DR, ReportText) {
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(Integration,
     DR,
-	::testing::Values("-d fasttrack"));
+	::testing::Values("-d fasttrack", "-d tsan"));
