@@ -64,7 +64,7 @@ public:
         _libdummy.load("drace.detector.dummy.dll");
 
         //to make this work copy dynamorio.dll in the test folder
-        _libfasttrack.load("drace.detector.fasttrack.dll");
+        _libfasttrack.load("drace.detector.fasttrack.standalone.dll");
        
 
         decltype(CreateDetector)* create_tsan = _libtsan["CreateDetector"];
