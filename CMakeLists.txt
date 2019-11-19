@@ -12,6 +12,8 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
+
+
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
@@ -69,6 +71,7 @@ set(LIC_SEP "\n\n===============================================================
 file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
+
 
 # Common Files
 add_subdirectory("common")

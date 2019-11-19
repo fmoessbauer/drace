@@ -8,11 +8,17 @@
 # This work is licensed under the terms of the MIT license.  See
 # the LICENSE file in the top-level directory.
 
-
 set(SOURCES
 "src/stacktrace"
 "src/varstate"
 "src/threadstate")
+
+
+
+add_library(fasttrack_test SHARED "test/fasttrack_test.cpp")
+target_link_libraries(fasttrack_test PRIVATE gtest "drace-common")
+#gtest_add_tests(TARGET fasttrack_test)
+
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target
