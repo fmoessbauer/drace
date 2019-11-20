@@ -8,17 +8,13 @@
 # This work is licensed under the terms of the MIT license.  See
 # the LICENSE file in the top-level directory.
 
-set(SOURCES
+set(FT_SOURCES
 "src/stacktrace"
 "src/varstate"
 "src/threadstate")
 
-
-
-add_library(fasttrack_test SHARED "test/fasttrack_test.cpp")
-target_link_libraries(fasttrack_test PRIVATE gtest "drace-common")
-#gtest_add_tests(TARGET fasttrack_test)
-
+set(FT_TEST_SOURCES
+"test/fasttrack_test.cpp")
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target
@@ -27,7 +23,7 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     
-    add_library("drace.detector.fasttrack.generic" SHARED ${SOURCES})
+    add_library("drace.detector.fasttrack.generic" SHARED ${FT_SOURCES})
 
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
@@ -49,7 +45,7 @@ if(Boost_FOUND)
         "${PROJECT_BINARY_DIR}/drace-client")
 
     ###########DRACE Version#####################
-    add_library("drace.detector.fasttrack" SHARED ${SOURCES} "src/fasttrack_dr.cpp")
+    add_library("drace.detector.fasttrack" SHARED ${FT_SOURCES} "src/fasttrack_dr.cpp")
     configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
     generate_export_header("drace.detector.fasttrack" BASE_NAME fasttrack_dr)
@@ -69,7 +65,7 @@ if(Boost_FOUND)
 
 
     ###########standalone Version#####################
-    add_library("drace.detector.fasttrack.standalone" SHARED ${SOURCES} "src/fasttrack_st.cpp")
+    add_library("drace.detector.fasttrack.standalone" SHARED ${FT_SOURCES} "src/fasttrack_st.cpp")
 
     generate_export_header("drace.detector.fasttrack.standalone" BASE_NAME fasttrack_st)
 
@@ -89,4 +85,13 @@ if(Boost_FOUND)
             "$<TARGET_FILE:drace.detector.fasttrack.standalone>"
             "${PROJECT_BINARY_DIR}/drace-client")
 
+    ################ configure test module ################
+    if(DRACE_ENABLE_TESTING)
+        # create library which is linked in global testing module
+        add_library(fasttrack_test OBJECT ${FT_TEST_SOURCES})
+        # use dynamic version of stdlib (has to match gtests version)
+        target_compile_options(fasttrack_test PRIVATE "/MD$<$<CONFIG:Debug>:d>")
+        target_link_libraries(fasttrack_test PRIVATE gtest)
+        set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES fasttrack_test)
+    endif()
 endif()

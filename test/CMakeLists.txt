@@ -1,25 +1,32 @@
 set(SOURCES 
 	"src/main.cpp"
 	"src/DetectorTest.cpp"
-	"src/IntegrationTest.cpp"
-	"src/ShmDriver.cpp"	)
+	"src/IntegrationTest.cpp")
 
 set(TEST_TARGET "drace-tests")
-
-
-# for visual studio's gtest plugin
-file(WRITE "${CMAKE_BINARY_DIR}/test/${TEST_TARGET}.exe.is_google_test" "")
 
 add_executable(${TEST_TARGET} ${SOURCES})
 
 target_include_directories(${TEST_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_TARGET} PRIVATE gtest "drace-common")
 
-target_link_libraries(${TEST_TARGET} PRIVATE "fasttrack_test")
+# get and register all test suites
+get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
+if(TEST_SUITES)
+	target_link_libraries(${TEST_TARGET} PRIVATE ${TEST_SUITES})
+endif()
 
 # enable dr mocks
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
+
+# TODO: integration tests might not succeed in CTest
+# due to wrong escaping in --dr argument
+get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
+file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
+message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
+gtest_discover_tests(${TEST_TARGET}
+	EXTRA_ARGS --dr ${PATH_TO_DRRUN})
 
 # manually build C# tests as CMake support is not available in ninja
 find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
