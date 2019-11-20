@@ -5,7 +5,15 @@ set(SOURCES
 
 set(TEST_TARGET "drace-tests")
 
-add_executable(${TEST_TARGET} ${SOURCES})
+# get path to drrun and hard-code into test binary for easier
+# integration in CI
+get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
+file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
+message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
+configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp @ONLY)
+
+add_executable(${TEST_TARGET} ${SOURCES}
+	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
 
 target_include_directories(${TEST_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_TARGET} PRIVATE gtest "drace-common")
@@ -20,13 +28,7 @@ endif()
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
 
-# TODO: integration tests might not succeed in CTest
-# due to wrong escaping in --dr argument
-get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
-file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
-message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
-gtest_discover_tests(${TEST_TARGET}
-	EXTRA_ARGS --dr ${PATH_TO_DRRUN})
+gtest_discover_tests(${TEST_TARGET})
 
 # manually build C# tests as CMake support is not available in ninja
 find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")

@@ -20,7 +20,6 @@
 #include <cstdio>
 #endif
 
-std::string Integration::drrun = "drrun.exe";
 std::string Integration::drclient = "drace-client/drace-client.dll";
 bool Integration::verbose = false;
 
