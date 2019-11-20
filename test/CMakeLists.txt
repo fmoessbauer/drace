@@ -23,6 +23,8 @@ target_link_libraries(${TEST_TARGET} gtest "drace-common")
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
 
+#gtest_discover_tests(${TEST_TARGET})
+
 # manually build C# tests as CMake support is not available in ninja
 find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
 if(CSC)
