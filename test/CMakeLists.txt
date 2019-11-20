@@ -15,6 +15,7 @@ configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp
 
 add_executable(${TEST_TARGET} ${SOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
+target_compile_options(${TEST_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
 target_include_directories(${TEST_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_TARGET} gtest "drace-common")
@@ -23,6 +24,8 @@ target_link_libraries(${TEST_TARGET} gtest "drace-common")
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
 
+# This introduces a circular dependency as shared libraries
+# are copied after the target is build
 #gtest_discover_tests(${TEST_TARGET})
 
 # manually build C# tests as CMake support is not available in ninja
@@ -69,6 +72,20 @@ add_custom_command(TARGET copy_files_testing POST_BUILD
 		"$<TARGET_FILE:drace.detector.dummy>"
 		"$<TARGET_FILE_DIR:drace-tests>")
 
+<<<<<<< HEAD
+=======
+		
+add_custom_command(TARGET copy_files_testing POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE:drace.detector.fasttrack>"
+	"$<TARGET_FILE_DIR:drace-tests>")
+
+add_custom_command(TARGET copy_files_testing POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE:drace.detector.fasttrack.standalone>"
+	"$<TARGET_FILE_DIR:drace-tests>")
+
+>>>>>>> 070ca89... test: use static runtime
 # copy gtest shared lib
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
