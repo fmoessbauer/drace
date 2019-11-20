@@ -23,7 +23,8 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     
-    add_library("drace.detector.fasttrack.generic" SHARED ${FT_SOURCES})
+    add_library("drace.detector.fasttrack.generic" OBJECT ${FT_SOURCES})
+    target_compile_options("drace.detector.fasttrack.generic" PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
@@ -36,16 +37,10 @@ if(Boost_FOUND)
         PUBLIC "include"
         PUBLIC "${Boost_INCLUDE_DIR}")
    
-    target_link_libraries("drace.detector.fasttrack.generic" "drace-common")
-    target_link_libraries("drace.detector.fasttrack.generic" "parallel-hashmap")
-
-    add_custom_command(TARGET "drace.detector.fasttrack.generic" POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:drace.detector.fasttrack.generic>"
-        "${PROJECT_BINARY_DIR}/drace-client")
+    target_link_libraries("drace.detector.fasttrack.generic" "drace-common" "parallel-hashmap")
 
     ###########DRACE Version#####################
-    add_library("drace.detector.fasttrack" SHARED ${FT_SOURCES} "src/fasttrack_dr.cpp")
+    add_library("drace.detector.fasttrack" SHARED "src/fasttrack_dr.cpp")
     configure_DynamoRIO_standalone("drace.detector.fasttrack")
 
     generate_export_header("drace.detector.fasttrack" BASE_NAME fasttrack_dr)
@@ -65,7 +60,7 @@ if(Boost_FOUND)
 
 
     ###########standalone Version#####################
-    add_library("drace.detector.fasttrack.standalone" SHARED ${FT_SOURCES} "src/fasttrack_st.cpp")
+    add_library("drace.detector.fasttrack.standalone" SHARED "src/fasttrack_st.cpp")
 
     generate_export_header("drace.detector.fasttrack.standalone" BASE_NAME fasttrack_st)
 
@@ -90,7 +85,7 @@ if(Boost_FOUND)
         # create library which is linked in global testing module
         add_library(fasttrack_test OBJECT ${FT_TEST_SOURCES})
         # use dynamic version of stdlib (has to match gtests version)
-        target_compile_options(fasttrack_test PRIVATE "/MD$<$<CONFIG:Debug>:d>")
+        target_compile_options(fasttrack_test PRIVATE "/MT$<$<CONFIG:Debug>:d>")
         target_link_libraries(fasttrack_test PRIVATE gtest)
         set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES fasttrack_test)
     endif()
