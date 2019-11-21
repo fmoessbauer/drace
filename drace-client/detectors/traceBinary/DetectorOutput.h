@@ -117,10 +117,15 @@ public:
                 );
                 break;
             case ipc::event::Type::FORK:
+                std::cout << "fork\n";
                 fork(buf->payload.forkjoin.child, buf->payload.forkjoin.parent);
                 break;
             case ipc::event::Type::JOIN:
-                break;
+                std::cout << "join\n";
+                /*_det->finish(
+                    tls[buf->payload.forkjoin.child],
+                    buf->payload.forkjoin.child
+                );*/
                 _det->join(
                     buf->payload.forkjoin.parent,
                     buf->payload.forkjoin.child
