@@ -6,10 +6,16 @@ set(SOURCES
 
 set(TEST_TARGET "drace-tests")
 
-# for visual studio's gtest plugin
-file(WRITE "${CMAKE_BINARY_DIR}/test/${TEST_TARGET}.exe.is_google_test" "")
+# get path to drrun and hard-code into test binary for easier
+# integration in CI
+get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
+file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
+message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
+configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp @ONLY)
 
-add_executable(${TEST_TARGET} ${SOURCES})
+add_executable(${TEST_TARGET} ${SOURCES}
+	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
+
 target_include_directories(${TEST_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_TARGET} gtest "drace-common")
 
