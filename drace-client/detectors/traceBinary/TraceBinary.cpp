@@ -11,6 +11,7 @@
 
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include <dr_api.h>
 #include <ipc/ExtsanData.h>
@@ -44,11 +45,15 @@ namespace drace
             virtual void map_shadow(void* startaddr, size_t size_in_bytes) { };
 
             virtual void func_enter(tls_t tls, void* pc) {
-                write_log_sync({Type::FUNCENTER, {(uint32_t)tls, (uint64_t)pc}});
+                ipc::event::BufferEntry buf{Type::FUNCENTER};
+                buf.payload.funcenter = {(uint32_t)tls, (uint64_t)pc};
+                write_log_sync(buf);
             }
 
             virtual void func_exit(tls_t tls) {
-                write_log_sync({Type::FUNCEXIT, {(uint32_t)tls}});
+                ipc::event::BufferEntry buf{Type::FUNCEXIT};
+                buf.payload.funcexit = {(uint32_t)tls};
+                write_log_sync(buf);
             }
 
             virtual void acquire(
@@ -72,11 +77,15 @@ namespace drace
                 }
 
             virtual void happens_before(tls_t tls, void* identifier) {
-                write_log_sync({Type::HAPPENSBEFORE, {(uint32_t)tls, (uint64_t)identifier}});
+                ipc::event::BufferEntry buf{Type::HAPPENSBEFORE};
+                buf.payload.happens = {(uint32_t)tls, (uint64_t)identifier};
+                write_log_sync(buf);
             }
 
             virtual void happens_after(tls_t tls, void* identifier) {
-                write_log_sync({Type::HAPPENSAFTER, {(uint32_t)tls, (uint64_t)identifier}});
+                ipc::event::BufferEntry buf{Type::HAPPENSAFTER};
+                buf.payload.happens = {(uint32_t)tls, (uint64_t)identifier};
+                write_log_sync(buf);
             }
 
             virtual void read(tls_t tls, void* pc, void* addr, size_t size) {
@@ -105,19 +114,27 @@ namespace drace
 
             virtual void fork(tid_t parent, tid_t child, tls_t * tls) {
                 *tls = (void*)((uint64_t)child);
-                write_log_sync({Type::FORK, {(uint32_t)parent, (uint32_t)child}});
+                ipc::event::BufferEntry buf{Type::FORK};
+                buf.payload.forkjoin = {(uint32_t)parent, (uint32_t)child};               
+                write_log_sync(buf);
             }
 
             virtual void join(tid_t parent, tid_t child) {
-                write_log_sync({Type::JOIN, {(uint32_t)parent, (uint32_t)child}});
+               ipc::event::BufferEntry buf{Type::JOIN};
+               buf.payload.forkjoin = {(uint32_t)parent, (uint32_t)child};
+               write_log_sync(buf);
             }
 
             virtual void detach(tls_t tls, tid_t thread_id) {
-                write_log_sync({Type::DETACH, {(uint32_t)tls}});
+                ipc::event::BufferEntry buf{Type::DETACH};
+                buf.payload.detachfinish = {(uint32_t)tls};
+                write_log_sync(buf);
             };
 
             virtual void finish(tls_t tls, tid_t thread_id) {
-                write_log_sync({Type::FINISH, {(uint32_t)tls}});
+                ipc::event::BufferEntry buf{Type::FINISH};
+                buf.payload.detachfinish = {(uint32_t)tls};
+                write_log_sync(buf);
             };
 
             virtual const char * name() {

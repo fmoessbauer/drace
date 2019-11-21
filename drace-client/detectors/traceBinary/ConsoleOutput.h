@@ -19,12 +19,14 @@ public:
         switch(buf->type){
             case ipc::event::Type::FUNCENTER:
                 logger->debug("funcenter, call {}", buf->payload.funcenter.pc);
+                logger->debug("funcenter, call {}", buf->payload.funcenter.thread_id);
                 break;
             case ipc::event::Type::FUNCEXIT:
                 logger->debug("funcexit");
                 break;
             case ipc::event::Type::MEMREAD:
                 logger->debug("memread, pc {}", buf->payload.memaccess.pc);
+                logger->debug("memread, pc {}", buf->payload.memaccess.thread_id);
                 break;
             case ipc::event::Type::MEMWRITE:
                 logger->debug("memwrite, pc {}", buf->payload.memaccess.pc);
