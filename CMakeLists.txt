@@ -12,6 +12,8 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
+
+
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
@@ -70,10 +72,15 @@ file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 
+define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
+	BRIEF_DOCS "unit test suites"
+	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
+
 # Common Files
 add_subdirectory("common")
 # external vendor targets
 add_subdirectory("vendor")
+
 # DRACE
 add_subdirectory("drace-client")
 # Managed Stack Resolver
@@ -81,6 +88,8 @@ add_subdirectory("ManagedResolver")
 
 if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
+	include(CTest)
+	include(GoogleTest)
 	add_subdirectory("test")
 endif()
 
