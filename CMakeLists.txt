@@ -80,6 +80,8 @@ define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
 add_subdirectory("common")
 # external vendor targets
 add_subdirectory("vendor")
+# standalone tools
+add_subdirectory("standalone")
 
 # DRACE
 add_subdirectory("drace-client")
