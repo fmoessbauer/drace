@@ -9,18 +9,18 @@
 
 class DetectorOutput{
 
-    std::unordered_map<uint32_t, void*> tls; 
+    std::unordered_map<uint32_t, void**> tls; 
 
-    void * allocate_memory(uint32_t tid){
-        void * mem = new uint64_t;
-        tls.insert({tid, &mem});
+    void** allocate_memory(uint32_t tid){
+        void** mem = new void*;
+        tls.insert({tid, mem});
         return mem;
     }
 
     void fork(uint32_t tid, uint32_t parent_tid){
         
-        void * mem = allocate_memory(tid);
-        _det->fork(parent_tid, tid, &mem);
+        void ** mem = allocate_memory(tid);
+        _det->fork(parent_tid, tid, mem);
     }
 
 protected:
@@ -28,9 +28,9 @@ protected:
     std::unique_ptr<Detector> _det;
 
 public:
-    DetectorOutput(){
+    DetectorOutput(const char * detector){
         
-        _libdetector.load("drace.detector.fasttrack.standalone.dll");
+        _libdetector.load(detector);
         decltype(CreateDetector)* create_detector = _libdetector["CreateDetector"];
         _det =  std::unique_ptr<Detector>(create_detector());
 
@@ -49,12 +49,11 @@ public:
     }
 
     void makeOutput(std::shared_ptr<ipc::event::BufferEntry> buf){
-        //std::cout << "do_stuff\n";
+                
         switch(buf->type){
             case ipc::event::Type::FUNCENTER:
                 _det->func_enter(
-                    // tls[buf->payload.funcenter.thread_id],
-                    (void*)buf->payload.funcenter.thread_id,
+                    *(tls[buf->payload.funcenter.thread_id]),
                     &(buf->payload.funcenter.pc)
                     );
                 break;
@@ -63,8 +62,7 @@ public:
                 break;
             case ipc::event::Type::MEMREAD:
                 _det->read(
-                    // tls[buf->payload.memaccess.thread_id],
-                    (void*)buf->payload.memaccess.thread_id,
+                    *(tls[buf->payload.memaccess.thread_id]),
                     &(buf->payload.memaccess.pc),
                     &(buf->payload.memaccess.addr),
                     buf->payload.memaccess.size
@@ -72,8 +70,7 @@ public:
                 break;
             case ipc::event::Type::MEMWRITE:
                 _det->write(
-                    // tls[buf->payload.memaccess.thread_id],
-                    (void*)buf->payload.memaccess.thread_id,
+                    *(tls[buf->payload.memaccess.thread_id]),
                     &(buf->payload.memaccess.pc),
                     &(buf->payload.memaccess.addr),
                     buf->payload.memaccess.size
@@ -81,8 +78,7 @@ public:
                 break;
             case ipc::event::Type::ACQUIRE:
                 _det->acquire(
-                    //  tls[buf->payload.mutex.thread_id],
-                    (void*)buf->payload.mutex.thread_id,
+                    *(tls[buf->payload.mutex.thread_id]),
                      &(buf->payload.mutex.addr),
                      buf->payload.mutex.recursive,
                      buf->payload.mutex.write
@@ -90,30 +86,26 @@ public:
                 break;
             case ipc::event::Type::RELEASE:
                 _det->release(
-                    //  tls[buf->payload.mutex.thread_id],
-                    (void*)buf->payload.mutex.thread_id,
+                    *(tls[buf->payload.mutex.thread_id]),
                      &(buf->payload.mutex.addr),
                      buf->payload.mutex.write
                 );
                 break;
             case ipc::event::Type::HAPPENSBEFORE:
                 _det->happens_before(
-                    // tls[buf->payload.happens.thread_id],
-                    (void*)buf->payload.happens.thread_id,
+                    *(tls[buf->payload.happens.thread_id]),
                     &(buf->payload.happens.id)
                 );
                 break;
             case ipc::event::Type::HAPPENSAFTER:
                 _det->happens_after(
-                   // tls[buf->payload.happens.thread_id],
-                    (void*)buf->payload.happens.thread_id,
+                    *(tls[buf->payload.happens.thread_id]),
                     &(buf->payload.happens.id)
                 );
                 break;
             case ipc::event::Type::ALLOCATION:
                 _det->allocate(
-                    // tls[buf->payload.allocation.thread_id],
-                    (void*)buf->payload.allocation.thread_id,
+                    *(tls[buf->payload.allocation.thread_id]),
                     &(buf->payload.allocation.pc),
                     &(buf->payload.allocation.addr),
                     buf->payload.allocation.size
@@ -121,8 +113,7 @@ public:
                 break;
             case ipc::event::Type::FREE:
                 _det->deallocate(
-                    // tls[buf->payload.allocation.thread_id],
-                    (void*)buf->payload.allocation.thread_id,
+                    *(tls[buf->payload.allocation.thread_id]),
                     &(buf->payload.allocation.addr)
                 );
                 break;
@@ -134,30 +125,39 @@ public:
                     buf->payload.forkjoin.parent,
                     buf->payload.forkjoin.child
                 );
-                //delete tls[buf->payload.forkjoin.child];  //delete 'local' tls
+                
+                delete tls[buf->payload.forkjoin.child];  //delete 'local' tls
                 break;
             case ipc::event::Type::DETACH:
                 _det->detach(
-                    // tls[buf->payload.detachfinish.thread_id],
-                    (void*) buf->payload.detachfinish.thread_id,
+                    *(tls[buf->payload.detachfinish.thread_id]),
                     buf->payload.detachfinish.thread_id
                 );
                 break;
             case ipc::event::Type::FINISH:
                 _det->finish(
-                    // tls[buf->payload.detachfinish.thread_id],
-                    (void*) buf->payload.detachfinish.thread_id,
+                    *(tls[buf->payload.detachfinish.thread_id]),
                     buf->payload.detachfinish.thread_id
                 );
-                //delete tls[buf->payload.forkjoin.child]; //delete 'local' tls
+                delete tls[buf->payload.forkjoin.child]; //delete 'local' tls
                 break;
+            default:
+                std::cout << "ERROR";
         }
     }
 
     static void callback(const Detector::Race* race){
         static int i = 0;
-        std::cout << "race: " << i << "\n";
-        i++;
+        static uint64_t s1=0, s2=0;
+        if(s1 != race->first.stack_trace[0] && s2 !=race->second.stack_trace[0] ){
+            s1 = race->first.stack_trace[0];
+            s2 = race->second.stack_trace[0];
+            std::cout << s1 << " " << s2 <<std::endl;
+            std::cout << race->first.thread_id << " " << race->second.thread_id <<std::endl;
+            std::cout << "race: " << i << "\n";
+            i++;
+        }
+
     }
 };
 
