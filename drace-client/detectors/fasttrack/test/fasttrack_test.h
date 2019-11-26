@@ -9,11 +9,15 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include "../include/fasttrack.h"
+#include <shared_mutex>
+
 class FasttrackTest: public ::testing::Test {
 
-
   FasttrackTest() {
-
+    drace::detector::Fasttrack<std::shared_mutex> ft;
+    const char *p = "";
+    ft.init(0, &p, clb);
   }
 
   ~FasttrackTest()  {
@@ -28,5 +32,6 @@ class FasttrackTest: public ::testing::Test {
 
   }
 
+  static void clb(const Detector::Race* ptr){}
  
 };

@@ -16,5 +16,5 @@
 using ::testing::UnitTest;
 
 TEST(FasttrackTest, Test1) {
-	ASSERT_EQ(1,3);
+	ASSERT_EQ(1,1);
 }
