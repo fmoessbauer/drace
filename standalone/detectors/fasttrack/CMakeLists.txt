@@ -14,7 +14,8 @@ set(FT_SOURCES
 "src/threadstate")
 
 set(FT_TEST_SOURCES
-"test/fasttrack_test.cpp")
+"test/fasttrack_test.cpp"
+"src/stacktrace")
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target
@@ -66,7 +67,9 @@ if(Boost_FOUND)
         # use dynamic version of stdlib (has to match gtests version)
         target_compile_options(fasttrack_test PRIVATE "/MT$<$<CONFIG:Debug>:d>")
         target_link_libraries(fasttrack_test PRIVATE gtest "drace-common" "parallel-hashmap")
-        target_include_directories(fasttrack_test PUBLIC "${Boost_INCLUDE_DIR}")
+        target_include_directories(fasttrack_test
+        PUBLIC "include"
+        PUBLIC "${Boost_INCLUDE_DIR}")
         set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES fasttrack_test)
     endif()
 endif()

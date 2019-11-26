@@ -35,13 +35,11 @@ class StackTrace {
     uint16_t pop_count = 0;
 
     std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data);
+    void clean();
 
 public:
+
     StackTrace();
-
-    //void cut_tree(stack_tree::vertex_descriptor to_cut);
-
-    void clean();
 
     void pop_stack_element();
     void push_stack_element(size_t element);
