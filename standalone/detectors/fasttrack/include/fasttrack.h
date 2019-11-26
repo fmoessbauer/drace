@@ -306,13 +306,13 @@ namespace drace {
             void process_log_output(){
                 double read_actions, write_actions;
                 //percentages
-                double read, write, r_ex_se, r_sh_se, r_ex, r_share, r_shared, w_se, w_ex, w_sh;
+                double rd, wr, r_ex_se, r_sh_se, r_ex, r_share, r_shared, w_se, w_ex, w_sh;
                 
                 read_actions  = log_count.read_ex_same_epoch + log_count.read_sh_same_epoch + log_count.read_exclusive + log_count.read_share + log_count.read_shared;
                 write_actions = log_count.write_same_epoch + log_count.write_exclusive + log_count.write_shared;
                 
-                read    = (read_actions/(read_actions + write_actions))*100;
-                write   = 100 - read;
+                rd    = (read_actions/(read_actions + write_actions))*100;
+                wr   = 100 - read;
                 r_ex_se = (log_count.read_ex_same_epoch / read_actions)*100;
                 r_sh_se = (log_count.read_sh_same_epoch / read_actions)*100;
                 r_ex = (log_count.read_exclusive / read_actions)*100;
