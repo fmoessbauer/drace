@@ -20,7 +20,6 @@ class StackTrace {
     typedef boost::property<boost::vertex_name_t, size_t> VertexProperty;
     typedef boost::adjacency_list <boost::listS, boost::listS, boost::bidirectionalS, VertexProperty > stack_tree;
 
-
     ///holds var_address, pc, stack_length
     std::unordered_map<size_t, std::pair<size_t,
         stack_tree::vertex_descriptor>> read_write;
@@ -33,9 +32,9 @@ class StackTrace {
     ///holds the current stack element
     stack_tree::vertex_descriptor ce;
 
-    std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data);
-
     uint16_t pop_count = 0;
+
+    std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data);
 
 public:
     StackTrace();

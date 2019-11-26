@@ -87,26 +87,21 @@ namespace drace {
             {
                 std::list<size_t> stack1, stack2;
                 {
-                    std::shared_ptr<StackTrace> s1;
-                    std::shared_ptr<StackTrace> s2;
                     std::lock_guard<LockT> exLockT(s_LockT);
                     auto it = traces.find(thr1);
                     if (it != traces.end()) {
-                        s1 = it->second;
+                        stack1 = it->second->return_stack_trace(var);
                     }
                     else { //if thread is, because of finishing not in stack traces anymore, return
                         return;
                     }
                     it = traces.find(thr2);
                     if (it != traces.end()) {
-                        s2 = it->second;
+                        stack2 = it->second->return_stack_trace(var);
                     }
                     else {//if thread is, because of finishing not in stack traces anymore, return
                         return;
                     }
-
-                    stack1 = s1->return_stack_trace(var);
-                    stack2 = s2->return_stack_trace(var);
                 }
                 
                 size_t var_size = 0;
