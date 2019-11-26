@@ -32,70 +32,68 @@ TEST_P(DetectorTest, WR_Race) {
 	EXPECT_EQ(num_races, 1);
 }
 
-#if false
 TEST_P(DetectorTest, WR2_Race) {
-    Detector::tls_t tls10;
-    Detector::tls_t tls11;
-    Detector::tls_t tls12;
+    Detector::tls_t tls13;
+    Detector::tls_t tls14;
+    Detector::tls_t tls15;
 
-    detector->fork(1, 10, &tls10);
-    detector->fork(1, 11, &tls11);
-    detector->fork(1, 12, &tls12);
+    detector->fork(1, 13, &tls13);
+    detector->fork(1, 14, &tls14);
+    detector->fork(1, 15, &tls15);
 
-    detector->acquire(tls10, (void*)0x01000000, 1, true);
-    detector->write(tls10, (void*)0x0010, (void*)0x00100000, 8);
-    detector->read(tls10, (void*)0x0011, (void*)0x00100000, 8);
-    detector->release(tls10, (void*)0x01000000, true);
+    detector->acquire(tls13, (void*)0x01000000, 1, true);
+    detector->write(tls13, (void*)0x0010, (void*)0x00110000, 8);
+    detector->read(tls13, (void*)0x0011, (void*)0x00110000, 8);
+    detector->release(tls13, (void*)0x01000000, true);
     EXPECT_EQ(num_races, 0);
 
-    detector->acquire(tls12, (void*)0x01000000, 1, true);
-    detector->read(tls12, (void*)0x0011, (void*)0x00100000, 8);
-    detector->release(tls12, (void*)0x01000000, true);
+    detector->acquire(tls15, (void*)0x01000000, 1, true);
+    detector->read(tls15, (void*)0x0011, (void*)0x00110000, 8);
+    detector->release(tls15, (void*)0x01000000, true);
     EXPECT_EQ(num_races, 0);
 
-    detector->acquire(tls11, (void*)0x01000000, 1, true);
-    detector->read(tls11, (void*)0x0011, (void*)0x00100000, 8);
-    detector->release(tls11, (void*)0x01000000, true);
+    detector->acquire(tls14, (void*)0x01000000, 1, true);
+    detector->read(tls14, (void*)0x0011, (void*)0x00110000, 8);
+    detector->release(tls14, (void*)0x01000000, true);
     EXPECT_EQ(num_races, 0);
     
-    detector->write(tls12, (void*)0x0011, (void*)0x00100000, 8);
+    detector->write(tls15, (void*)0x0011, (void*)0x00110000, 8);
     EXPECT_EQ(num_races, 1);
 }
 
-
 TEST_P(DetectorTest, WW_Race) {
-    Detector::tls_t tls10;
-    Detector::tls_t tls11;
+    Detector::tls_t tls16;
+    Detector::tls_t tls17;
 
-    detector->fork(1, 10, &tls10);
-    detector->fork(1, 11, &tls11);
+    detector->fork(1, 16, &tls16);
+    detector->fork(1, 17, &tls17);
 
-    detector->write(tls10, (void*)0x0010, (void*)0x00100000, 8);
-    detector->write(tls11, (void*)0x0011, (void*)0x00100000, 8);
+    detector->write(tls16, (void*)0x0010, (void*)0x00120000, 8);
+    detector->write(tls17, (void*)0x0011, (void*)0x00120000, 8);
 
     EXPECT_EQ(num_races, 1);
 }
 
 TEST_P(DetectorTest, RW_Race) {
-    Detector::tls_t tls10;
-    Detector::tls_t tls11;
+    Detector::tls_t tls18;
+    Detector::tls_t tls19;
 
-    detector->fork(1, 10, &tls10);
-    detector->fork(1, 11, &tls11);
+    detector->fork(1, 18, &tls18);
+    detector->fork(1, 19, &tls19);
 
-    detector->acquire(tls10, (void*)0x01000000, 1, true);
-    detector->write(tls10, (void*)0x0010, (void*)0x00100000, 8);
-    detector->release(tls10, (void*)0x01000000, true);
+    detector->acquire(tls18, (void*)0x01000000, 1, true);
+    detector->write(tls18, (void*)0x0010, (void*)0x00130000, 8);
+    detector->release(tls18, (void*)0x01000000, true);
 
-    detector->acquire(tls11, (void*)0x01000000, 1, true);
-    detector->read(tls11, (void*)0x0011, (void*)0x00100000, 8);
-    detector->release(tls11, (void*)0x01000000, true);
+    detector->acquire(tls19, (void*)0x01000000, 1, true);
+    detector->read(tls19, (void*)0x0011, (void*)0x00130000, 8);
+    detector->release(tls19, (void*)0x01000000, true);
     EXPECT_EQ(num_races, 0);
 
-    detector->write(tls10, (void*)0x0010, (void*)0x00100000, 8);
+    detector->write(tls18, (void*)0x0010, (void*)0x00130000, 8);
     EXPECT_EQ(num_races, 1);
 }
-#endif
+
 
 TEST_P(DetectorTest, Mutex) {
     Detector::tls_t tls20;
@@ -169,19 +167,7 @@ TEST_P(DetectorTest, HappensBefore) {
 }
 
 
-#if false
-TEST_P(DetectorTest, HA_before_HB) {
-    Detector::tls_t tls50;
-    Detector::tls_t tls51;
 
-    detector->fork(1, 50, &tls50);
-    detector->fork(1, 51, &tls51);
-
-    detector->happens_after(tls51, (void*)50510000);
-    detector->happens_before(tls50, (void*)50510000);
-    //a detector must not crash on something like this
-}
-#endif
 
 TEST_P(DetectorTest, ForkInitialize) {
 	Detector::tls_t tls60;
@@ -311,6 +297,65 @@ TEST_P(DetectorTest, RaceInspection) {
     EXPECT_EQ(a2.stack_trace[0], (uint64_t)&callstack_funB);
     EXPECT_EQ(a2.stack_trace[1], 0x0091ull);
 }
+
+TEST_P(DetectorTest, Recursive_Lock){
+	Detector::tls_t tls100;
+    Detector::tls_t tls101;
+
+	detector->fork(1, 100, &tls100);
+	detector->fork(1, 101, &tls101);
+
+    detector->acquire(tls100, (void*)0x01000000, 1, true);
+    detector->acquire(tls100, (void*)0x01000000, 2, true);
+
+	detector->write(tls100, (void*)0x0010, (void*)0x00100002, 8);
+    
+    detector->release(tls100, (void*)0x01000000, true);
+    detector->release(tls100, (void*)0x01000000, true);
+
+    detector->acquire(tls101, (void*)0x01000000, 1, true);
+    detector->acquire(tls101, (void*)0x01000000, 2, true);
+	detector->read( tls101, (void*)0x0011, (void*)0x00100001, 8);
+    detector->release(tls100, (void*)0x01000000, true);
+    detector->release(tls100, (void*)0x01000000, true);
+
+	EXPECT_EQ(num_races, 0);
+}
+
+TEST_P(DetectorTest, Reader_Writer_Lock){
+	Detector::tls_t tls110;
+    Detector::tls_t tls111;
+
+	detector->fork(1, 110, &tls110);
+	detector->fork(1, 111, &tls111);
+
+    detector->acquire(tls110, (void*)0x01000000, 1, false);
+    detector->acquire(tls111, (void*)0x01000000, 1, false);
+	detector->read(tls111, (void*)0x0011, (void*)0x00100003, 8);
+	detector->read(tls110, (void*)0x0011, (void*)0x00100003, 8);
+    detector->release(tls111, (void*)0x01000000, false);
+    detector->release(tls110, (void*)0x01000000, false);
+
+    detector->acquire(tls110, (void*)0x01000000, 1, true);
+	detector->write(tls110, (void*)0x0010, (void*)0x00100003, 8);
+    detector->release(tls110, (void*)0x01000000, true);
+    
+
+	EXPECT_EQ(num_races, 0);
+}
+
+TEST_P(DetectorTest, HA_before_HB) {
+    Detector::tls_t tls120;
+    Detector::tls_t tls121;
+
+    detector->fork(1, 120, &tls120);
+    detector->fork(1, 121, &tls121);
+
+    detector->happens_after(tls121, (void*)50510001);
+    detector->happens_before(tls120, (void*)50510001);
+    //a detector must not crash on something like this
+}
+
 
 // TODO: i#11
 #if 0
