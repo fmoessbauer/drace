@@ -312,7 +312,7 @@ namespace drace {
                 write_actions = log_count.write_same_epoch + log_count.write_exclusive + log_count.write_shared;
                 
                 rd    = (read_actions/(read_actions + write_actions))*100;
-                wr   = 100 - read;
+                wr   = 100 - rd;
                 r_ex_se = (log_count.read_ex_same_epoch / read_actions)*100;
                 r_sh_se = (log_count.read_sh_same_epoch / read_actions)*100;
                 r_ex = (log_count.read_exclusive / read_actions)*100;
@@ -325,7 +325,7 @@ namespace drace {
 
 
                 std::cout << "FASTTRACK_STATISTICS: All values are percentages!" << std::endl;                
-                std::cout << std::fixed << std::setprecision(2) << "Read Actions: " << read << std::endl;
+                std::cout << std::fixed << std::setprecision(2) << "Read Actions: " << rd << std::endl;
                 std::cout << "Of which: " << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Read exclusive same epoch: " << r_ex_se << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Read shared same epoch: " << r_sh_se<< std::endl;
@@ -333,7 +333,7 @@ namespace drace {
                 std::cout << std::fixed << std::setprecision(2) << "Read share: " << r_share << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Read shared: " << r_shared << std::endl;
                 std::cout << std::endl;
-                std::cout << std::fixed << std::setprecision(2) << "Write Actions: " << write << std::endl; 
+                std::cout << std::fixed << std::setprecision(2) << "Write Actions: " << wr << std::endl; 
                 std::cout << "Of which: " << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Write same epoch: " << w_se << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Write exclusive: " << w_ex << std::endl;
