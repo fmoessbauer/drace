@@ -82,8 +82,7 @@ namespace drace {
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                size_t var,
-                uint32_t clk1, uint32_t clk2)
+                size_t var)
             {
                 std::list<size_t> stack1, stack2;
                 {
@@ -167,7 +166,7 @@ namespace drace {
 
                 if (v->is_wr_race(t))
                 { // write-read race
-                    report_race(v->get_w_tid(), tid, true, false, v->address, v->get_w_clock(), t->get_clock());
+                    report_race(v->get_w_tid(), tid, true, false, v->address);
                 }
 
                 //update vc
@@ -225,7 +224,7 @@ namespace drace {
                 //tids are different and write epoch greater or equal than known epoch of other thread
                 if (v->is_ww_race(t)) // write-write race
                 {
-                    report_race(v->get_w_tid(), tid, true, true, v->address, v->get_w_clock(), t->get_clock());
+                    report_race(v->get_w_tid(), tid, true, true, v->address);
                 }
 
                 if (! v->is_read_shared()) {
@@ -234,7 +233,7 @@ namespace drace {
                     }
                     if (v->is_rw_ex_race(t))// read-write race
                     {
-                        report_race(v->get_r_tid(), t->get_tid(), false, true, v->address, v->get_r_clock(), t->get_clock());
+                        report_race(v->get_r_tid(), t->get_tid(), false, true, v->address);
                     }
                 }
                 else {//come here in read shared case
@@ -244,7 +243,7 @@ namespace drace {
                     uint32_t act_tid = v->is_rw_sh_race(t);
                     if (act_tid != 0) //read shared read-write race       
                     {
-                        report_race(act_tid, tid, false, true, v->address, v->get_clock_by_thr(act_tid), t->get_clock());
+                        report_race(act_tid, tid, false, true, v->address);
                     }
                 }
                 v->update(true, t->return_own_id());
