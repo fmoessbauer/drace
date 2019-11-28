@@ -12,6 +12,8 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
+
+
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
@@ -31,6 +33,8 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
+
+include(GenerateExportHeader)
 
 if(DRACE_ENABLE_CPPCHECK)
     if(CMAKE_VERSION VERSION_GREATER 3.10.0)
@@ -68,10 +72,17 @@ file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 
+define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
+	BRIEF_DOCS "unit test suites"
+	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
+
 # Common Files
 add_subdirectory("common")
 # external vendor targets
 add_subdirectory("vendor")
+# standalone tools
+add_subdirectory("standalone")
+
 # DRACE
 add_subdirectory("drace-client")
 # Managed Stack Resolver
@@ -79,6 +90,8 @@ add_subdirectory("ManagedResolver")
 
 if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
+	include(CTest)
+	include(GoogleTest)
 	add_subdirectory("test")
 endif()
 
@@ -115,7 +128,7 @@ if(Doxygen_FOUND)
 
 	doxygen_add_docs(
 	    doc
-	    ${PROJECT_SOURCE_DIR}
+	    #${PROJECT_SOURCE_DIR}
 	    COMMENT "Generate Code Documentation")
 
     if(${DRACE_INSTALL_DOCS})

@@ -99,3 +99,13 @@ cppcheck.exe --project=compile_commands.json --enable=all --inline-suppr --suppr
 
 A note regarding missing headers is ok and is not treated as an error.
 
+## Add External Dependency
+
+Please follow the following steps when adding a new dependency to an external library.
+Please also check carefully, that this dependency is really needed.
+
+1. discuss with DRace team, check license
+2. add as library as a git submodule in vendor, similar to existing ones
+3. add cmake library target, similar to the existing ones in `vendor/CMakeLists.txt`
+4. make sure license copy works
+5. document external dependency in `DEPENDENCIES.md`

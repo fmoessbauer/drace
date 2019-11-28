@@ -10,15 +10,27 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <string>
-#include <vector>
-#include <functional>
+#include <utility>
 
- /// Interface for a DRace compatible race detector
+/**
+    Interface for a DRace compatible race detector
+
+    Premises for a implementation of a detector back-end:
+
+    - Every thread starts with a initial call of fork()
+    - There are no double forks of the same thread as child
+    - A read or write will never contain a tid which was not forked
+    - A read can happen before a write
+    - A read and a write with the same TID will never arrive concurrently
+    - A happens after may arrive before a corresponding happens beore arrives
+    - A lock may be be released, before it will be acquired 
+    -> the last three bullet points must not cause a crash
+
+    \brief Interface for a DRace compatible race detector
+*/
 class Detector {
 public:
 
-    /// Type of a thread-id
     typedef unsigned long tid_t;
 
     /// type of a pointer to an entry in the thread local storage

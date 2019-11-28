@@ -24,9 +24,11 @@ class DetectorTest : public ::testing::TestWithParam<const char*>{
 protected:
     static util::WindowsLibLoader _libtsan;
     static util::WindowsLibLoader _libdummy;
+    static util::WindowsLibLoader _libfasttrack;
 
     static Detector * _dettsan;
     static Detector * _detdummy;
+    static Detector * _detfasttrack;
 
 public:
     Detector * detector;
@@ -48,6 +50,9 @@ public:
         else if (std::string(GetParam()).compare("dummy") == 0) {
             detector = _detdummy;
         }
+        else if (std::string(GetParam()).compare("fasttrack") == 0) {
+            detector = _detfasttrack;
+        }
 	}
     ~DetectorTest() {
         detector = nullptr;
@@ -58,19 +63,27 @@ public:
         _libtsan.load("drace.detector.tsan.dll");
         _libdummy.load("drace.detector.dummy.dll");
 
+        //to make this work copy dynamorio.dll in the test folder
+        _libfasttrack.load("drace.detector.fasttrack.standalone.dll");
+       
+
         decltype(CreateDetector)* create_tsan = _libtsan["CreateDetector"];
         decltype(CreateDetector)* create_dummy = _libdummy["CreateDetector"];
+        decltype(CreateDetector)* create_fasttrack = _libfasttrack["CreateDetector"];
 
         _dettsan = create_tsan();
         _detdummy = create_dummy();
+        _detfasttrack = create_fasttrack();
 
     	const char * _argv = "drace-tests.exe";
 		_dettsan->init(1, &_argv, callback);
         _detdummy->init(1, &_argv, callback);
+        _detfasttrack->init(1, &_argv, callback);
 	}
 
 	static void TearDownTestCase() {
         _dettsan->finalize();
         _detdummy->finalize();
+        _detfasttrack->finalize();
 	}
 };

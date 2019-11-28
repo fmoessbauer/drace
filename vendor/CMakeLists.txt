@@ -60,14 +60,13 @@ target_include_directories("clipp" INTERFACE
 file(READ "muellan/clipp/LICENSE" LIC_FILE_CLIPP)
 file(APPEND ${LIC_FILE} "${LIC_SEP}muellan/clipp\n\n${LIC_FILE_CLIPP}")
 
-if(${DRACE_DETECTOR} STREQUAL "extsan")
-	# greg7mdp sparsepp
-	add_library("sparsepp" INTERFACE)
-	target_include_directories("sparsepp" INTERFACE
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greg7mdp/sparsepp>)
-	file(READ "greg7mdp/sparsepp/LICENSE" LIC_FILE_SPARSEPP)
-	file(APPEND ${LIC_FILE} "${LIC_SEP}greg7mdp/sparsepp\n\n${LIC_FILE_SPARSEPP}")
-endif()
+# Used in FastTrack2 detector backend
+# greg7mdp parallel-hashmap
+add_library("parallel-hashmap" INTERFACE)
+target_include_directories("parallel-hashmap" INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greg7mdp/parallel-hashmap>)
+file(READ "greg7mdp/parallel-hashmap/LICENSE" LIC_FILE_SPARSEPP)
+file(APPEND ${LIC_FILE} "${LIC_SEP}greg7mdp/parallel-hashmap\n\n${LIC_FILE_SPARSEPP}")
 
 # gabime/spdlog for logging
 add_library("spdlog" INTERFACE)
@@ -78,14 +77,13 @@ file(APPEND ${LIC_FILE} "${LIC_SEP}gabime/spdlog\n\n${LIC_FILE_SPDLOG}")
 
 if(${DRACE_ENABLE_TESTING} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib
-	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
+	#set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
 	add_subdirectory("google/googletest/googletest")
 else()
 	set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Enable Testing" FORCE)
 endif()
 
 if(${DRACE_ENABLE_BENCH} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/benchmark/CMakeLists.txt")
-	# force gtest to build static lib
 	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
 	set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Do not install benchmark" FORCE)
 	add_subdirectory("google/benchmark")

@@ -20,7 +20,6 @@
 #include <cstdio>
 #endif
 
-std::string Integration::drrun = "drrun.exe";
 std::string Integration::drclient = "drace-client/drace-client.dll";
 bool Integration::verbose = false;
 
@@ -59,7 +58,7 @@ TEST_P(DR, DisabledAnnotations) {
 TEST_P(DR, DelayedLookup) {
     // with delayed lookup all races have to be cached,
     // hence make test more difficult by disabling suppressions
-    run(std::string(GetParam()) + " --delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 50);
+    run(std::string(GetParam()) + " --delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 210);
 }
 
 TEST_P(DR, ExclStack) {
@@ -133,4 +132,4 @@ TEST_P(DR, ReportText) {
 // Setup value-parameterized tests
 INSTANTIATE_TEST_CASE_P(Integration,
     DR,
-	::testing::Values("-d tsan"));
+	::testing::Values("-d fasttrack", "-d tsan"));

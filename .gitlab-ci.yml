@@ -11,7 +11,7 @@
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
-  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18081-0\\bin64\\drrun.exe"
+  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18219-0\\bin64\\drrun.exe"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
 stages:
   - generate
@@ -63,7 +63,7 @@ detector-test:
   script:
   - cd build-tsan-dr791
   - echo "Use DR 7.91.x"
-  - .\test\drace-tests.exe --dr $env:DRRUN_EXE --gtest_output="xml:test-results.xml"
+  - .\test\drace-tests.exe --gtest_output="xml:test-results.xml"
   artifacts:
     reports:
       junit:
