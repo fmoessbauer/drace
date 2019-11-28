@@ -89,19 +89,14 @@ namespace drace {
                 {
                     std::lock_guard<LockT> exLockT(s_LockT);
                     auto it = traces.find(thr1);
-                    if (it != traces.end()) {
-                        stack1 = it->second->return_stack_trace(var);
-                    }
-                    else { //if thread is, because of finishing not in stack traces anymore, return
+                    auto it2 = traces.find(thr2);
+                    auto it_end = traces.end();  
+
+                    if (it == it_end || it2 == it_end) {//if thread_id is, because of finishing, not in stack traces anymore, return
                         return;
                     }
-                    it = traces.find(thr2);
-                    if (it != traces.end()) {
-                        stack2 = it->second->return_stack_trace(var);
-                    }
-                    else {//if thread is, because of finishing not in stack traces anymore, return
-                        return;
-                    }
+                    stack1 = it->second->return_stack_trace(var);
+                    stack2 = it2->second->return_stack_trace(var);
                 }
                 
                 size_t var_size = 0;
