@@ -31,6 +31,8 @@ namespace drace
             std::fstream file;
 
         public:
+            TraceBinary(){}
+
             virtual bool init(int argc, const char **argv, Callback rc_clb) {
                 iolock = dr_mutex_create();
                 file = std::fstream("trace.bin", std::ios::out | std::ios::binary);

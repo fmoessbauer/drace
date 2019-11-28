@@ -30,7 +30,7 @@ protected:
     std::unique_ptr<Detector> _det;
 
 public:
-    DetectorOutput(const char * detector){
+    explicit DetectorOutput(const char * detector){
         
         _libdetector.load(detector);
         decltype(CreateDetector)* create_detector = _libdetector["CreateDetector"];
@@ -151,9 +151,9 @@ public:
     }
 
     static void callback(const Detector::Race* race){
-        static int i = 0;
         static uint64_t s1=0, s2=0;
         if(s1 != race->first.stack_trace[0] && s2 !=race->second.stack_trace[0] ){
+            static int i = 0;
             s1 = race->first.stack_trace[0];
             s2 = race->second.stack_trace[0];
             std::cout << s1 << " " << s2 <<std::endl;
