@@ -5,6 +5,7 @@
 
 #include <detector/Detector.h>
 #include <util/WindowsLibLoader.h>
+#include <unordered_map>
 #include <Windows.h>
 
 class DetectorOutput{
@@ -13,6 +14,7 @@ class DetectorOutput{
 
     void** allocate_memory(uint32_t tid){
         void** mem = new void*;
+        
         tls.insert({tid, mem});
         return mem;
     }
@@ -33,7 +35,7 @@ public:
         _libdetector.load(detector);
         decltype(CreateDetector)* create_detector = _libdetector["CreateDetector"];
         _det =  std::unique_ptr<Detector>(create_detector());
-
+        
         const char * _argv = "";
 		_det->init(1, &_argv, callback);
         
@@ -45,41 +47,41 @@ public:
         for(auto it = tls.begin(); it != tls.end(); it++){
             delete it->second;
         }
-        std::cout << "finished";
+        std::cout << "finished ";
     }
 
-    void makeOutput(std::shared_ptr<ipc::event::BufferEntry> buf){
+    void makeOutput(ipc::event::BufferEntry * buf){//std::shared_ptr<ipc::event::BufferEntry> buf){
                 
         switch(buf->type){
             case ipc::event::Type::FUNCENTER:
                 _det->func_enter(
                     *(tls[buf->payload.funcenter.thread_id]),
-                    &(buf->payload.funcenter.pc)
+                    (void*)(buf->payload.funcenter.pc)
                     );
                 break;
             case ipc::event::Type::FUNCEXIT:
-                _det->func_exit((void*)buf->payload.funcexit.thread_id);//tls[buf->payload.funcexit.thread_id]);
+                _det->func_exit(*(tls[buf->payload.funcexit.thread_id]));
                 break;
             case ipc::event::Type::MEMREAD:
                 _det->read(
                     *(tls[buf->payload.memaccess.thread_id]),
-                    &(buf->payload.memaccess.pc),
-                    &(buf->payload.memaccess.addr),
+                    (void*)(buf->payload.memaccess.pc),
+                    (void*)(buf->payload.memaccess.addr),
                     buf->payload.memaccess.size
                 );
                 break;
             case ipc::event::Type::MEMWRITE:
                 _det->write(
                     *(tls[buf->payload.memaccess.thread_id]),
-                    &(buf->payload.memaccess.pc),
-                    &(buf->payload.memaccess.addr),
+                    (void*)(buf->payload.memaccess.pc),
+                    (void*)(buf->payload.memaccess.addr),
                     buf->payload.memaccess.size
                 );
                 break;
             case ipc::event::Type::ACQUIRE:
                 _det->acquire(
                     *(tls[buf->payload.mutex.thread_id]),
-                     &(buf->payload.mutex.addr),
+                     (void*)(buf->payload.mutex.addr),
                      buf->payload.mutex.recursive,
                      buf->payload.mutex.write
                 );
@@ -87,34 +89,34 @@ public:
             case ipc::event::Type::RELEASE:
                 _det->release(
                     *(tls[buf->payload.mutex.thread_id]),
-                     &(buf->payload.mutex.addr),
+                    (void*)(buf->payload.mutex.addr),
                      buf->payload.mutex.write
                 );
                 break;
             case ipc::event::Type::HAPPENSBEFORE:
                 _det->happens_before(
                     *(tls[buf->payload.happens.thread_id]),
-                    &(buf->payload.happens.id)
+                    (void*)(buf->payload.happens.id)
                 );
                 break;
             case ipc::event::Type::HAPPENSAFTER:
                 _det->happens_after(
                     *(tls[buf->payload.happens.thread_id]),
-                    &(buf->payload.happens.id)
+                    (void*)(buf->payload.happens.id)
                 );
                 break;
             case ipc::event::Type::ALLOCATION:
                 _det->allocate(
                     *(tls[buf->payload.allocation.thread_id]),
-                    &(buf->payload.allocation.pc),
-                    &(buf->payload.allocation.addr),
+                    (void*)(buf->payload.allocation.pc),
+                    (void*)(buf->payload.allocation.addr),
                     buf->payload.allocation.size
                 );
                 break;
             case ipc::event::Type::FREE:
                 _det->deallocate(
                     *(tls[buf->payload.allocation.thread_id]),
-                    &(buf->payload.allocation.addr)
+                    (void*)(buf->payload.allocation.addr)
                 );
                 break;
             case ipc::event::Type::FORK:
@@ -127,6 +129,7 @@ public:
                 );
                 
                 delete tls[buf->payload.forkjoin.child];  //delete 'local' tls
+                tls.erase(buf->payload.forkjoin.child);
                 break;
             case ipc::event::Type::DETACH:
                 _det->detach(
@@ -140,6 +143,7 @@ public:
                     buf->payload.detachfinish.thread_id
                 );
                 delete tls[buf->payload.forkjoin.child]; //delete 'local' tls
+                tls.erase(buf->payload.forkjoin.child);
                 break;
             default:
                 std::cout << "ERROR";
@@ -157,7 +161,6 @@ public:
             std::cout << "race: " << i << "\n";
             i++;
         }
-
     }
 };
 

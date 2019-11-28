@@ -10,12 +10,7 @@
 
 add_subdirectory("dummy")
 add_subdirectory("tsan")
-<<<<<<< HEAD
 add_subdirectory("traceBinary")
-||||||| merged common ancestors
-=======
-
 if(TARGET "parallel-hashmap")
     add_subdirectory("fasttrack")
 endif()
->>>>>>> feature/fasttrack

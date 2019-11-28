@@ -10,5 +10,3 @@ add_custom_command(TARGET "drace.detector.tracebinary" POST_BUILD
 		"$<TARGET_FILE:drace.detector.tracebinary>"
 		"${PROJECT_BINARY_DIR}/drace-client")
 
-add_executable("drace.detector.tracebinary.decoder" "./BinaryDecoder.cpp")
-target_link_libraries("drace.detector.tracebinary.decoder" "drace-common" "spdlog" "clipp")
