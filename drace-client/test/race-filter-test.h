@@ -9,14 +9,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/race-filter.h"
+//#include "../include/race-filter.h"
 #include <string>
 
 class RaceFilterTest: public ::testing::Test {
 
   RaceFilterTest() {
-    std::string filename = "testfile.txt";
-    drace::RaceFilter filter(filename);
+   
   }
 
   ~RaceFilterTest()  {

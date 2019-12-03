@@ -98,7 +98,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Setup Memory Tracing
     memory_tracker = std::make_unique<MemoryTracker>();
 
-    std::shared_ptr<RaceFilter> filter = std::make_shared<RaceFilter>("suppr.txt");
+    std::shared_ptr<RaceFilter> filter = std::make_shared<RaceFilter>(params.filter_file);
 
     // Setup Race Collector and bind lookup function
     race_collector = std::make_unique<RaceCollector>(
