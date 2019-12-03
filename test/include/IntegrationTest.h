@@ -74,6 +74,9 @@ public:
 			}
 		}
 		else {
+			if(verbose) {
+				std::cout << output << std::endl;
+			}
 			ADD_FAILURE() << "Race-Summary not found";
 		}
 	}
