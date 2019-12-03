@@ -12,7 +12,8 @@ set(SOURCES
     "src/MSR"
     "src/symbols"
     "src/util"
-    "src/config")
+    "src/config"
+    "src/race-filter")
 
 find_package(DynamoRIO 7.0 REQUIRED)
 

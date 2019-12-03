@@ -12,6 +12,7 @@
 #include <drmgr.h>
 #include <detector/Detector.h>
 
+#include "race-filter.h"
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
 #include "statistics.h"
@@ -23,6 +24,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <atomic>
+
 
 namespace drace {
     /**
@@ -53,14 +55,19 @@ namespace drace {
         std::set<uint64_t>       _racy_stacks;
 
         std::vector<std::shared_ptr<sink::Sink>> _sinks;
+        
+        std::shared_ptr<RaceFilter> _filter;
 
     public:
         RaceCollector(
             bool delayed_lookup,
-            const std::shared_ptr<Symbols> & symbols)
+            const std::shared_ptr<Symbols> & symbols,
+            std::shared_ptr<RaceFilter> filter)
             : _delayed_lookup(delayed_lookup),
             _syms(symbols),
-            _start_time(clock_t::now())
+            _start_time(clock_t::now()),
+            _filter(filter)
+            
         {
             _races.reserve(1);
             _races_lock = dr_mutex_create();
@@ -97,6 +104,10 @@ namespace drace {
                 _races.emplace_back(*r, ttr);
                 if (!_delayed_lookup) {
                     resolve_race(_races.back());
+                    if(_filter->check_suppress(_races.back())) { 
+                        dr_mutex_unlock(_races_lock);
+                        return;
+                    }
                 }
                 forward_race(_races.back());
                 // destroy race in streaming mode
@@ -115,8 +126,16 @@ namespace drace {
         */
         void resolve_all() {
             dr_mutex_lock(_races_lock);
-            for (auto & r : _races) {
-                resolve_race(r);
+
+            for (auto r = _races.begin(); r != _races.end(); ) {
+                resolve_race(*r);
+                if(_filter->check_suppress(*r)){
+                    _race_count -= 1;
+                    r = _races.erase(r); //erase returns iterator to element after the erased one
+                } 
+                else{
+                    r++;
+                }
             }
             dr_mutex_unlock(_races_lock);
         }

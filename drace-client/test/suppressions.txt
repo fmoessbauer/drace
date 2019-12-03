@@ -1,0 +1,9 @@
+# ThreadSanitizer suppressions file for project X.
+
+# Library foobar is full of races.
+# Filed bug 123, but do not want to deal with it now.
+race_tos:foobar
+
+# The function turns to be racy. Bug 345.
+race_tos:NuclearRocket::Launch
+
