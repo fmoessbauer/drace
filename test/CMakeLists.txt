@@ -1,27 +1,42 @@
 set(SOURCES 
 	"src/main.cpp"
 	"src/DetectorTest.cpp"
-	"src/IntegrationTest.cpp"
-	"src/ShmDriver.cpp")
+	"src/IntegrationTest.cpp")
 
 set(TEST_TARGET "drace-tests")
 
-# get path to drrun and hard-code into test binary for easier
-# integration in CI
+# get path to drrun and race and hard-code into test binary
+# for easier integration in CI
 get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
 file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
-message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
+message(STATUS "Test (integration): Use DynamoRIO in ${PATH_TO_DRRUN}")
+
+get_filename_component(DRACE_NORMALIZED_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client.dll" ABSOLUTE)
+file(TO_NATIVE_PATH ${DRACE_NORMALIZED_PATH} PATH_TO_DRACE)
+message(STATUS "Test (integration): Use DRace in     ${PATH_TO_DRACE}")
+
 configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp @ONLY)
 
 add_executable(${TEST_TARGET} ${SOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
+target_compile_options(${TEST_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
 target_include_directories(${TEST_TARGET} PRIVATE "include")
-target_link_libraries(${TEST_TARGET} gtest "drace-common")
+target_link_libraries(${TEST_TARGET} PRIVATE gtest "drace-common")
+
+# get and register all test suites
+get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
+if(TEST_SUITES)
+	target_link_libraries(${TEST_TARGET} PRIVATE ${TEST_SUITES})
+endif()
 
 # enable dr mocks
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
 add_dependencies(${TEST_TARGET} "drace-client")
+
+# This introduces a circular dependency as shared libraries
+# are copied after the target is build
+#gtest_discover_tests(${TEST_TARGET})
 
 # manually build C# tests as CMake support is not available in ninja
 find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
@@ -38,7 +53,7 @@ add_custom_target(copy_files_testing ALL
 
 if(${DRACE_XML_EXPORTER})
     target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
-    target_link_libraries(${TEST_TARGET} "tinyxml2")
+    target_link_libraries(${TEST_TARGET} PRIVATE "tinyxml2")
 	add_custom_command(TARGET copy_files_testing POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"$<TARGET_FILE:tinyxml2>"
