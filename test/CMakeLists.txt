@@ -1,8 +1,7 @@
 set(SOURCES 
 	"src/main.cpp"
 	"src/DetectorTest.cpp"
-	"src/IntegrationTest.cpp"
-	"src/ShmDriver.cpp")
+	"src/IntegrationTest.cpp")
 
 set(TEST_TARGET "drace-tests")
 
@@ -18,7 +17,13 @@ add_executable(${TEST_TARGET} ${SOURCES}
 target_compile_options(${TEST_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
 target_include_directories(${TEST_TARGET} PRIVATE "include")
-target_link_libraries(${TEST_TARGET} gtest "drace-common")
+target_link_libraries(${TEST_TARGET} PRIVATE gtest "drace-common")
+
+# get and register all test suites
+get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
+if(TEST_SUITES)
+	target_link_libraries(${TEST_TARGET} PRIVATE ${TEST_SUITES})
+endif()
 
 # enable dr mocks
 target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
@@ -43,7 +48,7 @@ add_custom_target(copy_files_testing ALL
 
 if(${DRACE_XML_EXPORTER})
     target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
-    target_link_libraries(${TEST_TARGET} "tinyxml2")
+    target_link_libraries(${TEST_TARGET} PRIVATE "tinyxml2")
 	add_custom_command(TARGET copy_files_testing POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"$<TARGET_FILE:tinyxml2>"
@@ -72,20 +77,6 @@ add_custom_command(TARGET copy_files_testing POST_BUILD
 		"$<TARGET_FILE:drace.detector.dummy>"
 		"$<TARGET_FILE_DIR:drace-tests>")
 
-<<<<<<< HEAD
-=======
-		
-add_custom_command(TARGET copy_files_testing POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"$<TARGET_FILE:drace.detector.fasttrack>"
-	"$<TARGET_FILE_DIR:drace-tests>")
-
-add_custom_command(TARGET copy_files_testing POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"$<TARGET_FILE:drace.detector.fasttrack.standalone>"
-	"$<TARGET_FILE_DIR:drace-tests>")
-
->>>>>>> 070ca89... test: use static runtime
 # copy gtest shared lib
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
