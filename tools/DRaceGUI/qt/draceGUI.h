@@ -100,6 +100,7 @@ private:
 
     ///restores the GUI with the data of the loaded config file
     void set_boxes_after_load();
+    QString remove_quotes(QString str); 
 
 };
 #endif // MAINWINDOW_H

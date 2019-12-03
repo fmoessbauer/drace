@@ -11,3 +11,4 @@
 # NOTE: we build all non-Dynamorio libs and tools here, as DR changes global flags
 
 add_subdirectory("detectors/fasttrack")
+add_subdirectory("binarydecoder")
