@@ -5,11 +5,16 @@ set(SOURCES
 
 set(TEST_TARGET "drace-tests")
 
-# get path to drrun and hard-code into test binary for easier
-# integration in CI
+# get path to drrun and race and hard-code into test binary
+# for easier integration in CI
 get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
 file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
-message(STATUS "Test (integration): Use ${PATH_TO_DRRUN}")
+message(STATUS "Test (integration): Use DynamoRIO in ${PATH_TO_DRRUN}")
+
+get_filename_component(DRACE_NORMALIZED_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client.dll" ABSOLUTE)
+file(TO_NATIVE_PATH ${DRACE_NORMALIZED_PATH} PATH_TO_DRACE)
+message(STATUS "Test (integration): Use DRace in     ${PATH_TO_DRACE}")
+
 configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp @ONLY)
 
 add_executable(${TEST_TARGET} ${SOURCES}
