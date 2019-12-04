@@ -13,10 +13,14 @@
 //#include "race-filter-test.h"
 #include "string"
 
+/**
+  \todo
+  Implement Unit-Tests for the race-filter component
+*/
 
 using ::testing::UnitTest;
-TEST(FilterTest, parser) {
-/*  TODO
+TEST(FilterTest, dummy) {
+/*
     std::string file = "suppr.txt";
     drace::RaceFilter filter(file);
     filter.print_list();

@@ -9,8 +9,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-//#include "../include/race-filter.h"
+//#include "race-filter.h"
 #include <string>
+
+/**
+  \todo
+  Implement Unit-Tests for the race-filter component
+*/
 
 class RaceFilterTest: public ::testing::Test {
 
