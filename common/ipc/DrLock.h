@@ -19,12 +19,12 @@
 
 
 //implement  shared_timed_mutex if
-class DrLock : public std::shared_mutex {
+class DrLock  {
 private:
     void * this_lock;
 
 public:
-    inline DrLock() {
+    inline explicit DrLock()  {
         this_lock = dr_rwlock_create();
     }
 
