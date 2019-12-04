@@ -23,7 +23,7 @@ namespace drace{
 
     class  RaceFilter{
         std::vector<std::string> filter_list;
-    
+        void normalize_string(std::string & expr);
     public:
         RaceFilter(std::string filename);
         bool check_suppress(const drace::race::DecoratedRace & race);

@@ -11,7 +11,7 @@
 
 #include "gtest/gtest.h"
 //#include "race-filter-test.h"
-#include "string"
+
 
 /**
   \todo
@@ -20,10 +20,10 @@
 
 using ::testing::UnitTest;
 TEST(FilterTest, dummy) {
-/*
-    std::string file = "suppr.txt";
-    drace::RaceFilter filter(file);
-    filter.print_list();
-*/
+
+    // std::string file = "race_suppressions.txt";
+    // drace::RaceFilter filter(file);
+    // filter.print_list();
+
     ASSERT_EQ(0,0);
 }

@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <regex>
 
 drace::RaceFilter::RaceFilter(std::string filename){
     std::ifstream in_file(filename);
@@ -29,7 +30,9 @@ drace::RaceFilter::RaceFilter(std::string filename){
                 if(pos != std::string::npos){
                     //race_tos (top of stack is the only supported subject)
                     if(entry.substr(0, pos) == "race_tos"){
-                        filter_list.push_back(entry.substr(pos+1));
+                        std::string tmp = entry.substr(pos+1);
+                        normalize_string(tmp);
+                        filter_list.push_back(tmp);
                     }
                 }
             }
@@ -38,19 +41,45 @@ drace::RaceFilter::RaceFilter(std::string filename){
     }
 }
 
+void drace::RaceFilter::normalize_string(std::string & expr){
+    size_t pos = 0;
+
+    //make tsan wildcard * to regex wildcard .*
+    pos = expr.find('*', 0);
+    while(pos != std::string::npos){
+        expr.insert(pos, ".");
+        pos = expr.find('*', (pos+2));
+    }
+
+    //wild card at beginning, when no '^' and no existing wild card
+    if(expr[0] != '^'){
+        if((expr[0] != '.' && expr[1] != '*')){ expr.insert(0, ".*"); }
+    }
+    else{ expr.erase(0, 1); }
+
+    //wild card at end, when no '$' and no existing wild card
+    if(expr.back() != '$'){
+        if(expr.back() != '*') { expr.append(".*"); }
+    }
+    else{ expr.pop_back(); }
+}
+
 bool drace::RaceFilter::check_suppress(const drace::race::DecoratedRace & race){
 
     //get the top stack elements
     const std::string& top1_sym = race.first.resolved_stack.back().sym_name;
     const std::string& top2_sym = race.second.resolved_stack.back().sym_name;
-
-    if(std::find(filter_list.begin(), filter_list.end(), top1_sym) == filter_list.end() &&
-        std::find(filter_list.begin(), filter_list.end(), top2_sym) == filter_list.end())
-    {
-        return false; //not in list -> do not suppress
+    for(auto it = filter_list.begin(); it != filter_list.end(); ++it){
+        std::regex expr(*it);
+        std::smatch m;
+        if( std::regex_match(top1_sym.begin(), top1_sym.end(), m, expr) ||
+            std::regex_match(top2_sym.begin(), top2_sym.end(), m, expr) ){
+                return true; //at least one regex matched -> suppress
+            }
     }
 
-    return true; 
+    return false; //not in list -> do not suppress
+
 }
 
 void drace::RaceFilter::print_list(){
