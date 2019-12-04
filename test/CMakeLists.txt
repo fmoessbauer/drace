@@ -1,9 +1,10 @@
-set(SOURCES 
-	"src/main.cpp"
-	"src/DetectorTest.cpp"
-	"src/IntegrationTest.cpp")
+set(TEST_SOURCES_UNIT
+	"src/DetectorTest.cpp")
 
-set(TEST_TARGET "drace-tests")
+set(TEST_UNIT_TARGET "drace-unit-tests")
+set(TEST_SYSTEM_TARGET "drace-system-tests")
+
+##### SETUP DRace SYSTEM TESTS #####
 
 # get path to drrun and race and hard-code into test binary
 # for easier integration in CI
@@ -17,81 +18,95 @@ message(STATUS "Test (integration): Use DRace in     ${PATH_TO_DRACE}")
 
 configure_file(src/IntegrationTestEnv.cpp.cmake generated/IntegrationTestEnv.cpp @ONLY)
 
-add_executable(${TEST_TARGET} ${SOURCES}
+add_executable(${TEST_SYSTEM_TARGET}
+	"src/main.cpp"
+	"src/IntegrationTest.cpp"
 	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
-target_compile_options(${TEST_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
+target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE gtest)
+target_include_directories(${TEST_SYSTEM_TARGET} PRIVATE "include")
+target_compile_options(${TEST_SYSTEM_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
-target_include_directories(${TEST_TARGET} PRIVATE "include")
-target_link_libraries(${TEST_TARGET} PRIVATE gtest "drace-common")
-
-# get and register all test suites
-get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
-if(TEST_SUITES)
-	target_link_libraries(${TEST_TARGET} PRIVATE ${TEST_SUITES})
+if(DRACE_XML_EXPORTER)
+    target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
+    target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE "tinyxml2")
 endif()
-
-# enable dr mocks
-target_compile_definitions(${TEST_TARGET} PRIVATE -DTESTING)
-add_dependencies(${TEST_TARGET} "drace-client")
-
-# This introduces a circular dependency as shared libraries
-# are copied after the target is build
-#gtest_discover_tests(${TEST_TARGET})
 
 # manually build C# tests as CMake support is not available in ninja
 find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
 if(CSC)
-    target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
+    target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
 else()
     message(STATUS "csc not found: .NET Windows tests will be disabled")
 endif()
+
+
+##### SETUP DRace UNIT TESTS #####
+
+add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})
+target_compile_options(${TEST_UNIT_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
+
+target_include_directories(${TEST_UNIT_TARGET} PRIVATE "include")
+target_link_libraries(${TEST_UNIT_TARGET} PRIVATE gtest gtest_main "drace-common")
+
+# get and register all test suites
+get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
+if(TEST_SUITES)
+	target_link_libraries(${TEST_UNIT_TARGET} PRIVATE ${TEST_SUITES})
+endif()
+
+# enable dr mocks
+target_compile_definitions(${TEST_UNIT_TARGET} PRIVATE -DTESTING)
+add_dependencies(${TEST_UNIT_TARGET} "drace-client")
+
+# This introduces a circular dependency as shared libraries
+# are copied after the target is build
+#gtest_discover_tests(${TEST_TARGET})
 
 add_custom_target(copy_files_testing ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
     DEPENDS "$<TARGET_FILE:drace.detector.tsan>"
 )
 
-if(${DRACE_XML_EXPORTER})
-    target_compile_definitions(${TEST_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
-    target_link_libraries(${TEST_TARGET} PRIVATE "tinyxml2")
+if(DRACE_XML_EXPORTER)
 	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:tinyxml2>"
-			"$<TARGET_FILE_DIR:drace-tests>")
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"$<TARGET_FILE:tinyxml2>"
+		"$<TARGET_FILE_DIR:${TEST_SYSTEM_TARGET}>")
 endif()
 
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini"
-		"$<TARGET_FILE_DIR:drace-tests>/data/drace_excl.ini")
+		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/drace_excl.ini")
 
 # copy tsan dll
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"$<TARGET_FILE:drace.detector.tsan>"
-		"$<TARGET_FILE_DIR:drace-tests>")
+		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
 # Copy tsan-common
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
-		"$<TARGET_FILE_DIR:drace-tests>")
+		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"$<TARGET_FILE:drace.detector.dummy>"
-		"$<TARGET_FILE_DIR:drace-tests>")
+		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
 # copy gtest shared lib
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"$<TARGET_FILE:gtest>"
-		"$<TARGET_FILE_DIR:drace-tests>")
+		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
 # Prepare Guinea pigs
 add_subdirectory("mini-apps")
 
 if(${DRACE_INSTALL_TESTS})
-    install(TARGETS ${TEST_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
+	install(TARGETS ${TEST_UNIT_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
+	install(TARGETS ${TEST_SYSTEM_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
     install(FILES ${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini DESTINATION bin)
 endif()

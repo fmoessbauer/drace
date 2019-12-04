@@ -68,6 +68,7 @@ TEST_P(DR, ExcludeRaces) {
 	run(std::string(GetParam()) + " -c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 0, 0);
 }
 
+#ifdef DRACE_TESTING_DOTNET
 // Dotnet Tests
 TEST_P(DR, DotnetClrRacy) {
     // TODO: start msr
@@ -89,6 +90,7 @@ TEST_P(DR, DotnetClrMutex) {
     run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
     msr_task.join();
 }
+#endif
 
 #ifdef DRACE_XML_EXPORTER
 TEST_P(DR, ReportXML) {
