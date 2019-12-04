@@ -16,7 +16,9 @@
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
 #include "statistics.h"
+#include "ipc/DrLock.h"
 
+#include <shared_mutex>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
@@ -46,7 +48,7 @@ namespace drace {
 
         RaceCollectionT _races;
         /// guards all accesses to the _races container
-        void * _races_lock;
+        DrLock _races_lock;
         unsigned long _race_count{ 0 };
 
         bool                     _delayed_lookup{ false };
@@ -70,12 +72,9 @@ namespace drace {
             
         {
             _races.reserve(1);
-            _races_lock = dr_mutex_create();
         }
 
-        ~RaceCollector() {
-            dr_mutex_destroy(_races_lock);
-        }
+        ~RaceCollector() {}
 
         /**
         * register a sink that is notified on each race
@@ -95,7 +94,8 @@ namespace drace {
 
             auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
 
-            dr_mutex_lock(_races_lock);
+            std::lock_guard<DrLock> lock(_races_lock);
+
             if (!filter_duplicates(r) && !filter_excluded(r)) {
 
                 DR_ASSERT(r->first.stack_size > 0);
@@ -104,10 +104,7 @@ namespace drace {
                 _races.emplace_back(*r, ttr);
                 if (!_delayed_lookup) {
                     resolve_race(_races.back());
-                    if(_filter->check_suppress(_races.back())) { 
-                        dr_mutex_unlock(_races_lock);
-                        return;
-                    }
+                    if(_filter->check_suppress(_races.back())) { return; }
                 }
                 forward_race(_races.back());
                 // destroy race in streaming mode
@@ -116,7 +113,6 @@ namespace drace {
                 }
                 _race_count += 1;
             }
-            dr_mutex_unlock(_races_lock);
         }
 
         /**
@@ -125,7 +121,7 @@ namespace drace {
         * \note threadsafe
         */
         void resolve_all() {
-            dr_mutex_lock(_races_lock);
+            std::lock_guard<DrLock> lock(_races_lock);
 
             for (auto r = _races.begin(); r != _races.end(); ) {
                 resolve_race(*r);
@@ -137,7 +133,6 @@ namespace drace {
                     r++;
                 }
             }
-            dr_mutex_unlock(_races_lock);
         }
 
         /**
