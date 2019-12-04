@@ -1,0 +1,3 @@
+#more infos to file format: https://github.com/google/sanitizers/wiki/ThreadSanitizerSuppressions
+#this leads to false positives from time to time
+race_tos:std::_LaunchPad<>::_Go
