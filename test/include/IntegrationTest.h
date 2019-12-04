@@ -22,6 +22,8 @@
 
 class Integration : public ::testing::Test {
 private:
+	/// number of retries in case of sporadic crash
+	static constexpr int startup_retries = 3;
 	static std::string drrun;
 	static std::string drclient;
 	static bool verbose;
@@ -47,34 +49,50 @@ public:
 		if(verbose)
 			std::cout << ">> Issue Command: " << command.str() << std::endl;
 
-		std::system(command.str().c_str());
+		// retry if DRace crashed sporadically
+		// (e.g. because TSAN could not alloc at desired addr)
+		// Note: in case of detected races, immediately return
+		for(int i=0; i<startup_retries; ++i){
+			std::system(command.str().c_str());
 
-		// TODO: parse output
-		std::ifstream filestream(logfile);
-		std::stringstream file_content;
-		file_content << filestream.rdbuf();
-		std::string output(file_content.str());
+			// TODO: parse output
+			std::ifstream filestream(logfile);
+			std::stringstream file_content;
+			file_content << filestream.rdbuf();
+			std::string output(file_content.str());
 
-		std::regex expr("found (\\d+) possible data-races");
-		std::smatch races_match;
-		if (std::regex_search(output, races_match, expr)) {
-			std::string num_races_str;
-			std::copy(races_match[1].first, races_match[1].second, std::back_inserter(num_races_str));
-			
-			if(verbose)
-				std::cout << ">>> Detected Races: " << num_races_str << std::endl;
+			std::regex expr("found (\\d+) possible data-races");
+			std::smatch races_match;
+			if (std::regex_search(output, races_match, expr)) {
+				std::string num_races_str;
+				std::copy(races_match[1].first, races_match[1].second, std::back_inserter(num_races_str));
+				
+				if(verbose)
+					std::cout << ">>> Detected Races: " << num_races_str << std::endl;
 
-			int num_races = std::stoi(num_races_str);
-			if (num_races < min || num_races > max) {
-				ADD_FAILURE() << "Expected [" << min << "," << max << "] Races, found " << num_races
-					<< " in " << exe;
-                if (verbose) {
-                    std::cout << output << std::endl;
-                }
+				int num_races = std::stoi(num_races_str);
+				if (num_races < min || num_races > max) {
+					ADD_FAILURE() << "Expected [" << min << "," << max << "] Races, found " << num_races
+						<< " in " << exe;
+					if (verbose) {
+						std::cout << output << std::endl;
+					}
+				}
+				// we got a full execution, exit retry loop, but cleanup
+				i = startup_retries;
 			}
-		}
-		else {
-			ADD_FAILURE() << "Race-Summary not found";
+			else {
+				if(verbose) {
+					std::cout << output << std::endl;
+				}
+
+				if(i<startup_retries-1){
+					std::cout << "DRace crashed sporadically, probably to allocation error. Retry " << startup_retries-i-1 << std::endl;
+				} else {
+					ADD_FAILURE() << "Race-Summary not found";
+				}
+			}
+			// TODO: cleanup stuck processes, requires boost::processes i#36
 		}
 	}
 
