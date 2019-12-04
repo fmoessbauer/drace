@@ -23,6 +23,11 @@
 
 #define MAKE_OUTPUT false
 #define REGARD_ALLOCS true
+#define POOL_ALLOC false
+
+#if POOL_ALLOC
+#include "util/PoolAllocator.h"
+#endif
 
 namespace drace {
     namespace detector {
@@ -35,6 +40,14 @@ namespace drace {
             //make some shared pointers a bit more handy
             typedef std::shared_ptr<ThreadState> ts_ptr;
             typedef std::shared_ptr<VarState> vs_ptr;
+
+            #if POOL_ALLOC
+            template <class X>
+            using c_alloc = Allocator<X, 524288>;
+            #else
+            template <class X>
+            using c_alloc = std::allocator<X>;
+            #endif
             
         private:
 
@@ -254,14 +267,14 @@ namespace drace {
             auto create_var(size_t addr, size_t size){
                 uint16_t u16_size = static_cast<uint16_t>(size);
 
-                auto var = std::make_shared<VarState>(addr, u16_size);
-                return vars.insert({ addr, var }).first;
+               auto var = std::allocate_shared<VarState, c_alloc<VarState>>(c_alloc<VarState>(), addr, u16_size);
+               return vars.insert({ addr, var }).first;
             }
 
 
             ///creates a new lock object (is called when a lock is acquired or released for the first time)
-            auto createLockTock(void* mutex){
-                auto lock = std::make_shared<VectorClock<>>();
+            auto createLock(void* mutex){
+                auto lock = std::allocate_shared<VectorClock<>, c_alloc<VectorClock<>>>(c_alloc<VectorClock<>>());
                 return locks.insert({ mutex, lock }).first;
             }
 
@@ -270,7 +283,8 @@ namespace drace {
 
                 ts_ptr new_thread;
                 if (parent == nullptr) {
-                    new_thread = std::make_shared<ThreadState>(tid);
+                    //new_thread = std::make_shared<ThreadState>(tid);
+                    new_thread = std::make_shared<ThreadState>(tid); 
                     threads.insert( { tid, new_thread });
                 }
                 else {
@@ -288,7 +302,7 @@ namespace drace {
 
             ///creates a happens_before object
             auto create_happens(void* identifier){
-                auto new_hp = std::make_shared<VectorClock<>>();
+                auto new_hp = std::allocate_shared<VectorClock<>, c_alloc<VectorClock<>>>(c_alloc<VectorClock<>>());               
                 return happens_states.insert({ identifier, new_hp }).first;
             }
 
@@ -513,7 +527,7 @@ namespace drace {
                     std::lock_guard<LockT> exLockT(l_insert);
                     auto it = locks.find(mutex);
                     if (it == locks.end()) {
-                        lock = createLockTock(mutex)->second;
+                        lock = createLock(mutex)->second;
                     }
                     else {
                         lock = it->second;
@@ -537,7 +551,7 @@ namespace drace {
                     #if MAKE_OUTPUT
                         std::cerr << "lock is released but was never acquired by any thread" << std::endl;
                     #endif
-                        createLockTock(mutex)->second;
+                        createLock(mutex)->second;
                         return;//as lock is empty (was never acquired), we can return here
                     }
                     else {
