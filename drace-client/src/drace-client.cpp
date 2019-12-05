@@ -90,7 +90,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Setup Function Wrapper
     DR_ASSERT(funwrap::init());
 
-    auto symbol_table = std::make_shared<Symbols>();
+    auto symbol_table = std::make_shared<symbol::Symbols>();
 
     // Setup Module Tracking
     module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);

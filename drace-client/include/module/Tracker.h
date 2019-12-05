@@ -12,7 +12,7 @@
 
 #include "globals.h"
 #include "Metadata.h"
-#include "symbols.h"
+#include "symbol/Symbols.h"
 
 #include <dr_api.h>
 #include <map>
@@ -34,13 +34,13 @@ namespace drace {
 			using PMetadata = std::shared_ptr<Metadata>;
 
 			/// private symbol table for trace-logging scripts
-			std::shared_ptr<Symbols> _syms;
+			std::shared_ptr<symbol::Symbols> _syms;
 
 			std::vector<std::string> excluded_mods;
 			std::vector<std::string> excluded_path_prefix;
 
 		public:
-			explicit Tracker(const std::shared_ptr<Symbols> & syms);
+			explicit Tracker(const std::shared_ptr<symbol::Symbols> & syms);
 			~Tracker();
 
 			/**

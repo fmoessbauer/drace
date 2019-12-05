@@ -10,7 +10,8 @@ set(SOURCES
     "src/module/Metadata"
     "src/module/Tracker"
     "src/MSR"
-    "src/symbols"
+    "src/symbol/Symbols"
+    "src/symbol/SymbolLocation"
     "src/util"
     "src/config"
     "src/race-filter")

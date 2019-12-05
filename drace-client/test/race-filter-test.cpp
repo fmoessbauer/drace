@@ -10,7 +10,7 @@
  */
 
 #include "gtest/gtest.h"
-//#include "race-filter-test.h"
+#include "race-filter-test.h"
 
 
 /**
