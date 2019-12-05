@@ -78,7 +78,7 @@ file(APPEND ${LIC_FILE} "${LIC_SEP}gabime/spdlog\n\n${LIC_FILE_SPDLOG}")
 
 if(${DRACE_ENABLE_TESTING} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib
-	#set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
+	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
 	add_subdirectory("google/googletest/googletest")
 else()
 	set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Enable Testing" FORCE)

@@ -4,6 +4,12 @@ set(TEST_SOURCES_UNIT
 set(TEST_UNIT_TARGET "drace-unit-tests")
 set(TEST_SYSTEM_TARGET "drace-system-tests")
 
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
+
+find_package(Boost 1.65.0 REQUIRED COMPONENTS
+	filesystem)
+
 ##### SETUP DRace SYSTEM TESTS #####
 
 # get path to drrun and race and hard-code into test binary
@@ -22,9 +28,11 @@ add_executable(${TEST_SYSTEM_TARGET}
 	"src/main.cpp"
 	"src/IntegrationTest.cpp"
 	${CMAKE_CURRENT_BINARY_DIR}/generated/IntegrationTestEnv.cpp)
-target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE gtest)
+target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE
+	gtest
+	Boost::filesystem)
+
 target_include_directories(${TEST_SYSTEM_TARGET} PRIVATE "include")
-target_compile_options(${TEST_SYSTEM_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
 if(DRACE_XML_EXPORTER)
     target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
@@ -43,7 +51,6 @@ endif()
 ##### SETUP DRace UNIT TESTS #####
 
 add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})
-target_compile_options(${TEST_UNIT_TARGET} PUBLIC "/MT$<$<CONFIG:Debug>:d>")
 
 target_include_directories(${TEST_UNIT_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_UNIT_TARGET} PRIVATE gtest gtest_main "drace-common")
