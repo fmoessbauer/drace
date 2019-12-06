@@ -31,7 +31,7 @@ TEST(FilterTest, StaticSupression) {
     drace::symbol::SymbolLocation symbol_location;
     symbol_location.file = "FilterTest.cpp";
     symbol_location.mod_name = "FilterTestModule";
-		symbol_location.sym_name = "main";
+    symbol_location.sym_name = "main";
 
     // this should be supressed later
     auto symbol_loc_lp = symbol_location;

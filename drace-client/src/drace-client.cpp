@@ -381,7 +381,6 @@ namespace drace {
         if (params.delayed_sym_lookup) {
             race_collector->resolve_all();
 
-            
             if (params.out_file != "") {
                 auto race_text_report = std::make_shared<DrFile>(params.out_file, DR_FILE_WRITE_OVERWRITE);
                 if (race_text_report->good()) {
@@ -389,7 +388,6 @@ namespace drace {
                     hr_sink.process_all(race_collector->get_races());
                 }
                 else {
-
                     LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
                 }
             }
