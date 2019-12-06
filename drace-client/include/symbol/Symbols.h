@@ -22,6 +22,7 @@
 
 #ifdef TESTING
 class drsym_info_t {};
+class module_data_t;
 #endif
 
 namespace drace {

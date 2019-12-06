@@ -35,8 +35,8 @@ namespace drace {
                 elapsed(ttr) { }
 
             DecoratedRace(
-                ResolvedAccess && a,
-                ResolvedAccess && b,
+                const ResolvedAccess & a,
+                const ResolvedAccess & b,
                 /// elapsed time since program start
                 const std::chrono::milliseconds & ttr)
                 : first(a),
