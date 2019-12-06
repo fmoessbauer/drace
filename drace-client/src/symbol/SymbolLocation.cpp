@@ -21,7 +21,7 @@ std::string SymbolLocation::get_pretty() const {
     // we use c-style formatting here, as we cannot
     // use std::stringstream (see i#9)
     constexpr int bufsize = 256;
-    char * strbuf = (char*)dr_thread_alloc(dr_get_current_drcontext(), bufsize); //strbufptr.get();
+    char * strbuf = (char*)dr_thread_alloc(dr_get_current_drcontext(), bufsize);
 
     dr_snprintf(strbuf, bufsize, "PC %p ", pc);
     if (nullptr != mod_base) {
@@ -41,14 +41,14 @@ std::string SymbolLocation::get_pretty() const {
 
         if (sym_name != "") {
             // we overwrite the last \n here
-            size_t len = strlen(strbuf);
-            dr_snprintf(strbuf + len-1, bufsize - len,
+            size_t len_name = strlen(strbuf);
+            dr_snprintf(strbuf + len_name-1, bufsize - len_name,
                 " - %s\n", sym_name.c_str());
         }
 
         if (file != "") {
-            size_t len = strlen(strbuf);
-            dr_snprintf(strbuf + len, bufsize - len,
+            size_t len_file = strlen(strbuf);
+            dr_snprintf(strbuf + len_file, bufsize - len_file,
                 "\tFile %s:%i + %i\n", file.c_str(), (int)line, (int)line_offs);
         }
     }
