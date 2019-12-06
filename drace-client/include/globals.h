@@ -65,6 +65,7 @@ namespace drace {
 		std::string  xml_file;
 		std::string  logfile{ "stderr" };
         std::string  detector{ "tsan" };
+		std::string  filter_file{ "race_suppressions.txt" };
 
 		// Raw arguments
 		int          argc;
