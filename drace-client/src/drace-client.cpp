@@ -280,6 +280,7 @@ namespace drace {
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
+            (clipp::option("--sup-races") & clipp::value("sup-races", params.filter_file)) % ("race suppression file (default: " + params.filter_file + ")"),
             (
 #ifdef DRACE_XML_EXPORTER
             (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",

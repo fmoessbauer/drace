@@ -73,8 +73,9 @@ SYNOPSIS
         drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
                          <stacksz>] [--no-annotations] [--delay-syms] [--suplevel <level>]
-                         [--xml-file <filename>] [--out-file <filename>] [--logfile <filename>]
-                         [--extctrl] [--brkonrace] [--stats] [--version] [-h] [--heap-only]
+                         [--sup-races <sup-races>] [--xml-file <filename>] [--out-file <filename>]
+                         [--logfile <filename>][--extctrl] [--brkonrace] [--stats] [--version] [-h]
+                         [--heap-only]
 OPTIONS
         DRace Options
             -c, --config <config>
@@ -106,6 +107,8 @@ OPTIONS
             --suplevel <level>
                     suppress similar races (0=detector-default, 1=unique top-of-callstack entry,
                     default: 1)
+            --sup-races <sup-races>
+                    race suppression file (default: race_suppressions.txt)
             data race reporting
                 --xml-file, -x <filename>
                     log races in valkyries xml format in this file
