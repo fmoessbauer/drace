@@ -22,7 +22,7 @@ namespace drace {
          */
         class ResolvedAccess : public Detector::AccessEntry {
         public:
-            std::vector<SymbolLocation> resolved_stack;
+            std::vector<symbol::SymbolLocation> resolved_stack;
 
             ResolvedAccess(const Detector::AccessEntry & e)
                 : Detector::AccessEntry(e)

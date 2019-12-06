@@ -17,8 +17,9 @@
 #include "sink/sink.h"
 #include "statistics.h"
 #include "ipc/DrLock.h"
+#include "symbol/Symbols.h"
 
-#include <mutex>
+#include <shared_mutex>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
@@ -52,7 +53,7 @@ namespace drace {
         unsigned long _race_count{ 0 };
 
         bool                     _delayed_lookup{ false };
-        std::shared_ptr<Symbols> _syms;
+        std::shared_ptr<symbol::Symbols> _syms;
         tp_t                     _start_time;
         std::set<uint64_t>       _racy_stacks;
 
@@ -63,7 +64,7 @@ namespace drace {
     public:
         RaceCollector(
             bool delayed_lookup,
-            const std::shared_ptr<Symbols> & symbols,
+            const std::shared_ptr<symbol::Symbols> & symbols,
             std::shared_ptr<RaceFilter> filter)
             : _delayed_lookup(delayed_lookup),
             _syms(symbols),

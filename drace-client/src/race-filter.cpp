@@ -5,7 +5,7 @@
  * Copyright 2018 Siemens AG
  *
  * Authors:
- *  Philip Harr <philip.harr@siemens.com>
+ *   Felix Moessbauer <felix.moessbauer@siemens.com>
  *
  * SPDX-License-Identifier: MIT
  */

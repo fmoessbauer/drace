@@ -62,7 +62,7 @@ if(TEST_SUITES)
 endif()
 
 # enable dr mocks
-target_compile_definitions(${TEST_UNIT_TARGET} PRIVATE -DTESTING)
+target_compile_definitions(${TEST_UNIT_TARGET} PRIVATE TESTING)
 add_dependencies(${TEST_UNIT_TARGET} "drace-client")
 
 # This introduces a circular dependency as shared libraries

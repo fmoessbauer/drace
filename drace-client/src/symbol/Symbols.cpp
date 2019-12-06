@@ -10,17 +10,30 @@
  */
 
 #include "globals.h"
-#include "symbols.h"
+#include "symbol/Symbols.h"
 #include "Module.h"
 #include "MSR.h"
 #include "ipc/SyncSHMDriver.h"
 
 #include <dr_api.h>
+#include <drsyms.h>
+
 #include <string>
 #include <sstream>
 #include <algorithm>
 
 namespace drace {
+namespace symbol {
+
+	Symbols::Symbols(){
+		drsym_init(0);
+		create_drsym_info();
+	}
+
+	Symbols::~Symbols() {
+		free_drsmy_info();
+		drsym_exit();
+	}
 
 	std::string Symbols::get_bb_symbol(app_pc pc) {
 		auto modptr = module_tracker->get_module_containing(pc);
@@ -120,4 +133,5 @@ namespace drace {
         dr_global_free(syminfo.name, buffer_size);
     }
 
+} // namespace symbol
 } // namespace drace

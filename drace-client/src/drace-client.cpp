@@ -90,7 +90,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Setup Function Wrapper
     DR_ASSERT(funwrap::init());
 
-    auto symbol_table = std::make_shared<Symbols>();
+    auto symbol_table = std::make_shared<symbol::Symbols>();
 
     // Setup Module Tracking
     module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
@@ -380,7 +380,7 @@ namespace drace {
         // the report here
         if (params.delayed_sym_lookup) {
             race_collector->resolve_all();
-          
+
             if (params.out_file != "") {
                 auto race_text_report = std::make_shared<DrFile>(params.out_file, DR_FILE_WRITE_OVERWRITE);
                 if (race_text_report->good()) {

@@ -12,6 +12,7 @@
 
 #include "util.h"
 #include "sink.h"
+#include "symbol/SymbolLocation.h"
 
 #include <dr_api.h>
 #include <drutil.h>
@@ -79,7 +80,7 @@ namespace drace {
 				p.CloseElement();
 			}
 
-			void print_stack(const std::vector<SymbolLocation> & stack) {
+			void print_stack(const std::vector<symbol::SymbolLocation> & stack) {
                 auto & p = _printer;
                 // buffer for pc formatting
                 char strbuf[32];
