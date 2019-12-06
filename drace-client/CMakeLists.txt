@@ -12,7 +12,8 @@ set(SOURCES
     "src/MSR"
     "src/symbols"
     "src/util"
-    "src/config")
+    "src/config"
+    "src/race-filter")
 
 find_package(DynamoRIO 7.0 REQUIRED)
 
@@ -63,6 +64,11 @@ add_custom_command(TARGET copy_files POST_BUILD
 		"${PROJECT_SOURCE_DIR}/drace.ini"
 		"${PROJECT_BINARY_DIR}/drace.ini")
 
+add_custom_command(TARGET copy_files POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		"${PROJECT_SOURCE_DIR}/race_suppressions.txt"
+		"${PROJECT_BINARY_DIR}/race_suppressions.txt")
+
 if(${DRACE_XML_EXPORTER})
     add_dependencies(copy_files tinyxml2)
 	add_custom_command(TARGET copy_files POST_BUILD
@@ -76,6 +82,11 @@ if(${DRACE_ENABLE_CPPCHECK})
     set_target_properties("drace-client" PROPERTIES
         CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
 endif()
+
+if(DRACE_ENABLE_TESTING)
+    add_subdirectory(test)
+endif()
+
 
 # Add licensing information on LCM
 file(READ "include/lcm/LICENSE" LIC_FILE_LCM)

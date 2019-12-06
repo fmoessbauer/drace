@@ -125,5 +125,7 @@ endif()
 
 # install config readme
 install(FILES "drace.ini" DESTINATION bin)
+install(FILES "race_suppressions.txt" DESTINATION bin)
+
 install(FILES "README.md" DESTINATION doc)
 install(FILES ${LIC_FILE} DESTINATION doc)
