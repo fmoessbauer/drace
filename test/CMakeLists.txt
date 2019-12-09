@@ -65,9 +65,9 @@ endif()
 target_compile_definitions(${TEST_UNIT_TARGET} PRIVATE TESTING)
 add_dependencies(${TEST_UNIT_TARGET} "drace-client")
 
-# This introduces a circular dependency as shared libraries
-# are copied after the target is build
-#gtest_discover_tests(${TEST_TARGET})
+gtest_discover_tests(${TEST_UNIT_TARGET}
+	WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+	PROPERTIES RUN_SERIAL ON)
 
 add_custom_target(copy_files_testing ALL
     DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
@@ -84,7 +84,7 @@ endif()
 add_custom_command(TARGET copy_files_testing POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 		"${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini"
-		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/drace_excl.ini")
+		"$<TARGET_FILE_DIR:${TEST_SYSTEM_TARGET}>/data/drace_excl.ini")
 
 # copy tsan dll
 add_custom_command(TARGET copy_files_testing POST_BUILD
