@@ -14,7 +14,7 @@
 
 #include "function-wrapper.h"
 #include "statistics.h"
-#include "symbols.h"
+#include "symbol/Symbols.h"
 #include "util.h"
 
 #include "ipc/SyncSHMDriver.h"
@@ -33,7 +33,7 @@
 namespace drace {
 	namespace module {
 
-		Tracker::Tracker(const std::shared_ptr<Symbols> & symbols)
+		Tracker::Tracker(const std::shared_ptr<symbol::Symbols> & symbols)
 			: _syms(symbols)
 		{
 			mod_lock = dr_rwlock_create();

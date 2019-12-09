@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-//#include "race-filter.h"
+#include "race-filter.h"
 #include <string>
 
 /**

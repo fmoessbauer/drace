@@ -10,7 +10,8 @@ set(SOURCES
     "src/module/Metadata"
     "src/module/Tracker"
     "src/MSR"
-    "src/symbols"
+    "src/symbol/Symbols"
+    "src/symbol/SymbolLocation"
     "src/util"
     "src/config"
     "src/race-filter")
@@ -20,6 +21,10 @@ find_package(DynamoRIO 7.0 REQUIRED)
 # Bind detectors prior to first "configure_DynamoRIO_client"
 # as DR changes global vars
 add_subdirectory("detectors")
+
+if(DRACE_ENABLE_TESTING)
+    add_subdirectory(test)
+endif()
 
 add_library("drace-client" SHARED ${SOURCES})
 target_include_directories("drace-client" PRIVATE "include")
@@ -81,10 +86,6 @@ endif()
 if(${DRACE_ENABLE_CPPCHECK})
     set_target_properties("drace-client" PROPERTIES
         CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
-endif()
-
-if(DRACE_ENABLE_TESTING)
-    add_subdirectory(test)
 endif()
 
 

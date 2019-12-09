@@ -1,3 +1,4 @@
 #more infos to file format: https://github.com/google/sanitizers/wiki/ThreadSanitizerSuppressions
+#race_tos -> race top of stack suppresses races where the expression occurs as one of the top of stack elements
 #this leads to false positives from time to time
 race_tos:std::_LaunchPad<>::_Go

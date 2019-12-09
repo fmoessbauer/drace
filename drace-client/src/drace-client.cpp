@@ -90,7 +90,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Setup Function Wrapper
     DR_ASSERT(funwrap::init());
 
-    auto symbol_table = std::make_shared<Symbols>();
+    auto symbol_table = std::make_shared<symbol::Symbols>();
 
     // Setup Module Tracking
     module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
@@ -280,6 +280,7 @@ namespace drace {
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",
+            (clipp::option("--sup-races") & clipp::value("sup-races", params.filter_file)) % ("race suppression file (default: " + params.filter_file + ")"),
             (
 #ifdef DRACE_XML_EXPORTER
             (clipp::option("--xml-file", "-x") & clipp::value("filename", params.xml_file)) % "log races in valkyries xml format in this file",
@@ -380,7 +381,6 @@ namespace drace {
         if (params.delayed_sym_lookup) {
             race_collector->resolve_all();
 
-            
             if (params.out_file != "") {
                 auto race_text_report = std::make_shared<DrFile>(params.out_file, DR_FILE_WRITE_OVERWRITE);
                 if (race_text_report->good()) {
@@ -388,7 +388,6 @@ namespace drace {
                     hr_sink.process_all(race_collector->get_races());
                 }
                 else {
-
                     LOG_ERROR(-1, "Could not open race-report file: %c", params.out_file.c_str());
                 }
             }

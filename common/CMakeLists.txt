@@ -13,8 +13,6 @@ add_dependencies("drace-common" check_git_repository)
 if(DRACE_ENABLE_TESTING)
     # create library which is linked in global testing module
     add_library(common_test OBJECT "test/ShmDriver")
-    # use static version of stdlib (has to match gtests version)
-    target_compile_options(common_test PRIVATE "/MT$<$<CONFIG:Debug>:d>")
     target_link_libraries(common_test PRIVATE gtest "drace-common")
     set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES common_test)
 endif()

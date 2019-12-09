@@ -14,16 +14,28 @@
 #include <iostream>
 #include <string>
 #include <future>
+#include <signal.h>
+#include <sys/types.h>
 
 #ifdef DRACE_XML_EXPORTER
 #include <tinyxml2.h>
 #include <cstdio>
 #endif
 
+#ifdef WIN32
+// https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=vs-2019
+#include <SDKDDKVer.h>
+#endif
+
+#include <boost/process.hpp>
+
+namespace bp = boost::process;
+
 bool Integration::verbose = false;
 
-// Test cases
+static auto msr_timeout = std::chrono::minutes(2);
 
+// Test cases
 TEST_P(DR, ConcurrentInc) {
 	run(GetParam(), "mini-apps/concurrent-inc/gp-concurrent-inc.exe", 1, 10);
 }
@@ -71,24 +83,33 @@ TEST_P(DR, ExcludeRaces) {
 #ifdef DRACE_TESTING_DOTNET
 // Dotnet Tests
 TEST_P(DR, DotnetClrRacy) {
-    // TODO: start msr
-    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    bp::child msr("ManagedResolver\\msr.exe --once", bp::std_out > bp::null);
+
     run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
-    msr_task.join();
+
+    if(!msr.wait_for(msr_timeout)){
+        msr.terminate();
+    }
 }
 
 TEST_P(DR, DotnetClrMonitor) {
-    // TODO: start msr
-    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    bp::child msr("ManagedResolver\\msr.exe --once", bp::std_out > bp::null);
+
     run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe monitor", 0, 0);
-    msr_task.join();
+
+    if(!msr.wait_for(msr_timeout)){
+        msr.terminate();
+    }
 }
 
 TEST_P(DR, DotnetClrMutex) {
-    // TODO: start msr
-    auto msr_task = std::thread([]() {std::system("ManagedResolver\\msr.exe --once"); });
+    bp::child msr("ManagedResolver\\msr.exe --once", bp::std_out > bp::null);
+
     run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe mutex", 0, 0);
-    msr_task.join();
+
+    if(!msr.wait_for(msr_timeout)){
+        msr.terminate();
+    }
 }
 #endif
 
