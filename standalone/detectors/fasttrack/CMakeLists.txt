@@ -28,10 +28,16 @@ if(Boost_FOUND)
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
         CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED OFF
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN ON)
-    target_compile_options("drace.detector.fasttrack.generic" PUBLIC "/MT$<$<CONFIG:Debug>:d>")
+        CXX_STANDARD_REQUIRED OFF)
+
+    if(POLICY CMP0091)
+        set_target_properties(
+            "drace.detector.fasttrack.generic" PROPERTIES
+            # use static runtime (required by dynamorio)
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    else()
+        target_compile_options("drace.detector.fasttrack.generic" PRIVATE "/MT$<$<CONFIG:Debug>:d>")
+    endif()
 
     target_include_directories("drace.detector.fasttrack.generic"
         PUBLIC "include"
@@ -47,6 +53,21 @@ if(Boost_FOUND)
     # include exports header
     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
     target_link_libraries("drace.detector.fasttrack.standalone" PRIVATE "drace.detector.fasttrack.generic")
+    set_target_properties(
+        "drace.detector.fasttrack.standalone" PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED OFF
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN ON)
+
+    if(POLICY CMP0091)
+        set_target_properties(
+            "drace.detector.fasttrack.standalone" PROPERTIES
+            # use static runtime (required by dynamorio)
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    else()
+        target_compile_options("drace.detector.fasttrack.standalone" PRIVATE "/MT$<$<CONFIG:Debug>:d>")
+    endif()
 
     install(TARGETS "drace.detector.fasttrack.standalone"
         RUNTIME DESTINATION bin/fasttrack COMPONENT Runtime
@@ -64,8 +85,6 @@ if(Boost_FOUND)
     if(DRACE_ENABLE_TESTING)
         # create library which is linked in global testing module
         add_library(fasttrack_test OBJECT ${FT_TEST_SOURCES})
-        # use dynamic version of stdlib (has to match gtests version)
-        target_compile_options(fasttrack_test PRIVATE "/MT$<$<CONFIG:Debug>:d>")
         target_link_libraries(fasttrack_test PRIVATE gtest "drace-common" "parallel-hashmap")
         target_include_directories(fasttrack_test
         PUBLIC "include"

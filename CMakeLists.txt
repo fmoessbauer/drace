@@ -10,6 +10,11 @@
 
 cmake_minimum_required (VERSION 3.8)
 
+if(POLICY CMP0091)
+	# MSVC runtime library selected by abstraction
+	cmake_policy(SET CMP0091 NEW)
+endif()
+
 project ("drace-client" LANGUAGES "C" "CXX")
 
 
