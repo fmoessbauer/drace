@@ -79,6 +79,9 @@ add_subdirectory("ManagedResolver")
 
 if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
+	include(GoogleTest)
+	include(CTest)
+	enable_testing()
 	add_subdirectory("test")
 endif()
 
