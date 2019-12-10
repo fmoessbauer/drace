@@ -24,7 +24,7 @@ set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(BUILD_TOOLS ON CACHE BOOL "Build Tooling Support (e.g. Qt5 GUI)")
-set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
+set(DRACE_ENABLE_RUNTIME ON CACHE BOOL "Build Drace Runtime")
 set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
@@ -88,10 +88,12 @@ add_subdirectory("vendor")
 # standalone tools
 add_subdirectory("standalone")
 
-# DRACE
-add_subdirectory("drace-client")
-# Managed Stack Resolver
-add_subdirectory("ManagedResolver")
+if(DRACE_ENABLE_RUNTIME)
+	# DRACE
+	add_subdirectory("drace-client")
+	# Managed Stack Resolver
+	add_subdirectory("ManagedResolver")
+endif()
 
 if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
@@ -100,14 +102,16 @@ if(DRACE_ENABLE_TESTING)
 	add_subdirectory("test")
 endif()
 
-if(DRACE_ENABLE_BENCH)
-	message(STATUS "Build Benchmarks")
-	add_subdirectory("bench")
-endif()
+if(DRACE_ENABLE_RUNTIME)
+	if(DRACE_ENABLE_BENCH)
+		message(STATUS "Build Benchmarks")
+		add_subdirectory("bench")
+	endif()
 
-if(BUILD_TOOLS)
-    message(STATUS "Build Tools")
-    add_subdirectory("tools")
+	if(BUILD_TOOLS)
+		message(STATUS "Build Tools")
+		add_subdirectory("tools")
+	endif()
 endif()
 
 # Build documentation
@@ -123,27 +127,29 @@ if(Doxygen_FOUND)
 		"${PROJECT_SOURCE_DIR}/test/*"
 		"${PROJECT_SOURCE_DIR}/bench/*"
 		"${PROJECT_SOURCE_DIR}/vendor/*"
-        "${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
-        "${PROJECT_SOURCE_DIR}/tools/drace-gui/draceGUIUnitTest.py"
-        "${PROJECT_SOURCE_DIR}/node_modules/*")
+		"${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
+		"${PROJECT_SOURCE_DIR}/tools/drace-gui/draceGUIUnitTest.py"
+		"${PROJECT_SOURCE_DIR}/node_modules/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 	
 	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
 	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)
 
 	doxygen_add_docs(
-	    doc
-	    #${PROJECT_SOURCE_DIR}
-	    COMMENT "Generate Code Documentation")
+		doc
+		#${PROJECT_SOURCE_DIR}
+		COMMENT "Generate Code Documentation")
 
-    if(${DRACE_INSTALL_DOCS})
-	    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
-    endif()
+	if(${DRACE_INSTALL_DOCS})
+		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+	endif()
 endif()
 
-# install config readme
-install(FILES "drace.ini" DESTINATION bin)
-install(FILES "race_suppressions.txt" DESTINATION bin)
+if(DRACE_ENABLE_RUNTIME)
+	# install config readme
+	install(FILES "drace.ini" DESTINATION bin)
+	install(FILES "race_suppressions.txt" DESTINATION bin)
+endif()
 
 install(FILES "README.md" DESTINATION doc)
 install(FILES ${LIC_FILE} DESTINATION doc)
