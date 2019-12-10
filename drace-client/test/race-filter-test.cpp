@@ -115,7 +115,7 @@ TEST(FilterTest, In_Stack_Race){
     Detector::Race r;
     r.first.stack_size = 2;
     r.first.stack_trace[0] = 0x42;
-    r.first.stack_trace[0] = 0x43;
+    r.first.stack_trace[1] = 0x43;
 
     // create dummy symbol
     drace::symbol::SymbolLocation symbol_location;
