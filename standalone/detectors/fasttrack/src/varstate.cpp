@@ -20,7 +20,8 @@ r_id(VAR_NOT_INIT)
 
 ///evaluates for write/write races through this and and access through t
 bool VarState::is_ww_race(std::shared_ptr<ThreadState> t) {
-    if (t->get_tid() != get_w_tid() &&
+    if (get_write_id() != VAR_NOT_INIT &&
+        t->get_tid() != get_w_tid() &&
         get_w_clock() >= t->get_clock_by_tid(get_w_tid())) {
         return true;
     }
