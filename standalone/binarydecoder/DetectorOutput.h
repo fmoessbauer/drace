@@ -4,9 +4,8 @@
 #include <ipc/ExtsanData.h>
 
 #include <detector/Detector.h>
-#include <util/WindowsLibLoader.h>
+#include <util/LibLoaderFactory.h>
 #include <unordered_map>
-#include <Windows.h>
 
 class DetectorOutput{
 
@@ -26,14 +25,18 @@ class DetectorOutput{
     }
 
 protected:
-    util::WindowsLibLoader _libdetector;
+    std::shared_ptr<util::LibraryLoader> _libdetector = util::LibLoaderFactory::getLoader();
     std::unique_ptr<Detector> _det;
 
 public:
     explicit DetectorOutput(const char * detector){
-        
-        _libdetector.load(detector);
-        decltype(CreateDetector)* create_detector = _libdetector["CreateDetector"];
+        if(!_libdetector->load(detector)){
+            throw std::runtime_error("could not load library");
+        }
+        decltype(CreateDetector)* create_detector = (*_libdetector)["CreateDetector"];
+        if(nullptr == create_detector){
+            throw std::runtime_error("could not bind detector");
+        }
         _det =  std::unique_ptr<Detector>(create_detector());
         
         const char * _argv = "";

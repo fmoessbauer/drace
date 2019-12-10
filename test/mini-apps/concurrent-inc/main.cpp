@@ -13,7 +13,7 @@
 #include <iostream>
 #include <mutex>
 
-#define NUM_INCREMENTS 10'000
+#define NUM_INCREMENTS 10000
 #define USE_HEAP
 
 //std::mutex mx;

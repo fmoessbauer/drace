@@ -12,6 +12,7 @@
 #define FASTTRACK_H
 
 #include <mutex> // for lock_guard
+#include <shared_mutex>
 #include <iostream>
 #include <iomanip>
 #include <detector/Detector.h>
@@ -61,7 +62,7 @@ namespace drace {
             phmap::parallel_node_hash_map<size_t, std::shared_ptr<StackTrace>> traces;
         
             ///holds the callback address to report a race to the drace-main 
-            void * clb;
+            Callback clb;
 
             ///switch logging of read/write operations
             bool log_flag = false;

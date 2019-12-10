@@ -9,27 +9,26 @@
  *
  * SPDX-License-Identifier: MIT
  */
-
-#include <windows.h>
-
+ 
 #include "LibraryLoader.h"
+#include <dlfcn.h>
 
 namespace util {
-    class WindowsLibLoader : public LibraryLoader
+    class UnixLibLoader : public LibraryLoader
     {
-        HMODULE _lib = NULL;
+        void* _lib{nullptr};
 
     public:
 
-        WindowsLibLoader() = default;
+        UnixLibLoader() = default;
 
         /// LibraryLoader specialization for windows dlls
-        explicit WindowsLibLoader(const char * filename)
+        explicit UnixLibLoader(const char * filename)
         {
             load(filename);
         }
 
-        ~WindowsLibLoader()
+        ~UnixLibLoader() final
         {
             unload();
         }
@@ -38,25 +37,25 @@ namespace util {
          * load a module
          * \return true if module was loaded
          */
-        bool load(const char * filename)
+        bool load(const char * filename) final
         {
             if (loaded())
                 return false;
 
-            _lib = LoadLibrary(filename);
-            return true;
+            _lib = dlopen(filename, RTLD_NOW);
+            return nullptr != _lib;
         }
 
         /**
          * unload the loaded module
          * \return true if a module was loaded and is now unloaded.
          */
-        bool unload()
+        bool unload() final
         {
             if (loaded())
             {
-                FreeLibrary(_lib);
-                _lib = NULL;
+                dlclose(_lib);
+                _lib = nullptr;
                 return true;
             }
             return false;
@@ -65,15 +64,15 @@ namespace util {
         /**
          * \return true if module is loaded
          */
-        bool loaded()
+        bool loaded() final
         {
-            return _lib != NULL;
+            return _lib != nullptr;
         }
 
         /// Get a pointer to the requested function in this module
-        ProcedurePtr operator[](const char * proc_name) const
+        ProcedurePtr operator[](const char * proc_name) const final
         {
-            return ProcedurePtr(reinterpret_cast<void*>(GetProcAddress(_lib, proc_name)));
+            return ProcedurePtr(reinterpret_cast<void*>(dlsym(_lib, proc_name)));
         }
     };
 }

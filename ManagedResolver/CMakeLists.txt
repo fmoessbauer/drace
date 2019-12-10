@@ -7,6 +7,9 @@ set(SOURCES
 add_executable("msr" ${SOURCES})
 target_include_directories("msr" PRIVATE "include")
 target_link_libraries("msr" "drace-common" "spdlog" "clipp")
+if(WIN32)
+  target_compile_options("msr" PRIVATE "-EHsc")
+endif()
 
 if(${DRACE_ENABLE_CPPCHECK})
     set_target_properties("msr" PROPERTIES

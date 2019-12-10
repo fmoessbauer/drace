@@ -6,11 +6,10 @@ include(${PROJECT_SOURCE_DIR}/CMakeExt/git_watcher.cmake)
 # Common header-only target
 add_library("drace-common" INTERFACE)
 target_include_directories("drace-common" INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
-target_compile_options("drace-common" INTERFACE -EHsc)
 add_dependencies("drace-common" check_git_repository)
 
 ################ configure test module ################
-if(DRACE_ENABLE_TESTING)
+if(DRACE_ENABLE_TESTING AND WIN32)
     # create library which is linked in global testing module
     add_library(common_test OBJECT "test/ShmDriver")
     target_link_libraries(common_test PRIVATE gtest "drace-common")

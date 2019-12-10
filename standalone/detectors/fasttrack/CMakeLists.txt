@@ -33,14 +33,15 @@ if(Boost_FOUND)
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
         CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED OFF)
+        CXX_STANDARD_REQUIRED OFF
+        POSITION_INDEPENDENT_CODE ON)
 
     if(POLICY CMP0091)
         set_target_properties(
             "drace.detector.fasttrack.generic" PROPERTIES
             # use static runtime (required by dynamorio)
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    else()
+    elseif(WIN32)
         target_compile_options("drace.detector.fasttrack.generic" PRIVATE "/MT$<$<CONFIG:Debug>:d>")
     endif()
 
@@ -57,7 +58,7 @@ if(Boost_FOUND)
 
     # include exports header
     target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
-    target_link_libraries("drace.detector.fasttrack.standalone" PRIVATE "drace.detector.fasttrack.generic")
+    target_link_libraries("drace.detector.fasttrack.standalone" PRIVATE "drace.detector.fasttrack.generic" Threads::Threads)
     set_target_properties(
         "drace.detector.fasttrack.standalone" PROPERTIES
         CXX_STANDARD 17
@@ -70,7 +71,7 @@ if(Boost_FOUND)
             "drace.detector.fasttrack.standalone" PROPERTIES
             # use static runtime (required by dynamorio)
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    else()
+    elseif(WIN32)
         target_compile_options("drace.detector.fasttrack.standalone" PRIVATE "/MT$<$<CONFIG:Debug>:d>")
     endif()
 
@@ -94,6 +95,11 @@ if(Boost_FOUND)
         target_include_directories(fasttrack_test
         PUBLIC "include"
         PUBLIC "${Boost_INCLUDE_DIR}")
+        set_target_properties(
+            fasttrack_test PROPERTIES
+            CXX_STANDARD 17
+            CXX_STANDARD_REQUIRED ON)
+
         set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES fasttrack_test)
     endif()
 endif()

@@ -28,7 +28,7 @@ public:
        
     ///constructor of ThreadState object, initializes tid and clock
     ///copies the vector of parent thread, if a parent thread exists
-    ThreadState::ThreadState(/*drace::detector::Fasttrack<_mutex>* ft_inst,*/
+    ThreadState(/*drace::detector::Fasttrack<_mutex>* ft_inst,*/
                             VectorClock::TID own_tid,
                             std::shared_ptr<ThreadState> parent = nullptr);
 
