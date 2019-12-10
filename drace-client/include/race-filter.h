@@ -16,16 +16,25 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <iostream>
 #include <detector/Detector.h>
 #include <race/DecoratedRace.h>
 
 namespace drace{
 
     class  RaceFilter{
-        std::vector<std::string> filter_list;
+        std::vector<std::string> rtos_list; //race top of stack
+        std::vector<std::string> race_list;
         void normalize_string(std::string & expr);
+
+        bool check_race(const drace::race::DecoratedRace & race);
+        bool check_rtos(const drace::race::DecoratedRace & race);
+        void init(std::istream &content);
+
     public:
-        RaceFilter(std::string filename);
+        explicit RaceFilter(std::istream &content) ;
+        explicit RaceFilter(std::string filename) ;
+
         bool check_suppress(const drace::race::DecoratedRace & race);
         void print_list();
 
