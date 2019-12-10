@@ -24,6 +24,11 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack")
     
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        add_definitions(-DCOMPILE_X86)
+        message(STATUS "Building for x86 Plattform")
+    endif()
+    
     add_library("drace.detector.fasttrack.generic" OBJECT ${FT_SOURCES})
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES

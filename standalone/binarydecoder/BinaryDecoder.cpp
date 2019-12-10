@@ -44,7 +44,7 @@ int main(int argc, char** argv){
     std::streamsize size = in_file.tellg();
     in_file.seekg(0, std::ios::beg);
 
-    std::vector<ipc::event::BufferEntry> buffer((size/sizeof(ipc::event::BufferEntry)));
+    std::vector<ipc::event::BufferEntry> buffer((size_t)(size/sizeof(ipc::event::BufferEntry)));
    
     //ipc::event::BufferEntry buf;
     //int i = 0;

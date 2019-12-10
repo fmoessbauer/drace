@@ -40,14 +40,14 @@ namespace ipc {
 
 		struct MemAccess {
 			uint32_t thread_id;
-			uint64_t pc;
-			uint64_t addr;
-			uint64_t size;
+			uintptr_t pc;
+			uintptr_t addr;
+			uintptr_t size;
 		};
 
 		struct Mutex {
 			uint32_t thread_id;
-			uint64_t addr;
+			uintptr_t addr;
 			int recursive;
 			bool write;
 			bool acquire;
@@ -55,14 +55,14 @@ namespace ipc {
 
 		struct HappensRelation {
 			uint32_t thread_id;
-			uint64_t id;
+			uintptr_t id;
 		};
 
 		struct Allocation {
 			uint32_t thread_id;
-			uint64_t pc;
-			uint64_t addr;
-			uint64_t size;
+			uintptr_t pc;
+			uintptr_t addr;
+			uintptr_t size;
 		};
 
 		struct ForkJoin {
@@ -76,7 +76,7 @@ namespace ipc {
 
 		struct FuncEnter {
 			uint32_t thread_id;
-			uint64_t pc;
+			uintptr_t pc;
 		};
 
 		struct FuncExit {

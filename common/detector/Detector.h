@@ -40,16 +40,16 @@ public:
 
     /// A single memory access
     struct AccessEntry {
-        unsigned thread_id;
         bool     write;
-        uint64_t accessed_memory;
-        size_t   access_size;
-        int      access_type;
-        uint64_t heap_block_begin;
-        size_t   heap_block_size;
         bool     onheap{ false };
+        unsigned thread_id;
+        int      access_type;
         size_t   stack_size{ 0 };
-        uint64_t stack_trace[max_stack_size];
+        size_t   access_size;
+        size_t   heap_block_size;
+        uintptr_t accessed_memory;
+        uintptr_t heap_block_begin;
+        uintptr_t stack_trace[max_stack_size];
     };
 
     /// A Data-Race is a tuple of two Accesses

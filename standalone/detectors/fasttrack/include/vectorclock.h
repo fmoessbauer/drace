@@ -16,9 +16,6 @@
 
 
 
-#define IS_X64
-
-
 /**
     Implements a VectorClock.
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
@@ -30,16 +27,16 @@ public:
     ///by dividing the id with the multiplier one gets the tid, with modulo one gets the clock
     
 //on 64 bit platform 64 can be used for a VC_ID on 32 bit only the half
-#ifdef IS_X64
-    static constexpr size_t multplier = 0x100000000ull;
-    typedef size_t VC_ID;
-    typedef unsigned int TID;
-    typedef unsigned int Clock;
-#else 
+#if COMPILE_X86
     static constexpr size_t multplier = 0x10000ull;
     typedef size_t VC_ID;
     typedef unsigned short int TID;
     typedef unsigned short int Clock;
+#else 
+    static constexpr size_t multplier = 0x100000000ull;
+    typedef size_t VC_ID;
+    typedef unsigned int TID;
+    typedef unsigned int Clock;
 #endif
 
     ///vector clock which contains multiple thread ids, clocks
@@ -85,7 +82,7 @@ public:
 
 
     ///updates vector clock entry or creates entry if non-existant
-    void update(uint32_t tid, VC_ID id) {
+    void update(TID tid, VC_ID id) {
         auto it = vc.find(tid);
         if (it == vc.end()) {
             vc.insert({ tid, id });
@@ -102,7 +99,7 @@ public:
 
     ///returns known clock of tid
     ///returns 0 if vc does not hold the tid
-    Clock get_clock_by_tid(uint32_t tid) {
+    Clock get_clock_by_tid(TID tid) {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return make_clock(it->second);
@@ -126,12 +123,12 @@ public:
 
     ///returns the tid of the id
     static const TID make_tid(VC_ID id) {
-        return static_cast<uint32_t>(id / multplier);
+        return static_cast<TID>(id / multplier);
     }
 
     ///returns the clock of the id
     static const Clock make_clock(VC_ID id) {
-        return static_cast<uint32_t>(id % multplier);
+        return static_cast<Clock>(id % multplier);
     }
 
 
