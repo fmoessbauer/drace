@@ -146,5 +146,3 @@ TEST(FasttrackTest, IndicateRaces3){
 	ASSERT_FALSE(v1->is_ww_race(t3));
 	ASSERT_TRUE(v1->is_rw_sh_race(t3));
 }
-
-TEST(FasttrackTest, )

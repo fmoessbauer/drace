@@ -91,6 +91,5 @@ public:
 
     VectorClock<>::Clock  get_clock_by_thr(VectorClock<>::TID t) ;
 
-
 };
 #endif // !VARSTATE_H
