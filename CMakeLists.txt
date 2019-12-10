@@ -17,8 +17,6 @@ endif()
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
-
-
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")

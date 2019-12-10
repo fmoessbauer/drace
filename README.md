@@ -269,19 +269,28 @@ Each queue is then processed and analyzed by it's own thread.
 
 This detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
 
-## Tools 
+## Standalone
+
+The DRACE_ENABLE_RUNTIME CMake flag can be set to ```false```, if one only wants  to build the standalone components of the DRace project.
+
+Standalone Components:
+
+- Fasttrack (Standalone Version)
+- Binary Decoder
+
+## Tools
+
 ### DRaceGUI
+
 The DRaceGUI is a graphical interface with which one can use DRace without typing a very long command into the Powershell. This is especially useful for users which use DRace for the first time. 
 
 For more information have a look in [here](tools/DRaceGUI)
 
-
 ### ReportConverter
+
 With the ReportConverter an HTML report generator was added to the project. By using the `ReportConverter.py` script (or the ReportConverter.exe, which is very slow) one can generate an HTML report from the generated drace XML report.
 
 For more information have a look in [here](tools/ReportConverter)
-
-
 
 ## Licensing
 
