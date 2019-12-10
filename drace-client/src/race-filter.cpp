@@ -16,28 +16,50 @@
 #include <algorithm>
 #include <regex>
 
+
+
+drace::RaceFilter::RaceFilter(std::istream &content){
+    init(content);
+}
+
+
 drace::RaceFilter::RaceFilter(std::string filename){
-    std::ifstream in_file(filename);
+    std::ifstream f;
+    f.open(filename);
+    if (f.is_open()) {
+        //reads a file which has thread sanitizer suppression file fashion 
+        init(f);
+    }
+    else{
+        //some log message
+    }
+    f.close();
+}
+
+void drace::RaceFilter::init(std::istream &content){
     std::string entry;
-    
-    //reads a file which has thread sanitizer suppression file fashion 
-    if (in_file.is_open()) {
-        while(std::getline(in_file, entry)){
-            //ommit lines which start with a '#' -> comments
-            if(entry[0] != '#'){
-                //valid entries are like 'subject:function_name' -> race_tos:std::foo
-                size_t pos = entry.find(':', 0);
-                if(pos != std::string::npos){
-                    //race_tos (top of stack is the only supported subject)
-                    if(entry.substr(0, pos) == "race_tos"){
-                        std::string tmp = entry.substr(pos+1);
-                        normalize_string(tmp);
-                        filter_list.push_back(tmp);
-                    }
+    while(std::getline(content, entry)){
+        //omit lines which start with a '#' -> comments
+        if(entry[0] != '#'){
+            //valid entries are like 'subject:function_name' -> race_tos:std::foo
+            size_t pos = entry.find(':', 0);
+            if(pos != std::string::npos){
+               
+               //race_tos top of stack
+                if(entry.substr(0, pos) == "race_tos"){
+                    std::string tmp = entry.substr(pos+1);
+                    normalize_string(tmp);
+                    rtos_list.push_back(tmp);
+                }
+
+               //race
+                if(entry.substr(0, pos) == "race"){
+                    std::string tmp = entry.substr(pos+1);
+                    normalize_string(tmp);
+                    race_list.push_back(tmp);
                 }
             }
         }
-        in_file.close();
     }
 }
 
@@ -66,26 +88,60 @@ void drace::RaceFilter::normalize_string(std::string & expr){
 
 bool drace::RaceFilter::check_suppress(const drace::race::DecoratedRace & race){
 
+    if(check_race(race) || check_rtos(race)){
+        return true;
+    }
+    return false; //not in list -> do not suppress
+}
+
+bool drace::RaceFilter::check_rtos(const drace::race::DecoratedRace & race){
     //get the top stack elements
     const std::string& top1_sym = race.first.resolved_stack.back().sym_name;
     const std::string& top2_sym = race.second.resolved_stack.back().sym_name;
-    for(auto it = filter_list.begin(); it != filter_list.end(); ++it){
+    for(auto it = rtos_list.begin(); it != rtos_list.end(); ++it){
         std::regex expr(*it);
         std::smatch m;
         if( std::regex_match(top1_sym.begin(), top1_sym.end(), m, expr) ||
             std::regex_match(top2_sym.begin(), top2_sym.end(), m, expr) ){
                 return true; //at least one regex matched -> suppress
-            }
+        }
     }
+    return false;
+}
 
-    return false; //not in list -> do not suppress
+bool drace::RaceFilter::check_race(const drace::race::DecoratedRace & race){
+    //get the top stack elements
+    auto stack1 =  race.first.resolved_stack;
+    auto stack2 = race.second.resolved_stack;
+    
+    for(auto it = race_list.begin(); it != race_list.end(); ++it){
+        std::regex expr(*it);
+        std::smatch m;
 
+       for(auto st = stack1.begin(); st != stack1.end(); st++){
+            const std::string& sym = st->sym_name;
+            if( std::regex_match(sym.begin(), sym.end(), m, expr)) {
+                return true; //regex matched -> suppress
+            }
+        }
+        for(auto st = stack2.begin(); st != stack2.end(); st++){
+            const std::string& sym = st->sym_name;
+            if( std::regex_match(sym.begin(), sym.end(), m, expr)) {
+                return true; //regex matched -> suppress
+            }
+        }
+    }
+    return false;
 }
 
 void drace::RaceFilter::print_list(){
 
     std::cout << "Suppressed TOS functions: " << std::endl;
-    for(auto it = filter_list.begin(); it != filter_list.end(); ++it){
+    for(auto it = rtos_list.begin(); it != rtos_list.end(); ++it){
+        std::cout << *it << std::endl;
+    }
+    std::cout << "Suppressed functions: " << std::endl;
+    for(auto it = race_list.begin(); it != race_list.end(); ++it){
         std::cout << *it << std::endl;
     }
 }
