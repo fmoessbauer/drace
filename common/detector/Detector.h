@@ -12,6 +12,18 @@
 
 #include <utility>
 
+// this is a header only target, hence we cannot rely on cmake
+// to generate the export headers.
+#ifdef WIN32
+#ifdef DETECTOR_EXPORTS
+#define DETECTOR_EXPORT __declspec(dllexport)
+#else
+#define DETECTOR_EXPORT __declspec(dllimport)
+#endif
+#else
+#define DETECTOR_EXPORT
+#endif
+
 /**
     Interface for a DRace compatible race detector
 
@@ -22,7 +34,7 @@
     - A read or write will never contain a tid which was not forked
     - A read can happen before a write
     - A read and a write with the same TID will never arrive concurrently
-    - A happens after may arrive before a corresponding happens beore arrives
+    - A happens after may arrive before a corresponding happens before arrives
     - A lock may be be released, before it will be acquired 
     -> the last three bullet points must not cause a crash
 
@@ -204,4 +216,4 @@ public:
 };
 
 /// create a new detector instance
-extern "C" Detector * CreateDetector();
+extern "C" DETECTOR_EXPORT Detector * CreateDetector();
