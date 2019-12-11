@@ -15,7 +15,9 @@ set(FT_SOURCES
 
 set(FT_TEST_SOURCES
 "test/fasttrack_test.cpp"
-"src/stacktrace")
+"src/stacktrace"
+"src/varstate.cpp"
+"src/threadstate.cpp")
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target

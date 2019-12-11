@@ -101,3 +101,48 @@ TEST(FasttrackTest, stackInitializations){
 		i++;
 	}
 }
+
+TEST(FasttrackTest, IndicateRaces1){
+	auto t1 = std::make_shared<ThreadState>(1);
+	auto t2 = std::make_shared<ThreadState>(2);
+
+	auto v1 = std::make_shared<VarState>(10, 1);
+
+	//t1 writes to v1
+	v1->update(true, t1->return_own_id());
+
+	ASSERT_TRUE(v1->is_wr_race(t2));
+	ASSERT_FALSE(v1->is_rw_ex_race(t2));
+	ASSERT_TRUE(v1->is_ww_race(t2));
+}
+
+TEST(FasttrackTest, IndicateRaces2){
+	auto t1 = std::make_shared<ThreadState>(1);
+	auto t2 = std::make_shared<ThreadState>(2);
+
+	auto v1 = std::make_shared<VarState>(10, 1);
+
+	//t1 reads v1
+	v1->update(false, t1->return_own_id());
+
+	ASSERT_FALSE(v1->is_wr_race(t2));
+	ASSERT_TRUE(v1->is_rw_ex_race(t2));
+	ASSERT_FALSE(v1->is_ww_race(t2));
+}
+
+TEST(FasttrackTest, IndicateRaces3){
+	auto t1 = std::make_shared<ThreadState>(1);
+	auto t2 = std::make_shared<ThreadState>(2);
+	auto t3 = std::make_shared<ThreadState>(3);
+
+	auto v1 = std::make_shared<VarState>(10, 1);
+
+	//t1 and t2 read v1
+	v1->update(false, t1->return_own_id());
+	v1->set_read_shared(t2->return_own_id());
+
+	ASSERT_FALSE(v1->is_wr_race(t3));
+	ASSERT_FALSE(v1->is_rw_ex_race(t3));
+	ASSERT_FALSE(v1->is_ww_race(t3));
+	ASSERT_TRUE(v1->is_rw_sh_race(t3));
+}

@@ -21,8 +21,6 @@ class VarState  {
 
     ///contains read_shared case all involved threads and clocks
     std::unique_ptr <xvector<size_t >> shared_vc = nullptr;
-    //xvector<size_t> vc;
-
 
     /// the upper half of the bits are the thread id the lower half is the clock of the thread
     std::atomic<VectorClock<>::VC_ID> w_id;
@@ -92,7 +90,6 @@ public:
     VectorClock<>::VC_ID get_vc_by_thr(VectorClock<>::TID t) ;
 
     VectorClock<>::Clock  get_clock_by_thr(VectorClock<>::TID t) ;
-
 
 };
 #endif // !VARSTATE_H
