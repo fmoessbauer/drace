@@ -19,10 +19,9 @@ import shutil
 import argparse
 import pathlib
 import datetime
+import html
 import sys
 from subprocess import check_call, STDOUT, DEVNULL
-
-
 
 try:
     import matplotlib
@@ -553,12 +552,8 @@ class SourceCodeManagement:
 
 
 def adjText(text): #change html symbols e.g. & -> &amp;
-    text = text.replace('&', '&amp;')
-    text = text.replace('<', '&lt;')
-    text = text.replace('>', '&gt;')
-    text = text.replace('"', '&quot;')
     text = text.replace('\\', '/')
-    return text
+    return html.escape(text)
 
 def parseArgumentString(fileList, strEntries):
     strEntries = strEntries.replace("\\","/")
