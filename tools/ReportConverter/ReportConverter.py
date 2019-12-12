@@ -552,6 +552,7 @@ class SourceCodeManagement:
 
 
 def adjText(text): #change html symbols e.g. & -> &amp;
+    text = text.replace('`', '\'')
     text = text.replace('\\', '/')
     return html.escape(text)
 
