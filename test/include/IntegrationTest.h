@@ -17,13 +17,15 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <thread>
+#include <chrono>
 
 #include "globals.h"
 
 class Integration : public ::testing::Test {
 private:
 	/// number of retries in case of sporadic crash
-	static constexpr int startup_retries = 3;
+	static constexpr int startup_retries = 5;
 	static std::string drrun;
 	static std::string drclient;
 	static bool verbose;
@@ -88,6 +90,7 @@ public:
 
 				if(i<startup_retries-1){
 					std::cout << "DRace crashed sporadically, probably to allocation error. Retry " << startup_retries-i-1 << std::endl;
+					std::this_thread::sleep_for(std::chrono::seconds(15));
 				} else {
 					ADD_FAILURE() << "Race-Summary not found";
 				}
