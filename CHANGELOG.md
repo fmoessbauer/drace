@@ -1,3 +1,90 @@
+#### 1.4.0 (2019-12-13)
+
+##### Chores
+
+*  add support for vs enterprise ([4c9be969](https://github.com/siemens/drace/commit/4c9be969a99bc51b45859983cd535ecbad7003dc))
+*  adjusted naming of tests ([6d2a30ff](https://github.com/siemens/drace/commit/6d2a30ff95425e705a141383781c0511de025250))
+*  use vs enterprise in ci ([54f878a3](https://github.com/siemens/drace/commit/54f878a386d4412b67dd9f8c57f0a5d1a024565f))
+*  removed qt path from cmake file, updated readme ([97bf1348](https://github.com/siemens/drace/commit/97bf13488d88d59a822f454d885e53aa1abc9cdc))
+*  only build gui if boost is found ([0bc6d076](https://github.com/siemens/drace/commit/0bc6d076d5695d72afcca8486fed1d4f74bf876f))
+*  set correct error code in CI ([98c390d7](https://github.com/siemens/drace/commit/98c390d7647677bf3314ca0186d3f2c1fdad9c6a))
+*  add support to deploy self-containing version of drace-gui ([7e9bb50c](https://github.com/siemens/drace/commit/7e9bb50cfc9f313c4b6af5dc61715e8499949fce))
+*  integrate draceGUI into cmake project ([3b267d9a](https://github.com/siemens/drace/commit/3b267d9aa62bcfd4ce67abad3dbd591ff21f4f0b))
+*  generate binary of reportgenerator ([ed9dd604](https://github.com/siemens/drace/commit/ed9dd6043fad35f2c112d6b37e16fbf2342c5539))
+
+##### New Features
+
+*  auto select drace dll if next to gui ([dd476c0e](https://github.com/siemens/drace/commit/dd476c0eeb09724a06a7b748fe27aa51940b3b58))
+*  added 'race' suppression classifier ([35ed138e](https://github.com/siemens/drace/commit/35ed138e8ac2d026abe0e823099ea7f4946932d4))
+*  added wild card and special character handling ([dca4d598](https://github.com/siemens/drace/commit/dca4d598ed9540272e67cbf4290bb118ceb093fe))
+*  added working dummy test, set global_var ([36aa205f](https://github.com/siemens/drace/commit/36aa205ffd66bae2dcb3e5a8fec3f425af75d967))
+*  implemented race filter ([c29e8b6c](https://github.com/siemens/drace/commit/c29e8b6c8239982de6c300f57ff4a3edd3a75e23))
+*  added load/save functionality ([26568f24](https://github.com/siemens/drace/commit/26568f24a5126b33a26ac49815edc20590c6bff8))
+*  added report creation, added msr functionality ([37212333](https://github.com/siemens/drace/commit/372123333d1aa7bf62d7c284ccc9bdd40629c11f))
+*  further progress on gui features ([b590576f](https://github.com/siemens/drace/commit/b590576f956e44ed22f9ae726f2265d8dd3825ba))
+*  add boost dependency in drace-gui ([2e44c490](https://github.com/siemens/drace/commit/2e44c490d873524239a5697f949f2e103a4d229a))
+*  changed architecture, reorganized folder ([9334ec49](https://github.com/siemens/drace/commit/9334ec4920af964005f95659dda5f18baf00d1d2))
+*  added action buttons with dummy windows ([206c689f](https://github.com/siemens/drace/commit/206c689fb7aefb72409c8d15f994aee5605a2d20))
+*  further progress on drace gui ([23b5830c](https://github.com/siemens/drace/commit/23b5830c7ee4c6f2f5a2f57ee1150070fdc5b9e7))
+*  additional files for drace gui ([9ff810aa](https://github.com/siemens/drace/commit/9ff810aacb1f220a44272f6a9d5f338f8300318e))
+*  added draceGUI source files ([ea82cc19](https://github.com/siemens/drace/commit/ea82cc1956111a37e377dda689e739b6c9aaee17))
+*  tool was renamed to ReportConverter, some usability improvements ([d61b08f1](https://github.com/siemens/drace/commit/d61b08f10fdc03d33d00d6e1b8d74e7eec8989c3))
+*  fallback to config file at drace binary location ([d85c6bea](https://github.com/siemens/drace/commit/d85c6bea603986004cabcf7e9afb9af4acf1564e))
+
+##### Bug Fixes
+
+*  replace angular ticks in html output ([d8bbbaa5](https://github.com/siemens/drace/commit/d8bbbaa52591aa9d09cf0425192cde0e2f751228))
+*  escape all html-incompatible characters ([5ffb67bc](https://github.com/siemens/drace/commit/5ffb67bcc1deb5894aad50b9fd80b634b312089d))
+*  removed inheritance from shared_mutex ([8c53af39](https://github.com/siemens/drace/commit/8c53af3968b1b8719cf1adf84faf53cb2edd4a11))
+*  removes vertical lines, when no matplotlib pictures are created ([aecd1601](https://github.com/siemens/drace/commit/aecd1601ec975264509f62bcf67b3019ab1ae2bf))
+*  fixes double quote issue after load ([784ea468](https://github.com/siemens/drace/commit/784ea4689403c028d7f0644c85efe2c9075d0767))
+*  properly parse race-free report ([e1bc335a](https://github.com/siemens/drace/commit/e1bc335af4334b21dee5701c4184bf7ba29db35d))
+*  solved issue with paths containing spaces ([6b967523](https://github.com/siemens/drace/commit/6b967523e74b6afb9b2908e23a4a56864f2a3ae7))
+*  resolved findings of cpp-check of Pipeline [#3859543](https://github.com/siemens/drace/pull/3859543) ([51538fe8](https://github.com/siemens/drace/commit/51538fe8fc7a8094e0b2bf94d1a58374822e8020))
+*  msr handling was fixed ([1a875b47](https://github.com/siemens/drace/commit/1a875b4781b8345086be67277ab15ee3ed491e49))
+*  the created .exe finds now the resources path ([eb1628e6](https://github.com/siemens/drace/commit/eb1628e6814b048556c154f89f9e3b96119744df))
+*  make codebase cppcheck compliant ([5010bd80](https://github.com/siemens/drace/commit/5010bd80b431b6a7bb9b68d41d321c08e2bcb06c))
+*  removed circular include ([c4563523](https://github.com/siemens/drace/commit/c4563523316cc0394e9b87a676c48fe97540a012))
+*  check if license path is set was added ([ea8bf43b](https://github.com/siemens/drace/commit/ea8bf43be3891e51728788b62fd8b4fafd003e97))
+*  correctly exit on errors in pyinstaller builds ([b24f7ce1](https://github.com/siemens/drace/commit/b24f7ce10e98753f8458118dfa1d97fdcfc1f563))
+*  output path in debug mode was corrected ([0332835d](https://github.com/siemens/drace/commit/0332835d3c553ad8ae1d351a11e1118a34e4aaab))
+
+##### Other Changes
+
+*  updated readme.md ([8fa5ad17](https://github.com/siemens/drace/commit/8fa5ad1734a4583c899e3007441d11cf370b5a7f))
+*  adjusted Readme-files, due to renaming of report generator ([07077745](https://github.com/siemens/drace/commit/07077745423998469da23f7b7f31b0efb6a6d15e))
+
+##### Refactors
+
+*  fix shadow of variable ([39ba21b5](https://github.com/siemens/drace/commit/39ba21b55be42924af42ac63ecb4a567b2ff1a42))
+*  prepare symbol subsystem to be mocked ([58b674a4](https://github.com/siemens/drace/commit/58b674a45248aab950daff60780c3a94136722cc))
+*  split symbol module into separate components ([c8ecb533](https://github.com/siemens/drace/commit/c8ecb533a7bf46a132bbb57d290d39ffbf749d55))
+*  used scoped dynamorio lock in race-collector ([b084c426](https://github.com/siemens/drace/commit/b084c426d242a2876529710217eee1274e9275f3))
+*  minor adjustments, style and doc ([022d8f19](https://github.com/siemens/drace/commit/022d8f194b5572cc12eac54c8ee1ccbb1ff95ba3))
+*  adapt unit tests to new testing infrastructure ([3011d233](https://github.com/siemens/drace/commit/3011d233279dc2a544acfa10703bedfcb92b7517))
+*  finished renaming ([ca288337](https://github.com/siemens/drace/commit/ca28833763e4156c49deb3297b5bfb98d745f746))
+
+##### Code Style Changes
+
+*  resolved cppcheck warning ([1a01abd7](https://github.com/siemens/drace/commit/1a01abd74fad39fe2089a615c646f8335d9751ed))
+*  minor style fixes ([52cd5f6a](https://github.com/siemens/drace/commit/52cd5f6a77d9cb75d48b20996bdb2b019bd5ff3e))
+
+##### Tests
+
+*  improve robustness of integration test infrastructure ([79821737](https://github.com/siemens/drace/commit/79821737eddd836062fc772ffd4c58cd84020bc3))
+*  setup ctest for drace-unit-tests ([a8fbe0d7](https://github.com/siemens/drace/commit/a8fbe0d7084d6906c92fb309d86e73c95381b43a))
+*  test race-supression component ([7ac416f6](https://github.com/siemens/drace/commit/7ac416f60240efe8892fb6ba91c5b98d53fca5b3))
+*  use boost process to control MSR ([06689d61](https://github.com/siemens/drace/commit/06689d61414f84ff871db2e151284b5fc434a27f))
+*  retry system tests in case of sporadic crash ([4fe1cfe5](https://github.com/siemens/drace/commit/4fe1cfe5a089411655ea5543ffa4c7fcb96e1ce4))
+*  split unit and integration tests ([76c41e4c](https://github.com/siemens/drace/commit/76c41e4c46a281d558dadcd13c03d27073cd87ce))
+*  encode path to drace into test binary ([557892ec](https://github.com/siemens/drace/commit/557892ec2b7b94fb98d0f2cfbd98bc88c9d524e2))
+*  use static runtime ([98f7533e](https://github.com/siemens/drace/commit/98f7533e14fee2f7fef6341bcdd294c96886aeb0))
+*  bump dr version in CI ([9ad7a47e](https://github.com/siemens/drace/commit/9ad7a47efd75787f70ec16c0182db79b1e4a4a08))
+*  encode path to drrun into binary ([bcb85f12](https://github.com/siemens/drace/commit/bcb85f1228008269cc2cd2a071fe6bf1935c13c8))
+*  encode path to drrun into binary ([ea31ff45](https://github.com/siemens/drace/commit/ea31ff452cd53dd77a0105702eda40060f462ae6))
+*  added boost path to cmake generation ([b1b45003](https://github.com/siemens/drace/commit/b1b4500366859bb8f8aeb6c115bd7e87fb71fd6a))
+*  adjusted Unittests and Cmake ([5d239c41](https://github.com/siemens/drace/commit/5d239c41518d9e837a072fd89ca9ac9d50d0b278))
+
 #### 1.2.0 (2019-07-11)
 
 ##### Chores
