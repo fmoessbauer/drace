@@ -111,9 +111,9 @@ TEST(FasttrackTest, IndicateRaces1){
 	//t1 writes to v1
 	v1->update(true, t1->return_own_id());
 
-	ASSERT_TRUE(v1->is_wr_race(t2));
-	ASSERT_FALSE(v1->is_rw_ex_race(t2));
-	ASSERT_TRUE(v1->is_ww_race(t2));
+	ASSERT_TRUE(v1->is_wr_race(t2.get()));
+	ASSERT_FALSE(v1->is_rw_ex_race(t2.get()));
+	ASSERT_TRUE(v1->is_ww_race(t2.get()));
 }
 
 TEST(FasttrackTest, IndicateRaces2){
@@ -125,9 +125,9 @@ TEST(FasttrackTest, IndicateRaces2){
 	//t1 reads v1
 	v1->update(false, t1->return_own_id());
 
-	ASSERT_FALSE(v1->is_wr_race(t2));
-	ASSERT_TRUE(v1->is_rw_ex_race(t2));
-	ASSERT_FALSE(v1->is_ww_race(t2));
+	ASSERT_FALSE(v1->is_wr_race(t2.get()));
+	ASSERT_TRUE(v1->is_rw_ex_race(t2.get()));
+	ASSERT_FALSE(v1->is_ww_race(t2.get()));
 }
 
 TEST(FasttrackTest, IndicateRaces3){
@@ -141,8 +141,8 @@ TEST(FasttrackTest, IndicateRaces3){
 	v1->update(false, t1->return_own_id());
 	v1->set_read_shared(t2->return_own_id());
 
-	ASSERT_FALSE(v1->is_wr_race(t3));
-	ASSERT_FALSE(v1->is_rw_ex_race(t3));
-	ASSERT_FALSE(v1->is_ww_race(t3));
-	ASSERT_TRUE(v1->is_rw_sh_race(t3));
+	ASSERT_FALSE(v1->is_wr_race(t3.get()));
+	ASSERT_FALSE(v1->is_rw_ex_race(t3.get()));
+	ASSERT_FALSE(v1->is_ww_race(t3.get()));
+	ASSERT_TRUE(v1->is_rw_sh_race(t3.get()));
 }

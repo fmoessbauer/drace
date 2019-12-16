@@ -12,3 +12,4 @@
 
 add_subdirectory("detectors/fasttrack")
 add_subdirectory("binarydecoder")
+add_subdirectory("DataGenerator")

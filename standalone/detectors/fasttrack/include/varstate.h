@@ -31,10 +31,7 @@ class VarState  {
     auto find_in_vec(VectorClock<>::TID tid) ;
 
 public:
-
-    //static constexpr int READ_SHARED = -2;
     static constexpr int VAR_NOT_INIT = 0;
-
 
     ///var address
     const size_t address;
@@ -45,16 +42,16 @@ public:
     VarState(size_t addr, uint16_t var_size);
 
     ///evaluates for write/write races through this and and access through t
-    bool is_ww_race(std::shared_ptr<ThreadState> t);
+    bool is_ww_race(ThreadState * t);
 
     ///evaluates for write/read races through this and and access through t
-    bool is_wr_race(std::shared_ptr<ThreadState> t);
+    bool is_wr_race(ThreadState * t);
 
     ///evaluates for read-exclusive/write races through this and and access through t
-    bool is_rw_ex_race(std::shared_ptr<ThreadState> t);
+    bool is_rw_ex_race(ThreadState * t);
 
     ///evaluates for read-shared/write races through this and and access through t
-    VectorClock<>::TID is_rw_sh_race(std::shared_ptr<ThreadState> t);
+    VectorClock<>::TID is_rw_sh_race(ThreadState * t);
 
     ///returns id of last write access
     VectorClock<>::VC_ID get_write_id() const;
