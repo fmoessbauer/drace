@@ -28,7 +28,7 @@ class VarState  {
     std::atomic<VectorClock<>::VC_ID> r_id;
 
     ///finds the entry with the tid in the shared vectorclock
-    auto find_in_vec(VectorClock<>::TID tid) ;
+    auto find_in_vec(VectorClock<>::TID tid) const;
 
 public:
     static constexpr int VAR_NOT_INIT = 0;
@@ -42,16 +42,16 @@ public:
     VarState(size_t addr, uint16_t var_size);
 
     ///evaluates for write/write races through this and and access through t
-    bool is_ww_race(ThreadState * t);
+    bool is_ww_race(ThreadState * t) const;
 
     ///evaluates for write/read races through this and and access through t
-    bool is_wr_race(ThreadState * t);
+    bool is_wr_race(ThreadState * t) const;
 
     ///evaluates for read-exclusive/write races through this and and access through t
-    bool is_rw_ex_race(ThreadState * t);
+    bool is_rw_ex_race(ThreadState * t) const;
 
     ///evaluates for read-shared/write races through this and and access through t
-    VectorClock<>::TID is_rw_sh_race(ThreadState * t);
+    VectorClock<>::TID is_rw_sh_race(ThreadState * t) const;
 
     ///returns id of last write access
     VectorClock<>::VC_ID get_write_id() const;
@@ -84,9 +84,8 @@ public:
     VectorClock<>::VC_ID get_sh_id(uint32_t pos) const;
 
     ///return stored clock value, which belongs to ThreadState t, 0 if not available
-    VectorClock<>::VC_ID get_vc_by_thr(VectorClock<>::TID t) ;
+    VectorClock<>::VC_ID get_vc_by_thr(VectorClock<>::TID t) const;
 
-    VectorClock<>::Clock  get_clock_by_thr(VectorClock<>::TID t) ;
-
+    VectorClock<>::Clock  get_clock_by_thr(VectorClock<>::TID t) const;
 };
 #endif // !VARSTATE_H

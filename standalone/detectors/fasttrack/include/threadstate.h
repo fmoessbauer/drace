@@ -19,7 +19,7 @@
 #include <atomic>
 
 ///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock), as well as pointer to the fasttrack class
-class ThreadState : public VectorClock<>{//tl_alloc<std::pair<const size_t, size_t>>> {
+class ThreadState : public VectorClock<>{
 private:
 
     ///holds the tid and the actual clock value -> lower 32 bits are clock, upper 32 are the tid
@@ -53,7 +53,6 @@ public:
     StackTrace & get_stackDepot(){
         return traceDepot;
     }
-
 };
 
 #endif // !THREADSTATE_H

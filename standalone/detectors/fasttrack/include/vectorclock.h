@@ -1,3 +1,5 @@
+#ifndef VECTORCLOCK_H
+#define VECTORCLOCK_H
 /*
  * DRace, a dynamic data race detector
  *
@@ -8,13 +10,8 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef VECTORCLOCK_H
-#define VECTORCLOCK_H
 
 #include "parallel_hashmap/phmap.h"
-#include <unordered_map>
-
-
 
 /**
     Implements a VectorClock.
@@ -40,10 +37,10 @@ public:
 #endif
 
     ///vector clock which contains multiple thread ids, clocks
-    std::unordered_map<uint32_t, size_t> vc;
+    phmap::flat_hash_map<uint32_t, size_t> vc;
  
     ///return the thread id of the position pos of the vector clock
-    TID get_thr(uint32_t pos) {
+    TID get_thr(uint32_t pos) const {
         if (pos < vc.size()) {
             auto it = vc.begin();
             std::advance(it, pos);
@@ -55,7 +52,7 @@ public:
     };
 
     ///returns the no. of elements of the vector clock
-    uint32_t get_length() {
+    uint32_t get_length() const {
         return vc.size();
     };
 
@@ -99,7 +96,7 @@ public:
 
     ///returns known clock of tid
     ///returns 0 if vc does not hold the tid
-    Clock get_clock_by_tid(TID tid) {
+    Clock get_clock_by_tid(TID tid) const {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return make_clock(it->second);
@@ -111,7 +108,7 @@ public:
 
 
     ///returns known whole id in vectorclock of tid
-    VC_ID get_id_by_tid(TID tid) {
+    VC_ID get_id_by_tid(TID tid) const {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return it->second;
@@ -136,7 +133,6 @@ public:
     static const VC_ID make_id(TID tid) {
         return tid * VectorClock::multplier;
     }
-
 };
 
 #endif

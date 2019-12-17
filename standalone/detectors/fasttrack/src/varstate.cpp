@@ -19,7 +19,7 @@ r_id(VAR_NOT_INIT)
 
 
 ///evaluates for write/write races through this and and access through t
-bool VarState::is_ww_race(ThreadState * t) {
+bool VarState::is_ww_race(ThreadState * t) const {
     if (get_write_id() != VAR_NOT_INIT &&
         t->get_tid() != get_w_tid() &&
         get_w_clock() >= t->get_clock_by_tid(get_w_tid())) {
@@ -29,7 +29,7 @@ bool VarState::is_ww_race(ThreadState * t) {
 }
 
 ///evaluates for write/read races through this and and access through t
-bool VarState::is_wr_race(ThreadState * t) {
+bool VarState::is_wr_race(ThreadState * t) const {
     auto var_tid = get_w_tid();
     if (get_write_id() != VAR_NOT_INIT &&
         var_tid != t->get_tid()       &&
@@ -41,7 +41,7 @@ bool VarState::is_wr_race(ThreadState * t) {
 }
 
 ///evaluates for read-exclusive/write races through this and and access through t
-bool VarState::is_rw_ex_race(ThreadState * t) {
+bool VarState::is_rw_ex_race(ThreadState * t) const {
     auto var_tid = get_r_tid();
     if (get_read_id() != VAR_NOT_INIT &&
         t->get_tid() != var_tid &&
@@ -53,10 +53,9 @@ bool VarState::is_rw_ex_race(ThreadState * t) {
 }
 
 ///evaluates for read-shared/write races through this and and access through t
-VectorClock<>::TID VarState::is_rw_sh_race(ThreadState * t) {
+VectorClock<>::TID VarState::is_rw_sh_race(ThreadState * t) const {
     for (unsigned int i = 0; i < shared_vc->size(); ++i) {
         VectorClock<>::VC_ID act_id = get_sh_id(i);
-        
         VectorClock<>::TID act_tid = VectorClock<>::make_tid(act_id);
 
         if (act_id != 0            &&
@@ -77,7 +76,7 @@ VectorClock<>::VC_ID VarState::get_read_id() const {
     return r_id;
 }
 
-auto VarState::find_in_vec(VectorClock<>::TID tid)  {
+auto VarState::find_in_vec(VectorClock<>::TID tid) const {
     for (auto it = shared_vc->begin(); it != shared_vc->end(); ++it) {
         if (VectorClock<>::make_tid(*it) == tid) {
             return it;
@@ -154,9 +153,8 @@ bool VarState::is_read_shared() const{
 
 
 ///return stored clock value, which belongs to ThreadState t, 0 if not available
-VectorClock<>::VC_ID VarState::get_vc_by_thr(VectorClock<>::TID tid)  {
+VectorClock<>::VC_ID VarState::get_vc_by_thr(VectorClock<>::TID tid) const {
     auto it = find_in_vec(tid);
-
     if (it != shared_vc->end()) {
         return *it;
     }
@@ -164,8 +162,7 @@ VectorClock<>::VC_ID VarState::get_vc_by_thr(VectorClock<>::TID tid)  {
 }
 
 
-VectorClock<>::Clock VarState::get_clock_by_thr(VectorClock<>::TID tid)  {
-
+VectorClock<>::Clock VarState::get_clock_by_thr(VectorClock<>::TID tid) const {
     auto it = find_in_vec(tid);
     if (it != shared_vc->end()) {
         return VectorClock<>::make_clock(*it);

@@ -16,6 +16,7 @@
 #include <iostream>
 #include <iomanip>
 #include <detector/Detector.h>
+#include <ipc/spinlock.h>
 #include "threadstate.h"
 #include "varstate.h"
 #include "stacktrace.h"
@@ -54,11 +55,11 @@ namespace drace {
 
             ///these maps hold the various state objects together with the identifiers
 
-            phmap::parallel_node_hash_map<size_t, size_t> allocs;
-            phmap::parallel_node_hash_map<size_t, vs_ptr> vars;
-            phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
-            phmap::node_hash_map<tid_ft, ts_ptr> threads;
-            phmap::parallel_node_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
+            phmap::parallel_flat_hash_map<size_t, size_t> allocs;
+            phmap::parallel_flat_hash_map<size_t, vs_ptr> vars;
+            phmap::parallel_flat_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
+            phmap::flat_hash_map<tid_ft, ts_ptr> threads;
+            phmap::parallel_flat_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
         
             ///holds the callback address to report a race to the drace-main 
             Callback clb;
@@ -66,7 +67,7 @@ namespace drace {
             ///switch logging of read/write operations
             bool log_flag = false;
 
-            ///
+            /// internal statistics
             struct log_counters{
                 uint32_t read_ex_same_epoch = 0;
                 uint32_t read_sh_same_epoch = 0;
@@ -78,13 +79,25 @@ namespace drace {
                 uint32_t write_shared = 0;
             } log_count;
 
-            ///those locks secure the .find and .insert actions to the according hashmaps
+            /// central lock, used for accesses to global tables except vars
             LockT g_lock; // global Lock
 
+            /// spinlock to protect accesses to vars table
+            mutable ipc::spinlock vars_spl;
+
+            /**
+             * \brief report a data-race back to DRace
+             * \note the function itself must not use locks
+             * \note Invariant: this function requires a lock the following global tables
+             *                  threads, vars
+             * 
+             * \note to reconstruct stack traces, both threads must be stopped or locked.
+             *       TODO: could be implemented this by using one spinlock per thread object
+             */
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                size_t var)
+                size_t var) const
             {
                 std::list<size_t> stack1, stack2;
                 auto it = threads.find(thr1);
@@ -98,7 +111,10 @@ namespace drace {
                 stack2 = it2->second->get_stackDepot().return_stack_trace(var);
                 
                 size_t var_size = 0;
-                var_size = vars[var]->size; //size is const member -> thread safe
+                {
+                    std::lock_guard<ipc::spinlock> lg(vars_spl);
+                    var_size = vars.at(var)->size; //size is const member -> thread safe
+                }
 
                 while(stack1.size() > Detector::max_stack_size) {
                     stack1.pop_front();
@@ -131,12 +147,23 @@ namespace drace {
                 access2.stack_size = stack2.size();
                 std::copy(stack2.begin(), stack2.end(), access2.stack_trace);
 
-
                 Detector::Race race;
                 race.first = access1;
                 race.second = access2;
 
                 ((void(*)(const Detector::Race*))clb)(&race);
+            }
+
+            /**
+             * Wrapper for report_race to use const qualifier on
+             * wrapped function
+             */
+            void report_race_locked(uint32_t thr1, uint32_t thr2,
+                bool wr1, bool wr2,
+                size_t var)
+            {
+                std::lock_guard<LockT> lg(g_lock);
+                report_race(thr1, thr2, wr1, wr2, var);
             }
 
             /**
@@ -165,7 +192,7 @@ namespace drace {
 
                 if (v->is_wr_race(t))
                 { // write-read race
-                    report_race(v->get_w_tid(), tid, true, false, v->address);
+                    report_race_locked(v->get_w_tid(), tid, true, false, v->address);
                 }
 
                 //update vc
@@ -221,7 +248,7 @@ namespace drace {
                 //tids are different and write epoch greater or equal than known epoch of other thread
                 if (v->is_ww_race(t)) // write-write race
                 {
-                    report_race(v->get_w_tid(), tid, true, true, v->address);
+                    report_race_locked(v->get_w_tid(), tid, true, true, v->address);
                 }
 
                 if (! v->is_read_shared()) {
@@ -230,7 +257,7 @@ namespace drace {
                     }
                     if (v->is_rw_ex_race(t))// read-write race
                     {
-                        report_race(v->get_r_tid(), t->get_tid(), false, true, v->address);
+                        report_race_locked(v->get_r_tid(), t->get_tid(), false, true, v->address);
                     }
                 }
                 else {//come here in read shared case
@@ -240,7 +267,7 @@ namespace drace {
                     uint32_t act_tid = v->is_rw_sh_race(t);
                     if (act_tid != 0) //read shared read-write race       
                     {
-                        report_race(act_tid, tid, false, true, v->address);
+                        report_race_locked(act_tid, tid, false, true, v->address);
                     }
                 }
                 v->update(true, t->return_own_id());
@@ -291,7 +318,7 @@ namespace drace {
                 allocs.insert({ addr, size });
             }
 
-            void process_log_output(){
+            void process_log_output() const {
                 double read_actions, write_actions;
                 //percentages
                 double rd, wr, r_ex_se, r_sh_se, r_ex, r_share, r_shared, w_se, w_ex, w_sh;
@@ -324,7 +351,6 @@ namespace drace {
                 std::cout << std::fixed << std::setprecision(2) << "Write same epoch: " << w_se << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Write exclusive: " << w_ex << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Write shared: " << w_sh << std::endl;
-
             }
 
         public:
@@ -395,8 +421,7 @@ namespace drace {
                 thr->get_stackDepot().set_read_write((size_t)(addr), reinterpret_cast<size_t>(pc));
 
                 {
-                    // TODO: get rid of this lock (or use spinlock)!
-                    std::lock_guard<LockT> exLockT(g_lock);
+                    std::lock_guard<ipc::spinlock> exLockT(vars_spl);
                     auto it = vars.find((size_t)(addr));
                     if (it == vars.end()) { //create new variable if new
                     #if MAKE_OUTPUT
@@ -418,8 +443,8 @@ namespace drace {
                 thr->get_stackDepot().set_read_write((size_t)addr, reinterpret_cast<size_t>(pc));
                 {
                     // TODO: get rid of this lock!
-                    std::lock_guard<LockT> exLockT(g_lock);
-                    auto it = vars.find((size_t)addr);//vars[(size_t)addr];
+                    std::lock_guard<ipc::spinlock> exLockT(vars_spl);
+                    auto it = vars.find((size_t)addr);
                     if (it == vars.end()) {
                         var = (create_var((size_t)(addr), size))->second;
                     }
@@ -493,7 +518,6 @@ namespace drace {
             void release(tls_t tls, void* mutex, bool write) final 
             {
                 std::shared_ptr<VectorClock<>> lock;
-
                 {
                     std::lock_guard<LockT> exLockT(g_lock);
                     auto it = locks.find(mutex);
@@ -510,15 +534,14 @@ namespace drace {
                 }
                 ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
 
-                (thr)->inc_vc();
+                thr->inc_vc();
                 
                 //increase vector clock and propagate to lock    
-                (lock)->update(thr);
+                lock->update(thr);
             }
 
             void happens_before(tls_t tls, void* identifier) final {
                 std::shared_ptr<VectorClock<>> hp;
-
                 {
                     std::lock_guard<LockT> exLockT(g_lock);
                     auto it = happens_states.find(identifier);
@@ -576,6 +599,7 @@ namespace drace {
 
                 //variable is deallocated so varstate objects can be destroyed
                 while (address < end_addr) {
+                    std::lock_guard<ipc::spinlock> lg(vars_spl);
                     if (vars.find(address) != vars.end()) {
                         vs_ptr var = vars.find(address)->second;
                         vars.erase(address);

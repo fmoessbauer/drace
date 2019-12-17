@@ -1,4 +1,3 @@
-
 /*
  * DRace, a dynamic data race detector
  *
@@ -12,7 +11,7 @@
 
 #include "stacktrace.h"
 
-std::list<size_t> StackTrace::make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data)
+std::list<size_t> StackTrace::make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data) const
 {
     std::list<size_t> this_stack;
 
@@ -29,14 +28,10 @@ std::list<size_t> StackTrace::make_trace(std::pair<size_t, stack_tree::vertex_de
             this_stack.push_front(map[act_item]);
         }
     }
-
     return this_stack;
 }
 
-
 StackTrace::StackTrace() :ce(boost::add_vertex(0, local_stack)){}
-
-
 
 void StackTrace::clean() {
     bool delete_flag, sth_was_deleted;
@@ -62,20 +57,21 @@ void StackTrace::clean() {
                 }
             }
         }
-
     } while (sth_was_deleted);
-
 }
 
 void StackTrace::pop_stack_element() {
     auto edge = boost::out_edges(ce, local_stack);
     ce = (boost::target(*(edge.first), local_stack));
-    
+
+    #if 0
     pop_count++;
-    if(pop_count > 1000){
+    if(pop_count > 1000){ // TODO: magic value?
         pop_count = 0;
+        // clean has a huge performance impact
         clean();
-    } 
+    }
+    #endif
 }
 
 void StackTrace::push_stack_element(size_t element) {
@@ -98,36 +94,29 @@ void StackTrace::push_stack_element(size_t element) {
     tmp = boost::add_vertex(VertexProperty(element), local_stack);
     boost::add_edge(tmp, ce, local_stack);
     ce = tmp;
-
 }
 
 ///when a var is written or read, it copies the stack and adds the pc of the
 ///r/w operation to be able to return the stack trace if a race was detected
 void StackTrace::set_read_write(size_t addr, size_t pc) {
-
     if (read_write.find(addr) == read_write.end()) {
         read_write.insert({ addr, {pc, ce} });
     }
     else {
         read_write.find(addr)->second = { pc, ce };
     }
-
 }
 
 ///returns a stack trace of a clock for handing it over to drace
-std::list<size_t> StackTrace::return_stack_trace(size_t address) {
+std::list<size_t> StackTrace::return_stack_trace(size_t address) const {
 
     auto it = read_write.find(address);
     if (it != read_write.end()) {
         auto data = it->second;
-        std::list<size_t> t = make_trace(data);
-        return t;
+        return make_trace(data);
     }
     else {
         //A read/write operation was not tracked correctly -> return empty stack trace
-        return std::list<size_t>(0);
+        return {0};
     }
-
 }
-
-
