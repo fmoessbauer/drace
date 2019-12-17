@@ -18,7 +18,6 @@
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
 */
 template <class _al = std::allocator<std::pair<const size_t, size_t>>>
-
 class VectorClock {
 public:
     ///by dividing the id with the multiplier one gets the tid, with modulo one gets the clock
@@ -52,7 +51,7 @@ public:
     };
 
     ///returns the no. of elements of the vector clock
-    uint32_t get_length() const {
+    constexpr uint32_t get_length() {
         return vc.size();
     };
 
@@ -76,8 +75,6 @@ public:
         }
     };
 
-
-
     ///updates vector clock entry or creates entry if non-existant
     void update(TID tid, VC_ID id) {
         auto it = vc.find(tid);
@@ -94,8 +91,10 @@ public:
         vc.erase(tid);
     }
 
-    ///returns known clock of tid
-    ///returns 0 if vc does not hold the tid
+    /**
+     * \brief returns known clock of tid
+     *        returns 0 if vc does not hold the tid
+     */
     Clock get_clock_by_tid(TID tid) const {
         auto it = vc.find(tid);
         if (it != vc.end()) {
@@ -105,7 +104,6 @@ public:
             return 0;
         }
     }
-
 
     ///returns known whole id in vectorclock of tid
     VC_ID get_id_by_tid(TID tid) const {
@@ -119,18 +117,18 @@ public:
     }
 
     ///returns the tid of the id
-    static const TID make_tid(VC_ID id) {
+    static constexpr TID make_tid(VC_ID id) {
         return static_cast<TID>(id / multplier);
     }
 
     ///returns the clock of the id
-    static const Clock make_clock(VC_ID id) {
+    static constexpr Clock make_clock(VC_ID id) {
         return static_cast<Clock>(id % multplier);
     }
 
 
     ///creates an id with clock=0 from an tid
-    static const VC_ID make_id(TID tid) {
+    static constexpr VC_ID make_id(TID tid) {
         return tid * VectorClock::multplier;
     }
 };

@@ -18,30 +18,28 @@
 /**
  * \brief Implements a stack depot capable to store callstacks
  *        with references to particular nodes.
- * 
- * \todo optimize push/pop sequences without memory references
  */
 class StackTrace {
 
     typedef boost::property<boost::vertex_name_t, size_t> VertexProperty;
-    typedef boost::adjacency_list <boost::listS, boost::listS, boost::bidirectionalS, VertexProperty > stack_tree;
+    typedef boost::adjacency_list <boost::listS, boost::listS, boost::bidirectionalS, VertexProperty > StackTree;
 
     ///holds var_address, pc, stack_length
     phmap::flat_hash_map<size_t, std::pair<size_t,
-        stack_tree::vertex_descriptor>> read_write;
+        StackTree::vertex_descriptor>> _read_write;
 
     ///holds to complete stack tree
     ///is needed to create the stack trace in case of a race
     ///leafs of the tree which do not have pointer pointing to them may be deleted 
-    stack_tree local_stack;
+    StackTree _local_stack;
 
     ///holds the current stack element
-    stack_tree::vertex_descriptor ce;
+    StackTree::vertex_descriptor _ce;
 
-    uint16_t pop_count = 0;
+    uint16_t _pop_count = 0;
 
     /// re-construct a stack-trace from a bottom node to the root
-    std::list<size_t> make_trace(std::pair<size_t, stack_tree::vertex_descriptor> data) const;
+    std::list<size_t> make_trace(std::pair<size_t, StackTree::vertex_descriptor> data) const;
 
     /**
      * \brief cleanup unreferenced nodes in callstack tree

@@ -131,6 +131,7 @@ void VarState::update(bool is_write, VectorClock<>::VC_ID id) {
 void VarState::set_read_shared(VectorClock<>::VC_ID id)
 {
     shared_vc = std::make_unique<xvector<size_t>>();
+    shared_vc->reserve(2);
     shared_vc->push_back(r_id);
     shared_vc->push_back(id);
 
