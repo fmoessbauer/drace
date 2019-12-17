@@ -26,6 +26,7 @@ set(DRACE_ENABLE_RUNTIME ON CACHE BOOL "Build Drace Runtime")
 set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
+set(OPTIMIZE_FOR_NATIVE OFF CACHE BOOL "Build standalone components with -march=native")
 
 # install targets
 set(DRACE_INSTALL_TESTS OFF CACHE BOOL "Install test target")

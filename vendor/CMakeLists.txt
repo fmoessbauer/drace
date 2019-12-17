@@ -78,12 +78,15 @@ if(DRACE_ENABLE_BENCH AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/benchmark/C
 else()
 	set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Enable benchmark" FORCE)
 endif()
-	
+
 # Used in FastTrack2 detector backend
 # greg7mdp parallel-hashmap
 add_library("parallel-hashmap" INTERFACE)
 target_include_directories("parallel-hashmap" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greg7mdp/parallel-hashmap>)
+if(WIN32)
+	target_compile_options("parallel-hashmap" INTERFACE "/arch:AVX2")
+endif()
 file(READ "greg7mdp/parallel-hashmap/LICENSE" LIC_FILE_SPARSEPP)
 file(APPEND ${LIC_FILE} "${LIC_SEP}greg7mdp/parallel-hashmap\n\n${LIC_FILE_SPARSEPP}")
 
