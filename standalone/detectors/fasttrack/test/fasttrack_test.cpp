@@ -106,7 +106,7 @@ TEST(FasttrackTest, IndicateRaces1){
 	auto t1 = std::make_shared<ThreadState>(1);
 	auto t2 = std::make_shared<ThreadState>(2);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 writes to v1
 	v1->update(true, t1->return_own_id());
@@ -120,7 +120,7 @@ TEST(FasttrackTest, IndicateRaces2){
 	auto t1 = std::make_shared<ThreadState>(1);
 	auto t2 = std::make_shared<ThreadState>(2);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 reads v1
 	v1->update(false, t1->return_own_id());
@@ -135,7 +135,7 @@ TEST(FasttrackTest, IndicateRaces3){
 	auto t2 = std::make_shared<ThreadState>(2);
 	auto t3 = std::make_shared<ThreadState>(3);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 and t2 read v1
 	v1->update(false, t1->return_own_id());

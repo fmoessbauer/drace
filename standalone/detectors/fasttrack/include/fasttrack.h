@@ -41,7 +41,6 @@ namespace drace {
             typedef size_t tid_ft;
             //make some shared pointers a bit more handy
             typedef std::shared_ptr<ThreadState> ts_ptr;
-            typedef std::shared_ptr<VarState> vs_ptr;
 
             #if POOL_ALLOC
             template <class X>
@@ -55,7 +54,11 @@ namespace drace {
 
             ///these maps hold the various state objects together with the identifiers
             phmap::parallel_flat_hash_map<size_t, size_t> allocs;
-            phmap::parallel_flat_hash_map<size_t, vs_ptr> vars;
+            // we have to use a node hash map here, as we access the nodes from multiple threads, while
+            // the map might grow in the meantime.
+            // \todo for memory efficiency and locality, better use (userspace) RW-locks and use
+            //       the flat version of the map
+            phmap::parallel_node_hash_map<size_t, VarState> vars;
             // number of locks, threads is expected to be < 1000, hence use one map (without submaps)
             phmap::flat_hash_map<void*, VectorClock<>> locks;
             phmap::flat_hash_map<tid_ft, ts_ptr> threads;
@@ -94,7 +97,8 @@ namespace drace {
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                const VarState & var) const
+                const VarState & var,
+                size_t address) const
             {
                 auto it = threads.find(thr1);
                 auto it2 = threads.find(thr2);
@@ -103,8 +107,8 @@ namespace drace {
                 if (it == it_end || it2 == it_end) {//if thread_id is, because of finishing, not in stack traces anymore, return
                     return;
                 }
-                std::list<size_t> stack1(std::move(it->second->get_stackDepot().return_stack_trace(var.address)));
-                std::list<size_t> stack2(std::move(it2->second->get_stackDepot().return_stack_trace(var.address)));
+                std::list<size_t> stack1(std::move(it->second->get_stackDepot().return_stack_trace(address)));
+                std::list<size_t> stack2(std::move(it2->second->get_stackDepot().return_stack_trace(address)));
 
                 while(stack1.size() > Detector::max_stack_size) {
                     stack1.pop_front();
@@ -116,7 +120,7 @@ namespace drace {
                 Detector::AccessEntry access1;
                 access1.thread_id = thr1;
                 access1.write = wr1;
-                access1.accessed_memory = var.address;
+                access1.accessed_memory = address;
                 access1.access_size = var.size;
                 access1.access_type = 0;
                 access1.heap_block_begin = 0;
@@ -128,7 +132,7 @@ namespace drace {
                 Detector::AccessEntry access2;
                 access2.thread_id = thr2;
                 access2.write = wr2;
-                access2.accessed_memory = var.address;
+                access2.accessed_memory = address;
                 access2.access_size = var.size;
                 access2.access_type = 0;
                 access2.heap_block_begin = 0;
@@ -150,18 +154,18 @@ namespace drace {
              */
             void report_race_locked(uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                const VarState & var)
+                const VarState & var,
+                size_t addr)
             {
                 std::lock_guard<LockT> lg(g_lock);
-                report_race(thr1, thr2, wr1, wr2, var);
+                report_race(thr1, thr2, wr1, wr2, var, addr);
             }
 
             /**
              * \brief takes care of a read access 
              * \note works only on calling-thread and var object, not on any list
              */
-            void read(ThreadState * t, vs_ptr v){
-                
+            void read(ThreadState * t, VarState * v, size_t addr){
                 if (t->return_own_id() == v->get_read_id()) {//read same epoch, same thread;
                     if(log_flag){
                         log_count.read_ex_same_epoch++;
@@ -181,7 +185,7 @@ namespace drace {
 
                 if (v->is_wr_race(t))
                 { // write-read race
-                    report_race_locked(v->get_w_tid(), tid, true, false, *v);
+                    report_race_locked(v->get_w_tid(), tid, true, false, *v, addr);
                 }
 
                 //update vc
@@ -214,8 +218,7 @@ namespace drace {
              * \brief takes care of a write access 
              * \note works only on calling-thread and var object, not on any list
              */
-            void write(ThreadState * t, vs_ptr v){
-
+            void write(ThreadState * t, VarState * v, size_t addr){
                 if (t->return_own_id() == v->get_write_id()){//write same epoch
                     if(log_flag){
                         log_count.write_same_epoch++;
@@ -236,7 +239,7 @@ namespace drace {
                 //tids are different and write epoch greater or equal than known epoch of other thread
                 if (v->is_ww_race(t)) // write-write race
                 {
-                    report_race_locked(v->get_w_tid(), tid, true, true, *v);
+                    report_race_locked(v->get_w_tid(), tid, true, true, *v, addr);
                 }
 
                 if (! v->is_read_shared()) {
@@ -245,7 +248,7 @@ namespace drace {
                     }
                     if (v->is_rw_ex_race(t))// read-write race
                     {
-                        report_race_locked(v->get_r_tid(), t->get_tid(), false, true, *v);
+                        report_race_locked(v->get_r_tid(), t->get_tid(), false, true, *v, addr);
                     }
                 }
                 else {//come here in read shared case
@@ -255,7 +258,7 @@ namespace drace {
                     uint32_t act_tid = v->is_rw_sh_race(t);
                     if (act_tid != 0) //read shared read-write race       
                     {
-                        report_race_locked(act_tid, tid, false, true, *v);
+                        report_race_locked(act_tid, tid, false, true, *v, addr);
                     }
                 }
                 v->update(true, t->return_own_id());
@@ -265,42 +268,43 @@ namespace drace {
              * \brief creates a new variable object (is called, when var is read or written for the first time)
              * \note Invariant: vars table is locked
              */
-            auto create_var(size_t addr, size_t size){
-                uint16_t u16_size = static_cast<uint16_t>(size);
-
-                auto var = std::allocate_shared<VarState, c_alloc<VarState>>(c_alloc<VarState>(), addr, u16_size);
-                return vars.insert({ addr, var }).first;
+            inline auto create_var(size_t addr, size_t size){
+                return vars.emplace(addr, static_cast<uint16_t>(size)).first;
             }
 
             ///creates a new lock object (is called when a lock is acquired or released for the first time)
-            auto createLock(void* mutex){
-                return locks.insert({ mutex, {}}).first;
+            inline auto createLock(void* mutex){
+                return locks.emplace(
+                    std::piecewise_construct,
+                    std::forward_as_tuple(mutex),
+                    std::forward_as_tuple()).first;
             }
 
             ///creates a new thread object (is called when fork() called)
             ThreadState * create_thread(VectorClock<>::TID tid, ts_ptr parent = nullptr){
                 ts_ptr new_thread;
 
-                if (parent == nullptr) {
-                    new_thread = std::make_shared<ThreadState>(tid); 
-                    threads.insert( { tid, new_thread });
+                if (nullptr == parent) {
+                    new_thread = threads.emplace(tid, std::make_shared<ThreadState>(tid)).first->second;
                 }
                 else {
-                    new_thread = std::make_shared<ThreadState>(tid, parent);
-                    threads.insert({ tid, new_thread });
+                    new_thread = threads.emplace(tid, std::make_shared<ThreadState>(tid, parent)).first->second;
                 }
 
                 return new_thread.get();
             }
 
             ///creates a happens_before object
-            auto create_happens(void* identifier){
-                return happens_states.insert({ identifier, {} }).first;
+            inline auto create_happens(void* identifier){
+                return happens_states.emplace(
+                    std::piecewise_construct,
+                    std::forward_as_tuple(identifier),
+                    std::forward_as_tuple()).first;
             }
 
             ///creates an allocation object
-            void create_alloc(size_t addr, size_t size){
-                allocs.insert({ addr, size });
+            inline void create_alloc(size_t addr, size_t size){
+                allocs.emplace(addr, size);
             }
 
             ///print statistics about rule-hits
@@ -402,10 +406,9 @@ namespace drace {
 
             void read(tls_t tls, void* pc, void* addr, size_t size) final
             {
-                vs_ptr var;
                 ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
                 thr->get_stackDepot().set_read_write((size_t)(addr), reinterpret_cast<size_t>(pc));
-
+                VarState * var;
                 {
                     std::lock_guard<ipc::spinlock> exLockT(vars_spl);
                     auto it = vars.find((size_t)(addr));
@@ -413,32 +416,26 @@ namespace drace {
                     #if MAKE_OUTPUT
                         std::cout << "variable is read before written" << std::endl;//warning
                     #endif
-                        var = (create_var((size_t)(addr), size))->second;
+                        it = create_var((size_t)(addr), size);
                     }
-                    else {
-                        var = it->second;
-                    }
+                    var = &(it->second);
                 }
-
-                read(thr, var);
+                read(thr, var, (size_t)addr);
             }
 
             void write(tls_t tls, void* pc, void* addr, size_t size) final {
-                vs_ptr var;
                 ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
                 thr->get_stackDepot().set_read_write((size_t)addr, reinterpret_cast<size_t>(pc));
+                VarState * var;
                 {
-                    // TODO: get rid of this lock!
                     std::lock_guard<ipc::spinlock> exLockT(vars_spl);
                     auto it = vars.find((size_t)addr);
                     if (it == vars.end()) {
-                        var = (create_var((size_t)(addr), size))->second;
+                        it = create_var((size_t)(addr), size);
                     }
-                    else {
-                        var = it->second;
-                    }
+                    var = &(it->second);
                 }
-                write(thr, var); //func is thread_safe
+                write(thr, var, (size_t)addr); //func is thread_safe
             }
 
             void func_enter(tls_t tls, void* pc) final {
@@ -565,7 +562,7 @@ namespace drace {
                 while (address < end_addr) {
                     std::lock_guard<ipc::spinlock> lg(vars_spl);
                     if (vars.find(address) != vars.end()) {
-                        vs_ptr var = vars.find(address)->second;
+                        auto & var = vars.find(address)->second;
                         vars.erase(address);
                         address++;
                     }

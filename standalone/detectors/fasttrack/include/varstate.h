@@ -17,6 +17,10 @@
 #include <memory>
 #include "xvector.h"
 
+/**
+ * \brief stores information about a memory location
+ * \note does not store the address to avoid redundant information
+ */
 class VarState {
 
     ///contains read_shared case all involved threads and clocks
@@ -33,13 +37,13 @@ class VarState {
 public:
     static constexpr int VAR_NOT_INIT = 0;
 
-    ///var address
-    const size_t address;
-
     /// var size //TO DO make smaller
     const uint16_t size;
 
-    VarState(size_t addr, uint16_t var_size);
+    explicit inline VarState(uint16_t var_size)
+    : size(var_size),
+    w_id(VAR_NOT_INIT),
+    r_id(VAR_NOT_INIT) { }
 
     ///evaluates for write/write races through this and and access through t
     bool is_ww_race(ThreadState * t) const;
@@ -54,25 +58,39 @@ public:
     VectorClock<>::TID is_rw_sh_race(ThreadState * t) const;
 
     ///returns id of last write access
-    VectorClock<>::VC_ID get_write_id() const;
+    inline VectorClock<>::VC_ID get_write_id() const {
+        return w_id.load(std::memory_order_relaxed);
+    }
 
     ///returns id of last read access (when read is not shared)
-    VectorClock<>::VC_ID get_read_id() const;
+    inline VectorClock<>::VC_ID get_read_id() const {
+        return r_id.load(std::memory_order_relaxed);
+    }
 
     ///return tid of thread which last wrote this var
-    VectorClock<>::TID get_w_tid() const;
+    inline VectorClock<>::TID get_w_tid() const {
+        return VectorClock<>::make_tid(w_id.load(std::memory_order_relaxed));
+    }
 
     ///return tid of thread which last read this var, if not read shared
-    VectorClock<>::TID get_r_tid() const;
+    inline VectorClock<>::TID get_r_tid() const {
+        return VectorClock<>::make_tid(r_id.load(std::memory_order_relaxed));
+    }
 
     ///returns clock value of thread of last write access
-    VectorClock<>::Clock  get_w_clock() const;
+    inline VectorClock<>::Clock get_w_clock() const {
+        return VectorClock<>::make_clock(w_id.load(std::memory_order_relaxed));
+    }
 
     ///returns clock value of thread of last read access (returns 0 when read is shared)
-    VectorClock<>::Clock  get_r_clock() const;
+    inline VectorClock<>::Clock get_r_clock() const {
+        return VectorClock<>::make_clock(r_id.load(std::memory_order_relaxed));
+    }
 
     ///returns true when read is shared
-    bool is_read_shared() const;
+    bool is_read_shared() const {
+        return (shared_vc ==  nullptr) ? false : true;
+    }
 
     ///updates the var state because of an new read or write access through an thread
     void update(bool is_write, size_t id);
