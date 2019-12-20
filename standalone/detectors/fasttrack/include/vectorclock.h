@@ -66,8 +66,8 @@ public:
     };
 
     ///updates this.vc with values of other.vc, if they're larger -> one way update
-    void update(std::shared_ptr<VectorClock> other) {
-        for (auto it = other->vc.begin(); it != other->vc.end(); it++)
+    void update(const VectorClock & other) {
+        for (auto it = other.vc.begin(); it != other.vc.end(); it++)
         {
             if (it->second > get_id_by_tid(it->first)) {
                 update(it->first, it->second);

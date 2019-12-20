@@ -61,6 +61,7 @@ void StackTrace::clean() {
 }
 
 void StackTrace::pop_stack_element() {
+    std::lock_guard<ipc::spinlock> lg(lock);
     auto edge = boost::out_edges(_ce, _local_stack);
     _ce = (boost::target(*(edge.first), _local_stack));
 
@@ -75,8 +76,8 @@ void StackTrace::pop_stack_element() {
 }
 
 void StackTrace::push_stack_element(size_t element) {
+    std::lock_guard<ipc::spinlock> lg(lock);
     StackTree::vertex_descriptor tmp;
-
     if(boost::in_degree(_ce, _local_stack) > 0){
         auto in_edges = boost::in_edges(_ce, _local_stack);
         for(auto it = in_edges.first; it != in_edges.second; it++){
@@ -99,6 +100,7 @@ void StackTrace::push_stack_element(size_t element) {
 ///when a var is written or read, it copies the stack and adds the pc of the
 ///r/w operation to be able to return the stack trace if a race was detected
 void StackTrace::set_read_write(size_t addr, size_t pc) {
+    std::lock_guard<ipc::spinlock> lg(lock);
     if (_read_write.find(addr) == _read_write.end()) {
         _read_write.insert({ addr, {pc, _ce} });
     }
@@ -109,7 +111,7 @@ void StackTrace::set_read_write(size_t addr, size_t pc) {
 
 ///returns a stack trace of a clock for handing it over to drace
 std::list<size_t> StackTrace::return_stack_trace(size_t address) const {
-
+    std::lock_guard<ipc::spinlock> lg(lock);
     auto it = _read_write.find(address);
     if (it != _read_write.end()) {
         auto data = it->second;

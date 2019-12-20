@@ -14,6 +14,7 @@
 #include <list>
 #include <parallel_hashmap/phmap.h>
 #include <boost/graph/adjacency_list.hpp>
+#include <ipc/spinlock.h>
 
 /**
  * \brief Implements a stack depot capable to store callstacks
@@ -38,6 +39,8 @@ class StackTrace {
 
     uint16_t _pop_count = 0;
 
+    mutable ipc::spinlock lock;
+
     /// re-construct a stack-trace from a bottom node to the root
     std::list<size_t> make_trace(std::pair<size_t, StackTree::vertex_descriptor> data) const;
 
@@ -51,17 +54,29 @@ public:
 
     StackTrace();
 
-    /// pop the last element from the stack
+    /**
+     * \brief pop the last element from the stack
+     * \note threadsafe
+     */
     void pop_stack_element();
 
-    /// push a new element to the stack depot
+    /**
+     * \brief push a new element to the stack depot
+     * \note threadsafe
+     */
     void push_stack_element(size_t element);
 
-    ///when a var is written or read, it copies the stack and adds the pc of the
-    ///r/w operation to be able to return the stack trace if a race was detected
+    /**
+     * when a var is written or read, it copies the stack and adds the pc of the
+     * r/w operation to be able to return the stack trace if a race was detected
+     * \note threadsafe
+     */
     void set_read_write(size_t addr, size_t pc);
 
-    ///returns a stack trace of a clock for handing it over to drace
+    /**
+     * \brief returns a stack trace of a clock for handing it over to drace
+     * \note threadsafe
+     */
     std::list<size_t> return_stack_trace(size_t address) const;
 };
 #endif

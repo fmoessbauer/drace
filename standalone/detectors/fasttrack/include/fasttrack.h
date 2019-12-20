@@ -57,9 +57,9 @@ namespace drace {
 
             phmap::parallel_flat_hash_map<size_t, size_t> allocs;
             phmap::parallel_flat_hash_map<size_t, vs_ptr> vars;
-            phmap::parallel_flat_hash_map<void*, std::shared_ptr<VectorClock<>>> locks;
+            phmap::parallel_flat_hash_map<void*, VectorClock<>> locks;
             phmap::flat_hash_map<tid_ft, ts_ptr> threads;
-            phmap::parallel_flat_hash_map<void*, std::shared_ptr<VectorClock<>>> happens_states;
+            phmap::parallel_flat_hash_map<void*, VectorClock<>> happens_states;
         
             ///holds the callback address to report a race to the drace-main 
             Callback clb;
@@ -89,17 +89,13 @@ namespace drace {
              * \brief report a data-race back to DRace
              * \note the function itself must not use locks
              * \note Invariant: this function requires a lock the following global tables
-             *                  threads, vars
-             * 
-             * \note to reconstruct stack traces, both threads must be stopped or locked.
-             *       TODO: could be implemented this by using one spinlock per thread object
+             *                  threads
              */
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
                 size_t var) const
             {
-                std::list<size_t> stack1, stack2;
                 auto it = threads.find(thr1);
                 auto it2 = threads.find(thr2);
                 auto it_end = threads.end();
@@ -107,8 +103,8 @@ namespace drace {
                 if (it == it_end || it2 == it_end) {//if thread_id is, because of finishing, not in stack traces anymore, return
                     return;
                 }
-                stack1 = it->second->get_stackDepot().return_stack_trace(var);
-                stack2 = it2->second->get_stackDepot().return_stack_trace(var);
+                std::list<size_t> stack1(std::move(it->second->get_stackDepot().return_stack_trace(var)));
+                std::list<size_t> stack2(std::move(it2->second->get_stackDepot().return_stack_trace(var)));
                 
                 size_t var_size = 0;
                 {
@@ -286,8 +282,7 @@ namespace drace {
 
             ///creates a new lock object (is called when a lock is acquired or released for the first time)
             auto createLock(void* mutex){
-                auto lock = std::allocate_shared<VectorClock<>, c_alloc<VectorClock<>>>(c_alloc<VectorClock<>>());
-                return locks.insert({ mutex, lock }).first;
+                return locks.insert({ mutex, {}}).first;
             }
 
             ///creates a new thread object (is called when fork() called)
@@ -309,8 +304,7 @@ namespace drace {
 
             ///creates a happens_before object
             auto create_happens(void* identifier){
-                auto new_hp = std::allocate_shared<VectorClock<>, c_alloc<VectorClock<>>>(c_alloc<VectorClock<>>());               
-                return happens_states.insert({ identifier, new_hp }).first;
+                return happens_states.insert({ identifier, {} }).first;
             }
 
             ///creates an allocation object
@@ -366,7 +360,7 @@ namespace drace {
             void cleanup(uint32_t tid) {
                 {
                     for (auto it = locks.begin(); it != locks.end(); ++it) {
-                        it->second->delete_vc(tid);
+                        it->second.delete_vc(tid);
                     }
 
                     for (auto it = threads.begin(); it != threads.end(); ++it) {
@@ -374,7 +368,7 @@ namespace drace {
                     }
 
                     for (auto it = happens_states.begin(); it != happens_states.end(); ++it) {
-                        it->second->delete_vc(tid);
+                        it->second.delete_vc(tid);
                     }
                 }
             }
@@ -452,7 +446,7 @@ namespace drace {
                         var = it->second;
                     }
                 }
-                write(thr, var); //func is thread_safe     
+                write(thr, var); //func is thread_safe
             }
 
             void func_enter(tls_t tls, void* pc) final {
@@ -469,16 +463,17 @@ namespace drace {
                 ThreadState * thr;
 
                 std::lock_guard<LockT> exLockT(g_lock);
-                if (threads.find(parent) != threads.end()) {
+                auto thrit = threads.find(parent);
+                if (thrit != threads.end()) {
                     {
-                        threads[parent]->inc_vc(); //inc vector clock for creation of new thread
+                        thrit->second->inc_vc(); //inc vector clock for creation of new thread
                     }
                     thr = create_thread(child, threads[parent]);
                 }
                 else {
                     thr = create_thread(child);
                 }
-                *tls = reinterpret_cast<void*>(thr);
+                *tls = reinterpret_cast<tls_t>(thr);
             }
 
             void join(tid_t parent, tid_t child) final{
@@ -486,81 +481,60 @@ namespace drace {
                 ts_ptr del_thread = threads[child];
                 del_thread->inc_vc();
                 //pass incremented clock of deleted thread to parent
-                threads[parent]->update(del_thread);
+                threads[parent]->update(*del_thread);
                 del_thread->delete_vector();
-
                 threads.erase(child);
                 cleanup(child);
             }
 
             //sync thread vc to lock vc 
             void acquire(tls_t tls, void* mutex, int recursive, bool write) final{
-
                 if(recursive > 1){ //lock haven't been updated by another thread (by definition) 
                     return;        //therefore no action needed here as only the invoking thread may have updated the lock
                 }
                 
-                std::shared_ptr<VectorClock<>> lock;
-                {
-                    std::lock_guard<LockT> exLockT(g_lock);
-                    auto it = locks.find(mutex);
-                    if (it == locks.end()) {
-                        lock = createLock(mutex)->second;
-                    }
-                    else {
-                        lock = it->second;
-                    }
+                std::lock_guard<LockT> exLockT(g_lock);
+                auto it = locks.find(mutex);
+                if (it == locks.end()) {
+                    it = createLock(mutex);
                 }
                 ThreadState * thr = reinterpret_cast<ThreadState*>(tls);   
-                (thr)->update(lock);
+                (thr)->update(it->second);
             }
 
             void release(tls_t tls, void* mutex, bool write) final 
             {
-                std::shared_ptr<VectorClock<>> lock;
-                {
-                    std::lock_guard<LockT> exLockT(g_lock);
-                    auto it = locks.find(mutex);
-                    if (it == locks.end()) {
-                    #if MAKE_OUTPUT
-                        std::cerr << "lock is released but was never acquired by any thread" << std::endl;
-                    #endif
-                        createLock(mutex)->second;
-                        return;//as lock is empty (was never acquired), we can return here
-                    }
-                    else {
-                        lock = it->second;
-                    }
+                std::lock_guard<LockT> exLockT(g_lock);
+                auto it = locks.find(mutex);
+                if (it == locks.end()) {
+                #if MAKE_OUTPUT
+                    std::cerr << "lock is released but was never acquired by any thread" << std::endl;
+                #endif
+                    createLock(mutex)->second;
+                    return;//as lock is empty (was never acquired), we can return here
                 }
-                ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
 
+                ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
                 thr->inc_vc();
                 
                 //increase vector clock and propagate to lock    
-                lock->update(thr);
+                it->second.update(thr);
             }
 
             void happens_before(tls_t tls, void* identifier) final {
-                std::shared_ptr<VectorClock<>> hp;
-                {
-                    std::lock_guard<LockT> exLockT(g_lock);
-                    auto it = happens_states.find(identifier);
-                    if (it == happens_states.end()) {
-                        hp = create_happens(identifier)->second;
-                    }
-                    else {
-                        hp = it->second;
-                    }
+                std::lock_guard<LockT> exLockT(g_lock);
+                auto it = happens_states.find(identifier);
+                if (it == happens_states.end()) {
+                    it = create_happens(identifier);
                 }
             
                 ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
 
                 thr->inc_vc();//increment clock of thread and update happens state
-                hp->update(thr->get_tid(), thr->return_own_id());
+                it->second.update(thr->get_tid(), thr->return_own_id());
             }
 
             void happens_after(tls_t tls, void* identifier) final{
-                std::shared_ptr<VectorClock<>> hp;
                 {
                     std::lock_guard<LockT> exLockT(g_lock);
                     auto it = happens_states.find(identifier);
@@ -569,13 +543,11 @@ namespace drace {
                         return;//create -> no happens_before can be synced
                     }
                     else {
-                        hp = it->second;
+                        ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
+                        //update vector clock of thread with happened before clocks
+                        thr->update(it->second);
                     }
                 }
-
-                ThreadState * thr = reinterpret_cast<ThreadState*>(tls);
-                //update vector clock of thread with happened before clocks
-                thr->update(hp);                
             }
 
             void allocate(tls_t  tls, void*  pc, void*  addr, size_t size) final{
