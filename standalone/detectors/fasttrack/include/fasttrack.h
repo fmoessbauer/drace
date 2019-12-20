@@ -420,6 +420,7 @@ namespace drace {
                     }
                     var = &(it->second);
                 }
+                std::lock_guard<ipc::spinlock> lg(var->lock);
                 read(thr, var, (size_t)addr);
             }
 
@@ -435,6 +436,7 @@ namespace drace {
                     }
                     var = &(it->second);
                 }
+                std::lock_guard<ipc::spinlock> lg(var->lock);
                 write(thr, var, (size_t)addr); //func is thread_safe
             }
 

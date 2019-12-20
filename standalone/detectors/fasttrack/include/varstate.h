@@ -37,6 +37,14 @@ class VarState {
 public:
     static constexpr int VAR_NOT_INIT = 0;
 
+    /**
+     * \brief spinlock to ensure mutually-excluded access to a single VarState instance
+     *
+     * \todo this could be space optimized by having a pool of spinlocks
+     *       instead of one per VarState
+     */
+    ipc::spinlock lock;
+
     /// var size //TO DO make smaller
     const uint16_t size;
 
