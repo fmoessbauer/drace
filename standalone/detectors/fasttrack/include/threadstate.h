@@ -18,7 +18,7 @@
 #include "stacktrace.h"
 #include <atomic>
 
-///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock), as well as pointer to the fasttrack class
+///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock)
 class ThreadState : public VectorClock<>{
 private:
 

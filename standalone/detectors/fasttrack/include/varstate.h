@@ -17,7 +17,7 @@
 #include <memory>
 #include "xvector.h"
 
-class VarState  {
+class VarState {
 
     ///contains read_shared case all involved threads and clocks
     std::unique_ptr <xvector<size_t >> shared_vc = nullptr;

@@ -54,10 +54,10 @@ namespace drace {
         private:
 
             ///these maps hold the various state objects together with the identifiers
-
             phmap::parallel_flat_hash_map<size_t, size_t> allocs;
             phmap::parallel_flat_hash_map<size_t, vs_ptr> vars;
-            phmap::parallel_flat_hash_map<void*, VectorClock<>> locks;
+            // number of locks, threads is expected to be < 1000, hence use one map (without submaps)
+            phmap::flat_hash_map<void*, VectorClock<>> locks;
             phmap::flat_hash_map<tid_ft, ts_ptr> threads;
             phmap::parallel_flat_hash_map<void*, VectorClock<>> happens_states;
         
@@ -79,22 +79,22 @@ namespace drace {
                 uint32_t write_shared = 0;
             } log_count;
 
-            /// central lock, used for accesses to global tables except vars
+            /// central lock, used for accesses to global tables except vars (order: 1)
             LockT g_lock; // global Lock
 
-            /// spinlock to protect accesses to vars table
+            /// spinlock to protect accesses to vars table (order: 2)
             mutable ipc::spinlock vars_spl;
 
             /**
              * \brief report a data-race back to DRace
              * \note the function itself must not use locks
-             * \note Invariant: this function requires a lock the following global tables
+             * \note Invariant: this function requires a lock the following global tables:
              *                  threads
              */
             void report_race(
                 uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                size_t var) const
+                const VarState & var) const
             {
                 auto it = threads.find(thr1);
                 auto it2 = threads.find(thr2);
@@ -103,14 +103,8 @@ namespace drace {
                 if (it == it_end || it2 == it_end) {//if thread_id is, because of finishing, not in stack traces anymore, return
                     return;
                 }
-                std::list<size_t> stack1(std::move(it->second->get_stackDepot().return_stack_trace(var)));
-                std::list<size_t> stack2(std::move(it2->second->get_stackDepot().return_stack_trace(var)));
-                
-                size_t var_size = 0;
-                {
-                    std::lock_guard<ipc::spinlock> lg(vars_spl);
-                    var_size = vars.at(var)->size; //size is const member -> thread safe
-                }
+                std::list<size_t> stack1(std::move(it->second->get_stackDepot().return_stack_trace(var.address)));
+                std::list<size_t> stack2(std::move(it2->second->get_stackDepot().return_stack_trace(var.address)));
 
                 while(stack1.size() > Detector::max_stack_size) {
                     stack1.pop_front();
@@ -122,8 +116,8 @@ namespace drace {
                 Detector::AccessEntry access1;
                 access1.thread_id = thr1;
                 access1.write = wr1;
-                access1.accessed_memory = var;
-                access1.access_size = var_size;
+                access1.accessed_memory = var.address;
+                access1.access_size = var.size;
                 access1.access_type = 0;
                 access1.heap_block_begin = 0;
                 access1.heap_block_size = 0;
@@ -134,8 +128,8 @@ namespace drace {
                 Detector::AccessEntry access2;
                 access2.thread_id = thr2;
                 access2.write = wr2;
-                access2.accessed_memory = var;
-                access2.access_size = var_size;
+                access2.accessed_memory = var.address;
+                access2.access_size = var.size;
                 access2.access_type = 0;
                 access2.heap_block_begin = 0;
                 access2.heap_block_size = 0;
@@ -151,12 +145,12 @@ namespace drace {
             }
 
             /**
-             * Wrapper for report_race to use const qualifier on
-             * wrapped function
+             * \brief Wrapper for report_race to use const qualifier on
+             *        wrapped function
              */
             void report_race_locked(uint32_t thr1, uint32_t thr2,
                 bool wr1, bool wr2,
-                size_t var)
+                const VarState & var)
             {
                 std::lock_guard<LockT> lg(g_lock);
                 report_race(thr1, thr2, wr1, wr2, var);
@@ -164,8 +158,7 @@ namespace drace {
 
             /**
              * \brief takes care of a read access 
-             * \note works only on thread and var object, not on any list
-             *       Invariant: var object is locked
+             * \note works only on calling-thread and var object, not on any list
              */
             void read(ThreadState * t, vs_ptr v){
                 
@@ -188,7 +181,7 @@ namespace drace {
 
                 if (v->is_wr_race(t))
                 { // write-read race
-                    report_race_locked(v->get_w_tid(), tid, true, false, v->address);
+                    report_race_locked(v->get_w_tid(), tid, true, false, *v);
                 }
 
                 //update vc
@@ -219,8 +212,7 @@ namespace drace {
 
             /**
              * \brief takes care of a write access 
-             * \note works only on thread and var object, not on any list
-             *       Invariant: var object is locked
+             * \note works only on calling-thread and var object, not on any list
              */
             void write(ThreadState * t, vs_ptr v){
 
@@ -244,7 +236,7 @@ namespace drace {
                 //tids are different and write epoch greater or equal than known epoch of other thread
                 if (v->is_ww_race(t)) // write-write race
                 {
-                    report_race_locked(v->get_w_tid(), tid, true, true, v->address);
+                    report_race_locked(v->get_w_tid(), tid, true, true, *v);
                 }
 
                 if (! v->is_read_shared()) {
@@ -253,7 +245,7 @@ namespace drace {
                     }
                     if (v->is_rw_ex_race(t))// read-write race
                     {
-                        report_race_locked(v->get_r_tid(), t->get_tid(), false, true, v->address);
+                        report_race_locked(v->get_r_tid(), t->get_tid(), false, true, *v);
                     }
                 }
                 else {//come here in read shared case
@@ -263,7 +255,7 @@ namespace drace {
                     uint32_t act_tid = v->is_rw_sh_race(t);
                     if (act_tid != 0) //read shared read-write race       
                     {
-                        report_race_locked(act_tid, tid, false, true, v->address);
+                        report_race_locked(act_tid, tid, false, true, *v);
                     }
                 }
                 v->update(true, t->return_own_id());
@@ -271,7 +263,7 @@ namespace drace {
 
             /**
              * \brief creates a new variable object (is called, when var is read or written for the first time)
-             * \note Invariant: var object is locked
+             * \note Invariant: vars table is locked
              */
             auto create_var(size_t addr, size_t size){
                 uint16_t u16_size = static_cast<uint16_t>(size);
@@ -301,7 +293,6 @@ namespace drace {
                 return new_thread.get();
             }
 
-
             ///creates a happens_before object
             auto create_happens(void* identifier){
                 return happens_states.insert({ identifier, {} }).first;
@@ -312,6 +303,7 @@ namespace drace {
                 allocs.insert({ addr, size });
             }
 
+            ///print statistics about rule-hits
             void process_log_output() const {
                 double read_actions, write_actions;
                 //percentages
@@ -346,9 +338,6 @@ namespace drace {
                 std::cout << std::fixed << std::setprecision(2) << "Write exclusive: " << w_ex << std::endl;
                 std::cout << std::fixed << std::setprecision(2) << "Write shared: " << w_sh << std::endl;
             }
-
-        public:
-            Fasttrack() = default;
 
             /**
              * \brief deletes all data which is related to the tid
@@ -386,6 +375,9 @@ namespace drace {
                 }
             }
 
+        public:
+            Fasttrack() = default;
+
             bool init(int argc, const char **argv, Callback rc_clb) final{
                 parse_args(argc, argv);
                 clb = rc_clb; //init callback
@@ -393,19 +385,19 @@ namespace drace {
             }
 
             void finalize() final {
-                
-                vars.clear();
+                std::lock_guard<LockT> lg1(g_lock);
+                {
+                    std::lock_guard<ipc::spinlock> lg2(vars_spl);
+                    vars.clear();
+                }
                 locks.clear();
                 happens_states.clear();
                 allocs.clear();
-                while (threads.size() != 0) {
-                    threads.erase(threads.begin());
-                }
+                threads.clear();
                 
                 if(log_flag){
                     process_log_output();
                 }
-
             }
 
             void read(tls_t tls, void* pc, void* addr, size_t size) final
