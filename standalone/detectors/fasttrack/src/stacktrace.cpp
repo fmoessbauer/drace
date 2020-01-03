@@ -101,11 +101,12 @@ void StackTrace::push_stack_element(size_t element) {
 ///r/w operation to be able to return the stack trace if a race was detected
 void StackTrace::set_read_write(size_t addr, size_t pc) {
     std::lock_guard<ipc::spinlock> lg(lock);
-    if (_read_write.find(addr) == _read_write.end()) {
-        _read_write.insert({ addr, {pc, _ce} });
+    auto it = _read_write.find(addr);
+    if (it == _read_write.end()) {
+        _read_write.insert({addr, {pc, _ce}});
     }
     else {
-        _read_write.find(addr)->second = { pc, _ce };
+        it->second = {pc,_ce};
     }
 }
 
