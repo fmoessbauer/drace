@@ -24,12 +24,12 @@
 class VarState {
 
     ///contains read_shared case all involved threads and clocks
-    std::unique_ptr <xvector<size_t >> shared_vc = nullptr;
+    std::unique_ptr <xvector<size_t >> shared_vc{nullptr};
 
     /// the upper half of the bits are the thread id the lower half is the clock of the thread
-    std::atomic<VectorClock<>::VC_ID> w_id;
+    std::atomic<VectorClock<>::VC_ID> w_id{VAR_NOT_INIT};
     /// local clock of last read
-    std::atomic<VectorClock<>::VC_ID> r_id;
+    std::atomic<VectorClock<>::VC_ID> r_id{VAR_NOT_INIT};
 
     ///finds the entry with the tid in the shared vectorclock
     auto find_in_vec(VectorClock<>::TID tid) const;
@@ -45,13 +45,11 @@ public:
      */
     ipc::spinlock lock;
 
-    /// var size //TO DO make smaller
+    /// var size \todo make smaller
     const uint16_t size;
 
     explicit inline VarState(uint16_t var_size)
-    : size(var_size),
-    w_id(VAR_NOT_INIT),
-    r_id(VAR_NOT_INIT) { }
+    : size(var_size) { }
 
     ///evaluates for write/write races through this and and access through t
     bool is_ww_race(ThreadState * t) const;
