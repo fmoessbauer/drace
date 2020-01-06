@@ -34,15 +34,18 @@ class StackTrace {
     ///leafs of the tree which do not have pointer pointing to them may be deleted 
     StackTree _local_stack;
 
-    ///holds the current stack element
+    ///reference to the current stack element
     StackTree::vertex_descriptor _ce;
+
+    ///reference to the root element
+    StackTree::vertex_descriptor _root;
 
     uint16_t _pop_count = 0;
 
     mutable ipc::spinlock lock;
 
     /// re-construct a stack-trace from a bottom node to the root
-    std::list<size_t> make_trace(std::pair<size_t, StackTree::vertex_descriptor> data) const;
+    std::list<size_t> make_trace(const std::pair<size_t, StackTree::vertex_descriptor> & data) const;
 
     /**
      * \brief cleanup unreferenced nodes in callstack tree
@@ -52,10 +55,13 @@ class StackTrace {
 
 public:
 
-    StackTrace();
+    StackTrace() :
+        _ce(boost::add_vertex(0, _local_stack)),
+        _root(_ce) { }
 
     /**
      * \brief pop the last element from the stack
+     * \note precondition: stack is not empty
      * \note threadsafe
      */
     void pop_stack_element();

@@ -11,27 +11,24 @@
 
 #include "stacktrace.h"
 
-std::list<size_t> StackTrace::make_trace(std::pair<size_t, StackTree::vertex_descriptor> data) const
+std::list<size_t> StackTrace::make_trace(const std::pair<size_t, StackTree::vertex_descriptor> & data) const
 {
     std::list<size_t> this_stack;
 
     StackTree::vertex_descriptor act_item = data.second;
+    // map (node -> instruction pointer)
+    const auto & ips = boost::get(boost::vertex_name_t(), _local_stack);
 
     this_stack.push_front(data.first);
-    auto map = boost::get(boost::vertex_name_t(), _local_stack);
-    this_stack.push_front(map[act_item]);
-
-    while (boost::out_degree(act_item, _local_stack) != 0) {
-        auto edge = boost::out_edges(act_item, _local_stack);
-        act_item = (boost::target(*(edge.first), _local_stack));
-        if (map[act_item] != 0) {
-            this_stack.push_front(map[act_item]);
-        }
+    while ((act_item != _root)) {
+        this_stack.push_front(boost::get(ips, act_item));
+        // we are not root, hence we have edges per-definition
+        const auto edge = boost::out_edges(act_item, _local_stack);
+        act_item = boost::target(*(edge.first), _local_stack);
     }
+
     return this_stack;
 }
-
-StackTrace::StackTrace() :_ce(boost::add_vertex(0, _local_stack)){}
 
 void StackTrace::clean() {
     bool delete_flag, sth_was_deleted;
@@ -120,6 +117,6 @@ std::list<size_t> StackTrace::return_stack_trace(size_t address) const {
     }
     else {
         //A read/write operation was not tracked correctly -> return empty stack trace
-        return {0};
+        return {};
     }
 }
