@@ -1,3 +1,5 @@
+#ifndef XVECTOR_H
+#define XVECTOR_H
 /*
  * DRace, a dynamic data race detector
  *
@@ -8,13 +10,10 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef XVECTOR_H
-#define XVECTOR_H
 
+#include <vector>
 
 template<class _Ty, class _Ax = std::allocator<_Ty>>
-
-
 class xvector : public std::vector<_Ty, _Ax> {
     using std::vector<_Ty, _Ax>::vector;
 };

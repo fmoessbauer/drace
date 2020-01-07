@@ -1,3 +1,5 @@
+#ifndef THREADSTATE_H
+#define THREADSTATE_H
 /*
  * DRace, a dynamic data race detector
  *
@@ -8,45 +10,56 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef THREADSTATE_H
-#define THREADSTATE_H
 
 
 #include <memory>
 #include "vectorclock.h"
 #include "xvector.h"
+#include "stacktrace.h"
 #include <atomic>
 
-///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock), as well as pointer to the fasttrack class
-class ThreadState : public VectorClock<>{//tl_alloc<std::pair<const size_t, size_t>>> {
+///implements a threadstate, holds the thread's vectorclock and the thread's id (tid and act clock)
+class ThreadState : public VectorClock<>{
 private:
 
     ///holds the tid and the actual clock value -> lower 32 bits are clock, upper 32 are the tid
     std::atomic<VectorClock::VC_ID> id;
+    StackTrace traceDepot;
 
 public:
        
     ///constructor of ThreadState object, initializes tid and clock
     ///copies the vector of parent thread, if a parent thread exists
-    ThreadState(/*drace::detector::Fasttrack<_mutex>* ft_inst,*/
-                            VectorClock::TID own_tid,
-                            std::shared_ptr<ThreadState> parent = nullptr);
+    ThreadState(VectorClock::TID own_tid,
+                std::shared_ptr<ThreadState> parent = nullptr);
 
     ///increases own clock value
     void inc_vc();
 
     ///returns own clock value (upper bits) & thread (lower bits)
-    VectorClock::VC_ID return_own_id() const;
+    inline VectorClock::VC_ID return_own_id() const{
+        return id;
+    }
 
     ///returns thread id
-    VectorClock::TID get_tid() const;
+    inline VectorClock::TID get_tid() const{
+        return VectorClock::make_tid(id);
+    }
 
     ///returns current clock
-    VectorClock::Clock get_clock() const;
+    inline VectorClock::Clock get_clock() const{
+        return VectorClock::make_clock(id);
+    }
 
     ///may be called after exitting of thread
-    void delete_vector();
+    inline void delete_vector(){
+        vc.clear();
+    }
 
+    /// return stackDepot of this thread
+    StackTrace & get_stackDepot(){
+        return traceDepot;
+    }
 };
 
 #endif // !THREADSTATE_H

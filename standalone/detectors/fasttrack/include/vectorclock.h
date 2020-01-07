@@ -1,3 +1,5 @@
+#ifndef VECTORCLOCK_H
+#define VECTORCLOCK_H
 /*
  * DRace, a dynamic data race detector
  *
@@ -8,25 +10,19 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef VECTORCLOCK_H
-#define VECTORCLOCK_H
 
 #include "parallel_hashmap/phmap.h"
-#include <unordered_map>
-
-
 
 /**
     Implements a VectorClock.
     Can hold arbitrarily much pairs of a Thread Id and the belonging clock
 */
 template <class _al = std::allocator<std::pair<const size_t, size_t>>>
-
 class VectorClock {
 public:
     ///by dividing the id with the multiplier one gets the tid, with modulo one gets the clock
     
-//on 64 bit platform 64 can be used for a VC_ID on 32 bit only the half
+//on 64 bit platform 64 bits can be used for a VC_ID on 32 bit only the half
 #if COMPILE_X86
     static constexpr size_t multplier = 0x10000ull;
     typedef size_t VC_ID;
@@ -40,10 +36,10 @@ public:
 #endif
 
     ///vector clock which contains multiple thread ids, clocks
-    std::unordered_map<uint32_t, size_t> vc;
+    phmap::flat_hash_map<uint32_t, size_t> vc;
  
     ///return the thread id of the position pos of the vector clock
-    TID get_thr(uint32_t pos) {
+    TID get_thr(uint32_t pos) const {
         if (pos < vc.size()) {
             auto it = vc.begin();
             std::advance(it, pos);
@@ -55,7 +51,7 @@ public:
     };
 
     ///returns the no. of elements of the vector clock
-    uint32_t get_length() {
+    constexpr uint32_t get_length() {
         return vc.size();
     };
 
@@ -70,16 +66,14 @@ public:
     };
 
     ///updates this.vc with values of other.vc, if they're larger -> one way update
-    void update(std::shared_ptr<VectorClock> other) {
-        for (auto it = other->vc.begin(); it != other->vc.end(); it++)
+    void update(const VectorClock & other) {
+        for (auto it = other.vc.begin(); it != other.vc.end(); it++)
         {
             if (it->second > get_id_by_tid(it->first)) {
                 update(it->first, it->second);
             }
         }
     };
-
-
 
     ///updates vector clock entry or creates entry if non-existant
     void update(TID tid, VC_ID id) {
@@ -97,9 +91,11 @@ public:
         vc.erase(tid);
     }
 
-    ///returns known clock of tid
-    ///returns 0 if vc does not hold the tid
-    Clock get_clock_by_tid(TID tid) {
+    /**
+     * \brief returns known clock of tid
+     *        returns 0 if vc does not hold the tid
+     */
+    Clock get_clock_by_tid(TID tid) const {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return make_clock(it->second);
@@ -109,9 +105,8 @@ public:
         }
     }
 
-
     ///returns known whole id in vectorclock of tid
-    VC_ID get_id_by_tid(TID tid) {
+    VC_ID get_id_by_tid(TID tid) const {
         auto it = vc.find(tid);
         if (it != vc.end()) {
             return it->second;
@@ -122,21 +117,20 @@ public:
     }
 
     ///returns the tid of the id
-    static const TID make_tid(VC_ID id) {
+    static constexpr TID make_tid(VC_ID id) {
         return static_cast<TID>(id / multplier);
     }
 
     ///returns the clock of the id
-    static const Clock make_clock(VC_ID id) {
+    static constexpr Clock make_clock(VC_ID id) {
         return static_cast<Clock>(id % multplier);
     }
 
 
     ///creates an id with clock=0 from an tid
-    static const VC_ID make_id(TID tid) {
+    static constexpr VC_ID make_id(TID tid) {
         return tid * VectorClock::multplier;
     }
-
 };
 
 #endif

@@ -11,6 +11,7 @@
 
 #include "gtest/gtest.h"
 #include "fasttrack_test.h"
+#include <fasttrack.h>
 #include <random>
 
 //#include "stacktrace.h"
@@ -49,6 +50,14 @@ TEST(FasttrackTest, basic_stacktrace) {
 	ASSERT_EQ(vec[4], 6);
 	ASSERT_EQ(vec[5], 1004);
 	ASSERT_EQ(vec.size(), 6);
+}
+
+TEST(FasttrackTest, ItemNotFoundInTrace) {
+	StackTrace st;
+	st.push_stack_element(42);
+	// lookup element 40, which is not in the trace
+	auto list = st.return_stack_trace(40);
+	ASSERT_EQ(list.size(), 0);
 }
 
 TEST(FasttrackTest, stackAllocations) {
@@ -94,7 +103,7 @@ TEST(FasttrackTest, stackInitializations){
 		stack = cp->return_stack_trace(5);
 	}
 	vec[78]->pop_stack_element();
-	ASSERT_EQ(stack.size(), 4);
+	ASSERT_EQ(stack.size(), 4); // TODO: validate
 	int i = 1;
 	for(auto it = stack.begin(); it != stack.end(); ++it){
 		ASSERT_EQ(*(it), i);
@@ -106,28 +115,28 @@ TEST(FasttrackTest, IndicateRaces1){
 	auto t1 = std::make_shared<ThreadState>(1);
 	auto t2 = std::make_shared<ThreadState>(2);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 writes to v1
 	v1->update(true, t1->return_own_id());
 
-	ASSERT_TRUE(v1->is_wr_race(t2));
-	ASSERT_FALSE(v1->is_rw_ex_race(t2));
-	ASSERT_TRUE(v1->is_ww_race(t2));
+	ASSERT_TRUE(v1->is_wr_race(t2.get()));
+	ASSERT_FALSE(v1->is_rw_ex_race(t2.get()));
+	ASSERT_TRUE(v1->is_ww_race(t2.get()));
 }
 
 TEST(FasttrackTest, IndicateRaces2){
 	auto t1 = std::make_shared<ThreadState>(1);
 	auto t2 = std::make_shared<ThreadState>(2);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 reads v1
 	v1->update(false, t1->return_own_id());
 
-	ASSERT_FALSE(v1->is_wr_race(t2));
-	ASSERT_TRUE(v1->is_rw_ex_race(t2));
-	ASSERT_FALSE(v1->is_ww_race(t2));
+	ASSERT_FALSE(v1->is_wr_race(t2.get()));
+	ASSERT_TRUE(v1->is_rw_ex_race(t2.get()));
+	ASSERT_FALSE(v1->is_ww_race(t2.get()));
 }
 
 TEST(FasttrackTest, IndicateRaces3){
@@ -135,14 +144,42 @@ TEST(FasttrackTest, IndicateRaces3){
 	auto t2 = std::make_shared<ThreadState>(2);
 	auto t3 = std::make_shared<ThreadState>(3);
 
-	auto v1 = std::make_shared<VarState>(10, 1);
+	auto v1 = std::make_shared<VarState>(1);
 
 	//t1 and t2 read v1
 	v1->update(false, t1->return_own_id());
 	v1->set_read_shared(t2->return_own_id());
 
-	ASSERT_FALSE(v1->is_wr_race(t3));
-	ASSERT_FALSE(v1->is_rw_ex_race(t3));
-	ASSERT_FALSE(v1->is_ww_race(t3));
-	ASSERT_TRUE(v1->is_rw_sh_race(t3));
+	ASSERT_FALSE(v1->is_wr_race(t3.get()));
+	ASSERT_FALSE(v1->is_rw_ex_race(t3.get()));
+	ASSERT_FALSE(v1->is_ww_race(t3.get()));
+	ASSERT_TRUE(v1->is_rw_sh_race(t3.get()));
+}
+
+TEST(FasttrackTest, FullFtSimpleRace) {
+	using namespace drace::detector;
+
+	auto ft = std::make_unique<Fasttrack<std::mutex>>();
+	auto rc_clb = [](const Detector::Race * r){
+		ASSERT_EQ(r->first.stack_size, 1);
+		ASSERT_EQ(r->second.stack_size, 2);
+		// first stack
+		EXPECT_EQ(r->first.stack_trace[0], 0x1ull);
+		// second stack
+		EXPECT_EQ(r->second.stack_trace[0], 0x2ull);
+		EXPECT_EQ(r->second.stack_trace[1], 0x3ull);
+	};
+	const char* argv_mock[] = {"ft_test"};
+	void* tls[2]; // storage for TLS data
+
+	ft->init(1, argv_mock, rc_clb);
+
+	ft->fork(0, 1, &tls[0]);
+	ft->fork(0, 2, &tls[1]);
+
+	ft->write(tls[0], (void*)0x1ull, (void*)0x42ull, 1);
+	ft->func_enter(tls[1], (void*)0x2ull);
+	ft->write(tls[1], (void*)0x3ull, (void*)0x42ull, 1);
+	// here, we expect the race. Handled in callback
+	ft->finalize();
 }

@@ -57,6 +57,7 @@ public:
         unsigned thread_id;
         int      access_type;
         size_t   stack_size{ 0 };
+        ///access size in log2 bytes -> access_size = 0 -> log2(0) = 1 byte
         size_t   access_size;
         size_t   heap_block_size;
         uintptr_t accessed_memory;
@@ -172,7 +173,7 @@ public:
         void*  pc,
         /// begin of allocated memory block
         void*  addr,
-        /// size of memory block
+        /// size of memory block in bytes
         size_t size
     ) = 0;
 
