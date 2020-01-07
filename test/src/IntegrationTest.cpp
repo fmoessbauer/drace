@@ -85,7 +85,7 @@ TEST_P(DR, ExcludeRaces) {
 TEST_P(DR, DotnetClrRacy) {
     bp::child msr("ManagedResolver\\msr.exe --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 10);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr.exe none", 1, 30);
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
