@@ -10,7 +10,7 @@
 
 # NOTE: We link against the generic fasttrack module
 if(TARGET "drace.detector.fasttrack.generic")
-    message("Build detector Fasttrack-DRace")
+    message(STATUS "Build detector Fasttrack-DRace")
     ########### FT DRACE Version ###########
     add_library("drace.detector.fasttrack" SHARED "src/fasttrack_dr.cpp")
     configure_DynamoRIO_standalone("drace.detector.fasttrack")

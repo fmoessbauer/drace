@@ -25,7 +25,7 @@
 #endif
 
 /**
-    Interface for a DRace compatible race detector
+    \brief Interface for a DRace compatible race detector
 
     Premises for a implementation of a detector back-end:
 
@@ -36,9 +36,7 @@
     - A read and a write with the same TID will never arrive concurrently
     - A happens after may arrive before a corresponding happens before arrives
     - A lock may be be released, before it will be acquired 
-    -> the last three bullet points must not cause a crash
-
-    \brief Interface for a DRace compatible race detector
+    - the last three bullet points must not cause a crash
 */
 class Detector {
 public:

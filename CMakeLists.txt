@@ -122,12 +122,17 @@ if(Doxygen_FOUND)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
 	set(DOXYGEN_EXCLUDE_PATTERNS 
 		"*DynamoRIO*"
+		"build"
+		"install"
+		"${PROJECT_BINARY_DIR}"
+		"${CMAKE_INSTALL_PREFIX}"
+		"*/test/*"
 		"${PROJECT_SOURCE_DIR}/ManagedResolver/include/prebuild/*"
 		"${PROJECT_SOURCE_DIR}/test/*"
 		"${PROJECT_SOURCE_DIR}/bench/*"
 		"${PROJECT_SOURCE_DIR}/vendor/*"
 		"${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
-		"${PROJECT_SOURCE_DIR}/tools/drace-gui/draceGUIUnitTest.py"
+		"${PROJECT_SOURCE_DIR}/tools/ReportConverter/ReportConverterUnitTest.py"
 		"${PROJECT_SOURCE_DIR}/node_modules/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 	
@@ -145,10 +150,10 @@ if(Doxygen_FOUND)
 endif()
 
 if(DRACE_ENABLE_RUNTIME)
-	# install config readme
 	install(FILES "drace.ini" DESTINATION bin)
 	install(FILES "race_suppressions.txt" DESTINATION bin)
 endif()
 
+# install config readme
 install(FILES "README.md" DESTINATION doc)
 install(FILES ${LIC_FILE} DESTINATION doc)
