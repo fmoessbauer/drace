@@ -1,3 +1,5 @@
+#ifndef FASTTRACK_H
+#define FASTTRACK_H
 /*
  * DRace, a dynamic data race detector
  *
@@ -8,8 +10,6 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef FASTTRACK_H
-#define FASTTRACK_H
 
 #include <mutex> // for lock_guard
 #include <shared_mutex>
@@ -27,6 +27,7 @@
 #define REGARD_ALLOCS true
 #define POOL_ALLOC false
 
+///\todo implement a pool allocator
 #if POOL_ALLOC
 #include "util/PoolAllocator.h"
 #endif
@@ -437,7 +438,7 @@ namespace drace {
                     var = &(it->second);
                 }
                 std::lock_guard<ipc::spinlock> lg(var->lock);
-                write(thr, var, (size_t)addr); //func is thread_safe
+                write(thr, var, (size_t)addr);
             }
 
             void func_enter(tls_t tls, void* pc) final {
@@ -473,7 +474,6 @@ namespace drace {
                 del_thread->inc_vc();
                 //pass incremented clock of deleted thread to parent
                 threads[parent]->update(*del_thread);
-                del_thread->delete_vector();
                 threads.erase(child);
                 cleanup(child);
             }
@@ -585,7 +585,6 @@ namespace drace {
             {
                 std::lock_guard<LockT> exLockT(g_lock);
                 ///just delete thread from list, no backward sync needed
-                threads[thread_id]->delete_vector();
                 threads.erase(thread_id);
                 cleanup(thread_id);
             }

@@ -94,7 +94,6 @@ TEST_P(DetectorTest, RW_Race) {
     EXPECT_EQ(num_races, 1);
 }
 
-
 TEST_P(DetectorTest, Mutex) {
     Detector::tls_t tls20;
     Detector::tls_t tls21;
@@ -114,6 +113,21 @@ TEST_P(DetectorTest, Mutex) {
 	detector->release(tls21, (void*)0x01000000, true);
 
 	EXPECT_EQ(num_races, 0);
+}
+
+TEST_P(DetectorTest, VarLength){
+    Detector::tls_t tls22;
+    Detector::tls_t tls23;
+
+    detector->fork(1, 22, &tls22);
+    detector->fork(1, 23, &tls23);
+
+    
+    detector->write(tls22, (void*)0x0010, (void*)0x14000000, 8);
+    detector->write(tls23, (void*)0x0011, (void*)0x14000002, 8);
+    
+    /// \todo set test 'online' when a working handling of variable lengths is implemented 
+    //EXPECT_EQ(num_races, 1);
 }
 
 TEST_P(DetectorTest, ThreadExit) {

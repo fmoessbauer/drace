@@ -22,7 +22,7 @@ class VectorClock {
 public:
     ///by dividing the id with the multiplier one gets the tid, with modulo one gets the clock
     
-//on 64 bit platform 64 can be used for a VC_ID on 32 bit only the half
+//on 64 bit platform 64 bits can be used for a VC_ID on 32 bit only the half
 #if COMPILE_X86
     static constexpr size_t multplier = 0x10000ull;
     typedef size_t VC_ID;

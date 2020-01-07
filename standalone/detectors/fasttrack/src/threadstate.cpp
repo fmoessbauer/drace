@@ -24,19 +24,3 @@ void ThreadState::inc_vc() {
     id++; //as the lower 32 bits are clock just increase it by ine
     vc[VectorClock::make_tid(id)] = id;
 }
-
-VectorClock<>::VC_ID ThreadState::return_own_id() const{
-    return id;
-};
-
-VectorClock<>::TID ThreadState::get_tid() const {
-    return VectorClock::make_tid(id);
-}
-
-VectorClock<>::Clock ThreadState::get_clock() const {
-    return VectorClock::make_clock(id);
-}
-
-void ThreadState::delete_vector() {
-    vc.clear();
-}
