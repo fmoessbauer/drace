@@ -21,7 +21,7 @@ TEST(Spinlock, Congestion){
 
     std::vector<std::thread> threads;
 
-    for(int i=0; i<std::thread::hardware_concurrency() * 4; ++i){
+    for(unsigned i=0; i<std::thread::hardware_concurrency() * 4; ++i){
         threads.emplace_back([&mx](){
             std::lock_guard<ipc::spinlock> lg(mx);
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -36,12 +36,12 @@ TEST(Spinlock, Correctness){
     ipc::spinlock mx;
     std::vector<std::thread> threads;
     int var{0};
-    const int num_threads = std::thread::hardware_concurrency() * 4;
-    const int loc_incs = 20;
+    const unsigned num_threads = std::thread::hardware_concurrency() * 4;
+    const unsigned loc_incs = 20;
 
-    for(int i=0; i<num_threads; ++i){
-        threads.emplace_back([&mx,&var](){
-            for(int j=0; j<loc_incs; ++j){
+    for(unsigned i=0; i<num_threads; ++i){
+        threads.emplace_back([&](){
+            for(unsigned j=0; j<loc_incs; ++j){
                 std::lock_guard<ipc::spinlock> lg(mx);
                 int tmp = var + 1;
                 std::this_thread::sleep_for(std::chrono::milliseconds(2));
