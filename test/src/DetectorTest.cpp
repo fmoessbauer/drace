@@ -12,12 +12,8 @@
 #include "gtest/gtest.h"
 #include "detectorTest.h"
 
-util::WindowsLibLoader DetectorTest::_libtsan;
-util::WindowsLibLoader DetectorTest::_libdummy;
-util::WindowsLibLoader DetectorTest::_libfasttrack;
-Detector * DetectorTest::_dettsan;
-Detector * DetectorTest::_detdummy;
-Detector * DetectorTest::_detfasttrack;
+std::unordered_map<std::string, std::shared_ptr<util::LibraryLoader>> DetectorTest::_libs;
+std::unordered_map<std::string, Detector*> DetectorTest::_detectors;
 
 TEST_P(DetectorTest, WR_Race) {
 	Detector::tls_t tls10;
@@ -386,6 +382,10 @@ TEST_F(DetectorTest, ShadowMemory) {
 #endif
 
 // Setup value-parameterized tests
+#ifdef WIN32
 INSTANTIATE_TEST_CASE_P(Interface,
-    DetectorTest,
-    ::testing::Values("fasttrack", "tsan"));
+    DetectorTest, ::testing::Values("fasttrack.standalone", "tsan"));
+#else
+INSTANTIATE_TEST_CASE_P(Interface,
+    DetectorTest, ::testing::Values("fasttrack.standalone"));
+#endif

@@ -64,11 +64,7 @@ endif()
 	
 
 ##### SETUP DRace UNIT TESTS #####
-if(DRACE_ENABLE_RUNTIME)
-	add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})
-else()
-	add_executable(${TEST_UNIT_TARGET})
-endif()
+add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})
 
 target_include_directories(${TEST_UNIT_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_UNIT_TARGET} PRIVATE gtest gtest_main "drace-common")
