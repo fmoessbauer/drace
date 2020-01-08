@@ -1,3 +1,155 @@
+#### 1.5.0 (2020-01-08)
+
+##### Build System / Dependencies
+
+*  excluded some libaries from standalone build ([95d0c548](https://github.com/siemens/drace/commit/95d0c548105c6a40a71cc78381830d2352bd73eb))
+*  added a flag to be to build only the stanalone parts ([1e8d97cf](https://github.com/siemens/drace/commit/1e8d97cfc20be2fe8e60f40f8ed36fa0d0c60287))
+
+##### Chores
+
+*  only build necessary deps in standalone version ([efc01ef3](https://github.com/siemens/drace/commit/efc01ef33eb3678e07c8b9a4f4dd97f179cd0170))
+*  removed unused variable ([3dde8eb1](https://github.com/siemens/drace/commit/3dde8eb149697a1957a973cab1903a65e17853ee))
+*  updated cmake file ([bd857971](https://github.com/siemens/drace/commit/bd857971969e220896522cc41ac9c70e166c8320))
+*  adjusted cmake ([5d26d467](https://github.com/siemens/drace/commit/5d26d46743c2b00d6a7ce3d5988cd1cb514f5aa8))
+*  introduced typedefs for tid, id, clock ([2c76f6af](https://github.com/siemens/drace/commit/2c76f6af76aa6618b705a3075dec94ed026a3671))
+*  resolved compiler warnings ([3b5173ee](https://github.com/siemens/drace/commit/3b5173ee8eb0790ace946d6731351c200c832837))
+*  performance improvements of fasttrack ([ec82dcdb](https://github.com/siemens/drace/commit/ec82dcdbf4544d0676440d6ae0de573f31203afd))
+*  some style refactorings and added a unit test ([8add9efe](https://github.com/siemens/drace/commit/8add9efe6e8edf6f7b02b90c9026ee66fd9004b8))
+
+##### Documentation Changes
+
+*  updated readme, added limitations ([a5f174cd](https://github.com/siemens/drace/commit/a5f174cdff832f7c2d26971531f30359959c4a9f))
+*  improve doxygen html output ([baaabc4a](https://github.com/siemens/drace/commit/baaabc4a6265b40aa8cf2e6196c04979ba060a8f))
+*  improved standalone documentation ([17fb2dc0](https://github.com/siemens/drace/commit/17fb2dc0c0ed1ed869a7e8a16f99623e74843adf))
+*  updated and added READMEs ([9860c567](https://github.com/siemens/drace/commit/9860c567e8287cd4b0e36be0965c33ddbc54e243))
+*  added some documentation ([825d95d8](https://github.com/siemens/drace/commit/825d95d8223decb6672d92289f00667d2f5a40e5))
+
+##### New Features
+
+*  added support for x86 compilation of standalone parts ([4990b68b](https://github.com/siemens/drace/commit/4990b68ba5595a9ea698c94a533f7ad4afc15020))
+*  started implementing custom allocators ([36a5d967](https://github.com/siemens/drace/commit/36a5d96751e19fb9552f761bdde9798f6da9a8c0))
+*  lock kinds troubleshooting ([32171b52](https://github.com/siemens/drace/commit/32171b52e69a0e2b6683fd3ae35add708ecc2a29))
+*  fasttrack tests ([7e8d6744](https://github.com/siemens/drace/commit/7e8d6744f104161618458815bf68f95417ab5600))
+*  progress on traacebnary decoder ([ade2d0fe](https://github.com/siemens/drace/commit/ade2d0fed85b7b693893aed6637f7c55889b834b))
+*  progress on detector output, but still not entirely working ([7dfe3be6](https://github.com/siemens/drace/commit/7dfe3be6383d520c9298c1b2d9067ca4d1ed7c90))
+*  first draft to use the binary decoder with fasttrack ([3912d0e0](https://github.com/siemens/drace/commit/3912d0e05477faa5743520be69ae2114b6f002ad))
+*  extended functionality of BinaryDecoder ([8bab5147](https://github.com/siemens/drace/commit/8bab51475ca4c90f0dc60455b096cf66c356ce9d))
+*  finalized logging function ([5a380643](https://github.com/siemens/drace/commit/5a380643cf26509557896441da6e5a8d2cbbb585))
+*  added logging functionality ([6c3aa01d](https://github.com/siemens/drace/commit/6c3aa01dbfa03ca34ba0a1dd5f16eba36bda55ff))
+*  poc for a trace-logging detector ([447ead41](https://github.com/siemens/drace/commit/447ead416eed2448419cb967eaa0990a77f61b43))
+*  added cleaning function for stacktrace handling ([cfe41a0f](https://github.com/siemens/drace/commit/cfe41a0f68e262395c02a53247885d69a5ef4640))
+*  introduced template for fasttrack to define used lock ([9236fd9a](https://github.com/siemens/drace/commit/9236fd9ab520cee5ca5143427dc5a351eed15782))
+*  added reuse of existing nodes in stack tree ([616e0dab](https://github.com/siemens/drace/commit/616e0dabd23223b7b5b1fdb8cf97411e0081017f))
+*  stack trace handling was implemented with boost graph library ([10206f06](https://github.com/siemens/drace/commit/10206f06e2238a6cd5b30761b50b2f610161724c))
+*  include boost graph ([0cab2b11](https://github.com/siemens/drace/commit/0cab2b11fa0246f83e192f97cb7e3d5f2a2a4827))
+*  put tid and clock in one var. to use atomic reads ([e5b9e1c8](https://github.com/siemens/drace/commit/e5b9e1c8781be8292c16bc8dcf93869472b9d286))
+*  replaced spinlock with dr_api-locks ([4de4723a](https://github.com/siemens/drace/commit/4de4723af0014c01de41137218e8999d08fbb651))
+*  began to tackle requirements of !55 ([2a2717c5](https://github.com/siemens/drace/commit/2a2717c57437635b30698075e6eda9156363c418))
+*  further progress on fasttrack ([dfbf4f77](https://github.com/siemens/drace/commit/dfbf4f770252daaf14880d0876f61a7d1463766a))
+*  first commit with all potential features of fasttrack ([49fa4a6e](https://github.com/siemens/drace/commit/49fa4a6e8dbfdc3041f6d7782299489004f3172b))
+*  further progress on fasttrack ([7101e130](https://github.com/siemens/drace/commit/7101e1300f601082f305b6d672864944826ec0fd))
+*  still very early stage of fasttrack algorithm ([cc04e6d8](https://github.com/siemens/drace/commit/cc04e6d86f584b8067d6f4f4845770a1ce1b5c8d))
+*  a very early version of the fasttrack algorithm ([f07d8a38](https://github.com/siemens/drace/commit/f07d8a3860e877bc673075767f55c256569ca49f))
+*  added plot: errors over time to report ([3a6d88ac](https://github.com/siemens/drace/commit/3a6d88acfdc739f1d75f3110bfe4b96b6c39ff5b))
+
+##### Bug Fixes
+
+*  correctly handle short stack traces in ft ([142953f9](https://github.com/siemens/drace/commit/142953f98aae37380d40bc15584ffb5d752067e8))
+*  ensure mutual access per varstate instance ([4c40c5c4](https://github.com/siemens/drace/commit/4c40c5c4d7605b6a31d782516e508c6fae306c80))
+*  ft: correctly and efficiently lock data structures ([c0eabaab](https://github.com/siemens/drace/commit/c0eabaab69cdddffb1daed78ef2e163adc0b661a))
+*  manually generate export header for detector.h ([a3424a40](https://github.com/siemens/drace/commit/a3424a40e6a531ad7809f9c03871ebb3ce9bc8fb))
+*  use static rt in all ft objects ([80205ee3](https://github.com/siemens/drace/commit/80205ee3be2131cfa71b971a575d37e7e37853c9))
+*  removed inheritance from shared_mutex ([60b763a9](https://github.com/siemens/drace/commit/60b763a938cef126fe18bd84f86a492f7a54bbf8))
+*  resolved cppcheck warnings ([99999f59](https://github.com/siemens/drace/commit/99999f590cad5ab44ead5ddbeb6381c86fa87057))
+*  resolved cppcheck warnings ([32e805f8](https://github.com/siemens/drace/commit/32e805f810e72f871061bfaaf4a24963561f0e6c))
+*  fixed some issues regarding the binary decoder ([8afe83bb](https://github.com/siemens/drace/commit/8afe83bb412d6f38cc74fe9a429856defb3d35a4))
+*  fixed cppcheck issues ([43bb2d81](https://github.com/siemens/drace/commit/43bb2d81f71b78705c8e757868396985211e3bf3))
+*  fixed cppcheck issues ([affb8521](https://github.com/siemens/drace/commit/affb8521a041bc4d9ae37d4fe2b0cace4ecdb678))
+*  debugging measures ([85e15ed8](https://github.com/siemens/drace/commit/85e15ed8c458b4abb0ae09c9ed2e960519a9a077))
+*  example branch to investigate cmake issue ([8e436a50](https://github.com/siemens/drace/commit/8e436a5086aa4beeb695a7b7f3c999ca155d551d))
+*  revert erronous change to dllimport ([9e6ce71d](https://github.com/siemens/drace/commit/9e6ce71dfa6c5e33da2c823f656b4677a837854a))
+*  properly generate export headers ([2c2c538b](https://github.com/siemens/drace/commit/2c2c538be1cecb701c7509b541f53ddeee316c9b))
+*  fixed compile error ([8d940116](https://github.com/siemens/drace/commit/8d940116ee4491c4a2e2ee23e32ee80cda414742))
+*  troubleshooting ([02efdb69](https://github.com/siemens/drace/commit/02efdb6982360ba94c2310a86a9c840c40b845de))
+*  fixed bug of double insertions of ids into the shared vectorclock of a variable ([f65a851c](https://github.com/siemens/drace/commit/f65a851c2b639e2e0dcf13d1bc4c93ab6747cdfc))
+*  fixed cppcheck issues of [#17325502](https://github.com/siemens/drace/pull/17325502) ([64c72893](https://github.com/siemens/drace/commit/64c72893417ade76e02c37ee4fee126b069fab67))
+*  set of id in varstate ([b7c458eb](https://github.com/siemens/drace/commit/b7c458eba896d0d3b23836d86fa8a32259da59c9))
+*  an existance check of a xml was missing ([4eef966b](https://github.com/siemens/drace/commit/4eef966b0cc5db72a15e16b5bb61f7d9b090ce44))
+*  resolved path issue ([6e37c1a0](https://github.com/siemens/drace/commit/6e37c1a02f84f07c65594a974f18d9687f8400ca))
+
+##### Other Changes
+
+*  added file-header to all files ([2bb1caef](https://github.com/siemens/drace/commit/2bb1caef096380321b0c4915be444e5a4fb2fed9))
+*  resolved more path issues ([1efe1861](https://github.com/siemens/drace/commit/1efe1861ae698553562fbda990d6116220077fc4))
+*  same asone comit earlier ([d56a5459](https://github.com/siemens/drace/commit/d56a5459bdb570dbe7a16844c171b717312cf368))
+*  path was not conv. to string for open(...) ([86d70177](https://github.com/siemens/drace/commit/86d70177120db58d709789245bd10064ba90df24))
+*  minor bug fix ([80465ee1](https://github.com/siemens/drace/commit/80465ee1b54b3214a0e43a947731f3c055fe27cf))
+*  resolve relative path issues ([e1dd0358](https://github.com/siemens/drace/commit/e1dd03584ec25c7f4aa12af542f6978b71c8a087))
+
+##### Performance Improvements
+
+*  improve performance of spinlock ([bcb1b3ac](https://github.com/siemens/drace/commit/bcb1b3ac5d9992585336dd28c988dc0f589c7b11))
+*  avoid double-search in stacktrace hot path ([d7965bce](https://github.com/siemens/drace/commit/d7965bceb903366438fe4d860b8d1f691bf0e92a))
+*  enable avx2 features on windows ([45ceeac5](https://github.com/siemens/drace/commit/45ceeac5ee3f6d99c6e6afeba93e9ba803de60d3))
+*  massively increased performance of ft2 implementation ([07aae5fd](https://github.com/siemens/drace/commit/07aae5fd25d3c845f061c52c00338bd384e7c20a))
+*  simplified locking in FT ([81195405](https://github.com/siemens/drace/commit/81195405e0e7f372a2943a2d84eedd4b2ef3edb7))
+*  removed race detection for finished thr for performance reasons ([80dbc3ed](https://github.com/siemens/drace/commit/80dbc3edd694caddd529ce2df35e4ebefb94c2ca))
+*  several measures to try to increase performance ([44cebf7b](https://github.com/siemens/drace/commit/44cebf7bee3f29c3a2a472056f6cd12e0fd7acec))
+*  changed stack trace handling to improve perf. ([3106e098](https://github.com/siemens/drace/commit/3106e098836012e3c63bb219d3cac3274f50be3b))
+
+##### Refactors
+
+*  minor refactorings ([603b683c](https://github.com/siemens/drace/commit/603b683c5e085c7ebd905c0a65c0d9d7c006c929))
+*  use brace initialization in varstate ([67a2ba35](https://github.com/siemens/drace/commit/67a2ba35f123e358098efd66dd5ed65204b7ddbd))
+*  improve memory usage efficiency ([fd43e6c0](https://github.com/siemens/drace/commit/fd43e6c087fab9c4ebc35e5ed83d500f821e8bb9))
+*  ft minor improvements ([2ed6398e](https://github.com/siemens/drace/commit/2ed6398ed0706cf00d50c45160ce00166a23230b))
+*  unify name of private variables ([d825e9c1](https://github.com/siemens/drace/commit/d825e9c1a0b317a8d3ba455e0dd6387c90497930))
+*  removed  false characters ([2f9b05ca](https://github.com/siemens/drace/commit/2f9b05cab4f6a8f351e9a86d5fcd88e7704e0820))
+*  resolved merge conflict ([5d0174a4](https://github.com/siemens/drace/commit/5d0174a4a8981240ab8e3aa367cf8536f9dd5fad))
+*  separate build of ft and ft-drace to avoid global-flag changes of DR ([52f02bdc](https://github.com/siemens/drace/commit/52f02bdcba2abfd4529bb8f6a0248dd80a796c4a))
+*  give lock type a self explaining name ([87d440b1](https://github.com/siemens/drace/commit/87d440b18cfc1ef55028ba18c168a85fc8696b3c))
+*  improved ft install handling ([e8d19ba2](https://github.com/siemens/drace/commit/e8d19ba2bad043a4de0aec854e36c0a7d2503035))
+*  improve interface build cmake ([731da4e1](https://github.com/siemens/drace/commit/731da4e1020de9d6f113bda142f3e9eee07803ef))
+*  minor refactorings ([d4e81aea](https://github.com/siemens/drace/commit/d4e81aeaf5a3abf31b9a80a2e99e452b1420146b))
+*  add parallel hashmap as external dependency ([5e228ffa](https://github.com/siemens/drace/commit/5e228ffa2b851e76531338a0fefa29d345180f4b))
+*  minor reconfigurations ([688aced5](https://github.com/siemens/drace/commit/688aced52ce55dca2759615e9f2a2a0967a1e68a))
+*  removed fasttrack.cpp as source ([4d42fdfd](https://github.com/siemens/drace/commit/4d42fdfd83451c49482a21ca020a8dfada1218e0))
+*  added header and implementation files to all non-template classes ([b744b73a](https://github.com/siemens/drace/commit/b744b73aedc0e8975099a77edcf3196019f30b80))
+*  adjusted cmake file of fasttrack ([5c209790](https://github.com/siemens/drace/commit/5c209790bdaee162ed681fceaa566d3247122bed))
+*  adjusted fasttrack to new rtload impl. git pull origin feature/reportgui ([28f94d37](https://github.com/siemens/drace/commit/28f94d3745c55982c7a2addf6ba3dcb3b06f4454))
+*  minor refactorings ([ea5ab458](https://github.com/siemens/drace/commit/ea5ab45859f88af079317028058c408e3a5aaf34))
+*  optimisation with regards to fasttrack, doc and unit test ([ad93aa6d](https://github.com/siemens/drace/commit/ad93aa6d6fe473f25152e34eedabddc624e4ab95))
+*  moved placeholders.txt ([1f5d3ed8](https://github.com/siemens/drace/commit/1f5d3ed8a48f29136c9313ef62cbb884b4881dd2))
+
+##### Code Style Changes
+
+*  minor name changes because of python conv. naming ([394038e7](https://github.com/siemens/drace/commit/394038e7351f7aa97729229d727978fa21cfd91b))
+
+##### Tests
+
+*  add support to run detector if tests on unix ([6ce2b3c9](https://github.com/siemens/drace/commit/6ce2b3c9f5eb50caa0d00c98bb6c9efb79ba1104))
+*  add support to run detector if tests on unix ([ddab1113](https://github.com/siemens/drace/commit/ddab11133ac47175341b4ba832554ce099062ea8))
+*  increased race count of .net/clr_racy test ([9b5179dd](https://github.com/siemens/drace/commit/9b5179dddc525560deb5a7e7fad25a3c2bb589ca))
+*  fixed spinlock unit test ([2154012d](https://github.com/siemens/drace/commit/2154012d5fa7d8c6139440adf62b9eef2c54d1ea))
+*  added some fasttrack unittests ([a25fc740](https://github.com/siemens/drace/commit/a25fc740234fafbfc04ba412c6c58d94699fc1e7))
+*  added stacktrace unit tests ([2f735e76](https://github.com/siemens/drace/commit/2f735e76a687aa7a36ea44132ead72914388125e))
+*  fixed behaviour of fasttrack in lock kinds test ([e3b922f8](https://github.com/siemens/drace/commit/e3b922f873a98f901f3fddeee7c3442bc8a3f6ac))
+*  added some unit tests ([0da4683e](https://github.com/siemens/drace/commit/0da4683eadb1e5176490c514ba2172e35a1717a7))
+*  use static runtime ([070ca89e](https://github.com/siemens/drace/commit/070ca89e3bb76b5328e300e0c0264fb52df12972))
+*  bump dr version in CI ([51b7462c](https://github.com/siemens/drace/commit/51b7462c462e114e8e3256059beda8f6dd9f8f1c))
+*  encode path to drrun into binary ([5ba76249](https://github.com/siemens/drace/commit/5ba762491b936d2f5f036d419c15fd413e639e7b))
+*  add infrastructure for component tests ([cb043c37](https://github.com/siemens/drace/commit/cb043c375308554e63cfc7efac409c0bfae9c7c7))
+*  adjusted unit tests to load the standalone version of fasttrack ([c2333ef6](https://github.com/siemens/drace/commit/c2333ef67fe0625798320c6bd325430b9574f102))
+*  adjusted unit tests ([f5d4df5c](https://github.com/siemens/drace/commit/f5d4df5cd61bb1efa187ec65fff917a95f57c112))
+*  adjusted paths of gui-test ([a009abed](https://github.com/siemens/drace/commit/a009abed9b03c69e54dae61ff9735a19c35dc737))
+*  removed python tag from stage ([afba6468](https://github.com/siemens/drace/commit/afba64686ff2c0c68c9fa28f3ce259dd5cf76e42))
+*  test-commit for testing of new CI script ([a64dac02](https://github.com/siemens/drace/commit/a64dac0229bd0d68153e3cd05572eeba791926cb))
+*  corrected except/only paths ([19a62f3e](https://github.com/siemens/drace/commit/19a62f3e5aaa4b5775461e8a9125606c8db6b4e5))
+*  relocated and extended unit_test.py ([606862d5](https://github.com/siemens/drace/commit/606862d582282e1db733d3f7878203ffd44734b4))
+*  adjusted syntax error in .gitlab-ci ([5c636036](https://github.com/siemens/drace/commit/5c636036542af9905eca836d19aab888f292cde1))
+*  included drace-gui-.gitlab-ci.yml functionality in global .gitlab-ci.yml ([281dab31](https://github.com/siemens/drace/commit/281dab3159dcac042bdf8afdf23ad3e2b46e564d))
+*  added first unit test ([34b79fda](https://github.com/siemens/drace/commit/34b79fda2c4023332670905ee42d837a90a4a00e))
+
 #### 1.4.0 (2019-12-13)
 
 ##### Chores
