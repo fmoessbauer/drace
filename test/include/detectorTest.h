@@ -44,11 +44,15 @@ public:
         auto det_it = _detectors.find(GetParam());
         if(det_it == _detectors.end()){
             auto it = _libs.emplace(GetParam(), util::LibLoaderFactory::getLoader());
-            std::string name = "drace.detector." + std::string(GetParam()) + util::LibLoaderFactory::getModuleExtension();
+            std::string name =
+              util::LibLoaderFactory::getModulePrefix()
+              + "drace.detector." + std::string(GetParam())
+              + util::LibLoaderFactory::getModuleExtension();
 
             auto & loader =*(it.first->second);
-            if(!loader.load(name.c_str()))
-                std::cerr <<"could not load detector" << std::endl;
+            if(!loader.load(name.c_str())){
+                throw std::runtime_error("could not load detector");
+            }
             decltype(CreateDetector)* create_detector = loader["CreateDetector"];
             det_it = _detectors.emplace(GetParam(), create_detector()).first;
 
