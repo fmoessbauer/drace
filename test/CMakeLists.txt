@@ -82,8 +82,6 @@ if(DRACE_ENABLE_RUNTIME)
 	add_dependencies(${TEST_UNIT_TARGET} "drace-client")
 endif()
 
-# This introduces a circular dependency as shared libraries
-# are copied after the target is build
 gtest_discover_tests(${TEST_UNIT_TARGET}
 	WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 	PROPERTIES RUN_SERIAL ON)

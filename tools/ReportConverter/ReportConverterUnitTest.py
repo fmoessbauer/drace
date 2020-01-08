@@ -90,8 +90,8 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(1,1)
 
     def testSymbolCorrection(self):
-        testStr = '&<>&"\\&'
-        if gui.adjText(testStr) == '&amp;&lt;&gt;&amp;&quot;/&amp;':
+        testStr = '&<>&"\\&`'
+        if gui.adjText(testStr) == '&amp;&lt;&gt;&amp;&quot;/&amp;&#x27;':
             self.assertEqual(1,1)
         else:
             self.fail()

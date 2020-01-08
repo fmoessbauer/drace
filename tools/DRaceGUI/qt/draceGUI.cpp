@@ -23,6 +23,12 @@ DRaceGUI::DRaceGUI(QWidget *parent)
 
     ui->dr_path_input->setText("drrun.exe");
     ui->command_output->setText(ch->get_command());
+
+    // check if drace-client.dll is in same folder
+    std::fstream drace_client("drace-client.dll", std::fstream::in);
+    if(drace_client.good()){
+        ui->drace_path_input->setText("drace-client.dll");
+    }
 }
 
 DRaceGUI::~DRaceGUI()
