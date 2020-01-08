@@ -26,48 +26,75 @@ namespace ipc {
 			MEMWRITE,
 			ACQUIRE,
 			RELEASE,
+			HAPPENSBEFORE,
+			HAPPENSAFTER,
 			ALLOCATION,
 			FREE,
 			FORK,
 			JOIN,
 			DETACH,
-			FINISH
+			FINISH,
+			FUNCENTER,
+			FUNCEXIT
 		};
 
 		struct MemAccess {
 			uint32_t thread_id;
-			uint32_t stacksize;
-			uint64_t addr;
-			std::array<uint64_t, 16> callstack;
+			uintptr_t pc;
+			uintptr_t addr;
+			uintptr_t size;
 		};
 
 		struct Mutex {
-			unsigned long thread_id;
-			uint64_t addr;
+			uint32_t thread_id;
+			uintptr_t addr;
 			int recursive;
 			bool write;
 			bool acquire;
 		};
 
+		struct HappensRelation {
+			uint32_t thread_id;
+			uintptr_t id;
+		};
+
 		struct Allocation {
-			unsigned long thread_id;
-			uint64_t pc;
-			uint64_t addr;
-			size_t size;
+			uint32_t thread_id;
+			uintptr_t pc;
+			uintptr_t addr;
+			uintptr_t size;
 		};
 
 		struct ForkJoin {
-			unsigned long parent;
-			unsigned long child;
+			uint32_t parent;
+			uint32_t child;
 		};
 
 		struct DetachFinish {
-			unsigned long thread_id;
+			uint32_t thread_id;
+		};
+
+		struct FuncEnter {
+			uint32_t thread_id;
+			uintptr_t pc;
+		};
+
+		struct FuncExit {
+			uint32_t thread_id;
 		};
 
 		struct BufferEntry {
 			Type type{ Type::NONE };
-			char buffer[sizeof(MemAccess)];
+			union {
+				MemAccess memaccess;
+				Mutex mutex;
+				HappensRelation happens;
+				Allocation allocation;
+				ForkJoin forkjoin;
+				DetachFinish detachfinish;
+				FuncEnter funcenter;
+				FuncExit funcexit;
+			} payload;
 		};
 
 		template<typename T, class... Args>

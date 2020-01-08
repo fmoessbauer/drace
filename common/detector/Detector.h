@@ -10,15 +10,37 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <string>
-#include <vector>
-#include <functional>
+#include <utility>
 
- /// Interface for a DRace compatible race detector
+// this is a header only target, hence we cannot rely on cmake
+// to generate the export headers.
+#ifdef WIN32
+#ifdef DETECTOR_EXPORTS
+#define DETECTOR_EXPORT __declspec(dllexport)
+#else
+#define DETECTOR_EXPORT __declspec(dllimport)
+#endif
+#else
+#define DETECTOR_EXPORT
+#endif
+
+/**
+    \brief Interface for a DRace compatible race detector
+
+    Premises for a implementation of a detector back-end:
+
+    - Every thread starts with a initial call of fork()
+    - There are no double forks of the same thread as child
+    - A read or write will never contain a tid which was not forked
+    - A read can happen before a write
+    - A read and a write with the same TID will never arrive concurrently
+    - A happens after may arrive before a corresponding happens before arrives
+    - A lock may be be released, before it will be acquired 
+    - the last three bullet points must not cause a crash
+*/
 class Detector {
 public:
 
-    /// Type of a thread-id
     typedef unsigned long tid_t;
 
     /// type of a pointer to an entry in the thread local storage
@@ -28,16 +50,17 @@ public:
 
     /// A single memory access
     struct AccessEntry {
-        unsigned thread_id;
         bool     write;
-        uint64_t accessed_memory;
-        size_t   access_size;
-        int      access_type;
-        uint64_t heap_block_begin;
-        size_t   heap_block_size;
         bool     onheap{ false };
+        unsigned thread_id;
+        int      access_type;
         size_t   stack_size{ 0 };
-        uint64_t stack_trace[max_stack_size];
+        ///access size in log2 bytes -> access_size = 0 -> log2(0) = 1 byte
+        size_t   access_size;
+        size_t   heap_block_size;
+        uintptr_t accessed_memory;
+        uintptr_t heap_block_begin;
+        uintptr_t stack_trace[max_stack_size];
     };
 
     /// A Data-Race is a tuple of two Accesses
@@ -148,7 +171,7 @@ public:
         void*  pc,
         /// begin of allocated memory block
         void*  addr,
-        /// size of memory block
+        /// size of memory block in bytes
         size_t size
     ) = 0;
 
@@ -192,4 +215,4 @@ public:
 };
 
 /// create a new detector instance
-extern "C" __declspec(dllexport) Detector * CreateDetector();
+extern "C" DETECTOR_EXPORT Detector * CreateDetector();

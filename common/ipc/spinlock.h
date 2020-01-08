@@ -17,38 +17,52 @@
 #include <iostream>
 #endif
 
+#ifdef HAVE_SSE2
+#include <immintrin.h> //_mm_pause
+#endif
+
 namespace ipc {
     /**
-    * \brief Simple mutex implemented as a spinlock
+    * \brief mutex implemented as a spinlock
     *
     * implements interface of \ref std::mutex
+    * 
+    * \note only use this spinlock, if the critical section is short
+    *       and the pressure on the lock is low
+    * 
+    * \note this spinlock is cache-coherence friendly and
+    *       has optimizations for hyper-threading CPUs
     */
     class spinlock : public std::mutex {
-        std::atomic_flag _flag{ false };
+        std::atomic<bool> _locked{ false };
     public:
         inline void lock() noexcept
         {
-            unsigned cnt = 0;
-            while (_flag.test_and_set(std::memory_order_acquire)) {
-                if (++cnt == 100) {
-                    // congestion on the lock
+            for(int spin_count = 0; !try_lock(); ++spin_count){
+                if(spin_count < 16) {
+                    #ifdef HAVE_SSE2
+                    // tell the CPU (not OS), that we are spin-waiting
+                    _mm_pause();
+                    #endif
+                } else {
+                    // avoid waisting CPU time in rare long-wait scenarios
                     std::this_thread::yield();
-                    cnt = 0;
-#ifdef DEBUG    
-                    std::cout << "spinlock congestion" << std::endl;
-#endif          
                 }
             }
         }
 
         inline bool try_lock() noexcept
         {
-            return !(_flag.test_and_set(std::memory_order_acquire));
+            // first check if lock is free, then try to exchange
+            // the result tells if the value did change.
+            // if not, the mutex has been locked in the meantime by another
+            // thread, and we report that out try_lock was not successfull
+            return !_locked.load(std::memory_order_relaxed) && !_locked.exchange(true, std::memory_order_acquire);
         }
 
         inline void unlock() noexcept
         {
-            _flag.clear(std::memory_order_release);
+            _locked.store(false, std::memory_order_release);
         }
     };
 

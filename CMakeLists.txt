@@ -10,6 +10,11 @@
 
 cmake_minimum_required (VERSION 3.8)
 
+if(POLICY CMP0091)
+	# MSVC runtime library selected by abstraction
+	cmake_policy(SET CMP0091 NEW)
+endif()
+
 project ("drace-client" LANGUAGES "C" "CXX")
 
 set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
@@ -17,10 +22,11 @@ set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(BUILD_TOOLS ON CACHE BOOL "Build Tooling Support (e.g. Qt5 GUI)")
-set(DRACE_DETECTOR "tsan" CACHE STRING "Detector to be used")
+set(DRACE_ENABLE_RUNTIME ON CACHE BOOL "Build Drace Runtime")
 set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
+set(OPTIMIZE_FOR_NATIVE OFF CACHE BOOL "Build standalone components with -march=native")
 
 # install targets
 set(DRACE_INSTALL_TESTS OFF CACHE BOOL "Install test target")
@@ -31,6 +37,8 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
+
+include(GenerateExportHeader)
 
 if(DRACE_ENABLE_CPPCHECK)
     if(CMAKE_VERSION VERSION_GREATER 3.10.0)
@@ -68,31 +76,41 @@ file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 
+define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
+	BRIEF_DOCS "unit test suites"
+	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
+
 # Common Files
 add_subdirectory("common")
 # external vendor targets
 add_subdirectory("vendor")
-# DRACE
-add_subdirectory("drace-client")
-# Managed Stack Resolver
-add_subdirectory("ManagedResolver")
+# standalone tools
+add_subdirectory("standalone")
+
+if(DRACE_ENABLE_RUNTIME)
+	# DRACE
+	add_subdirectory("drace-client")
+	# Managed Stack Resolver
+	add_subdirectory("ManagedResolver")
+endif()
 
 if(DRACE_ENABLE_TESTING)
 	message(STATUS "Build Testsuite")
-	include(GoogleTest)
 	include(CTest)
-	enable_testing()
+	include(GoogleTest)
 	add_subdirectory("test")
 endif()
 
-if(DRACE_ENABLE_BENCH)
-	message(STATUS "Build Benchmarks")
-	add_subdirectory("bench")
-endif()
+if(DRACE_ENABLE_RUNTIME)
+	if(DRACE_ENABLE_BENCH)
+		message(STATUS "Build Benchmarks")
+		add_subdirectory("bench")
+	endif()
 
-if(BUILD_TOOLS)
-    message(STATUS "Build Tools")
-    add_subdirectory("tools")
+	if(BUILD_TOOLS)
+		message(STATUS "Build Tools")
+		add_subdirectory("tools")
+	endif()
 endif()
 
 # Build documentation
@@ -104,31 +122,38 @@ if(Doxygen_FOUND)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
 	set(DOXYGEN_EXCLUDE_PATTERNS 
 		"*DynamoRIO*"
+		"build"
+		"install"
+		"${PROJECT_BINARY_DIR}"
+		"${CMAKE_INSTALL_PREFIX}"
+		"*/test/*"
 		"${PROJECT_SOURCE_DIR}/ManagedResolver/include/prebuild/*"
 		"${PROJECT_SOURCE_DIR}/test/*"
 		"${PROJECT_SOURCE_DIR}/bench/*"
 		"${PROJECT_SOURCE_DIR}/vendor/*"
-        "${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
-        "${PROJECT_SOURCE_DIR}/tools/drace-gui/draceGUIUnitTest.py"
-        "${PROJECT_SOURCE_DIR}/node_modules/*")
+		"${PROJECT_SOURCE_DIR}/drace-client/detectors/extsan"
+		"${PROJECT_SOURCE_DIR}/tools/ReportConverter/ReportConverterUnitTest.py"
+		"${PROJECT_SOURCE_DIR}/node_modules/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 	
 	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
 	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)
 
 	doxygen_add_docs(
-	    doc
-	    ${PROJECT_SOURCE_DIR}
-	    COMMENT "Generate Code Documentation")
+		doc
+		#${PROJECT_SOURCE_DIR}
+		COMMENT "Generate Code Documentation")
 
-    if(${DRACE_INSTALL_DOCS})
-	    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
-    endif()
+	if(${DRACE_INSTALL_DOCS})
+		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+	endif()
+endif()
+
+if(DRACE_ENABLE_RUNTIME)
+	install(FILES "drace.ini" DESTINATION bin)
+	install(FILES "race_suppressions.txt" DESTINATION bin)
 endif()
 
 # install config readme
-install(FILES "drace.ini" DESTINATION bin)
-install(FILES "race_suppressions.txt" DESTINATION bin)
-
 install(FILES "README.md" DESTINATION doc)
 install(FILES ${LIC_FILE} DESTINATION doc)

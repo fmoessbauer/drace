@@ -1,3 +1,4 @@
+#pragma once
 /*
  * DRace, a dynamic data race detector
  *
@@ -33,28 +34,36 @@ namespace util
         { }
 
         /// Destruct loader and release wrapped module
-        ~LibraryLoader()
+        virtual ~LibraryLoader()
         { }
 
         /**
          * load a module
          * \return true if module was loaded
          */
-        bool load(const char * filename);
+        virtual bool load(const char * filename) {
+            return false;
+        }
 
         /**
          * unload the loaded module
          * \return true if a module was loaded and is now unloaded.
          */
-        bool unload();
+        virtual bool unload() {
+            return false;
+        }
 
         /**
          * \return true if module is loaded
          */
-        bool loaded();
+        virtual bool loaded() {
+            return false;
+        }
 
         /// Get a pointer to the requested function in this module
-        ProcedurePtr operator[](const char * proc_name) const;
+        virtual ProcedurePtr operator[](const char * proc_name) const {
+            return ProcedurePtr(nullptr);
+        }
 
     };
 }

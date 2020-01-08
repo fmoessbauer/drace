@@ -1,3 +1,4 @@
+#pragma once
 /*
  * DRace, a dynamic data race detector
  *
@@ -19,7 +20,7 @@ namespace util {
         explicit ProcedurePtr(void * ptr) : _ptr(ptr) {}
 
         /// Conversion operator to extract native function pointer
-        template <typename T, typename = std::enable_if_t<std::is_function_v<T>>>
+        template <typename T, typename = std::enable_if_t<std::is_function<T>::value>>
         operator T *() const {
             return reinterpret_cast<T *>(_ptr);
         }

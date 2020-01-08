@@ -11,10 +11,10 @@
  */
 
 #include <detector/Detector.h>
-#include <util/WindowsLibLoader.h>
+#include <util/LibLoaderFactory.h>
 #include <string>
 #include <iostream>
-#include <Windows.h>
+#include <unordered_map>
 
 static unsigned        num_races = 0;
 static Detector::Race  last_race;
@@ -22,11 +22,9 @@ static Detector::Race  last_race;
 class DetectorTest : public ::testing::TestWithParam<const char*>{
 
 protected:
-    static util::WindowsLibLoader _libtsan;
-    static util::WindowsLibLoader _libdummy;
-
-    static Detector * _dettsan;
-    static Detector * _detdummy;
+    /// map to store instances of dll / so loader objects
+    static std::unordered_map<std::string, std::shared_ptr<util::LibraryLoader>> _libs;
+    static std::unordered_map<std::string, Detector*> _detectors;
 
 public:
     Detector * detector;
@@ -42,35 +40,36 @@ public:
 		num_races = 0;
         last_race = {};
 
-        if (std::string(GetParam()).compare("tsan") == 0) {
-            detector = _dettsan;
-        }
-        else if (std::string(GetParam()).compare("dummy") == 0) {
-            detector = _detdummy;
+        // we bind the detector lazy, i.e. if it is not loaded yet, load it
+        auto det_it = _detectors.find(GetParam());
+        if(det_it == _detectors.end()){
+            auto it = _libs.emplace(GetParam(), util::LibLoaderFactory::getLoader());
+            std::string name = "drace.detector." + std::string(GetParam()) + util::LibLoaderFactory::getModuleExtension();
+
+            auto & loader =*(it.first->second);
+            if(!loader.load(name.c_str()))
+                std::cerr <<"could not load detector" << std::endl;
+            decltype(CreateDetector)* create_detector = loader["CreateDetector"];
+            det_it = _detectors.emplace(GetParam(), create_detector()).first;
+
+            detector = det_it->second;
+            const char * _argv = "drace-tests.exe";
+            detector->init(1, &_argv, callback);
+        } else {
+            detector = det_it->second;
         }
 	}
     ~DetectorTest() {
         detector = nullptr;
     }
 
-	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
-        _libtsan.load("drace.detector.tsan.dll");
-        _libdummy.load("drace.detector.dummy.dll");
-
-        decltype(CreateDetector)* create_tsan = _libtsan["CreateDetector"];
-        decltype(CreateDetector)* create_dummy = _libdummy["CreateDetector"];
-
-        _dettsan = create_tsan();
-        _detdummy = create_dummy();
-
-    	const char * _argv = "drace-tests.exe";
-		_dettsan->init(1, &_argv, callback);
-        _detdummy->init(1, &_argv, callback);
 	}
 
 	static void TearDownTestCase() {
-        _dettsan->finalize();
-        _detdummy->finalize();
+        for(auto & d : _detectors){
+            d.second->finalize();
+        }
+        _libs.clear();
 	}
 };

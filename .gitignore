@@ -266,3 +266,5 @@ __pycache__/
 
 ## overwrite defaults
 !vendor/tsan/blob/**
+build
+install
