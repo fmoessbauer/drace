@@ -30,5 +30,14 @@ namespace util
             return std::make_shared<UnixLibLoader>();
             #endif
         }
+
+        /// return the filename extension of a shared module (e.g. '.dll')
+        static std::string getModuleExtension() {
+            #ifdef WIN32
+            return ".dll";
+            #else
+            return ".so";
+            #endif
+        }
     };
 } // namespace util
