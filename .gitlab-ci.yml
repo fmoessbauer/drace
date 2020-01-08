@@ -13,6 +13,10 @@ variables:
   GIT_SUBMODULE_STRATEGY: "normal"
   DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18219-0\\bin64\\drrun.exe"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
+  http_proxy: "$CODE_PROXY"
+  https_proxy: "$CODE_PROXY"
+  no_proxy: "127.0.0.1,localhost,.siemens.de,.siemens.net,.siemens.com,.siemens.io"
+  
 stages:
   - generate
   - validate
@@ -81,10 +85,21 @@ report-converter-test:
   - echo "Start test..."
   - python3 tools/ReportConverter/ReportConverter.py --Debug
   - python3 tools/ReportConverter/ReportConverterUnitTest.py
-  
+
+reuse-compliant:
+  stage: generate
+  image: python:latest
+  tags:
+  - DOCKER
+  before_script:
+    - python3 -m venv ../venv
+    - . ../venv/bin/activate
+    - pip3 install fsfe-reuse
+    - git clean -f -d
+  script:
+  - reuse lint
 
 # Package
-
 bundle:
   <<: *globals
   stage: package

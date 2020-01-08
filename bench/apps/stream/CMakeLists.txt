@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 SET(BENCH "bench-stream")
 
 add_executable(${BENCH} "main")

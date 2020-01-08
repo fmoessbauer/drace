@@ -1,5 +1,6 @@
 # DRace
 
+[![REUSE status](https://api.reuse.software/badge/github.com/siemens/drace)](https://api.reuse.software/info/github.com/siemens/drace)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2553/badge)](https://bestpractices.coreinfrastructure.org/projects/2553)
 
 DRace is a data-race detector for windows applications which uses DynamoRIO
