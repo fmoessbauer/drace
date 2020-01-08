@@ -245,7 +245,8 @@ class ReportCreator:
                      
                 
             else: #no filepath for file in xml is given 
-                codeIndex, tag = self.SCM.handleSourceCode("","", "")
+                codeIndex = -1
+                tag  = self._htmlTemplates.find('no_code_entry').text
                 newStackElement = newStackElement.replace('*FILE*', 'no filename avail.')
                 noPreview = True
 
@@ -441,6 +442,8 @@ class SourceCodeManagement:
             fp = pathlib.Path(fullPath).resolve() #returns absolute path
         except FileNotFoundError:
             return -1
+        except OSError: #if path is available, but for any reason not reachable (e.g. locked by bitlocker) OSError is thrown
+            return -1
 
         if fp.is_file():
             for element in SOURCEFILE_BL: #blacklisting routine
@@ -455,17 +458,23 @@ class SourceCodeManagement:
                 if not returnSrc:
                     return -1
             if justExistance:
+                sourceCode = self._getLines(fullPath, line)
+                if sourceCode == -1: ##line was not found
+                    return -1
                 return 0
         else:
             return -1
         
-        #if we are we want to return the source code
+        #if we are here we want to return the source code
         return adjText(self._getLines(fullPath, line))
 
 
     def _getLines(self, path, line):
         sourceFile = open(path, mode='r')
         sourceLineList = sourceFile.readlines()
+
+        if len(sourceLineList) < line: #the found file contains less lines than the target (e.g. wrong line number from drace)
+            return -1
 
         if len(sourceLineList) > NUMBEROFCODELINES:
             if line <= NUMBEROFCODELINES//2:
@@ -487,8 +496,8 @@ class SourceCodeManagement:
 
     def handleSourceCode(self, filename, directory, line):
         fullPath = pathlib.Path(directory +'/'+ filename)
-        
-        src = self._returnCode(fullPath, justExistance=1)
+
+        src = self._returnCode(fullPath, 1, int(line))
         if src == -1:
             return -1, self._htmlTemplates.find('no_code_entry').text
 
@@ -511,7 +520,7 @@ class SourceCodeManagement:
 
         for sourceObject in self._sourcefilelist:
             src = self._returnCode(sourceObject[0], justExistance=0, line = sourceObject[1])
-            tmpCode = "code_" + str(self._sourcefilelist.index(sourceObject)) + ' = `' + src + '`;\n'
+            tmpCode = "code_" + str(self._sourcefilelist.index(sourceObject)) + ' = "' + src + '";\n'
             codeString += tmpCode
 
         report = report.replace("*CODE_VARIABLES*", codeString)
@@ -554,6 +563,7 @@ class SourceCodeManagement:
 def adjText(text): #change html symbols e.g. & -> &amp;
     text = text.replace('`', '\'')
     text = text.replace('\\', '/')
+    text = text.replace('\n', '\\n')
     return html.escape(text)
 
 def parseArgumentString(fileList, strEntries):

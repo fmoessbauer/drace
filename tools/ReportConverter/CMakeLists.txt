@@ -17,7 +17,9 @@ if(PyInstaller_FOUND)
     file(COPY "resources" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ReportConverter.exe DESTINATION bin)
 endif()
-
-# Install drace gui
+     
+file(COPY "ReportConverter.py" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    
+# Install report converter
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ReportConverter.py DESTINATION bin)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/ DESTINATION resources)
