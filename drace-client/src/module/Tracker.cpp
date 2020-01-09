@@ -134,13 +134,14 @@ namespace drace {
 			if (modptr->instrument != INSTR_FLAGS::STACK) {
 				// check if mod name is excluded
 				// in this case, we check for syms but only instrument stack
+				// \todo for linux, either strip .so.x suffix, or add support for wildcards
 				if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
 					modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
 				}
 			}
 			if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
 				// check if debug info is available
-                // TODO: unclear if drsyms is threadsafe.
+                // \todo unclear if drsyms is threadsafe.
                 //       so better lock
                 lock_write();
 				modptr->debug_info = _syms->debug_info_available(mod);
@@ -150,7 +151,9 @@ namespace drace {
 			return modptr;
 		}
 
-		/* Module load event implementation.
+		/**
+		* \brief Module load event implementation.
+		*
 		* To get clean call-stacks, we add the shadow-stack instrumentation
 		* to all modules (even the excluded ones).
 		* \note As this function is passed as a callback to a c API, we cannot use std::bind

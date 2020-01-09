@@ -93,7 +93,13 @@ namespace drace {
             if (num_races() > MAX)
                 return;
 
+#ifdef WINDOWS
             auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - _start_time);
+#else
+            // \todo when running under DR, calling clock::now()
+            //       leads to a segfault
+            auto ttr = std::chrono::milliseconds(0);
+#endif
 
             std::lock_guard<DrLock> lock(_races_lock);
 
@@ -160,6 +166,10 @@ namespace drace {
         * \return true if race is suppressed
         */
         bool filter_excluded(const Detector::Race * r) {
+            DR_ASSERT(r != nullptr);
+            if(r->first.stack_size == 0 || r->second.stack_size == 0)
+                return false;
+
             // PC is null
             if (r->first.stack_trace[r->first.stack_size - 1] == 0x0)
                 return true;

@@ -117,17 +117,20 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
-#ifdef WINDOWS
     // \todo port to linux
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
+        #if WINDOWS
         if (!MSR::connect()) {
             LOG_ERROR(-1, "MSR not available (required for --extctrl)");
             dr_abort();
         }
+        #else
+        LOG_ERROR(-1, "--extctrl is not supported on linux yet.");
+        dr_abort();
+        #endif
     }
-#endif
 }
 
 namespace drace {

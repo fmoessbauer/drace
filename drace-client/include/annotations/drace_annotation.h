@@ -30,10 +30,16 @@
 
 #ifdef DRACE_ANNOTATION
 
+#ifdef __unix__
+#define DRACE_ANNOTATION_EXPORT
+#elif defined(_WIN32) || defined(WIN32)
+#define DRACE_ANNOTATION_EXPORT __declspec(dllexport)
+#endif
+
 extern "C" {
 
 #pragma optimize("", off)
-	__declspec(dllexport) void __drace_happens_before(void* identifier) {
+	DRACE_ANNOTATION_EXPORT void __drace_happens_before(void* identifier) {
         // cppcheck-suppress unreadVariable
 		volatile void* noopt = identifier;
 	}
@@ -41,7 +47,7 @@ extern "C" {
 
 
 #pragma optimize("", off)
-	__declspec(dllexport) void __drace_happens_after(void* identifier) {
+	DRACE_ANNOTATION_EXPORT void __drace_happens_after(void* identifier) {
         // cppcheck-suppress unreadVariable
 		volatile void* noopt = identifier;
 	}
@@ -49,7 +55,7 @@ extern "C" {
 
 
 #pragma optimize("", off)
-	__declspec(dllexport) void __drace_enter_exclude() {
+	DRACE_ANNOTATION_EXPORT void __drace_enter_exclude() {
 		int var;
         // cppcheck-suppress unreadVariable
 		volatile void* noopt = &var;
@@ -58,7 +64,7 @@ extern "C" {
 
 
 #pragma optimize("", off)
-	__declspec(dllexport) void __drace_leave_exclude() {
+	DRACE_ANNOTATION_EXPORT void __drace_leave_exclude() {
 		int var;
         // cppcheck-suppress unreadVariable
 		volatile void* noopt = &var;
