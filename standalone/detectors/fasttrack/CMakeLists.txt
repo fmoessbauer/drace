@@ -90,7 +90,7 @@ if(Boost_FOUND)
             "${PROJECT_BINARY_DIR}/drace-client")
 
     ################ configure test module ################
-    if(DRACE_ENABLE_TESTING)
+    if(BUILD_TESTING)
         # create library which is linked in global testing module
         add_library(fasttrack_test OBJECT ${FT_TEST_SOURCES})
         target_link_libraries(fasttrack_test PRIVATE gtest "drace-common" "parallel-hashmap")

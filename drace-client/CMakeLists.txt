@@ -22,7 +22,7 @@ find_package(DynamoRIO 7.0 REQUIRED)
 # as DR changes global vars
 add_subdirectory("detectors")
 
-if(DRACE_ENABLE_TESTING)
+if(BUILD_TESTING)
     add_subdirectory(test)
 endif()
 

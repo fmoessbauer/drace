@@ -63,12 +63,12 @@ target_include_directories("clipp" INTERFACE
 file(READ "muellan/clipp/LICENSE" LIC_FILE_CLIPP)
 file(APPEND ${LIC_FILE} "${LIC_SEP}muellan/clipp\n\n${LIC_FILE_CLIPP}")
 
-if(DRACE_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib
 	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
 	add_subdirectory("google/googletest/googletest")
 	else()
-	set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Enable Testing" FORCE)
+	set(BUILD_TESTING OFF CACHE BOOL "Enable Testing" FORCE)
 endif()
 
 if(DRACE_ENABLE_BENCH AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/benchmark/CMakeLists.txt")
