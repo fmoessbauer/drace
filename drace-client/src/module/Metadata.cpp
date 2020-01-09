@@ -10,7 +10,9 @@
  */
 
 #include "module/Metadata.h"
+#ifdef WINDOWS
 #include <windows.h>
+#endif
 
 /* Global operator to compare module_data_t regarding logic equivalence */
 static bool operator==(const module_data_t & d1, const module_data_t & d2)
@@ -40,6 +42,7 @@ static bool operator!=(const module_data_t & d1, const module_data_t & d2) {
 namespace drace {
 	namespace module {
 		void Metadata::tag_module() {
+			#ifdef WINDOWS
 			// We want to read the COM_ENTRY from the data directory
 			// according to https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_data_directory
 			PIMAGE_DOS_HEADER      pidh = (PIMAGE_DOS_HEADER)info->start;
@@ -49,6 +52,9 @@ namespace drace {
 
 			DWORD clrh = pioh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress;
 			modtype = (clrh == 0) ? MOD_TYPE_FLAGS::NATIVE : MOD_TYPE_FLAGS::MANAGED;
+			#else
+			modtype = MOD_TYPE_FLAGS::NATIVE;
+			#endif
 		}
 	}
 }

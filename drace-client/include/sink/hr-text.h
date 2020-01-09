@@ -37,7 +37,7 @@ namespace drace {
 			{ }
 
 			virtual void process_single_race(const race::DecoratedRace & race) {
-                FILE * handle = _target->get();
+                file_t handle = _target->get();
                 dr_fprintf(handle, "----- DATA Race at %8lld ms runtime -----\n", race.elapsed.count());
 
 				for (int i = 0; i != 2; ++i) {

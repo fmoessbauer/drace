@@ -9,12 +9,14 @@ set(SOURCES
     "src/instr/instr-mem-full"
     "src/module/Metadata"
     "src/module/Tracker"
-    "src/MSR"
     "src/symbol/Symbols"
     "src/symbol/SymbolLocation"
     "src/util"
     "src/config"
     "src/race-filter")
+if(WIN32)
+    list(APPEND SOURCES "src/MSR")
+endif()
 
 find_package(DynamoRIO 7.0 REQUIRED)
 
@@ -50,8 +52,10 @@ target_link_libraries(
 # Set loglevel
 target_compile_definitions("drace-client" PRIVATE -DLOGLEVEL=${DRACE_LOGLEVEL})
 # we need a specific base addr, hence disable this warning
-target_link_libraries("drace-client" -ignore:4281)
-target_compile_options("drace-client" PRIVATE -EHsc)
+if(WIN32)
+    target_link_libraries("drace-client" -ignore:4281)
+    target_compile_options("drace-client" PRIVATE -EHsc)
+endif()
 
 # TinyXML2
 if(${DRACE_XML_EXPORTER})
@@ -93,4 +97,6 @@ endif()
 file(READ "include/lcm/LICENSE" LIC_FILE_LCM)
 file(APPEND ${LIC_FILE} "${LIC_SEP}fmoessbauer/LossyCountingModel\n\n${LIC_FILE_LCM}")
 
-install(TARGETS "drace-client" RUNTIME DESTINATION bin COMPONENT Runtime)
+install(TARGETS "drace-client"
+    RUNTIME DESTINATION bin COMPONENT Runtime
+    LIBRARY DESTINATION lib COMPONENT ARCHIVE)

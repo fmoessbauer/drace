@@ -122,15 +122,15 @@ namespace drace {
 
 			if (instr == instrlist_last(bb)) {
                 if (instr_is_call_direct(instr)) {
-                    dr_insert_call_instrumentation(drcontext, bb, instr, on_call);
+                    dr_insert_call_instrumentation(drcontext, bb, instr, (void*)on_call);
                     return true;
                 }
                 else if (instr_is_call_indirect(instr)) {
-                    dr_insert_mbr_instrumentation(drcontext, bb, instr, on_call, SPILL_SLOT_1);
+                    dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)on_call, SPILL_SLOT_1);
                     return true;
                 }
                 else if (instr_is_return(instr)) {
-                    dr_insert_mbr_instrumentation(drcontext, bb, instr, on_ret, SPILL_SLOT_1);
+                    dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)on_ret, SPILL_SLOT_1);
                     return true;
                 }
 			}

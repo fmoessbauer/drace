@@ -358,8 +358,10 @@ namespace drace {
 
 			dr_thread_free(drcontext, user_data, sizeof(wfmo_args_t));
 		}
+#endif // WINDOWS
 
         void event::thread_start(void *wrapctx, void *user_data) {
+			#ifdef WINDOWS
             app_pc drcontext = drwrap_get_drcontext(wrapctx);
             per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
             HANDLE retval = util::unsafe_ptr_cast<HANDLE>(drwrap_get_retval(wrapctx));
@@ -367,6 +369,9 @@ namespace drace {
             DWORD threadid = GetThreadId(retval);
             LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", retval, threadid);
             detector->happens_before(data->detector_data, (void*)threadid);
+			#else
+			// \todo implement on linux
+			#endif
         }
 
         void event::barrier_enter(void *wrapctx, void** addr) {
@@ -428,6 +433,5 @@ namespace drace {
 			detector->happens_after(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
-#endif
 	} // namespace funwrap
 } // namespace drace

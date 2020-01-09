@@ -17,9 +17,11 @@
 #include "symbol/Symbols.h"
 #include "util.h"
 
+#ifdef WINDOWS
 #include "ipc/SyncSHMDriver.h"
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
+#endif
 #include "MSR.h"
 
 #include <drmgr.h>
@@ -111,9 +113,11 @@ namespace drace {
 			modptr->set_info(mod);
 			modptr->instrument = def_instr_flags;
 
+#ifdef WINDOWS
             if (modptr->modtype == Metadata::MANAGED && !shmdriver) {
                 LOG_WARN(0, "managed module detected, but MSR not available");
             }
+#endif
 
 			std::string mod_path(mod->full_path);
 			std::string mod_name(dr_module_preferred_name(mod));
@@ -176,6 +180,8 @@ namespace drace {
 				funwrap::wrap_allocations(mod);
 				funwrap::wrap_thread_start_sys(mod);
 			}
+#ifdef WINDOWS
+			// \todo Dotnet is currently only supported on windows
 			else if (util::common_prefix(mod_name, "clr.dll") ||
 				util::common_prefix(mod_name, "coreclr.dll"))
 			{
@@ -232,6 +238,7 @@ namespace drace {
 					modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
 				}
 			}
+#endif
 			else if (modptr->instrument != INSTR_FLAGS::NONE && params.annotations) {
 				// no special handling of this module
                 funwrap::wrap_excludes(mod);
@@ -253,10 +260,13 @@ namespace drace {
 
 			// Free symbol information. A later access re-creates them, so its safe to do it here
 			drsym_free_resources(mod->full_path);
+
+			#ifdef WINDOWS
 			// free symbols on MPCR side
 			if (modptr->modtype == Metadata::MOD_TYPE_FLAGS::MANAGED && shmdriver) {
 				MSR::unload_symbols(mod->start);
 			}
+			#endif
 
 			data->stats->module_load_duration += std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start);
 			data->stats->module_loads++;

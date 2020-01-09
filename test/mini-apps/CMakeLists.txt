@@ -11,7 +11,6 @@ if(WIN32)
     add_subdirectory("atomics")
     add_subdirectory("sampler")
     add_subdirectory("memchecker")
+    # CSharp examples
+    add_subdirectory("cs-sync")
 endif()
-
-# CSharp examples
-add_subdirectory("cs-sync")

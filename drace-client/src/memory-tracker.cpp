@@ -27,9 +27,10 @@
 #include "shadow-stack.h"
 #include "function-wrapper.h"
 #include "statistics.h"
+#if WINDOWS
 #include "ipc/SharedMemory.h"
 #include "ipc/SMData.h"
-
+#endif
 
 namespace drace {
 	MemoryTracker::MemoryTracker()
@@ -42,9 +43,13 @@ namespace drace {
 		/* Ensure that atomic and native type have equal size as otherwise
 		   instrumentation reads invalid value */
 		using no_flush_t = decltype(per_thread_t::no_flush);
+
+#ifdef WINDOWS
+		// this requires C++17, but is available in MSVC with C++11
 		static_assert(
 			sizeof(no_flush_t) == sizeof(no_flush_t::value_type)
 			, "atomic uint64 size differs from uint64 size");
+#endif
 
 		DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
 		page_size = dr_page_size();
@@ -171,8 +176,8 @@ namespace drace {
 
                 for (; mem_ref < (mem_ref_t *)data->buf_ptr; ++mem_ref) {
 					if (params.excl_stack &&
-						((ULONG_PTR)mem_ref->addr > data->appstack_beg) && 
-						((ULONG_PTR)mem_ref->addr < data->appstack_end))
+						((uintptr_t)mem_ref->addr > data->appstack_beg) && 
+						((uintptr_t)mem_ref->addr < data->appstack_end))
 					{
 						// this reference points into the stack range, skip
 						continue;
@@ -233,7 +238,8 @@ namespace drace {
         data->stats = (Statistics*) dr_thread_alloc(drcontext, sizeof(Statistics));
         new (data->stats) Statistics(data->tid);
 
-        // TODO: emulate this for windows 7
+#ifdef WINDOWS
+        // TODO: emulate this for windows 7, linux
 		// determin stack range of this thread
         if (runtime_tid.load(std::memory_order_relaxed) != data->tid) {
             if (!dr_using_app_state(drcontext))
@@ -246,6 +252,7 @@ namespace drace {
             // TODO: this lookup cannot be performed on master thread, as state is not valid. See drmem#xxx
             LOG_NOTICE(data->tid, "stack range cannot be detected");
         }
+#endif
 	}
 
     void MemoryTracker::event_thread_exit(void *drcontext)
@@ -481,6 +488,7 @@ namespace drace {
 	}
 
 	void MemoryTracker::handle_ext_state(per_thread_t * data) {
+#ifdef WINDOWS
 		if (shmdriver) {
 			bool external_state = extcb->get()->enabled.load(std::memory_order_relaxed);
 			if (bool (data->enable_external) != external_state) {
@@ -503,6 +511,7 @@ namespace drace {
 				update_sampling();
 			}
 		}
+#endif
 	}
 
 	void MemoryTracker::update_sampling() {

@@ -67,12 +67,12 @@ namespace drace {
     std::string Config::get(
         const std::string & section,
         const std::string & key,
-        const std::string & default) const
+        const std::string & def_val) const
     {
         if (_kvstore.count(key) > 0) {
             return _kvstore.at(key);
         }
-        return _reader->Get(section, key, default);
+        return _reader->Get(section, key, def_val);
     }
 
     /// returns multiline ini-items as a vector

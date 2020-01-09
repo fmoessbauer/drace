@@ -17,6 +17,12 @@
 #include <ipc/ExtsanData.h>
 #include <detector/Detector.h>
 
+#ifdef WINDOWS
+#define TRACEBINARY_EXPORT __declspec(dllexport)
+#else
+#define TRACEBINARY_EXPORT
+#endif
+
 using namespace ipc::event;
 
 namespace drace
@@ -49,13 +55,13 @@ namespace drace
 
             virtual void func_enter(tls_t tls, void* pc) {
                 ipc::event::BufferEntry buf{Type::FUNCENTER};
-                buf.payload.funcenter = {(uint32_t)tls, (uint64_t)pc};
+                buf.payload.funcenter = {(uint32_t)(uintptr_t)tls, (uint64_t)pc};
                 write_log_sync(buf);
             }
 
             virtual void func_exit(tls_t tls) {
                 ipc::event::BufferEntry buf{Type::FUNCEXIT};
-                buf.payload.funcexit = {(uint32_t)tls};
+                buf.payload.funcexit = {(uint32_t)(uintptr_t)tls};
                 write_log_sync(buf);
             }
 
@@ -66,7 +72,7 @@ namespace drace
                 bool write)
             {
                 ipc::event::BufferEntry buf{Type::ACQUIRE};
-                buf.payload.mutex = {(uint32_t)tls, (uint64_t)mutex, (int)recursive, write, true};
+                buf.payload.mutex = {(uint32_t)(uintptr_t)tls, (uint64_t)mutex, (int)recursive, write, true};
                 write_log_sync(buf);
             }
 
@@ -75,68 +81,68 @@ namespace drace
                 void* mutex,
                 bool write) {
                     ipc::event::BufferEntry buf{Type::RELEASE};
-                    buf.payload.mutex = {(uint32_t)tls, (uint64_t)mutex, (int)0, write, false};
+                    buf.payload.mutex = {(uint32_t)(uintptr_t)tls, (uint64_t)mutex, (int)0, write, false};
                     write_log_sync(buf);
                 }
 
             virtual void happens_before(tls_t tls, void* identifier) {
                 ipc::event::BufferEntry buf{Type::HAPPENSBEFORE};
-                buf.payload.happens = {(uint32_t)tls, (uint64_t)identifier};
+                buf.payload.happens = {(uint32_t)(uintptr_t)tls, (uint64_t)identifier};
                 write_log_sync(buf);
             }
 
             virtual void happens_after(tls_t tls, void* identifier) {
                 ipc::event::BufferEntry buf{Type::HAPPENSAFTER};
-                buf.payload.happens = {(uint32_t)tls, (uint64_t)identifier};
+                buf.payload.happens = {(uint32_t)(uintptr_t)tls, (uint64_t)identifier};
                 write_log_sync(buf);
             }
 
             virtual void read(tls_t tls, void* pc, void* addr, size_t size) {
                 ipc::event::BufferEntry buf{Type::MEMREAD};
-                buf.payload.memaccess = {(uint32_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
+                buf.payload.memaccess = {(uint32_t)(uintptr_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
                 write_log_sync(buf);
             }
 
             virtual void write(tls_t tls, void* pc, void* addr, size_t size) {
                 ipc::event::BufferEntry buf{Type::MEMWRITE};
-                buf.payload.memaccess = {(uint32_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
+                buf.payload.memaccess = {(uint32_t)(uintptr_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
                 write_log_sync(buf);
             }
 
             virtual void allocate(tls_t tls, void* pc, void* addr, size_t size) {
                 ipc::event::BufferEntry buf{Type::ALLOCATION};
-                buf.payload.allocation = {(uint32_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
+                buf.payload.allocation = {(uint32_t)(uintptr_t)tls, (uint64_t)pc, (uint64_t)addr, (uint64_t)size};
                 write_log_sync(buf);
             }
 
             virtual void deallocate(tls_t tls, void* addr) {
                 ipc::event::BufferEntry buf{Type::FREE};
-                buf.payload.allocation = {(uint32_t)tls, (uint64_t)0x0, (uint64_t)addr, (uint64_t)0x0};
+                buf.payload.allocation = {(uint32_t)(uintptr_t)tls, (uint64_t)0x0, (uint64_t)addr, (uint64_t)0x0};
                 write_log_sync(buf);
             }
 
             virtual void fork(tid_t parent, tid_t child, tls_t * tls) {
                 *tls = (void*)((uint64_t)child);
                 ipc::event::BufferEntry buf{Type::FORK};
-                buf.payload.forkjoin = {(uint32_t)parent, (uint32_t)child};               
+                buf.payload.forkjoin = {(uint32_t)(uintptr_t)parent, (uint32_t)child};               
                 write_log_sync(buf);
             }
 
             virtual void join(tid_t parent, tid_t child) {
                ipc::event::BufferEntry buf{Type::JOIN};
-               buf.payload.forkjoin = {(uint32_t)parent, (uint32_t)child};
+               buf.payload.forkjoin = {(uint32_t)(uintptr_t)parent, (uint32_t)child};
                write_log_sync(buf);
             }
 
             virtual void detach(tls_t tls, tid_t thread_id) {
                 ipc::event::BufferEntry buf{Type::DETACH};
-                buf.payload.detachfinish = {(uint32_t)tls};
+                buf.payload.detachfinish = {(uint32_t)(uintptr_t)tls};
                 write_log_sync(buf);
             };
 
             virtual void finish(tls_t tls, tid_t thread_id) {
                 ipc::event::BufferEntry buf{Type::FINISH};
-                buf.payload.detachfinish = {(uint32_t)tls};
+                buf.payload.detachfinish = {(uint32_t)(uintptr_t)tls};
                 write_log_sync(buf);
             };
 
@@ -158,6 +164,6 @@ namespace drace
     }
 }
 
-extern "C" __declspec(dllexport) Detector * CreateDetector() {
+extern "C" TRACEBINARY_EXPORT Detector * CreateDetector() {
     return new drace::detector::TraceBinary();
 }

@@ -12,7 +12,9 @@ message(STATUS "Build detector dummy")
 
 add_library("drace.detector.dummy" SHARED "dummy")
 target_link_libraries("drace.detector.dummy" "drace-common")
-install(TARGETS "drace.detector.dummy" RUNTIME DESTINATION bin COMPONENT Runtime)
+install(TARGETS "drace.detector.dummy"
+	RUNTIME DESTINATION bin COMPONENT Runtime
+	LIBRARY DESTINATION lib COMPONENT ARCHIVE)
 
 # copy detector dlls to drace-client binary dir
 add_custom_command(TARGET "drace.detector.dummy" POST_BUILD

@@ -12,8 +12,10 @@
 #include "globals.h"
 #include "symbol/Symbols.h"
 #include "Module.h"
+#ifdef WINDOWS
 #include "MSR.h"
 #include "ipc/SyncSHMDriver.h"
+#endif
 
 #include <dr_api.h>
 #include <drsyms.h>
@@ -59,6 +61,9 @@ namespace symbol {
 		auto modptr = module_tracker->get_module_containing(pc);
 		// Not (Jitted PC or PC is in managed module)
 		// OR managed module, but MSR is not attached
+		#ifndef WINDOWS
+		bool shmdriver{false};
+		#endif
 		if (modptr && ((modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::NATIVE)
 			|| (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::MANAGED && !shmdriver)))
 		{
@@ -84,6 +89,7 @@ namespace symbol {
 			}
 		}
 		else {
+			#ifdef WINDOWS
 			// Managed Code
 			if (shmdriver) {
 				const auto & sym = MSR::lookup_address(pc);
@@ -102,6 +108,7 @@ namespace symbol {
 					sloc.mod_name = "JIT";
 				}
 			}
+			#endif
 		}
 		return sloc;
 	}

@@ -11,6 +11,7 @@
 
 #include <dr_api.h>
 #include <drsyms.h>
+#include <cstring>
 
 #include "symbol/SymbolLocation.h"
 

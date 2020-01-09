@@ -34,6 +34,7 @@
 #include "symbols.h"
 #include "statistics.h"
 #include "DrFile.h"
+#include "util/LibLoaderFactory.h"
 #include "util/DrModuleLoader.h"
 #include "race-filter.h"
 
@@ -41,7 +42,9 @@
 #ifdef DRACE_XML_EXPORTER
 #include "sink/valkyrie.h"
 #endif
+#ifdef WINDOWS
 #include "MSR.h"
+#endif
 
 #include <clipp.h>
 #include <detector/Detector.h>
@@ -54,7 +57,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     dr_set_client_name("Race-Detection Tool 'DRace'",
         "https://github.com/siemens/drace/issues");
 
+#ifdef WINDOWS
     dr_enable_console_printing();
+#endif
 
     // Parse runtime arguments and print generated configuration
     drace::parse_args(argc, argv);
@@ -66,7 +71,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     bool success = config.loadfile(params.config_file, argv[0]);
     if (!success) {
         LOG_ERROR(-1, "error loading config file");
-        dr_flush_file(stdout);
+        dr_flush_file(drace::log_target);
         exit(1);
     }
     LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
@@ -112,6 +117,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
+#ifdef WINDOWS
+    // \todo port to linux
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
@@ -120,6 +127,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
             dr_abort();
         }
     }
+#endif
 }
 
 namespace drace {
@@ -129,7 +137,9 @@ namespace drace {
         const char ** argv,
         const std::string & detector_name)
     {
-        std::string detector_lib("drace.detector." + detector_name + ".dll");
+        std::string detector_lib(::util::LibLoaderFactory::getModulePrefix()
+        + "drace.detector." + detector_name
+        + ::util::LibLoaderFactory::getModuleExtension());
 
         module_loader = std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
         if (!module_loader->loaded())
@@ -146,7 +156,7 @@ namespace drace {
     }
 
     static void register_report_sinks() {
-        if (drace::log_target != NULL) {
+        if (drace::log_target != 0) {
             // register the console printer
             race_collector->register_sink(
                 std::make_shared<sink::HRText>(drace::log_file)

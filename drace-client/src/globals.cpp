@@ -16,8 +16,10 @@
 #include "race-collector.h"
 #include "DrFile.h"
 #include "statistics.h"
+#if WIN32
 #include "ipc/SharedMemory.h"
 #include "ipc/MtSyncSHMDriver.h"
+#endif
 #include "util/DrModuleLoader.h"
 
 #include <detector/Detector.h>
@@ -46,8 +48,11 @@ namespace drace {
 	std::unique_ptr<RaceCollector> race_collector;
     std::shared_ptr<DrFile> log_file;
 	std::unique_ptr<Statistics> stats;
+
+	#if WIN32
 	std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
 	std::unique_ptr<ipc::SharedMemory<ipc::ClientCB, true>> extcb;
+	#endif
 
 	/* Runtime parameters */
 	params_t params;

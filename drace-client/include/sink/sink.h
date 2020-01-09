@@ -21,8 +21,8 @@ namespace drace {
         */
         class Sink {
         public:
-            virtual void process_single_race(const race::DecoratedRace & race) = NULL;
-            virtual void process_all(const std::vector<race::DecoratedRace> & races) = NULL;
+            virtual void process_single_race(const race::DecoratedRace & race) = 0;
+            virtual void process_all(const std::vector<race::DecoratedRace> & races) = 0;
         };
     }
 }

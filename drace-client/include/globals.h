@@ -106,9 +106,9 @@ namespace drace {
 		uint64        event_cnt{ 0 };
 
 		/// begin of this threads stack range
-		ULONG_PTR appstack_beg{ 0x0 };
+		uintptr_t appstack_beg{ 0x0 };
 		/// end of this threads stack range
-		ULONG_PTR appstack_end{ 0x0 };
+		uintptr_t appstack_end{ 0x0 };
 
         /**
          * as the detector cannot allocate TLS,
@@ -184,10 +184,13 @@ namespace drace {
 		struct ClientCB;
 	}
 
+#if WIN32
+// \todo currently only available on windows
 namespace drace {
 	extern std::unique_ptr<::ipc::MtSyncSHMDriver<true, true>> shmdriver;
 	extern std::unique_ptr<::ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 }
+#endif
 
 // infected by windows.h and clashes with std::min/max
 #undef max

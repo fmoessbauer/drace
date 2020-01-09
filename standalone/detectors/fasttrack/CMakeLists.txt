@@ -59,7 +59,7 @@ if(Boost_FOUND)
     generate_export_header("drace.detector.fasttrack.standalone" BASE_NAME fasttrack_st)
 
     # include exports header
-    target_include_directories("drace.detector.fasttrack.standalone" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack.standalone>)
+    target_include_directories("drace.detector.fasttrack.standalone" PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries("drace.detector.fasttrack.standalone" PRIVATE "drace.detector.fasttrack.generic" Threads::Threads)
     set_target_properties(
         "drace.detector.fasttrack.standalone" PROPERTIES

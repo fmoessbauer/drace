@@ -19,12 +19,14 @@ namespace drace {
 
         /// Provides callbacks for certain events, triggered by DRace
 		class event {
+			#ifdef WINDOWS
 			/// Arguments of a WaitForMultipleObjects call
 			struct wfmo_args_t {
 				DWORD          ncount;
 				BOOL           waitall;
 				const HANDLE*  handles;
 			};
+			#endif
 
 		private:
 			static void prepare_and_aquire(
@@ -90,10 +92,10 @@ namespace drace {
 
 			/// WaitForMultipleObjects Windows API call (experimental)
 			static void wait_for_mult_obj(void *wrapctx, void *user_data);
-
+#endif
             /// Thread start event on caller side
             static void thread_start(void *wrapctx, void *user_data);
-#endif
+
 			/// Call this function before a thread-barrier is entered */
 			static void barrier_enter(void *wrapctx, void **user_data);
 

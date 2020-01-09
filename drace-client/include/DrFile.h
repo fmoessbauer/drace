@@ -20,17 +20,17 @@ namespace drace {
      */
     class DrFile {
     private:
-        FILE * _handle{ nullptr };
+        file_t _handle{0};
         bool   _needs_closing{false};
 
     public:
         DrFile(std::string filename, uint mode_flags) {
             if (filename == "stdout")
-                _handle = (FILE*)dr_get_stdout_file();
+                _handle = STDOUT;
             else if (filename == "stderr")
-                _handle = (FILE*)dr_get_stderr_file();
+                _handle = STDERR;
             else { // filename
-                if ((_handle = (FILE*)dr_open_file(filename.c_str(), mode_flags)) != INVALID_FILE)
+                if ((_handle = dr_open_file(filename.c_str(), mode_flags)) != INVALID_FILE)
                     _needs_closing = true;
             }
         }
@@ -44,10 +44,10 @@ namespace drace {
         }
 
         bool good() const {
-            return (_handle != nullptr) && (_handle != INVALID_FILE);
+            return _handle != INVALID_FILE;
         }
 
-        inline FILE * get() const {
+        inline file_t get() const {
             return _handle;
         }
     };

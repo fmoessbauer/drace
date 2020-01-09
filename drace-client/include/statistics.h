@@ -59,7 +59,7 @@ namespace drace {
 			pc_hits(0.01, 0.001)
 		{ }
 
-		void print_summary(FILE * target) {
+		void print_summary(file_t target) {
 			std::stringstream s;
 			s << "mutex_ops:\t\t" << std::dec << mutex_ops << std::endl
 				<< "all-flushes:\t\t" << std::dec << flush_events << std::endl

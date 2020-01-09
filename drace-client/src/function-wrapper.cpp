@@ -69,6 +69,8 @@ namespace drace {
 			}
 			else if (method == Method::DBGSYMS)
 			{
+				#if WINDOWS
+				// \todo not supported on linux
 				wrap_info_t info{ mod, pre, post };
 				drsym_error_t err = drsym_search_symbols(
 					mod->full_path,
@@ -77,6 +79,7 @@ namespace drace {
 					(drsym_enumerate_cb)internal::wrap_function_clbck,
 					(void*)&info);
                 wrapped_some |= (err == DRSYM_SUCCESS);
+				#endif
 			}
 			else if (method == Method::EXPORTS)
 			{

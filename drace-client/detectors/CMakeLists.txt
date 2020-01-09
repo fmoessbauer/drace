@@ -9,7 +9,9 @@
 # the LICENSE file in the top-level directory.
 
 add_subdirectory("dummy")
-add_subdirectory("tsan")
+if(WIN32)
+    add_subdirectory("tsan")
+endif()
 add_subdirectory("traceBinary")
 if(TARGET "parallel-hashmap")
     add_subdirectory("fasttrack")

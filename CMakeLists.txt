@@ -36,10 +36,13 @@ set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# must be set to fixes issue in DR configure scripts on unix
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib" CACHE STRING "Library install location")
+
 # DRace runtime is currently only available on windows
-if(NOT WIN32)
-	set(DRACE_ENABLE_RUNTIME OFF CACHE BOOL "" FORCE)
-endif()
+#if(NOT WIN32)
+#	set(DRACE_ENABLE_RUNTIME OFF CACHE BOOL "" FORCE)
+#endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
 
@@ -95,8 +98,10 @@ add_subdirectory("standalone")
 if(DRACE_ENABLE_RUNTIME)
 	# DRACE
 	add_subdirectory("drace-client")
-	# Managed Stack Resolver
-	add_subdirectory("ManagedResolver")
+	if(WIN32)
+		# Managed Stack Resolver
+		add_subdirectory("ManagedResolver")
+	endif()
 endif()
 
 if(BUILD_TESTING)

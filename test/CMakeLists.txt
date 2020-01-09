@@ -52,15 +52,16 @@ if(DRACE_ENABLE_RUNTIME)
 	# are copied after the target is build
 	#gtest_discover_tests(${TEST_TARGET})
 	
-	# manually build C# tests as CMake support is not available in ninja
-	find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
-	if(CSC)
-	target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
-	else()
-	message(STATUS "csc not found: .NET Windows tests will be disabled")
+	if(WIN32)
+		# manually build C# tests as CMake support is not available in ninja
+		find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
+		if(CSC)
+		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
+		else()
+		message(STATUS "csc not found: .NET Windows tests will be disabled")
+		endif()
 	endif()
 endif()
-	
 
 ##### SETUP DRace UNIT TESTS #####
 add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})

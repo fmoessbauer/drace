@@ -180,7 +180,7 @@ namespace drace {
 
 		// Instrumentation
 		/// Inserts a jump to clean call if a flush is pending
-		void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
+		void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
 			reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
 
 		/// Instrument all memory accessing instructions

@@ -23,7 +23,7 @@
 
 namespace drace {
 
-	FILE * log_target = nullptr;
+	file_t log_target{0};
 
     namespace util {
         bool common_prefix(const std::string& a, const std::string& b)
