@@ -23,9 +23,6 @@
 #include "ipc/ringbuffer.hpp"
 #include "ipc/spinlock.h"
 
-#undef min
-#undef max
-
 namespace detector {
 	/// external detector which performes analysis in MSR
 	namespace extsan {

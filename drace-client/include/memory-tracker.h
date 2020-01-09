@@ -23,9 +23,6 @@
 #include <memory>
 #include <random>
 
-// DR somewere defines max()
-#undef max
-
 namespace drace {
 	/**
 	* \brief Covers application memory tracing.

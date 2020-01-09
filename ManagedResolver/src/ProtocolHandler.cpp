@@ -17,8 +17,6 @@
 #include <Windows.h>
 #include <DbgHelp.h>
 
-#undef min
-#undef max
 
 BOOL SymbolMatchCallback(
     PSYMBOL_INFO pSymInfo,

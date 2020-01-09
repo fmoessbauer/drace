@@ -10,9 +10,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-#undef min
-#undef max
-
 #include <array>
 
 #include "ringbuffer.hpp"

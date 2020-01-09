@@ -14,13 +14,15 @@
 #include <vector>
 #include <chrono>
 
+#ifdef WINDOWS
+#include <windows.h>
+using file_t = HANDLE;
+#else
+using file_t = int;
+#endif
+
 namespace drace {
 	/** Target to which all logs are written. Can be any file handle */
-	#ifdef WINDOWS
-	using file_t = FILE *;
-	#else
-	using file_t = int;
-	#endif
 	extern file_t log_target;
 
 	/// Utility functions used in drace modules

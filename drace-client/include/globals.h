@@ -191,7 +191,3 @@ namespace drace {
 	extern std::unique_ptr<::ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 }
 #endif
-
-// infected by windows.h and clashes with std::min/max
-#undef max
-#undef min

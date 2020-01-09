@@ -88,6 +88,11 @@ define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
 	BRIEF_DOCS "unit test suites"
 	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
 
+if(WIN32)
+	# avoid name collisions with std::min / std::max
+	add_compile_definitions("NOMINMAX")
+endif()
+
 # Common Files
 add_subdirectory("common")
 # external vendor targets
