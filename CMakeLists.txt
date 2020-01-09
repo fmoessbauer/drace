@@ -17,7 +17,7 @@ endif()
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
-set(DRACE_ENABLE_TESTING OFF CACHE BOOL "Build Tests")
+set(BUILD_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
@@ -35,6 +35,11 @@ set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# DRace runtime is currently only available on windows
+if(NOT WIN32)
+	set(DRACE_ENABLE_RUNTIME OFF CACHE BOOL "" FORCE)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
 
@@ -94,7 +99,7 @@ if(DRACE_ENABLE_RUNTIME)
 	add_subdirectory("ManagedResolver")
 endif()
 
-if(DRACE_ENABLE_TESTING)
+if(BUILD_TESTING)
 	message(STATUS "Build Testsuite")
 	include(CTest)
 	include(GoogleTest)

@@ -213,7 +213,7 @@ A sample VisualStudio `CMakeSettings.json` is given here:
   "inheritEnvironments": [ "msvc_x64_x64" ],
   "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
   "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-  "cmakeCommandArgs": "-DDRACE_XML_EXPORTER=1 -DDRACE_ENABLE_TESTING=1 -DDRACE_ENABLE_BENCH=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake" -DBOOST_ROOT=<PATH-TO-BOOST> -DCMAKE_PREFIX_PATH=<PATH-TO-QT>\\msvc2017_64\\lib\\cmake\\Qt5,
+  "cmakeCommandArgs": "-DBUILD_TESTING=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake" -DBOOST_ROOT=<PATH-TO-BOOST> -DCMAKE_PREFIX_PATH=<PATH-TO-QT>\\msvc2017_64\\lib\\cmake\\Qt5,
   "buildCommandArgs": "-v",
   "ctestCommandArgs": ""
 }

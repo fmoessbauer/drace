@@ -19,7 +19,7 @@ endif()
 add_dependencies("drace-common" check_git_repository)
 
 ################ configure test module ################
-if(DRACE_ENABLE_TESTING)
+if(BUILD_TESTING)
     set(TEST_SOURCES "test/spinlock")
     if(WIN32)
         list(APPEND TEST_SOURCES "test/ShmDriver")

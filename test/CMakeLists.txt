@@ -17,14 +17,13 @@ set(TEST_SYSTEM_TARGET "drace-system-tests")
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 
-find_package(Boost 1.65.0 REQUIRED COMPONENTS
-	filesystem)
-
 ##### SETUP DRace SYSTEM TESTS #####
 
 # get path to drrun and race and hard-code into test binary
 # for easier integration in CI
 if(DRACE_ENABLE_RUNTIME)
+	find_package(Boost 1.65.0 REQUIRED COMPONENTS filesystem)
+
 	get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
 	file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
 	message(STATUS "Test (integration): Use DynamoRIO in ${PATH_TO_DRRUN}")
@@ -70,6 +69,8 @@ target_include_directories(${TEST_UNIT_TARGET} PRIVATE "include")
 target_link_libraries(${TEST_UNIT_TARGET} PRIVATE gtest gtest_main "drace-common")
 if(UNIX)
   target_link_libraries(${TEST_UNIT_TARGET} PRIVATE "-ldl")
+  set_property(TARGET ${TEST_UNIT_TARGET}
+	  APPEND PROPERTY BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 # get and register all test suites
