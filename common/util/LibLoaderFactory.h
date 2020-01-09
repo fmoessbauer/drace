@@ -39,5 +39,14 @@ namespace util
             return ".so";
             #endif
         }
+
+        /// return the prefix of a shared module (e.g. 'lib')
+        static std::string getModulePrefix() {
+            #ifdef WIN32
+            return "";
+            #else
+            return "lib";
+            #endif
+        }
     };
 } // namespace util
