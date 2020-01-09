@@ -30,11 +30,15 @@
 /// max number of individual mutexes per thread
 constexpr int MUTEX_MAP_SIZE = 128;
 
+#ifdef WINDOWS
 /** Upper limit of process address space according to
 *   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
 *   TODO: does not seem to be correct, as all DLLs are loaded at 0x7FFx'xxxx'xxxx, i#11
 */
-constexpr uint64_t PROC_ADDR_LIMIT = 0x7FF'FFFFFFFF;
+constexpr uint64_t PROC_ADDR_LIMIT = 0x000007FF'FFFFFFFF;
+#else
+constexpr uint64_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
 
 // forward decls
 class Detector;
@@ -81,6 +85,12 @@ namespace drace {
 	* \warning Initialisation is done in the thread-creation event
 	*          in \see MemoryTracker.
     *          Prior thread-creation events must not use this data
+	*
+	* \todo This type is not standard_layout anymore due to the
+	*       aligned buffers. This should be fixed by using two
+	*       TLS slots, whereby only the first is POD and accessed
+	*       from inline assembly (instrumentation code).
+	*       When fixed, re-enable the static assertion.
 	*/
 	struct per_thread_t {
 		byte *        buf_ptr;
@@ -124,6 +134,9 @@ namespace drace {
         /// book-keeping of active mutexes
         hashtable_t mutex_book;
 	};
+
+	//static_assert(std::is_standard_layout<per_thread_t>::value,
+	//	"per_thread_t has to be POD to be safely accessed via inline assembly");
 
 	/** Thread local storage */
 	extern int      tls_idx;

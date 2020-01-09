@@ -17,13 +17,22 @@ endif()
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
+# prepare default values
+if(WIN32)
+	set(DEFAULT_DRACE_ENABLE_RUNTIME ON)
+	set(DEFAULT_DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe")
+else()
+	set(DEFAULT_DRACE_ENABLE_RUNTIME OFF)
+	set(DEFAULT_DRACE_CPPCHECK_BIN "cppcheck")
+endif()
+
 set(BUILD_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(BUILD_TOOLS ON CACHE BOOL "Build Tooling Support (e.g. Qt5 GUI)")
-set(DRACE_ENABLE_RUNTIME ON CACHE BOOL "Build Drace Runtime")
-set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
+set(DRACE_ENABLE_RUNTIME ${DEFAULT_DRACE_ENABLE_RUNTIME} CACHE BOOL "Build Drace Runtime")
+set(DRACE_CPPCHECK_BIN ${DEFAULT_DRACE_CPPCHECK_BIN} CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
 set(OPTIMIZE_FOR_NATIVE OFF CACHE BOOL "Build standalone components with -march=native")
@@ -37,12 +46,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # must be set to fixes issue in DR configure scripts on unix
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib" CACHE STRING "Library install location")
-
-# DRace runtime is currently only available on windows
-#if(NOT WIN32)
-#	set(DRACE_ENABLE_RUNTIME OFF CACHE BOOL "" FORCE)
-#endif()
+if(UNIX)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib" CACHE STRING "Library install location")
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
 

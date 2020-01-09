@@ -110,16 +110,18 @@ if(DRACE_ENABLE_RUNTIME)
 			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/drace_excl.ini")
 
 	# copy tsan dll
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:drace.detector.tsan>"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
+	if(TARGET "drace.detector.tsan")
+		add_custom_command(TARGET copy_files_testing POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				"$<TARGET_FILE:drace.detector.tsan>"
+				"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
-	# Copy tsan-common
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
+		# Copy tsan-common
+		add_custom_command(TARGET copy_files_testing POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
+				"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
+	endif()
 
 	add_custom_command(TARGET copy_files_testing POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different

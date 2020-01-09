@@ -118,11 +118,11 @@ public:
 		std::string dr_test(drrun + " -h > dr_avail.log");
 		int ret = std::system(dr_test.c_str());
 		if (ret) {
-			throw std::exception("drrun.exe not found");
+			throw std::runtime_error("drrun.exe not found");
 		}
 		std::ifstream f(drclient.c_str());
 		if (!f.good()) {
-			throw std::exception("DRace not found");
+			throw std::runtime_error("DRace not found");
 		}
 		f.close();
 	}

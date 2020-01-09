@@ -38,6 +38,9 @@ namespace drace {
 
 		std::string basename(const std::string & fullpath);
 
+        /// removes the filename extension
+		std::string without_extension(const std::string & path);
+
 		std::string to_iso_time(std::chrono::system_clock::time_point tp);
 
 		std::string instr_flags_to_str(uint8_t flags);

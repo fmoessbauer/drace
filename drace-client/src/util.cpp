@@ -56,6 +56,11 @@ namespace drace {
             return fullpath.substr(fullpath.find_last_of("/\\") + 1);
         }
 
+        std::string without_extension(const std::string & path) {
+            size_t pos = path.find_last_of(".");
+            return path.substr(0, pos);
+        }
+
         std::string to_iso_time(std::chrono::system_clock::time_point tp) {
             return date::format("%FT%TZ", date::floor<std::chrono::milliseconds>(tp));
         }

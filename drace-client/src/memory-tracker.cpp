@@ -146,7 +146,7 @@ namespace drace {
                 static_cast<Detector::tid_t>(data->tid),
                 &(data->detector_data));
             // arc between parent thread and this thread
-            detector->happens_after(data->detector_data, (void*)data->tid);
+            detector->happens_after(data->detector_data, (void*)(uintptr_t)(data->tid));
             clear_buffer();
             return;
 		}
