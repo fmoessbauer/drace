@@ -16,6 +16,7 @@
 #include <mutex>
 #include <iostream>
 #include <chrono>
+#include <cmath>
 
 // exclude races on IO without adding synchronisation,
 // annotate spinlock with happens before

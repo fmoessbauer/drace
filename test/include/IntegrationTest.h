@@ -28,6 +28,7 @@ private:
 	static constexpr int startup_retries = 5;
 	static std::string drrun;
 	static std::string drclient;
+	static std::string exe_suffix;
 	static bool verbose;
 
 	std::string logfile;
@@ -46,7 +47,7 @@ public:
 	void run(const std::string & client_args, const std::string & exe, int min, int max) {
 		std::stringstream command;
 		command << drrun << " -c " << drclient << " "
-				<< client_args << " -- " << "test/" << exe
+				<< client_args << " -- " << "test/" << exe << exe_suffix
 			    << " > " << logfile << " 2>&1";
 		if(verbose)
 			std::cout << ">> Issue Command: " << command.str() << std::endl;

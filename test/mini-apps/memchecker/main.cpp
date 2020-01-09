@@ -16,6 +16,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 
 #define DRACE_ANNOTATION
 #include "../../../drace-client/include/annotations/drace_annotation.h"

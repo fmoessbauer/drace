@@ -24,11 +24,17 @@ set(Boost_USE_MULTITHREADED ON)
 if(DRACE_ENABLE_RUNTIME)
 	find_package(Boost 1.65.0 REQUIRED COMPONENTS filesystem)
 
-	get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
+	get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 	file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
 	message(STATUS "Test (integration): Use DynamoRIO in ${PATH_TO_DRRUN}")
 
-	get_filename_component(DRACE_NORMALIZED_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client.dll" ABSOLUTE)
+	# we cannot use generator expressions here, hence hardcode
+	if(WIN32)
+		set(DRACE_REL_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client")
+	else()
+		set(DRACE_REL_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libdrace-client.so")
+	endif()
+	get_filename_component(DRACE_NORMALIZED_PATH ${DRACE_REL_PATH} ABSOLUTE)
 	file(TO_NATIVE_PATH ${DRACE_NORMALIZED_PATH} PATH_TO_DRACE)
 	message(STATUS "Test (integration): Use DRace in     ${PATH_TO_DRACE}")
 
