@@ -44,10 +44,11 @@ public:
 		std::remove(logfile.c_str());
 	}
 
-	void run(const std::string & client_args, const std::string & exe, int min, int max) {
+	void run(const std::string & client_args, const std::string & exe, int min, int max, const std::string & app_args = "") {
 		std::stringstream command;
 		command << drrun << " -c " << drclient << " "
 				<< client_args << " -- " << "test/" << exe << exe_suffix
+				<< " " << app_args
 			    << " > " << logfile << " 2>&1";
 		if(verbose)
 			std::cout << ">> Issue Command: " << command.str() << std::endl;

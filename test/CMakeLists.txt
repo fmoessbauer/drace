@@ -30,7 +30,7 @@ if(DRACE_ENABLE_RUNTIME)
 
 	# we cannot use generator expressions here, hence hardcode
 	if(WIN32)
-		set(DRACE_REL_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client")
+		set(DRACE_REL_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client.dll")
 	else()
 		set(DRACE_REL_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libdrace-client.so")
 	endif()
@@ -51,20 +51,18 @@ if(DRACE_ENABLE_RUNTIME)
 	target_include_directories(${TEST_SYSTEM_TARGET} PRIVATE "include")
 
 	if(DRACE_XML_EXPORTER)
-		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
+		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE DRACE_XML_EXPORTER)
 		target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE "tinyxml2")
 	endif()
-	# This introduces a circular dependency as shared libraries
-	# are copied after the target is build
-	#gtest_discover_tests(${TEST_TARGET})
 	
 	if(WIN32)
+		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE WINDOWS)
 		# manually build C# tests as CMake support is not available in ninja
 		find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
 		if(CSC)
-		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
+			target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE DRACE_TESTING_DOTNET)
 		else()
-		message(STATUS "csc not found: .NET Windows tests will be disabled")
+		message(WARNING "csc not found: .NET Windows tests will be disabled")
 		endif()
 	endif()
 endif()

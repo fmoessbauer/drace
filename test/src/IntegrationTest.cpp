@@ -88,7 +88,7 @@ TEST_P(DR, ExcludeRaces) {
 TEST_P(DR, DotnetClrRacy) {
     bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr none", 1, 30);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 1, 30, "none");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
@@ -98,7 +98,7 @@ TEST_P(DR, DotnetClrRacy) {
 TEST_P(DR, DotnetClrMonitor) {
     bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr monitor", 0, 0);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 0, 0, "monitor");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
@@ -108,7 +108,7 @@ TEST_P(DR, DotnetClrMonitor) {
 TEST_P(DR, DotnetClrMutex) {
     bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr mutex", 0, 0);
+    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 0, 0, "mutex");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
