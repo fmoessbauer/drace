@@ -31,10 +31,11 @@
 constexpr int MUTEX_MAP_SIZE = 128;
 
 /** Upper limit of process address space according to
-*   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
-*   TODO: does not seem to be correct, as all DLLs are loaded at 0x7FFx'xxxx'xxxx, i#11
+*   https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-limits-for-windows-and-windows-server-releases
+*   This also holds for Linux x64
+*   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
 */
-constexpr uint64_t PROC_ADDR_LIMIT = 0x7FF'FFFFFFFF;
+constexpr uint64_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
 
 // forward decls
 class Detector;
