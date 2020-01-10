@@ -56,6 +56,7 @@ namespace drace {
 		for (const auto & name : syms) {
 			LOG_NOTICE(-1, "Search for %s", name.c_str());
 			if (method == Method::EXTERNAL_MPCR) {
+                #ifdef WINDOWS
 				std::string symname = (modname + '!') + name;
 				auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
                 wrapped_some |= sr.size > 0;
@@ -66,6 +67,7 @@ namespace drace {
 						sr.adresses[i] - (size_t)mod->start,
 						(void*)(&info));
 				}
+                #endif
 			}
 			else if (method == Method::DBGSYMS)
 			{

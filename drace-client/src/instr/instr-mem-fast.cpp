@@ -18,8 +18,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist, ins
 	opnd_t ref, bool write)
 {
     // The instrumentation relies on exact type sizes
-    static_assert(sizeof(mem_ref_t::addr) == 8, "type size not correct");
-    static_assert(sizeof(mem_ref_t::pc) == 8, "type size not correct");
+    static_assert(sizeof(mem_ref_t::addr) == sizeof(uintptr_t), "type size not correct");
+    static_assert(sizeof(mem_ref_t::pc) == sizeof(uintptr_t), "type size not correct");
     static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
     static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
     static_assert(sizeof(per_thread_t::enabled) == 1, "type size not correct");

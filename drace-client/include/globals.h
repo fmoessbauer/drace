@@ -35,9 +35,13 @@ constexpr int MUTEX_MAP_SIZE = 128;
 *   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
 *   TODO: does not seem to be correct, as all DLLs are loaded at 0x7FFx'xxxx'xxxx, i#11
 */
-constexpr uint64_t PROC_ADDR_LIMIT = 0x000007FF'FFFFFFFF;
+constexpr uintptr_t PROC_ADDR_LIMIT = 0x000007FF'FFFFFFFF;
 #else
-constexpr uint64_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#if COMPILE_X86
+constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
+#else
+constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
 #endif
 
 // forward decls
@@ -113,7 +117,7 @@ namespace drace {
 		/// Shadow Stack
 		AlignedStack<void*, 32> stack;
 		/// track state of detector (count nr of disable / enable calls)
-		uint64        event_cnt{ 0 };
+		uintptr_t event_cnt{ 0 };
 
 		/// begin of this threads stack range
 		uintptr_t appstack_beg{ 0x0 };

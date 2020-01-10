@@ -55,10 +55,10 @@ namespace drace {
         bool                     _delayed_lookup{ false };
         std::shared_ptr<symbol::Symbols> _syms;
         tp_t                     _start_time;
-        std::set<uint64_t>       _racy_stacks;
+        std::set<uintptr_t>       _racy_stacks;
 
         std::vector<std::shared_ptr<sink::Sink>> _sinks;
-        
+
         std::shared_ptr<RaceFilter> _filter;
 
     public:
@@ -70,7 +70,7 @@ namespace drace {
             _syms(symbols),
             _start_time(clock_t::now()),
             _filter(filter)
-            
+
         {
             _races.reserve(1);
         }
@@ -135,7 +135,7 @@ namespace drace {
                 if(_filter->check_suppress(*r)){
                     _race_count -= 1;
                     r = _races.erase(r); //erase returns iterator to element after the erased one
-                } 
+                }
                 else{
                     r++;
                 }
@@ -189,7 +189,7 @@ namespace drace {
             if (params.suppression_level == 0)
                 return false;
 
-            uint64_t hash = r->first.stack_trace[0] ^ (r->second.stack_trace[0] << 1);
+            uintptr_t hash = r->first.stack_trace[0] ^ (r->second.stack_trace[0] << 1);
             if (_racy_stacks.count(hash) == 0) {
                 // suppress this race
                 _racy_stacks.insert(hash);
@@ -244,7 +244,7 @@ namespace drace {
         race_collector->add_race(r);
         // for benchmarking and testing
         if (params.break_on_race) {
-            
+
             void * drcontext = dr_get_current_drcontext();
             per_thread_t * data = (per_thread_t*) drmgr_get_tls_field(drcontext, tls_idx);
             data->stats->print_summary(drace::log_target);

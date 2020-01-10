@@ -170,7 +170,7 @@ namespace drace {
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 
-            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
             if (cnt > 1) {
                 hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
             }
@@ -198,7 +198,7 @@ namespace drace {
 			void* mutex = drwrap_get_arg(wrapctx, 0);
 			//detector::happens_before(data->tid, mutex);
 
-            uint64_t cnt = (uint64_t)hashtable_lookup(&data->mutex_book, mutex);
+            uintptr_t cnt = (uintptr_t)hashtable_lookup(&data->mutex_book, mutex);
 			if (cnt == 0) {
 				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 				// mutex not in book
@@ -291,7 +291,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "waitForSingleObject: %p (Success)", mutex);
 
             // add or increment counter in table
-            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
             if (cnt > 1) {
                 hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
             }
@@ -332,7 +332,7 @@ namespace drace {
 				for (DWORD i = 0; i < info->ncount; ++i) {
 					HANDLE mutex = info->handles[i];
 
-                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
                     if (cnt > 1) {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }
@@ -346,7 +346,7 @@ namespace drace {
 					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 
-                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
                     if (cnt > 1) {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }

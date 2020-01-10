@@ -72,7 +72,7 @@ namespace drace {
 
 		template<typename InputIt>
 		void wrap_dotnet(InputIt a, InputIt b) {
-			std::for_each(a, b, [](uint64_t addr) {
+			std::for_each(a, b, [](uintptr_t addr) {
 				internal::wrap_dotnet_helper(addr);
 			});
 		}

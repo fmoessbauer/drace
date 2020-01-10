@@ -125,12 +125,17 @@ namespace drace {
 
 		/// Sets the detector state based on the sampling condition
 		inline void switch_sampling(per_thread_t * data) {
+            #ifdef COMPILE_X86
+            static constexpr int flag_bit = 31;
+            #else
+            static constexpr int flag_bit = 63;
+            #endif
 			if (!sample_ref(data)) {
 				data->enabled = false;
-				data->event_cnt |= ((uint64_t)1 << 63);
+				data->event_cnt |= ((uintptr_t)1 << flag_bit);
 			}
 			else {
-				data->event_cnt &= ~((uint64_t)1 << 63);
+				data->event_cnt &= ~((uintptr_t)1 << flag_bit);
 				if (!data->event_cnt)
 					data->enabled = true;
 			}

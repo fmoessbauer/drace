@@ -91,7 +91,7 @@ namespace drace {
 					const auto & f = stack[ssize - 1 - i];
 					p.OpenElement("frame");
                     // format program counter
-                    dr_snprintf(strbuf, sizeof(strbuf), "%#018llx", (uint64_t)f.pc);
+                    dr_snprintf(strbuf, sizeof(strbuf), "%#018llx", (uintptr_t)f.pc);
 					p.OpenElement("ip"); p.PushText(strbuf); p.CloseElement();
 					p.OpenElement("obj"); p.PushText(f.mod_name.c_str()); p.CloseElement();
 					if (!f.sym_name.empty()) {
@@ -109,7 +109,7 @@ namespace drace {
 				}
 				p.CloseElement();
 			}
-            
+
             void print_race(const race::DecoratedRace & race) {
                 const race::ResolvedAccess & r = race.first;
                 const race::ResolvedAccess & r2 = race.second;

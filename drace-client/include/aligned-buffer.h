@@ -90,7 +90,7 @@ namespace drace {
                     std::align(alignment, capacity, mem_align, space_size) != nullptr,
                     "could not allocate aligned memory");
                 data = (T*)mem_align;
-				DR_ASSERT(((uint64_t)data % alignment) == 0);
+				DR_ASSERT(((uintptr_t)data % alignment) == 0);
 			}
 		}
 	};
