@@ -9,17 +9,17 @@
 
 class DetectorOutput{
 
-    std::unordered_map<uint32_t, void**> tls; 
+    std::unordered_map<uint32_t, void**> tls;
 
     void** allocate_memory(uint32_t tid){
         void** mem = new void*;
-        
+
         tls.insert({tid, mem});
         return mem;
     }
 
     void fork(uint32_t tid, uint32_t parent_tid){
-        
+
         void ** mem = allocate_memory(tid);
         _det->fork(parent_tid, tid, mem);
     }
@@ -38,10 +38,10 @@ public:
             throw std::runtime_error("could not bind detector");
         }
         _det =  std::unique_ptr<Detector>(create_detector());
-        
+
         const char * _argv = "";
 		_det->init(1, &_argv, callback);
-        
+
         std::cout << "init_done\n";
     }
 
@@ -54,7 +54,7 @@ public:
     }
 
     void makeOutput(ipc::event::BufferEntry * buf){//std::shared_ptr<ipc::event::BufferEntry> buf){
-                
+
         switch(buf->type){
             case ipc::event::Type::FUNCENTER:
                 _det->func_enter(
@@ -130,7 +130,7 @@ public:
                     buf->payload.forkjoin.parent,
                     buf->payload.forkjoin.child
                 );
-                
+
                 delete tls[buf->payload.forkjoin.child];  //delete 'local' tls
                 tls.erase(buf->payload.forkjoin.child);
                 break;
@@ -154,7 +154,7 @@ public:
     }
 
     static void callback(const Detector::Race* race){
-        static uint64_t s1=0, s2=0;
+        static uintptr_t s1=0, s2=0;
         if(s1 != race->first.stack_trace[0] && s2 !=race->second.stack_trace[0] ){
             static int i = 0;
             s1 = race->first.stack_trace[0];

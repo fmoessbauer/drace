@@ -32,7 +32,7 @@ namespace drace {
 	public:
 		AlignedBuffer() = default;
 		AlignedBuffer(const self_t & other) = delete;
-		AlignedBuffer(self_t && other) = default;
+		explicit AlignedBuffer(self_t && other) = default;
 
 		self_t & operator= (const self_t & other) = delete;
 		self_t & operator= (self_t && other) = default;
@@ -90,7 +90,7 @@ namespace drace {
                     std::align(alignment, capacity, mem_align, space_size) != nullptr,
                     "could not allocate aligned memory");
                 data = (T*)mem_align;
-				DR_ASSERT(((uint64_t)data % alignment) == 0);
+				DR_ASSERT(((uintptr_t)data % alignment) == 0);
 			}
 		}
 	};

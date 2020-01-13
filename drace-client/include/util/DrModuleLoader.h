@@ -18,9 +18,9 @@ namespace drace {
         /// LibraryLoader specialization to be used inside a DR client
         class DrModuleLoader : public ::util::LibraryLoader {
         public:
-            DrModuleLoader() = default;
+            explicit DrModuleLoader() = default;
 
-            DrModuleLoader(const char * filename)
+            explicit DrModuleLoader(const char * filename)
             {
                 load(filename);
             }
@@ -30,7 +30,7 @@ namespace drace {
                 unload();
             }
 
-            bool load(const char * filename) {
+            bool load(const char * filename) override {
                 if (_lib == nullptr)
                 {
                     _lib = dr_load_aux_library(filename, NULL, NULL);
@@ -39,7 +39,7 @@ namespace drace {
                 return false;
             }
 
-            bool unload() {
+            bool unload() override {
                 if (_lib != nullptr)
                 {
                     dr_unload_aux_library(_lib);
@@ -49,11 +49,11 @@ namespace drace {
                 return false;
             }
 
-            bool loaded() {
+            bool loaded() override {
                 return _lib != nullptr;
             }
 
-            ::util::ProcedurePtr operator[](const char * proc_name) const {
+            ::util::ProcedurePtr operator[](const char * proc_name) const override {
                 return ::util::ProcedurePtr(
                     reinterpret_cast<void*>(dr_lookup_aux_library_routine(_lib, proc_name)));
             }

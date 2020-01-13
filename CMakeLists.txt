@@ -94,9 +94,14 @@ define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
 	BRIEF_DOCS "unit test suites"
 	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
 
+# setup global defines
 if(WIN32)
 	# avoid name collisions with std::min / std::max
 	add_compile_definitions("NOMINMAX")
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(STATUS "Building for x86 Plattform")
+    add_compile_definitions("COMPILE_X86")
 endif()
 
 # Common Files
@@ -141,7 +146,7 @@ if(Doxygen_FOUND)
 	set(DOXYGEN_GENERATE_HTML YES)
 	set(DOXYGEN_GENERATE_MAN NO)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
-	set(DOXYGEN_EXCLUDE_PATTERNS 
+	set(DOXYGEN_EXCLUDE_PATTERNS
 		"*DynamoRIO*"
 		"build"
 		"install"
@@ -156,7 +161,7 @@ if(Doxygen_FOUND)
 		"${PROJECT_SOURCE_DIR}/tools/ReportConverter/ReportConverterUnitTest.py"
 		"${PROJECT_SOURCE_DIR}/node_modules/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
-	
+
 	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
 	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)
 

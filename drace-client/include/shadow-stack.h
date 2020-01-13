@@ -82,7 +82,7 @@ namespace drace {
 
 			// Sampling: Possibly disable detector during this function
 			memory_tracker->switch_sampling(data);
-			
+
 			// if lossy_flush, disable detector instead of changeing the instructions
 			if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
 				data->enabled = false;
@@ -103,7 +103,7 @@ namespace drace {
 
 			ptrdiff_t diff;
 			// leave this scope / call
-			while ((diff = (byte*)target_addr - (byte*)pop(data)), !(0 <= diff && diff <= 8))
+			while ((diff = (byte*)target_addr - (byte*)pop(data)), !(0 <= diff && diff <= sizeof(void*)))
 			{
 				// skipping a frame
 				if (stack->entries == 0) return;

@@ -52,7 +52,7 @@ TEST_P(DetectorTest, WR2_Race) {
     detector->read(tls14, (void*)0x0011, (void*)0x00110000, 8);
     detector->release(tls14, (void*)0x01000000, true);
     EXPECT_EQ(num_races, 0);
-    
+
     detector->write(tls15, (void*)0x0011, (void*)0x00110000, 8);
     EXPECT_EQ(num_races, 1);
 }
@@ -118,11 +118,11 @@ TEST_P(DetectorTest, VarLength){
     detector->fork(1, 22, &tls22);
     detector->fork(1, 23, &tls23);
 
-    
+
     detector->write(tls22, (void*)0x0010, (void*)0x14000000, 8);
     detector->write(tls23, (void*)0x0011, (void*)0x14000002, 8);
-    
-    /// \todo set test 'online' when a working handling of variable lengths is implemented 
+
+    /// \todo set test 'online' when a working handling of variable lengths is implemented
     //EXPECT_EQ(num_races, 1);
 }
 
@@ -300,11 +300,11 @@ TEST_P(DetectorTest, RaceInspection) {
     ASSERT_EQ(a1.stack_size, 3);
     ASSERT_EQ(a2.stack_size, 2);
 
-    EXPECT_EQ(a1.stack_trace[0], (uint64_t)&callstack_funA);
-    EXPECT_EQ(a1.stack_trace[1], (uint64_t)&callstack_funB);
+    EXPECT_EQ(a1.stack_trace[0], (uintptr_t)&callstack_funA);
+    EXPECT_EQ(a1.stack_trace[1], (uintptr_t)&callstack_funB);
     EXPECT_EQ(a1.stack_trace[2], 0x0090ull);
 
-    EXPECT_EQ(a2.stack_trace[0], (uint64_t)&callstack_funB);
+    EXPECT_EQ(a2.stack_trace[0], (uintptr_t)&callstack_funB);
     EXPECT_EQ(a2.stack_trace[1], 0x0091ull);
 }
 
@@ -319,7 +319,7 @@ TEST_P(DetectorTest, Recursive_Lock){
     detector->acquire(tls100, (void*)0x01000000, 2, true);
 
 	detector->write(tls100, (void*)0x0010, (void*)0x00100002, 8);
-    
+
     detector->release(tls100, (void*)0x01000000, true);
     detector->release(tls100, (void*)0x01000000, true);
 
@@ -349,7 +349,7 @@ TEST_P(DetectorTest, Reader_Writer_Lock){
     detector->acquire(tls110, (void*)0x01000000, 1, true);
 	detector->write(tls110, (void*)0x0010, (void*)0x00100003, 8);
     detector->release(tls110, (void*)0x01000000, true);
-    
+
 
 	EXPECT_EQ(num_races, 0);
 }
@@ -374,7 +374,7 @@ TEST_F(DetectorTest, ShadowMemory) {
     detector->fork(1, 100, &tls100);
 
     // DLLs are loaded at 07ff8 xxxx xxxx most times
-    uint64_t shadow_beg = 0x7ff7'0000'0000ull;
+    uintptr_t shadow_beg = 0x7ff7'0000'0000ull;
 
     detector->map_shadow((void*)(shadow_beg), (size_t)(0xFFFF'FFFF - 4096));
     detector->write(tls100, (void*)0x0100, (void*)(shadow_beg + 0xF), 8);

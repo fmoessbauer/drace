@@ -30,13 +30,13 @@ namespace drace {
 		public:
 			HRText() = delete;
 			HRText(const self_t &) = delete;
-			HRText(self_t &&) = default;
+			explicit HRText(self_t &&) = default;
 
 			explicit HRText(std::shared_ptr<DrFile> target)
 				: _target(target)
 			{ }
 
-			virtual void process_single_race(const race::DecoratedRace & race) {
+			virtual void process_single_race(const race::DecoratedRace & race) override {
                 file_t handle = _target->get();
                 dr_fprintf(handle, "----- DATA Race at %8lld ms runtime -----\n", race.elapsed.count());
 
@@ -67,7 +67,7 @@ namespace drace {
                 dr_flush_file(handle);
             }
 
-			virtual void process_all(const std::vector<race::DecoratedRace> & races) {
+			virtual void process_all(const std::vector<race::DecoratedRace> & races) override {
 				for (auto & r : races) {
 					process_single_race(r);
 				}

@@ -49,11 +49,11 @@ int main() {
 
 	ta.join();
 	tb.join();
-	
+
 	//mx.lock();
 	std::cout << "EXPECTED: " << 0 << ", "
 		<< "ACTUAL: " << *mem << ", "
-		<< "LOCATION: " << std::hex << (uint64_t) (mem) << std::endl;
+		<< "LOCATION: " << std::hex << (uintptr_t) (mem) << std::endl;
 	//mx.unlock();
 #ifdef USE_HEAP
 	delete[] mem;

@@ -35,7 +35,11 @@ constexpr int MUTEX_MAP_SIZE = 128;
 *   This also holds for Linux x64
 *   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
 */
-constexpr uint64_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#if COMPILE_X86
+constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
+#else
+constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
 
 // forward decls
 class Detector;
@@ -110,7 +114,7 @@ namespace drace {
 		/// Shadow Stack
 		AlignedStack<void*, 32> stack;
 		/// track state of detector (count nr of disable / enable calls)
-		uint64        event_cnt{ 0 };
+		uintptr_t event_cnt{ 0 };
 
 		/// begin of this threads stack range
 		uintptr_t appstack_beg{ 0x0 };

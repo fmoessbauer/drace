@@ -34,7 +34,7 @@ namespace drace {
 		Config & operator=(const Config&) = delete;
 		Config & operator=(Config&&) = default;
 
-        explicit Config(std::string filename);
+        explicit Config(const std::string & filename);
 
         bool loadfile(
             const std::string & filename,

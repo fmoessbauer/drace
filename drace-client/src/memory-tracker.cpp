@@ -51,6 +51,9 @@ namespace drace {
 			, "atomic uint64 size differs from uint64 size");
 #endif
 
+		DR_ASSERT_MSG(instrum_count.is_lock_free(),
+			"type of instrum_count is not lock-free on this platform");
+
 		DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
 		page_size = dr_page_size();
 
@@ -85,14 +88,14 @@ namespace drace {
 			DR_ASSERT(false);
 	}
 
-	inline void flush_region(void* drcontext, uint64_t pc) {
+	inline void flush_region(void* drcontext, uintptr_t pc) {
 		// Flush this area from the code cache
 		dr_delay_flush_region((app_pc)(pc << MemoryTracker::HIST_PC_RES), 1 << MemoryTracker::HIST_PC_RES, 0, NULL);
 		LOG_NOTICE(dr_get_thread_id(drcontext), "Flushed %p", pc << MemoryTracker::HIST_PC_RES);
 	}
 
-	inline std::vector<uint64_t> get_pcs_from_hist(const Statistics::hist_t & hist) {
-		std::vector<uint64_t> result;
+	inline std::vector<uintptr_t> get_pcs_from_hist(const Statistics::hist_t & hist) {
+		std::vector<uintptr_t> result;
 		result.reserve(hist.size());
 
 		std::transform(hist.begin(), hist.end(), std::back_inserter(result),
@@ -112,7 +115,7 @@ namespace drace {
 			const auto & pc_new = get_pcs_from_hist(new_freq);
 			const auto & pc_old = data->stats->freq_pcs;
 
-			std::vector<uint64_t> difference;
+			std::vector<uintptr_t> difference;
 			difference.reserve(pc_new.size() + pc_old.size());
 
 			// get difference between both histograms
@@ -129,7 +132,7 @@ namespace drace {
 
 	bool MemoryTracker::pc_in_freq(per_thread_t * data, void* bb) {
 		const auto & freq_pcs = data->stats->freq_pcs;
-		return std::binary_search(freq_pcs.begin(), freq_pcs.end(), ((uint64_t)bb >> MemoryTracker::HIST_PC_RES));
+		return std::binary_search(freq_pcs.begin(), freq_pcs.end(), ((uintptr_t)bb >> MemoryTracker::HIST_PC_RES));
 	}
 
 	void MemoryTracker::analyze_access(per_thread_t * data) {
@@ -159,16 +162,16 @@ namespace drace {
 		}
 
 		if (data->enabled) {
-			mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.data;
-			uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+			mem_ref_t * mem_ref = reinterpret_cast<mem_ref_t *>(data->mem_buf.data);
+			uintptr_t num_refs = static_cast<uintptr_t>(reinterpret_cast<mem_ref_t*>(data->buf_ptr) - mem_ref);
 
 			if (num_refs > 0) {
 				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
 				DR_ASSERT(data->detector_data != nullptr);
-				
+
 				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 				if (params.lossy) {
-					data->stats->pc_hits.processItem((uint64_t)mem_ref->pc >> HIST_PC_RES);
+					data->stats->pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
 					if ((data->stats->flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
 						update_cache(data);
 					}
@@ -176,23 +179,27 @@ namespace drace {
 
                 for (; mem_ref < (mem_ref_t *)data->buf_ptr; ++mem_ref) {
 					if (params.excl_stack &&
-						((uintptr_t)mem_ref->addr > data->appstack_beg) && 
-						((uintptr_t)mem_ref->addr < data->appstack_end))
+						(mem_ref->addr > data->appstack_beg) &&
+						(mem_ref->addr < data->appstack_end))
 					{
 						// this reference points into the stack range, skip
 						continue;
 					}
-					if ((uint64_t)mem_ref->addr > PROC_ADDR_LIMIT) {
+					if (mem_ref->addr > PROC_ADDR_LIMIT) {
 						// outside process address space
 						continue;
 					}
 
 					if (mem_ref->write) {
-						detector->write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->write(data->detector_data,
+							reinterpret_cast<void*>(mem_ref->pc),
+							reinterpret_cast<void*>(mem_ref->addr), mem_ref->size);
 						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					else {
-						detector->read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->read(data->detector_data,
+							reinterpret_cast<void*>(mem_ref->pc),
+							reinterpret_cast<void*>(mem_ref->addr), mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++(data->stats->proc_refs);
@@ -218,7 +225,7 @@ namespace drace {
 		data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
 		data->buf_ptr = data->mem_buf.data;
 		/* set buf_end to be negative of address of buffer end for the lea later */
-		data->buf_end = -(ptr_int_t)(data->mem_buf.data + MEM_BUF_SIZE);
+		data->buf_end = (-1) * reinterpret_cast<intptr_t>(data->mem_buf.data + MEM_BUF_SIZE);
 
 		data->tid = dr_get_thread_id(drcontext);
 		// Init ShadowStack with max_size + 1 Element for PC of access
@@ -235,7 +242,7 @@ namespace drace {
 			disable_scope(data);
 		}
 
-        data->stats = (Statistics*) dr_thread_alloc(drcontext, sizeof(Statistics));
+        data->stats = reinterpret_cast<Statistics*>(dr_thread_alloc(drcontext, sizeof(Statistics)));
         new (data->stats) Statistics(data->tid);
 
 #ifdef WINDOWS
@@ -317,7 +324,7 @@ namespace drace {
         INSTR_FLAGS instrument_bb;
 		app_pc bb_addr = dr_fragment_app_pc(tag);
 
-		// Lookup module from cache, hit is very likely as adiacent bb's 
+		// Lookup module from cache, hit is very likely as adiacent bb's
 		// are mostly in the same module
 		const module::Metadata * modptr = mc.lookup(bb_addr);
 		if (nullptr != modptr) {
@@ -360,7 +367,7 @@ namespace drace {
 			return DR_EMIT_DEFAULT;
 
 		using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
-		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uint64_t>(user_data));
+		auto instrument_instr = (INSTR_FLAGS)(util::unsafe_ptr_cast<uintptr_t>(user_data));
 		// we treat all atomic accesses as reads
 		bool instr_is_atomic{ false };
 
@@ -406,7 +413,7 @@ namespace drace {
 
 		// Sampling: Only instrument some instructions
 		// This is a racy increment, but we do not rely on exact numbers
-		auto cnt = ++instrum_count;
+		auto cnt = instrum_count.fetch_add(1, std::memory_order_relaxed) + 1;
 		if (params.instr_rate == 0 || cnt % params.instr_rate != 0) {
 			return DR_EMIT_DEFAULT;
 		}
@@ -445,7 +452,7 @@ namespace drace {
 		void *drcontext = dr_get_current_drcontext();
 		per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
 		mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data;
-		uint64_t num_refs = (uint64_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+		uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 		data->stats->proc_refs += num_refs;
 		data->stats->flushes++;
