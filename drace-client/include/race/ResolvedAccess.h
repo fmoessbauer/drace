@@ -24,7 +24,7 @@ namespace drace {
         public:
             std::vector<symbol::SymbolLocation> resolved_stack;
 
-            ResolvedAccess(const Detector::AccessEntry & e)
+            explicit ResolvedAccess(const Detector::AccessEntry & e)
                 : Detector::AccessEntry(e)
             {
                 std::copy(e.stack_trace, e.stack_trace + e.stack_size, this->stack_trace);

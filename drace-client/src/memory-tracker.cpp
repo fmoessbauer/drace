@@ -159,8 +159,8 @@ namespace drace {
 		}
 
 		if (data->enabled) {
-			mem_ref_t * mem_ref = (mem_ref_t *)data->mem_buf.data;
-			uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+			mem_ref_t * mem_ref = reinterpret_cast<mem_ref_t *>(data->mem_buf.data);
+			uintptr_t num_refs = static_cast<uintptr_t>(reinterpret_cast<mem_ref_t*>(data->buf_ptr) - mem_ref);
 
 			if (num_refs > 0) {
 				//dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid, data->no_flush.load(std::memory_order_relaxed), num_refs);
@@ -168,7 +168,7 @@ namespace drace {
 
 				// Lossy count first mem-ref (all are adiacent as after each call is flushed)
 				if (params.lossy) {
-					data->stats->pc_hits.processItem((uintptr_t)mem_ref->pc >> HIST_PC_RES);
+					data->stats->pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
 					if ((data->stats->flushes & (CC_UPDATE_PERIOD - 1)) == (CC_UPDATE_PERIOD - 1)) {
 						update_cache(data);
 					}
@@ -176,23 +176,27 @@ namespace drace {
 
                 for (; mem_ref < (mem_ref_t *)data->buf_ptr; ++mem_ref) {
 					if (params.excl_stack &&
-						((uintptr_t)mem_ref->addr > data->appstack_beg) &&
-						((uintptr_t)mem_ref->addr < data->appstack_end))
+						(mem_ref->addr > data->appstack_beg) &&
+						(mem_ref->addr < data->appstack_end))
 					{
 						// this reference points into the stack range, skip
 						continue;
 					}
-					if ((uintptr_t)mem_ref->addr > PROC_ADDR_LIMIT) {
+					if (mem_ref->addr > PROC_ADDR_LIMIT) {
 						// outside process address space
 						continue;
 					}
 
 					if (mem_ref->write) {
-						detector->write(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->write(data->detector_data,
+							reinterpret_cast<void*>(mem_ref->pc),
+							reinterpret_cast<void*>(mem_ref->addr), mem_ref->size);
 						//printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					else {
-						detector->read(data->detector_data, mem_ref->pc, mem_ref->addr, mem_ref->size);
+						detector->read(data->detector_data,
+							reinterpret_cast<void*>(mem_ref->pc),
+							reinterpret_cast<void*>(mem_ref->addr), mem_ref->size);
 						//printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr, mem_ref->pc);
 					}
 					++(data->stats->proc_refs);
@@ -218,7 +222,7 @@ namespace drace {
 		data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
 		data->buf_ptr = data->mem_buf.data;
 		/* set buf_end to be negative of address of buffer end for the lea later */
-		data->buf_end = -(ptr_int_t)(data->mem_buf.data + MEM_BUF_SIZE);
+		data->buf_end = (-1) * reinterpret_cast<intptr_t>(data->mem_buf.data + MEM_BUF_SIZE);
 
 		data->tid = dr_get_thread_id(drcontext);
 		// Init ShadowStack with max_size + 1 Element for PC of access
@@ -235,7 +239,7 @@ namespace drace {
 			disable_scope(data);
 		}
 
-        data->stats = (Statistics*) dr_thread_alloc(drcontext, sizeof(Statistics));
+        data->stats = reinterpret_cast<Statistics*>(dr_thread_alloc(drcontext, sizeof(Statistics)));
         new (data->stats) Statistics(data->tid);
 
 #ifdef WINDOWS

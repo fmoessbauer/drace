@@ -34,8 +34,9 @@ private:
 	std::string logfile;
 
 public:
-	Integration() {
-		logfile = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+	Integration()
+		: logfile(::testing::UnitTest::GetInstance()->current_test_info()->name())
+	{
 		std::replace(logfile.begin(), logfile.end(), '/', '_');
 		logfile += ".log";
 	}
@@ -104,7 +105,7 @@ public:
 	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
 		for (int i = 1; i < t_argc; ++i) {
-			if (strncmp(t_argv[i], "--dr", 8) == 0 && i<(t_argc-1)) {
+			if (i<(t_argc-1) && strncmp(t_argv[i], "--dr", 8) == 0) {
 				drrun = t_argv[i + 1];
 			}
 			else if (strncmp(t_argv[i], "-v", 4) == 0) {

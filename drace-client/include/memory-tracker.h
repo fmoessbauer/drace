@@ -36,10 +36,10 @@ namespace drace {
 
 		/// Single memory reference
 		struct mem_ref_t {
-			void    *addr;
-            app_pc   pc;
-			uint32_t size;
-            bool     write;
+			uintptr_t addr;
+            uintptr_t pc;
+			uint32_t  size;
+            bool      write;
 		};
 
 		/// Maximum number of references between clean calls
@@ -71,7 +71,7 @@ namespace drace {
 		/* XCX registers */
 		drvector_t allowed_xcx;
 
-		module::Cache mc;
+		module::Cache mc{};
 
 		/// fast random numbers for sampling
 		std::mt19937 _prng;

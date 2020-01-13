@@ -32,7 +32,7 @@ namespace drace {
 	public:
 		AlignedBuffer() = default;
 		AlignedBuffer(const self_t & other) = delete;
-		AlignedBuffer(self_t && other) = default;
+		explicit AlignedBuffer(self_t && other) = default;
 
 		self_t & operator= (const self_t & other) = delete;
 		self_t & operator= (self_t && other) = default;

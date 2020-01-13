@@ -241,7 +241,7 @@ namespace drace {
             /**
             * Process / stream a single data race
             */
-            virtual void process_single_race(const race::DecoratedRace & race) {
+            virtual void process_single_race(const race::DecoratedRace & race) override {
                 print_race(race);
             }
 
@@ -249,7 +249,7 @@ namespace drace {
             * open new document, process all data-races provided in the vector
             * and close it.
             */
-            virtual void process_all(const std::vector<race::DecoratedRace> & races) {
+            virtual void process_all(const std::vector<race::DecoratedRace> & races) override {
 				// TODO: Announce Threads
 				print_races(races);
 			}

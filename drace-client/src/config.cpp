@@ -21,7 +21,7 @@
 
 namespace drace {
     /// Handles dynamic config information from configuration file
-    Config::Config(std::string filename) :
+    Config::Config(const std::string & filename) :
         _reader(std::make_unique<INIReader>(filename))
     {
         _sections = _reader->Sections();

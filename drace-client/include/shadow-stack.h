@@ -103,7 +103,7 @@ namespace drace {
 
 			ptrdiff_t diff;
 			// leave this scope / call
-			while ((diff = (byte*)target_addr - (byte*)pop(data)), !(0 <= diff && diff <= 8))
+			while ((diff = (byte*)target_addr - (byte*)pop(data)), !(0 <= diff && diff <= sizeof(void*)))
 			{
 				// skipping a frame
 				if (stack->entries == 0) return;
