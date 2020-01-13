@@ -62,13 +62,20 @@ void spinlock(int * v) {
     static ipc::spinlock mx;
 
     for (int i = 0; i < NUM_INCREMENTS; ++i) {
-        std::lock_guard<ipc::spinlock> lg(mx);
+        // we expect races on the spinlock itself,
+        // as this is not annotated. Simply exclude
+        DRACE_ENTER_EXCLUDE();
+        mx.lock();
+        DRACE_LEAVE_EXCLUDE();
         DRACE_HAPPENS_AFTER(&mx);
         int val = *v;
         ++val;
         wait();
         *v = val;
         DRACE_HAPPENS_BEFORE(&mx);
+        DRACE_ENTER_EXCLUDE();
+        mx.unlock();
+        DRACE_LEAVE_EXCLUDE();
     }
 }
 

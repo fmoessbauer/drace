@@ -104,9 +104,9 @@ if(DRACE_ENABLE_RUNTIME)
 	endif()
 
 	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/drace_excl.ini")
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${PROJECT_SOURCE_DIR}/test/data/"
+			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/")
 
 	# copy tsan dll
 	add_custom_command(TARGET copy_files_testing POST_BUILD
