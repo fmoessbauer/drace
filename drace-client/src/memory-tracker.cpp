@@ -51,6 +51,9 @@ namespace drace {
 			, "atomic uint64 size differs from uint64 size");
 #endif
 
+		DR_ASSERT_MSG(instrum_count.is_lock_free(),
+			"type of instrum_count is not lock-free on this platform");
+
 		DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
 		page_size = dr_page_size();
 
@@ -410,7 +413,7 @@ namespace drace {
 
 		// Sampling: Only instrument some instructions
 		// This is a racy increment, but we do not rely on exact numbers
-		auto cnt = ++instrum_count;
+		auto cnt = instrum_count.fetch_add(1, std::memory_order_relaxed) + 1;
 		if (params.instr_rate == 0 || cnt % params.instr_rate != 0) {
 			return DR_EMIT_DEFAULT;
 		}

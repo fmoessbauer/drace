@@ -62,11 +62,8 @@ namespace drace {
 
 		/**
          * \brief Number of instrumented calls, used for sampling
-         *
-		 * \Warning This number is racily incremented by design.
-		 *          Hence, use the largest native type to avoid partial loads
 		 */
-		unsigned long long instrum_count{ 0 };
+		std::atomic<unsigned long long> instrum_count{ 0 };
 
 		/* XCX registers */
 		drvector_t allowed_xcx;
@@ -125,16 +122,16 @@ namespace drace {
 
 		/// Sets the detector state based on the sampling condition
 		inline void switch_sampling(per_thread_t * data) {
-            #ifdef COMPILE_X86
-            static constexpr int flag_bit = 31;
-            #else
-            static constexpr int flag_bit = 63;
-            #endif
+			// we use the highest available bit to denote if
+			// we sample (analyze) this fsection or not
+            static constexpr int flag_bit = sizeof(uintptr_t)*8-1;
 			if (!sample_ref(data)) {
 				data->enabled = false;
+				// set the flag
 				data->event_cnt |= ((uintptr_t)1 << flag_bit);
 			}
 			else {
+				// clear the flag
 				data->event_cnt &= ~((uintptr_t)1 << flag_bit);
 				if (!data->event_cnt)
 					data->enabled = true;
@@ -143,14 +140,12 @@ namespace drace {
 
 		/// enable the detector (does not affect sampling)
 		static inline void enable(per_thread_t * data) {
-			// access the lower part of the 64bit uint
-			*((uint32_t*)(&(data->enabled))) = true;
+			data->enabled = true;
 		}
 
 		/// disable the detector (does not affect sampling)
 		static inline void disable(per_thread_t * data) {
-			// access the lower part of the 64bit uint
-			*((uint32_t*)(&(data->enabled))) = false;
+			data->enabled = false;
 		}
 
 		/// enable the detector during this scope
