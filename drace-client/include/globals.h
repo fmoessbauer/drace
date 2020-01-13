@@ -30,18 +30,15 @@
 /// max number of individual mutexes per thread
 constexpr int MUTEX_MAP_SIZE = 128;
 
-#ifdef WINDOWS
 /** Upper limit of process address space according to
-*   https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/virtual-address-spaces
-*   TODO: does not seem to be correct, as all DLLs are loaded at 0x7FFx'xxxx'xxxx, i#11
+*   https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-limits-for-windows-and-windows-server-releases
+*   This also holds for Linux x64
+*   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
 */
-constexpr uintptr_t PROC_ADDR_LIMIT = 0x000007FF'FFFFFFFF;
-#else
 #if COMPILE_X86
 constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
 #else
 constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
-#endif
 #endif
 
 // forward decls
