@@ -26,7 +26,7 @@ find_package(Boost 1.65.0)
 if(Boost_FOUND)
     message(STATUS "Build detector fasttrack (standalone)")
 
-    add_library("drace.detector.fasttrack.generic" OBJECT ${FT_SOURCES})
+    add_library("drace.detector.fasttrack.generic" STATIC ${FT_SOURCES})
     set_target_properties(
         "drace.detector.fasttrack.generic" PROPERTIES
         CXX_STANDARD 17
@@ -87,8 +87,8 @@ if(Boost_FOUND)
     ################ configure test module ################
     if(BUILD_TESTING)
         # create library which is linked in global testing module
-        add_library(fasttrack_test OBJECT ${FT_TEST_SOURCES})
-        target_link_libraries(fasttrack_test PRIVATE gtest "drace-common" "parallel-hashmap")
+        add_executable(fasttrack_test ${FT_TEST_SOURCES})
+        target_link_libraries(fasttrack_test PRIVATE gtest gtest_main "drace-common" "parallel-hashmap")
         target_include_directories(fasttrack_test
         PUBLIC "include"
         PUBLIC "${Boost_INCLUDE_DIR}")
@@ -97,6 +97,6 @@ if(Boost_FOUND)
             CXX_STANDARD 17
             CXX_STANDARD_REQUIRED ON)
 
-        set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES fasttrack_test)
+        gtest_discover_tests(fasttrack_test WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
     endif()
 endif()
