@@ -25,7 +25,6 @@ When using the pre-build releases, only DynamoRIO is required:
 - [DynamoRIO](https://github.com/DynamoRIO/dynamorio) 7.91.x (use weekly releases)
 - [Debugging Tools for Windows](https://docs.microsoft.com/de-de/windows-hardware/drivers/debugger/debugger-download-tools) for symbol lookup in .Net runtime libraries (only required for .Net)
 
-
 ## Using the DRace Race Detector
 
 **Run the detector as follows**
@@ -181,15 +180,21 @@ To enable these macros, define `DRACE_ANNOTATION` prior to including the header.
 
 A example on how to use the annotations is provided in `test/mini-apps/annotations/`.
 
-## Testing with GoogleTest
+## Testing
 
-Both the detector and a fully integrated DR-Client can be tested using the following command:
-
+The unit test for the detector backends and other components can be executed with ctest:
 ```
-# Unit Tests
+# Unit tests
 ctest -j4 -T test --output-on-failure
+```
+
+Integration tests for the complete DR-Client can be executed using the following command:
+```
 # Integration Tests
-./test/drace-system-tests.exe
+# Windows
+./test/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
+#Linux
+/test/drace-system-tests --gtest_output="xml:test-system-results.xml"
 ```
 
 **Note:** Before pushing a commit, please run the integration tests.

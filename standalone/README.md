@@ -30,11 +30,12 @@ Decodes a binary trace file which was created with the [TraceBinary](../drace-cl
 
 |Architecture|Windows        |Linux          |
 |------------|---------------|---------------|
-|x86 (32bit) | FT            | FT            |
-|x86 (64bit) | DRace         | FT            |
+|x86 (32bit) | FT            | DRace-RT, FT  |
+|x86 (64bit) | DRace         | DRace-RT, FT  |
 |ARM         | -             | FT (untested) |
 
 **Legend**:
 
 - FT: Fasttrack library
+- DRace-RT: Just DRace-Runtime
 - DRace: Runtime + all components (e.g. FT, TSAN)
