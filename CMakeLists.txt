@@ -93,11 +93,11 @@ file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 # setup global defines
 if(WIN32)
 	# avoid name collisions with std::min / std::max
-	add_compile_definitions("NOMINMAX")
+	add_definitions(-DNOMINMAX)
 endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(STATUS "Building for x86 Plattform")
-    add_compile_definitions("COMPILE_X86")
+    add_definitions(-DCOMPILE_X86)
 endif()
 
 if(BUILD_TESTING)

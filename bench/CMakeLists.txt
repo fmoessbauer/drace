@@ -1,4 +1,4 @@
-set(SOURCES "main" "detector" "containers")
+set(SOURCES "main" "Detector" "Containers")
 
 add_executable("${PROJECT_NAME}-bench" ${SOURCES})
 set_target_properties("${PROJECT_NAME}-bench" PROPERTIES CXX_STANDARD 14)
