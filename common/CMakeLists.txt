@@ -29,7 +29,5 @@ if(BUILD_TESTING)
     add_executable(common_test ${TEST_SOURCES})
     target_link_libraries(common_test PRIVATE gtest gtest_main "drace-common")
     # SHMDriver requires serial execution
-    gtest_discover_tests(common_test
-        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-        PROPERTIES RUN_SERIAL ON)
+    gtest_discover_tests(common_test WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 endif()
