@@ -186,10 +186,10 @@ A example on how to use the annotations is provided in `test/mini-apps/annotatio
 Both the detector and a fully integrated DR-Client can be tested using the following command:
 
 ```
-# Detector Tests
-./test/drace-tests.exe --dr <path-to-drrun.exe> --gtest_filter="Interface*"
+# Unit Tests
+ctest -j4 -T test --output-on-failure
 # Integration Tests
-./test/drace-tests.exe --dr <path-to-drrun.exe> --gtest_filter="Integration*"
+./test/drace-system-tests.exe
 ```
 
 **Note:** Before pushing a commit, please run the integration tests.

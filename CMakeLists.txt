@@ -90,10 +90,6 @@ file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 
-define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
-	BRIEF_DOCS "unit test suites"
-	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
-
 # setup global defines
 if(WIN32)
 	# avoid name collisions with std::min / std::max
@@ -102,6 +98,12 @@ endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(STATUS "Building for x86 Plattform")
     add_compile_definitions("COMPILE_X86")
+endif()
+
+if(BUILD_TESTING)
+	message(STATUS "Build Testsuite")
+	include(CTest)
+	include(GoogleTest)
 endif()
 
 # Common Files
@@ -121,9 +123,6 @@ if(DRACE_ENABLE_RUNTIME)
 endif()
 
 if(BUILD_TESTING)
-	message(STATUS "Build Testsuite")
-	include(CTest)
-	include(GoogleTest)
 	add_subdirectory("test")
 endif()
 

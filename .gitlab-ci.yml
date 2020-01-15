@@ -32,7 +32,7 @@ cmake:
   - .\contrib\generate-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr791
+    - build-dr791
         
 compile:
   <<: *globals
@@ -44,7 +44,7 @@ compile:
   - .\contrib\build-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr791
+    - build-dr791
   dependencies:
   - cmake
 
@@ -52,7 +52,7 @@ cppcheck:
   <<: *globals
   stage: validate
   script:
-  - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd build-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
   - cmake
 
@@ -65,15 +65,18 @@ detector-test:
   <<: *testing
   stage: test
   script:
-  - cd build-tsan-dr791
+  - cd build-dr791
   - echo "Use DR 7.91.x"
-  - .\test\drace-unit-tests.exe --gtest_output="xml:test-unit-results.xml"
+  - ctest -j4 -T test --output-on-failure
   - .\test\drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
   artifacts:
+    paths:
+      - build-dr791
+      - build-dr791\Testing\*
     reports:
       junit:
-      - build-tsan-dr791\test-unit-results.xml
-      - build-tsan-dr791\test-system-results.xml
+      - Test.xml
+      - test-system-results.xml
   dependencies:
   - compile
 
@@ -108,9 +111,9 @@ bundle:
   - Copy-Item "contrib/package-lock.json" -Destination "."
   - echo "Generate Changelog"
   - npx generate-changelog
-  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr791/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-dr791/package/doc/"
   dependencies:
   - compile
   artifacts:
     paths:
-    - build-tsan-dr791/package
+    - build-dr791/package

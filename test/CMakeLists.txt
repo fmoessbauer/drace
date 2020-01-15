@@ -78,12 +78,6 @@ if(UNIX)
 	  APPEND PROPERTY BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
-# get and register all test suites
-get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
-if(TEST_SUITES)
-	target_link_libraries(${TEST_UNIT_TARGET} PRIVATE ${TEST_SUITES})
-endif()
-
 # enable dr mocks
 target_compile_definitions(${TEST_UNIT_TARGET} PRIVATE TESTING)
 
