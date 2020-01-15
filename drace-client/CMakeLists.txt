@@ -18,7 +18,7 @@ if(WIN32)
     list(APPEND SOURCES "src/MSR")
 endif()
 
-find_package(DynamoRIO 7.0 REQUIRED)
+find_package(DynamoRIO 7.91 REQUIRED)
 
 # Bind detectors prior to first "configure_DynamoRIO_client"
 # as DR changes global vars
