@@ -68,15 +68,15 @@ detector-test:
   - cd build-dr791
   - echo "Use DR 7.91.x"
   - ctest -j4 -T test --output-on-failure
-  - .\test\drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
+  - ./test/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
   artifacts:
     paths:
-      - build-dr791
-      - build-dr791\Testing\*
+      - build-dr791/test-system-results.xml
+      - build-dr791/Testing/**/Test.xml
     reports:
       junit:
-      - Test.xml
-      - test-system-results.xml
+      - build-dr791/test-system-results.xml
+      - build-dr791/Testing/**/Test.xml
   dependencies:
   - compile
 
