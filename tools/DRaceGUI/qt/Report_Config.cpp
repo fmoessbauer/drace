@@ -39,14 +39,32 @@ void Report_Config::on_buttonBox_accepted()
     QString name = ui->report_name->text();
 
     //check if filename is valid
-    if (boost::filesystem::windows_name(name.toStdString()) && boost::filesystem::is_regular_file(path.toStdString()) && r_handler->eval_rep_conv(path, this)){
+    if (boost::filesystem::portable_name(name.toStdString())){
         r_handler->set_report_name(name);
+    }
+    else {
+        QMessageBox msg;
+        msg.setIcon(QMessageBox::Warning);
+        msg.setText("Filename is not valid!");
+        msg.exec();
+        return;
+    }
+    //check if report converter is valid
+    if(! boost::filesystem::is_regular_file(path.toStdString())){
+        QMessageBox msg;
+        msg.setIcon(QMessageBox::Warning);
+        msg.setText("ReportConverter-Path: File does not exist.");
+        msg.exec();
+        return;
+    }
+    
+    if( r_handler->eval_rep_conv(path, this)){
         r_handler->set_report_command();
     }
     else {
         QMessageBox msg;
         msg.setIcon(QMessageBox::Warning);
-        msg.setText("Filename or ReportConverter is not valid!");
+        msg.setText("ReportConverter is not valid. Wrong name or probably Python is not installed, if the Python script is used.");
         msg.exec();
         return;
     }

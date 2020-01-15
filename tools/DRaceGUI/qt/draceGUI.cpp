@@ -141,7 +141,17 @@ void DRaceGUI::on_report_creation_stateChanged(int arg1)
         ui->command_output->setText(ch->get_command());
         return;
     }
+    else{ //if command is not set and shall be set, open report converter dialog
+        Report_Config* report_window;
+        report_window = new Report_Config(rh);
+        report_window->exec();
+    }
+    if (rh->set_report_command()){//now check again if converter is now set correctly
+        ui->command_output->setText(ch->get_command());
+        return;
+    }
 
+    //print error message if it still isn't set
     QMessageBox temp;
     temp.setIcon(QMessageBox::Warning);
     temp.setText("ReportConverter is not set correctly");
