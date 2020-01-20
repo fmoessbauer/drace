@@ -202,4 +202,30 @@ namespace drace {
 		wrap_functions(mod, config.get_multi("functions", "exclude_leave"), false, Method::EXPORTS, NULL, event::end_excl);
 	}
 
+    bool funwrap::wrap_generic_call(void *drcontext, void *tag, instrlist_t *bb,
+			instr_t *instr, bool for_trace,
+			bool translating, void *user_data)
+    {
+        // \todo The shadow stack instrumentation triggers many assertions
+        // when running in debug mode on a CoreCLR application
+
+        // \todo Handle dotnet calls with push addr; ret;
+
+        if (instr == instrlist_last(bb)) {
+            if (instr_is_call_direct(instr)) {
+                dr_insert_call_instrumentation(drcontext, bb, instr, (void*)event::on_func_call);
+                return true;
+            }
+            else if (instr_is_call_indirect(instr)) {
+                dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)event::on_func_call, SPILL_SLOT_1);
+                return true;
+            }
+            else if (instr_is_return(instr)) {
+                dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)event::on_func_ret, SPILL_SLOT_1);
+                return true;
+            }
+        }
+        return false;
+	}
+
 } // namespace drace

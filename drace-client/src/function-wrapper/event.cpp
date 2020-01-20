@@ -368,7 +368,7 @@ namespace drace {
             // the return value contains a handle to the thread, but we need the unique id
             DWORD threadid = GetThreadId(retval);
             LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", retval, threadid);
-            detector->happens_before(data->detector_data, (void*)threadid);
+            detector->happens_before(data->detector_data, (void*)(uintptr_t)threadid);
 			#else
 			// \todo implement on linux
 			#endif
@@ -433,5 +433,40 @@ namespace drace {
 			detector->happens_after(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
+
+        /// Default call instrumentation
+		void event::on_func_call(app_pc *call_ins, app_pc *target_addr) {
+            per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+
+			// TODO: possibibly racy in non-fast-mode
+            memory_tracker->analyze_access(data);
+
+			// Sampling: Possibly disable detector during this function
+			memory_tracker->switch_sampling(data);
+
+			// if lossy_flush, disable detector instead of changing the instructions
+			if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
+				data->enabled = false;
+			}
+
+			data->stack.push(call_ins, data->detector_data);
+        }
+
+		/// Default return instrumentation
+		void event::on_func_ret(app_pc *ret_ins, app_pc *target_addr) {
+            per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+            ShadowStack & stack = data->stack;
+			MemoryTracker::analyze_access(data);
+
+			if (stack.isEmpty()) return;
+
+			ptrdiff_t diff;
+			// leave this scope / call
+			while ((diff = (byte*)target_addr - (byte*)stack.pop(data->detector_data)), !(0 <= diff && diff <= sizeof(void*)))
+			{
+				// skipping a frame
+				if (stack.isEmpty()) return;
+			}
+        }
 	} // namespace funwrap
 } // namespace drace

@@ -78,5 +78,14 @@ namespace drace {
 		}
 		/** Wraps dotnet sync primitives */
 		void wrap_sync_dotnet(const module_data_t *mod, bool native);
+
+        /**
+         * \brief Manually instrument a call / ret construct
+         * \note: mainly for the shadow stack, but also for some fast
+         *        switching of the instrumentation logic
+         */
+        bool wrap_generic_call(void *drcontext, void *tag, instrlist_t *bb,
+			instr_t *instr, bool for_trace,
+			bool translating, void *user_data);
 	}
 }

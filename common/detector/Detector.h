@@ -35,7 +35,7 @@
     - A read can happen before a write
     - A read and a write with the same TID will never arrive concurrently
     - A happens after may arrive before a corresponding happens before arrives
-    - A lock may be be released, before it will be acquired 
+    - A lock may be be released, before it will be acquired
     - the last three bullet points must not cause a crash
 */
 class Detector {

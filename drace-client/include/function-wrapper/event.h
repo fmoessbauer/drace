@@ -11,6 +11,7 @@
  */
 
 #include <dr_api.h>
+#include <drmgr.h>
 
 namespace drace {
 	struct per_thread_t;
@@ -110,6 +111,12 @@ namespace drace {
 
 			/// Custom annotated happens after
 			static void happens_after(void *wrapctx, void *identifier);
+
+            /// Default call instrumentation
+		    static void on_func_call(app_pc *call_ins, app_pc *target_addr);
+
+		    /// Default return instrumentation
+		    static void on_func_ret(app_pc *ret_ins, app_pc *target_addr);
 		};
 	}
 } // namespace drace

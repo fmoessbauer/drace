@@ -25,9 +25,10 @@ namespace drace {
 		/// dr context at allocation time. Use this context for deallocation
 		void *   _alloc_ctx;
 
+        T * _data{ nullptr };
+
 	public:
 		using self_t = AlignedBuffer<T, alignment>;
-		T * data{ nullptr };
 
 	public:
 		AlignedBuffer() = default;
@@ -66,16 +67,20 @@ namespace drace {
 				}
 				dr_thread_free(drcontext, _mem, _size_in_bytes);
 				_size_in_bytes = 0;
-				data = nullptr;
+				_data = nullptr;
 			}
 		}
 
 		inline const T & operator[](int pos) const {
-			return data[pos];
+			return _data[pos];
 		}
 		inline T & operator[](int pos) {
-			return data[pos];
+			return _data[pos];
 		}
+
+        inline T * data() const {
+            return _data;
+        }
 
 	private:
 		void allocate(void* drcontext, size_t capacity) {
@@ -89,8 +94,8 @@ namespace drace {
                 DR_ASSERT_MSG(
                     std::align(alignment, capacity, mem_align, space_size) != nullptr,
                     "could not allocate aligned memory");
-                data = (T*)mem_align;
-				DR_ASSERT(((uintptr_t)data % alignment) == 0);
+                _data = (T*)mem_align;
+				DR_ASSERT(((uintptr_t)_data % alignment) == 0);
 			}
 		}
 	};

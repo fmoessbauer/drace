@@ -16,7 +16,8 @@
 #endif
 
 #include "config.h"
-#include "aligned-stack.h"
+#include "aligned-buffer.h"
+#include "shadow-stack.h"
 
 #include <string>
 #include <unordered_map>
@@ -86,12 +87,6 @@ namespace drace {
 	* \warning Initialisation is done in the thread-creation event
 	*          in \see MemoryTracker.
     *          Prior thread-creation events must not use this data
-	*
-	* \todo This type is not standard_layout anymore due to the
-	*       aligned buffers. This should be fixed by using two
-	*       TLS slots, whereby only the first is POD and accessed
-	*       from inline assembly (instrumentation code).
-	*       When fixed, re-enable the static assertion.
 	*/
 	struct per_thread_t {
 		byte *        buf_ptr;
@@ -106,8 +101,6 @@ namespace drace {
 
 		thread_id_t   tid;
 
-		/// Shadow Stack
-		AlignedStack<void*, 32> stack;
 		/// track state of detector (count nr of disable / enable calls)
 		uintptr_t event_cnt{ 0 };
 
@@ -129,10 +122,13 @@ namespace drace {
 
         /// book-keeping of active mutexes
         hashtable_t mutex_book;
+
+        /// ShadowStack
+        ShadowStack stack;
 	};
 
-	//static_assert(std::is_standard_layout<per_thread_t>::value,
-	//	"per_thread_t has to be POD to be safely accessed via inline assembly");
+	static_assert(std::is_standard_layout<per_thread_t>::value,
+		"per_thread_t has to be POD to be safely accessed via inline assembly");
 
 	/** Thread local storage */
 	extern int      tls_idx;
@@ -182,16 +178,16 @@ namespace drace {
 
 } // namespace drace
 
-	// MSR Communication Driver
-	namespace ipc {
-		template<bool, bool>
-		class MtSyncSHMDriver;
+// MSR Communication Driver
+namespace ipc {
+    template<bool, bool>
+    class MtSyncSHMDriver;
 
-		template<typename T, bool>
-		class SharedMemory;
+    template<typename T, bool>
+    class SharedMemory;
 
-		struct ClientCB;
-	}
+    struct ClientCB;
+}
 
 #if WIN32
 // \todo currently only available on windows

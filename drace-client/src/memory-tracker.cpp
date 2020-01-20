@@ -162,7 +162,7 @@ namespace drace {
 		}
 
 		if (data->enabled) {
-			mem_ref_t * mem_ref = reinterpret_cast<mem_ref_t *>(data->mem_buf.data);
+			mem_ref_t * mem_ref = reinterpret_cast<mem_ref_t *>(data->mem_buf.data());
 			uintptr_t num_refs = static_cast<uintptr_t>(reinterpret_cast<mem_ref_t*>(data->buf_ptr) - mem_ref);
 
 			if (num_refs > 0) {
@@ -207,7 +207,7 @@ namespace drace {
 				data->stats->total_refs += num_refs;
 			}
 		}
-		data->buf_ptr = data->mem_buf.data;
+		data->buf_ptr = data->mem_buf.data();
 	}
 
 	/*
@@ -223,19 +223,17 @@ namespace drace {
 		per_thread_t * data = new (tls_buffer) per_thread_t;
 
 		data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
-		data->buf_ptr = data->mem_buf.data;
+		data->buf_ptr = data->mem_buf.data();
 		/* set buf_end to be negative of address of buffer end for the lea later */
-		data->buf_end = (-1) * reinterpret_cast<intptr_t>(data->mem_buf.data + MEM_BUF_SIZE);
+		data->buf_end = (-1) * reinterpret_cast<intptr_t>(data->mem_buf.data() + MEM_BUF_SIZE);
 
 		data->tid = dr_get_thread_id(drcontext);
-		// Init ShadowStack with max_size + 1 Element for PC of access
-		data->stack.resize(ShadowStack::max_size + 1, drcontext);
 
-		//data->mutex_book.reserve(MUTEX_MAP_SIZE);
         hashtable_init(&(data->mutex_book), 8, HASH_INTPTR, false);
 
 		// set first sampling period
 		data->sampling_pos = params.sampling_rate;
+        data->stack.bindDetector(detector.get());
 
 		// this is the master thread
 		if (params.exclude_master && (data->tid == runtime_tid)) {
@@ -282,7 +280,6 @@ namespace drace {
 
         // Cleanup TLS
         // As we cannot rely on current drcontext here, use provided one
-        data->stack.deallocate(drcontext);
         data->mem_buf.deallocate(drcontext);
 
         hashtable_delete(&(data->mutex_book));
@@ -379,7 +376,7 @@ namespace drace {
 
 		if (instrument_instr & INSTR_FLAGS::STACK) {
 			// Instrument ShadowStack TODO: This sometimes crashes in Dotnet modules
-            if (ShadowStack::instrument(drcontext, tag, bb, instr, for_trace, translating, user_data))
+            if (funwrap::wrap_generic_call(drcontext, tag, bb, instr, for_trace, translating, user_data))
                 return DR_EMIT_MUST_END_TRACE;
 		}
 
@@ -451,12 +448,12 @@ namespace drace {
 	{
 		void *drcontext = dr_get_current_drcontext();
 		per_thread_t *data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-		mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data;
+		mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data();
 		uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
 		data->stats->proc_refs += num_refs;
 		data->stats->flushes++;
-		data->buf_ptr = data->mem_buf.data;
+		data->buf_ptr = data->mem_buf.data();
 		data->no_flush.store(true, std::memory_order_relaxed);
 	}
 
