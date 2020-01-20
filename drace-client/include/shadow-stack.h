@@ -36,7 +36,7 @@ namespace drace {
 
     private:
         std::array<void*, max_size> _data;
-        uint _entries{0};
+        int _entries{0};
         Detector * _detector{nullptr};
 
 	public:
@@ -56,10 +56,7 @@ namespace drace {
 
 		/**
         * \brief Push a pc on the stack.
-        *
-        * If the pc is already
-		* on the stack, skip. This avoids ever growing stacks
-		* if the returns are not detected properly
+        * \note more pushes than stack-size are allowed, but ignored
 		*/
 		inline void push(void *addr, void* det_data)
 		{
@@ -68,13 +65,24 @@ namespace drace {
 			_data[_entries++] = addr;
 		}
 
+        /**
+         * \brief pop the top element of the stack
+         * \note more pops than stack-elements are not allowed
+         *       (caller is responsible)
+         */
 		inline void *pop(void* det_data)
 		{
+            #ifdef DYNAMORIO_API
 			DR_ASSERT(_entries > 0);
+            #endif
 			--_entries;
 
 			_detector->func_exit(det_data);
 			return _data[_entries];
 		}
+
+        inline size_t size() const {
+            return _entries;
+        }
 	};
 } // namespace drace

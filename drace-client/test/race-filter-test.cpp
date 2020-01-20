@@ -10,7 +10,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "race-filter-test.h"
+#include "race-filter.h"
 #include <fstream>
 
 using ::testing::UnitTest;
@@ -77,7 +77,7 @@ TEST(FilterTest, RegEx){
     //suppression
     auto symbol_loc_2 = symbol_location;
     symbol_loc_2.sym_name = "main";
-    
+
     // suppression
     auto symbol_loc_3 = symbol_location;
     symbol_loc_3.sym_name = "sup_add";
