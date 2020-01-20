@@ -101,14 +101,9 @@ namespace drace {
         byte          enabled{ true };
         /// inverse of flush pending, jmpecxz
         std::atomic<byte> no_flush{ false };
-        /// bool external change detected
-        /// this flag is used to trigger the enable or disable
-        /// logic on this thread
-        byte enable_external{ true };
         /// local sampling state
         int sampling_pos = 0;
 
-		void         *cache;
 		thread_id_t   tid;
 
 		/// Shadow Stack

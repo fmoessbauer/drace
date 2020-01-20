@@ -496,20 +496,18 @@ namespace drace {
 
 	void MemoryTracker::handle_ext_state(per_thread_t * data) {
 #ifdef WINDOWS
-		if (shmdriver) {
-			bool external_state = extcb->get()->enabled.load(std::memory_order_relaxed);
-			if (bool (data->enable_external) != external_state) {
-				{
-					LOG_INFO(0, "externally switched state: %s", external_state ? "ON" : "OFF");
-					data->enable_external = external_state;
-					if (!external_state) {
-						funwrap::event::beg_excl_region(data);
-					}
-					else {
-						funwrap::event::end_excl_region(data);
-					}
-				}
-			}
+        if (shmdriver) {
+            bool shm_ext_state = extcb->get()->enabled.load(std::memory_order_relaxed);
+            if (enable_external.load(std::memory_order_relaxed) != shm_ext_state) {
+                LOG_INFO(0, "externally switched state: %s", shm_ext_state ? "ON" : "OFF");
+                enable_external.store(shm_ext_state, std::memory_order_relaxed);
+                if (!shm_ext_state) {
+                    funwrap::event::beg_excl_region(data);
+                }
+                else {
+                    funwrap::event::end_excl_region(data);
+                }
+            }
 			// set sampling rate
 			unsigned sampling_rate = extcb->get()->sampling_rate.load(std::memory_order_relaxed);
 			if (sampling_rate != params.sampling_rate) {

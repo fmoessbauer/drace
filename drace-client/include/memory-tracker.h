@@ -54,6 +54,11 @@ namespace drace {
 
 		std::atomic<int> flush_active{ false };
 
+        /// \brief external change detected
+        /// this flag is used to trigger the enable or disable
+        /// logic on this thread
+        std::atomic<bool> enable_external{ true };
+
 	private:
 		size_t page_size;
 
