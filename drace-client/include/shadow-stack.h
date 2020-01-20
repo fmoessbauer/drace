@@ -26,6 +26,7 @@ namespace drace {
 	*/
 	class ShadowStack {
 	public:
+    private:
         /**
          * \brief maximum number of stack entries.
          * That's one less than in the detector,
@@ -34,7 +35,6 @@ namespace drace {
          */
 		static constexpr int max_size = Detector::max_stack_size-1;
 
-    private:
         std::array<void*, max_size> _data;
         int _entries{0};
         Detector * _detector{nullptr};
@@ -83,6 +83,12 @@ namespace drace {
 
         inline size_t size() const {
             return _entries;
+        }
+
+        static constexpr size_t maxSize() {
+            // this getter is to work around ODR limitations
+            // in C++11
+            return max_size;
         }
 	};
 } // namespace drace

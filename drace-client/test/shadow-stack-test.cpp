@@ -34,18 +34,18 @@ TEST_F(ShadowStackTest, PushPop) {
 
 TEST_F(ShadowStackTest, StackOverflow) {
     ShadowStack stack(ShadowStackTest::detector.get());
-    intptr_t num_pushes = ShadowStack::max_size * 2;
+    intptr_t num_pushes = ShadowStack::maxSize() * 2;
 
-    EXPECT_CALL(*ShadowStackTest::detector, func_enter(_, _)).Times(ShadowStack::max_size);
+    EXPECT_CALL(*ShadowStackTest::detector, func_enter(_, _)).Times((int)ShadowStack::maxSize());
     for(intptr_t i=0; i<num_pushes; ++i){
         // this must not crash
         stack.push((void*)i, nullptr);
     }
-    ASSERT_EQ(stack.size(), ShadowStack::max_size);
+    ASSERT_EQ(stack.size(), ShadowStack::maxSize());
 
-    EXPECT_CALL(*ShadowStackTest::detector, func_exit(_)).Times(ShadowStack::max_size);
+    EXPECT_CALL(*ShadowStackTest::detector, func_exit(_)).Times((int)ShadowStack::maxSize());
 
-    intptr_t value{ShadowStack::max_size - 1};
+    intptr_t value = static_cast<intptr_t>(ShadowStack::maxSize() - 1);
     while(!stack.isEmpty()){
         auto got_value = stack.pop(nullptr);
         auto exp_value = (void*)value;
