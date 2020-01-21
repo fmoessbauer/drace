@@ -29,6 +29,7 @@ try:
     noMatplotLib = False
 except ImportError:
     noMatplotLib = True
+    print("Matplotlib is not installed.")
 
 #look for resources path
 if getattr(sys, 'frozen', False):
@@ -97,11 +98,12 @@ class ReportCreator:
 
         self._pathOfReport = pathOfReport
         if self._inputValidation():
-            self._createReport()
             hasErrors = self._reportRoot.find('error') != None
             if not noMatplotLib and hasErrors:
                 self._makeHistogramm(target)
                 self._countTopStackOccurences(target)
+            
+            self._createReport()
         else:
             print("input file is not valid")
             self.succesfullReportCreation = False
@@ -131,14 +133,30 @@ class ReportCreator:
 
     def _getHeader(self):
         header = list()
-        status = self._reportRoot.findall('status')[1]
-        strDatetime = status.find('time').text
-        date = strDatetime.split('T')[0]
-        time = (strDatetime.split('T')[1])[0:-1] #last digit is 'Z' -> not needed
-        header.append(adjText(date))
-        header.append(adjText(time))
-        header.append(adjText(status.find('duration').text))
-        header.append(adjText(status.find('duration').get('unit')))
+        status = self._reportRoot.findall('status')
+        if len(status) == 2:
+            status = status[1] ##second status contains finishing values
+            strDatetime = status.find('time').text
+            if "T" in strDatetime:
+                date = strDatetime.split('T')[0]
+                time = (strDatetime.split('T')[1])[0:-1] #last digit is 'Z' -> not needed
+            else:
+                date = ""
+                time = strDatetime
+
+            header.append(adjText(date))
+            header.append(adjText(time))
+            if status.find('duration') != None:
+                header.append(adjText(status.find('duration').text))
+                header.append(adjText(status.find('duration').get('unit')))
+            else:
+                header.append("")
+                header.append("")               
+        else:
+            header.append("")
+            header.append("")
+            header.append("")
+            header.append("")
 
         arguments = str()
         for arg in self._reportRoot.find('args').find('vargv').findall('arg'):
@@ -153,10 +171,10 @@ class ReportCreator:
         return header
 
     def _makeFileEntry(self, frame):
-        strDir = adjText(frame.find('dir').text)
-        strFile = adjText(frame.find('file').text)
-        strLine = adjText(frame.find('line').text)
-        offset = adjText(frame.find('offset').text)
+        strDir = adjText(self._frameValues["dir"])
+        strFile = adjText(self._frameValues["file"])
+        strLine = adjText(self._frameValues["line"])
+        offset = adjText(self._frameValues["offset"])
 
         if self._vscodeFlag:
             entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine + ":" + offset +"'>"+ strFile +":" + strLine + ":" + offset + "</a>"
@@ -165,27 +183,78 @@ class ReportCreator:
         
         return entry
 
+    def _readFrame(self, frame):
+        
+        if frame == None:
+            self._frameValues = {"obj":"", "fn":"", "ip":"", "dir":"", "file":"", "line":"", "offset":""}
+            return
+
+        obj = frame.find('obj')
+        if obj == None:
+            obj = ""
+        else:
+            obj = obj.text
+        fn = frame.find('fn')
+        if fn == None:
+            fn = ""
+        else:
+            fn = fn.text
+        ip = frame.find('ip')
+        if ip == None:
+            ip = ""
+        else:
+            ip = ip.text  
+
+        direc = frame.find('dir')
+        if direc == None:
+            direc = ""
+        else:
+            direc = direc.text  
+
+        filename = frame.find('file')
+        if filename == None:
+            filename = ""
+        else:
+            filename = filename.text  
+
+        line = frame.find('line')
+        if line == None:
+            line = "0"
+        else:
+            line = line.text  
+
+        offset = frame.find('offset')
+        if offset == None:
+            offset = "0"
+        else:
+            offset = offset.text  
+
+        self._frameValues = {"obj":obj, "fn":fn, "ip":ip, "dir":direc, "file":filename, "line":line, "offset":offset}
+
+
     def _createSnippetEntry(self, frame, elementNumber, tag, codeIndex, buttonID):
+      
+
         newSnippet = self._htmlTemplates.find('snippet_entry').text
 
         newSnippet = newSnippet.replace('*SNIPPET_VAR*', ("snippet_" + str(self._callStackNumber)))
         newSnippet = newSnippet.replace('*STACK_NUMBER*', adjText(hex(elementNumber)))
-        newSnippet = newSnippet.replace('*OBJ*', adjText(frame.find('obj').text))
-        newSnippet = newSnippet.replace('*FUNCTION*', adjText(frame.find('fn').text))
-        newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', adjText(frame.find('ip').text))
+        newSnippet = newSnippet.replace('*OBJ*', adjText(self._frameValues["obj"]))
+        newSnippet = newSnippet.replace('*FUNCTION*', adjText(self._frameValues["fn"]))
+        newSnippet = newSnippet.replace('*INSTRUCTION_POINTER*', adjText(self._frameValues["ip"]))
         newSnippet = newSnippet.replace('*CODE_TAG*', tag)
         newSnippet = newSnippet.replace('*SNIPPET_BUTTON_ID*', buttonID)
 
-        if (frame.find('file')!= None):
+        if (self._frameValues["file"] != ""):
             newSnippet = newSnippet.replace('*FILE_NAME_ENTRY*', self._makeFileEntry(frame))
-            newSnippet = newSnippet.replace('*DIRECTORY*', adjText(frame.find('dir').text))
-            newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self._makeShortDir(frame.find('dir').text)))
-            newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
+            newSnippet = newSnippet.replace('*DIRECTORY*', adjText(self._frameValues["dir"]))
+            newSnippet = newSnippet.replace('*SHORT_DIR*', adjText(self._makeShortDir(self._frameValues["dir"])))
+            newSnippet = newSnippet.replace('*LINE_OF_CODE*', adjText(self._frameValues["line"]))
 
 
             if(codeIndex != -1):
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*', "snippet_"+str(self._callStackNumber)+"_code")
-                newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(adjText(frame.find('file').text)))
+                newSnippet = newSnippet.replace('*LANGUAGE*', self.SCM.determineLanguage(adjText(self._frameValues["file"])))
                 newSnippet = newSnippet.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))
             else:
                 newSnippet = newSnippet.replace('*CODE_ID_VAR*',  "'None'")
@@ -198,8 +267,17 @@ class ReportCreator:
         self._snippets += newSnippet #append referenced code snippet
 
     def _makeShortDir(self, strDir):
-        elements = strDir.split("\\")
-        return elements[0] + "/" + elements[1] + "/.../" + elements[-1]
+        elements = None
+        if "\\" in strDir:
+            elements = strDir.split("\\")
+        else:
+            if "/" in strDir:
+                elements = strDir.split("/")
+        
+        if elements != None:
+            return elements[0] + "/" + elements[1] + "/.../" + elements[-1]
+        else:
+            return ""
 
     def _createCallStack(self, errorEntry, position, outputID):
         
@@ -209,35 +287,39 @@ class ReportCreator:
         stack = stackArray[position]
         elementNumber = 0
 
+        frames = stack.findall('frame')
+        if frames == None:
+            return ""
 
-        for frame in stack.findall('frame'):
+        for frame in frames:
+            self._readFrame(frame) #reads all frame values and fills member var
             noPreview = False 
             buttonID = "button_" + str(self._errorNumber) + "_" + str(position) + "_" + str(elementNumber)
             strOutputID = outputID+str(position)
-
+            
             if elementNumber == 0:
                 ###make heading for the red box### 
                 if len(self._errorHeading) == 0:
-                    self._errorHeading += "<br> Obj. 1: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '" <br> '
+                    self._errorHeading += "<br> Obj. 1: " + (adjText(self._frameValues["obj"]) + ': "' + adjText(self._frameValues["fn"])) + '" <br> '
                 else:
-                    self._errorHeading += "Obj. 2: " + (adjText(frame.find('obj').text) + ': "' + adjText(frame.find('fn').text)) + '"'
+                    self._errorHeading += "Obj. 2: " + (adjText(self._frameValues["obj"]) + ': "' + adjText(self._frameValues["fn"])) + '"'
            
             #general entries (always available)
             newStackElement = stackTemplate.replace('*STACK_NUMBER*', adjText(hex(elementNumber))+":")
             newStackElement = newStackElement.replace('*SNIPPET_VAR*', ("snippet_" + str(self._callStackNumber)))
             newStackElement = newStackElement.replace('*OUTPUT_ID*', strOutputID)
-            newStackElement = newStackElement.replace('*FUNCTION*', adjText(frame.find('fn').text))
+            newStackElement = newStackElement.replace('*FUNCTION*', adjText(self._frameValues['fn']))
             newStackElement = newStackElement.replace('*BUTTON_ID*', buttonID)
             
 
-            if (frame.find('file')!= None): #file is in xml report defined
-                codeIndex, tag = self.SCM.handleSourceCode(frame.find('file').text, frame.find('dir').text, frame.find('line').text)
-                newStackElement = newStackElement.replace('*FILE*', adjText(frame.find('file').text))
+            if (self._frameValues["file"]!= ""): #file is in xml report defined
+                codeIndex, tag = self.SCM.handleSourceCode(self._frameValues["file"], self._frameValues["dir"], self._frameValues["line"])
+                newStackElement = newStackElement.replace('*FILE*', adjText(self._frameValues["file"]))
 
                 if(codeIndex != -1):
                     newStackElement = newStackElement.replace('*CODE_VAR*', str(codeIndex))
                     newStackElement = newStackElement.replace('*CODE_ID_VAR*', "'snippet_"+str(self._callStackNumber)+"_code'")
-                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', adjText(frame.find('line').text))
+                    newStackElement = newStackElement.replace('*LINE_OF_CODE*', adjText(self._frameValues["line"]))
                     newStackElement = newStackElement.replace('*FIRST_LINE*', str(self.SCM.getFirstLineOfCodeSnippet(codeIndex)))  
                 
                 else: #file is not available on device or file is blacklisted or not whitelisted
@@ -271,6 +353,11 @@ class ReportCreator:
     def _makeHistogramm(self, target):
         errorTimes = dict()
         statusNode = self._reportRoot.findall('status')[1]
+       
+        if statusNode.find('duration') == None:
+            self._errorTimesPlot = ""
+            return
+        
         totalDuration =  int(statusNode.find('duration').text)
         errors = self._reportRoot.findall('error')
         
@@ -299,7 +386,6 @@ class ReportCreator:
         plt.ylabel('Occurrences', fontfamily="monospace",fontweight='bold')
         plt.xlabel('Execution of program in %. \n Total execution time = ' + str(totalDuration) + 'ms', fontfamily="monospace",fontweight='bold')   
 
-        
         fig.add_axes(ax)
         #plt.show()
         figPath = pathlib.Path(target+'/'+self._errorTimesPlot)
@@ -311,14 +397,15 @@ class ReportCreator:
         
         for error in errors:
             stacks = error.findall('stack')
-            for stack in stacks:
-                topFrame = stack.find('frame') #returns first element of with frame tag
+            for i in range(0,2): 
+                topFrame = stacks[i].find('frame') #returns first element of with frame tag
                 
                 if(topFrame != None):
-                    tmp1 = topFrame.find('file').text
-                    tmp2 = topFrame.find('fn').text
+                    self._readFrame(topFrame)
+                    tmp1 = self._frameValues["file"]
+                    tmp2 = self._frameValues["fn"]
 
-                    if(tmp1 != None and tmp2 != None):
+                    if(tmp1 != "None" and tmp2 != "None"):
                         if(len(tmp2) > 20): #split function name in half if it is too long
                             tmp2 = tmp2[:len(tmp2)//2] + '\n' + tmp2[len(tmp2)//2:]
                         identifier = tmp1 + ":\n" + tmp2
@@ -374,12 +461,27 @@ class ReportCreator:
             newError = newError.replace('*ERROR_TYPE*', adjText(error.find('kind').text))
             
             xwhat = error.findall('xwhat')
-            newError = newError.replace('*XWHAT_TEXT_1*', adjText(xwhat[0].find('text').text))
-            newError = newError.replace('*XWHAT_TEXT_2*', adjText(xwhat[1].find('text').text))
+            errortext1 = xwhat[0].find('text').text
+            #fall back to xauxhwaht -> valgrind format
+            if(len(xwhat) == 1):
+                element = error.find('xauxwhat')
+                if element != None:
+                    errortext2 = element.find('text').text
+                else:
+                    errortext2 = ""
+            else:
+                errortext2 = xwhat[1].find('text').text
+
+            newError = newError.replace('*XWHAT_TEXT_1*', adjText(errortext1))
+            newError = newError.replace('*XWHAT_TEXT_2*', adjText(errortext2))
 
             self._errorHeading = str() #reset errorHeading, will be filled filled by _createCallStack
             newError = newError.replace('*CALL_STACK_ENTRIES_1*', self._createCallStack(error, 0, outputID))
-            newError = newError.replace('*CALL_STACK_ENTRIES_2*', self._createCallStack(error, 1, outputID))
+            if errortext2 != "":
+                newError = newError.replace('*CALL_STACK_ENTRIES_2*', self._createCallStack(error, 1, outputID))
+            else:
+                newError = newError.replace('*CALL_STACK_ENTRIES_2*', "No Callstack Available")
+            
             newError = newError.replace('*OUTPUT_ID_1*', outputID+'0')
             newError = newError.replace('*OUTPUT_ID_2*', outputID+'1')
             newError = newError.replace('*ERROR_HEADING*', self._errorHeading)
