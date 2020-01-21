@@ -32,6 +32,8 @@
 #include <string>
 #include <algorithm>
 
+#include <regex>
+
 namespace drace {
 	namespace module {
 
@@ -43,7 +45,9 @@ namespace drace {
 			excluded_mods = config.get_multi("modules", "exclude_mods");
 			excluded_path_prefix = config.get_multi("modules", "exclude_path");
 
-			std::sort(excluded_mods.begin(), excluded_mods.end());
+			for(auto it = excluded_mods.begin(); it != excluded_mods.end(); ++it){
+				std::cout << *it << std::endl;
+			}
 
 			// convert pathes to lowercase for case-insensitive matching
 			for (auto & prefix : excluded_path_prefix) {
@@ -134,9 +138,13 @@ namespace drace {
 			if (modptr->instrument != INSTR_FLAGS::STACK) {
 				// check if mod name is excluded
 				// in this case, we check for syms but only instrument stack
-				// \todo for linux, either strip .so.x suffix, or add support for wildcards
-				if (std::binary_search(excluded_mods.begin(), excluded_mods.end(), mod_name)) {
-					modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
+				for(auto it = excluded_mods.begin(); it != excluded_mods.end(); ++it){
+					std::regex expr(*it);
+        			std::smatch m;
+					if(std::regex_match(mod_name, m, expr)){
+						modptr->instrument = (INSTR_FLAGS)(INSTR_FLAGS::SYMBOLS | INSTR_FLAGS::STACK);
+						break;
+					}
 				}
 			}
 			if (modptr->instrument & INSTR_FLAGS::SYMBOLS) {
