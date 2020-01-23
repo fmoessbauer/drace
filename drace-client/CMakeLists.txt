@@ -49,6 +49,11 @@ target_link_libraries(
 	"clipp"          # option parser
 )
 
+# libatomic is missing on clang builds i#52
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_link_libraries("drace-client" "-latomic")
+endif()
+
 # Set loglevel
 target_compile_definitions("drace-client" PRIVATE -DLOGLEVEL=${DRACE_LOGLEVEL})
 # we need a specific base addr, hence disable this warning
