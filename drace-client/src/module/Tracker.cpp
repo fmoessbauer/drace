@@ -45,10 +45,6 @@ namespace drace {
 			excluded_mods = config.get_multi("modules", "exclude_mods");
 			excluded_path_prefix = config.get_multi("modules", "exclude_path");
 
-			for(auto it = excluded_mods.begin(); it != excluded_mods.end(); ++it){
-				std::cout << *it << std::endl;
-			}
-
 			// convert pathes to lowercase for case-insensitive matching
 			for (auto & prefix : excluded_path_prefix) {
 				std::transform(prefix.begin(), prefix.end(), prefix.begin(), ::tolower);

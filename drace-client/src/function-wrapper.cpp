@@ -132,7 +132,14 @@ namespace drace {
 			wrap_functions(mod, config.get_multi("sync", "wait_for_single_object"), false, Method::EXPORTS, event::get_arg, event::wait_for_single_obj);
 			// waitForMultipleObjects
 			wrap_functions(mod, config.get_multi("sync", "wait_for_multiple_objects"), false, Method::EXPORTS, event::wait_for_mo_getargs, event::wait_for_mult_obj);
+#else
+			wrap_functions(mod, config.get_multi("linuxsync", "acquire_excl"), false, Method::EXPORTS, event::get_arg, event::mutex_lock);
+			// mutex trylock
+			wrap_functions(mod, config.get_multi("linuxsync", "acquire_excl_try"), false, Method::EXPORTS, event::get_arg, event::mutex_trylock);
+			// mutex unlock
+			wrap_functions(mod, config.get_multi("linuxsync", "release_excl"), false, Method::EXPORTS, event::mutex_unlock, NULL);
 #endif
+
 		}
 		else {
 			LOG_INFO(0, "try to wrap non-system mutexes");
