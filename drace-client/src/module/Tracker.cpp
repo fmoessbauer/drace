@@ -174,7 +174,8 @@ namespace drace {
 
 			// wrap functions
 			if (util::common_prefix(mod_name, "MSVCP") ||
-				util::common_prefix(mod_name, "KERNELBASE"))
+				util::common_prefix(mod_name, "KERNELBASE") ||
+				util::common_prefix(mod_name, "libc"))
 			{
 				funwrap::wrap_mutexes(mod, true);
 			}
