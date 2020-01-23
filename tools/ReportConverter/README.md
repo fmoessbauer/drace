@@ -2,7 +2,7 @@
 
 A Python XML to HTML report converter for the better visualization of drace result data.
 
-Takes an existing drace xml report searches for the mentioned source files on the local machine and puts everthing together for a nice looking, interactive HTML document.
+Takes an existing drace xml report searches for the mentioned source files on the local machine and puts everthing together for a nice looking, interactive HTML document. Works now also with Valgrind/Helgrind XML files.
 
 ## How to use
 

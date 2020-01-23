@@ -83,6 +83,7 @@ report-converter-test:
   - AWS
   script:
   - echo "Start test..."
+  - python3 tools/ReportConverter/ReportConverter.py -i tools/ReportConverter/test_files/helgrind.xml
   - python3 tools/ReportConverter/ReportConverter.py --Debug
   - python3 tools/ReportConverter/ReportConverterUnitTest.py
 
