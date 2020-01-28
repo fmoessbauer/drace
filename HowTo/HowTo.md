@@ -1,0 +1,200 @@
+# How to use DRace and its tools
+
+DRace is a data-race detector for windows applications which uses DynamoRIO to dynamically instrument a binary at runtime. This tutorial shall provide an overview on how to get and use DRace and the belonging tools.
+
+## Get the tools
+
+For the usage of DRace the following components are needed:
+
+- DRace + Tools
+- DynamoRio
+
+### DRace + Tools
+
+There are two ways to get DRace. You can download the prebuilt packages from
+**[here](https://github.com/siemens/drace/releases)**. The zip-archive must be extracted and you are done.
+
+Alternatively, **[this Git-repository](https://github.com/siemens/drace)**  can be cloned and DRace can be built by yourself.
+Further information about how to build DRace by yourself are given in the global [README](https://github.com/siemens/drace/blob/master/README.md) of the repository.
+
+### DynamoRio
+
+DynamoRio is a dynamic instrumentation framework, which is used by DRace. A prebuilt zip-archive can be downloaded **[here](https://github.com/DynamoRIO/dynamorio/releases)**.
+
+It is recommended to use the latest cron build. Once the download is finished, you must extract the zip-archive into a directory. To make the usage of DRace more convenient, it is recommended to put the path of the **drrun.exe**  into the Windows-PATH environment variable: drrun.exe is in ```./DynamoRIO-Windows-<version>/bin64```
+
+
+## Usage
+
+### GUI-Usage
+
+For new users the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quiet long and unhandy DRace command can be build in an easier fashion.
+
+Furthermore a working configuration, can be saved in a text file and restored at a later time.
+Additionally some plausability checks are exectued one the inputs. Correct and incorrect inputs are maked with green and red. The fields must be filled like described in the following.
+Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an abitrary shell.
+
+The following fields are mandatory:
+
+- DynamoRIO - Path: Path to ```drrun.exe```
+- DRace - Path: Path to the ```drace-client.dll```
+- Select Detector: Select one of the available detectors (more information about detectors are [here](##Detectors))
+- Configuration File: Path to ```drace.ini```
+- Executable: Path to the application under test
+
+The following fields are optional:
+
+- Debug Mode: This will start DynamoRIO in the debug mode.
+- Report: This option will create an HTML-Report after the analysis has finished. To set the option the report settings must be set correctly ([here](####Report-Settings))
+- MSR: This option starts the managed code resolver, if one wants to analyse applications with .NET code.
+- DRace Flags: here additional DRace Flags can be set. Be carefull, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Availble DRace flags are [here](###Shell-Usage)
+
+![1](./Images/dracegui_empty.png "Empty DRaceGUI")
+![2](./Images/dracegui_filled.png "Filled DRaceGUI")
+
+#### Report-Settings
+
+![report_pic](./Images/report_settings.png)
+
+One can create a nice looking HTML-Reports when using the **[ReportConverter](##ReportConverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
+
+Note: Python 3 must be installed and in the Windows-PATH environment variable when using the python script.
+
+More information about the ReportConverter is [here](##ReportConverter)
+
+### Shell-Usage
+
+**Run the detector as follows**
+
+```bash
+drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- application.exe <app parameter>
+# see limitations for -no_follow_children option
+```
+
+**Command Line Options**
+
+```
+SYNOPSIS
+        drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
+                         [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
+                         <stacksz>] [--no-annotations] [--delay-syms] [--suplevel <level>]
+                         [--sup-races <sup-races>] [--xml-file <filename>] [--out-file <filename>]
+                         [--logfile <filename>][--extctrl] [--brkonrace] [--stats] [--version] [-h]
+                         [--heap-only]
+OPTIONS
+        DRace Options
+            -c, --config <config>
+                    config file (default: drace.ini)
+            -d, --detector <detector>
+                    race detector (default: tsan)
+            sampling options
+                -s, --sample-rate <sample-rate>
+                    sample each nth instruction (default: no sampling)
+                -i, --instr-rate <instr-rate>
+                    instrument each nth instruction (default: no sampling, 0: no instrumentation)
+            analysis scope
+                --lossy
+                    dynamically exclude fragments using lossy counting
+                --lossy-flush
+                    de-instrument flushed segments (only with --lossy)
+                --excl-traces
+                    exclude dynamorio traces
+                --excl-stack
+                    exclude stack accesses
+                --excl-master
+                    exclude first thread
+            --stacksz <stacksz>
+                    size of callstack used for race-detection (must be in [1,31], default: 31)
+            --no-annotations
+                    disable code annotation support
+            --delay-syms
+                    perform symbol lookup after application shutdown
+            --suplevel <level>
+                    suppress similar races (0=detector-default, 1=unique top-of-callstack entry,
+                    default: 1)
+            --sup-races <sup-races>
+                    race suppression file (default: race_suppressions.txt)
+            data race reporting
+                --xml-file, -x <filename>
+                    log races in valkyries xml format in this file
+                --out-file, -o <filename>
+                    log races in human readable format in this file
+            --logfile, -l <filename>
+                    write all logs to this file (can be null, stdout, stderr, or filename)
+            --extctrl
+                    use second process for symbol lookup and state-controlling (required for Dotnet)
+            --brkonrace
+                    abort execution after first race is found (for testing purpose only)
+            --stats display per-thread statistics on thread-exit
+            --version
+                    display version information
+            -h, --usage
+                    display help
+        Detector Options
+            --heap-only
+                    only analyze heap memory (not supported currently)
+```
+
+## Detectors
+
+DRace is shipped with three different detector backends. The detector backend is evaluating the program trace which comes from DRace and reports the actual data race.
+
+The following detectors are available:
+
+- tsan (default)
+- fasttrack (experimental)
+- dummy
+
+Tsan is the default and fastest detector of the three and basically the one to use at the moment. Fasttrack is less optimized than tsan and has only experimental support at the moment. The dummy detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
+
+## ReportConverter
+
+DRace has the option to create xml reports which contain the detected data races. This xml report can be converted to a nice looking and interactive html document which can help ease the debugging after the usage of DRace. It can be used as follows or with the GUI ([more infos to the usage](https://github.com/siemens/drace/blob/master/tools/ReportConverter/README.md)):
+
+```
+Windows:
+    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+
+Linux:
+    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+
+```
+
+### Report
+The generated Report looks like the following example pictures. The first picture shows an overview, whereas the second one shows a single error entry. The labels  pretty much explain all the elements of the report.
+
+Note: If one wants to open a source file by clicking on its name, it will be opened with **VSCode**, if it is installed and the exe of it is in Windows-PATH (must be installed before the report was created). Otherwise, just a new browser tab with the file will be opened.
+
+**Report Overview:**
+![5](./Images/rep_ov.png "Overview of Report")
+
+**Error Entry:**
+![6](./Images/err_entry.png "Single Error Entry")
+
+## Step-by-step Example
+
+Now a step by step example on how to use DRace with an example application will be provided.
+
+1. Install DRace and DynamoRIO (if not already installed)
+
+You can find an explanation **[here](##Get-the-tools)**.
+
+2. Configure a DRace-Command using the GUI ([more Details](##GUI-Usage))
+
+    - The specified executable must be the delivered sample application `./drace/sample/ShoppingRush.exe`
+    - The report box must be ticked
+    - The MSR and Debug Mode box must be unticked
+    - Use TSAN as detector
+
+![7](./Images/gui_example.png)
+
+3. Execute DRace
+
+After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this.
+
+![8](./Images/powershell_out.png)
+
+There, you can see in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
+
+4. Examine the report
