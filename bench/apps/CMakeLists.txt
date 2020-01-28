@@ -1,5 +1,5 @@
 add_subdirectory(stream)
 
-if(${DRACE_INSTALL_BENCH})
-    install(TARGETS "bench-stream" RUNTIME DESTINATION bin COMPONENT RUNTIME)
+if(DRACE_INSTALL_BENCH)
+    install(TARGETS "bench-stream" DESTINATION ${DRACE_RUNTIME_DEST})
 endif()

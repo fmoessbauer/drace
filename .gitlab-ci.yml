@@ -16,7 +16,7 @@ variables:
   http_proxy: $CODE_PROXY
   https_proxy: $CODE_PROXY
   no_proxy: code.siemens.com,docker.siemens.com,devops.bt.siemens.com
-  
+
 stages:
   - generate
   - validate
@@ -33,12 +33,12 @@ cmake:
   artifacts:
     paths:
     - build-dr791
-        
+
 compile:
   <<: *globals
   stage: build
   except:
-  - doc-*    
+  - doc-*
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
@@ -99,7 +99,7 @@ compile_linux_x64:
   script:
   - echo "Release build..."
   - apt-get update -y
-  - apt-get install -y libboost-filesystem-dev git cmake gcc g++ 
+  - apt-get install -y libboost-filesystem-dev git cmake gcc g++
   - sh ./contrib/compile_x64-linux.sh
   cache:
     key: dynamorio-cache-x64
@@ -155,7 +155,7 @@ windows-test:
   - cd build-dr791
   - echo "Use DR 7.91.x"
   - ctest -j4 -T test --output-on-failure
-  - ./test/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
+  - ./bin/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
   artifacts:
     paths:
       - build-dr791/test-system-results.xml
@@ -178,7 +178,7 @@ linux-x64-test:
   script:
   - echo "Use DR 7.91.x"
   - apt-get update -y
-  - apt-get install -y cmake 
+  - apt-get install -y cmake
   - cd build64
   - ctest -j4 -T test --output-on-failure
   #- .\test\drace-system-tests --gtest_output="xml:test-system-results.xml"
@@ -230,8 +230,8 @@ linux-i386-test:
   - compile_linux_i386
 
 report-converter-test:
-  stage: test 
-  tags: 
+  stage: test
+  tags:
    - AWS
   script:
   - echo "Start test..."

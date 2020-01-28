@@ -383,9 +383,9 @@ TEST_F(DetectorTest, ShadowMemory) {
 
 // Setup value-parameterized tests
 #ifdef WIN32
-INSTANTIATE_TEST_CASE_P(Interface,
+INSTANTIATE_TEST_SUITE_P(Interface,
     DetectorTest, ::testing::Values("fasttrack.standalone", "tsan"));
 #else
-INSTANTIATE_TEST_CASE_P(Interface,
+INSTANTIATE_TEST_SUITE_P(Interface,
     DetectorTest, ::testing::Values("fasttrack.standalone"));
 #endif
