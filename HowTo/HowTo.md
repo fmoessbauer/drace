@@ -2,6 +2,8 @@
 
 DRace is a data-race detector for windows applications which uses DynamoRIO to dynamically instrument a binary at runtime. This tutorial shall provide an overview on how to get and use DRace and the belonging tools.
 
+This `HowTo.md` provides explanations about all parts of the usage of DRace. At the end a [step by step tutorial](##Step-by-step-Tutorial) is provided, in which you can train your skills in using DRace.
+
 ## Get the tools
 
 For the usage of DRace the following components are needed:
@@ -22,7 +24,6 @@ Further information about how to build DRace by yourself are given in the global
 DynamoRio is a dynamic instrumentation framework, which is used by DRace. A prebuilt zip-archive can be downloaded **[here](https://github.com/DynamoRIO/dynamorio/releases)**.
 
 It is recommended to use the latest cron build. Once the download is finished, you must extract the zip-archive into a directory. To make the usage of DRace more convenient, it is recommended to put the path of the **drrun.exe**  into the Windows-PATH environment variable: drrun.exe is in ```./DynamoRIO-Windows-<version>/bin64```
-
 
 ## Usage
 
@@ -73,7 +74,7 @@ drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- applic
 
 **Command Line Options**
 
-```
+```bash
 SYNOPSIS
         drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
                          [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
@@ -172,7 +173,7 @@ Note: If one wants to open a source file by clicking on its name, it will be ope
 **Error Entry:**
 ![6](./Images/err_entry.png "Single Error Entry")
 
-## Step-by-step Example
+## Step-by-step Tutorial
 
 Now a step by step example on how to use DRace with an example application will be provided.
 
@@ -182,7 +183,9 @@ You can find an explanation **[here](##Get-the-tools)**.
 
 2. Configure a DRace-Command using the GUI ([more Details](##GUI-Usage))
 
+    - Find the pathes to drrun, drace-client.dll and drace.ini
     - The specified executable must be the delivered sample application `./drace/sample/ShoppingRush.exe`
+    - Configure the ReportConverter
     - The report box must be ticked
     - The MSR and Debug Mode box must be unticked
     - Use TSAN as detector
@@ -193,8 +196,25 @@ You can find an explanation **[here](##Get-the-tools)**.
 
 After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this.
 
-![8](./Images/powershell_out.png)
+![8](./Images/powershell_out.png) ####some powershell snippet her####
 
 There, you can see in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
 
 4. Examine the report
+
+After opening the report, one can see in where exactly DRace found potential data races (More Information about how to read the report are [here](###Report)). This is a good starting point to figure out why the code produces data races.
+
+Now, you can start to fix the application.
+
+5. Fix the application and rerun DRace
+
+Your job is now to fix the racy parts in the source file. It is located in `./drace/sample/excercise`.
+If you think you did the trick you can recompile the example application and rerun with DRace.
+
+You're done when the application doesn't produce any races anymore, when it is analysed with DRace.
+
+6. Compare your solution with ours
+
+If you want, you can now compare your solution with the example solution provided in `./drace/sample/solution`.
+
+🎉🎉🎉Congrats you're done with the tutorial. 🎉🎉🎉
