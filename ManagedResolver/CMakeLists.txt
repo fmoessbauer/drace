@@ -11,7 +11,7 @@ if(WIN32)
   target_compile_options("msr" PRIVATE "-EHsc")
 endif()
 
-if(${DRACE_ENABLE_CPPCHECK})
+if(DRACE_ENABLE_CPPCHECK)
     set_target_properties("msr" PROPERTIES
         CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
 endif()
@@ -24,11 +24,8 @@ if("${DRACE_DETECTOR}" STREQUAL "extsan")
 
 	target_sources("msr" PRIVATE "src/QueueHandler.cpp")
 	target_link_libraries("msr" "tsan-common" "parallel-hashmap")
-
-	add_custom_command(TARGET "msr" POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_SOURCE_DIR}/vendor/tsan/blob/race_windows_amd64.dll"
-		"$<TARGET_FILE_DIR:msr>")
 endif()
 
-install(TARGETS "msr" DESTINATION bin)
+install(TARGETS "msr"
+    RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME
+    LIBRARY DESTINATION ${DRACE_ARCHIVE_DEST} COMPONENT ARCHIVE)

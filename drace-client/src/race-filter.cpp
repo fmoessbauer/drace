@@ -16,22 +16,42 @@
 #include <algorithm>
 #include <regex>
 
-
+#ifdef TESTING
+#include <exception>
+#else
+#include "util.h"
+#endif
 
 drace::RaceFilter::RaceFilter(std::istream &content){
     init(content);
 }
 
 
-drace::RaceFilter::RaceFilter(std::string filename){
+drace::RaceFilter::RaceFilter(
+    const std::string & filename,
+    const std::string & hint)
+{
     std::ifstream f;
     f.open(filename);
-    if (f.is_open()) {
-        //reads a file which has thread sanitizer suppression file fashion 
+    if (f.good()) {
+        //reads a file which has thread sanitizer suppression file fashion
         init(f);
     }
     else{
-        //some log message
+        #ifdef TESTING
+        throw std::runtime_error("file not found");
+        #else
+        // try to load file next to drace binary
+        const std::string file_next_to_drace = util::dir_from_path(hint) + "\\" + filename;
+        f.open(file_next_to_drace);
+        if(f.good()) {
+            init(f);
+        } else {
+            // In DRace, we must not use exceptions,
+            // but for testing, it's useful
+            LOG_WARN(-1, "File %s not found, no races will be suppressed", filename.c_str());
+        }
+        #endif
     }
     f.close();
 }
@@ -44,7 +64,7 @@ void drace::RaceFilter::init(std::istream &content){
             //valid entries are like 'subject:function_name' -> race_tos:std::foo
             size_t pos = entry.find(':', 0);
             if(pos != std::string::npos){
-               
+
                //race_tos top of stack
                 if(entry.substr(0, pos) == "race_tos"){
                     std::string tmp = entry.substr(pos+1);
@@ -113,7 +133,7 @@ bool drace::RaceFilter::check_race(const drace::race::DecoratedRace & race){
     //get the top stack elements
     auto stack1 =  race.first.resolved_stack;
     auto stack2 = race.second.resolved_stack;
-    
+
     for(auto it = race_list.begin(); it != race_list.end(); ++it){
         std::regex expr(*it);
         std::smatch m;

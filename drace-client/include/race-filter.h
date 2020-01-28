@@ -33,7 +33,7 @@ namespace drace{
 
     public:
         explicit RaceFilter(std::istream &content) ;
-        explicit RaceFilter(std::string filename) ;
+        explicit RaceFilter(const std::string & filename, const std::string & hint = {});
 
         bool check_suppress(const drace::race::DecoratedRace & race);
         void print_list();
