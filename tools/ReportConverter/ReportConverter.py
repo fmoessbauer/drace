@@ -179,7 +179,7 @@ class ReportCreator:
         if self._vscodeFlag:
             entry  = "<a href='vscode://file/" + strDir + "/" + strFile + ":" + strLine + ":" + offset +"'>"+ strFile +":" + strLine + ":" + offset + "</a>"
         else:
-            entry  = "<a href='file://"+ strDir + "/" + strFile + ":" + strLine + "'>" + strFile + ":" + strLine + "</a>"
+            entry  = "<a href='file://"+ strDir + "/" + strFile + "'>" + strFile + ":" + strLine + "</a>"
         
         return entry
 
