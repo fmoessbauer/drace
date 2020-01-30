@@ -57,7 +57,7 @@ The following fields are optional:
 
 ![report_pic](./Images/report_settings.png)
 
-One can create a nice looking HTML-Reports when using the **[ReportConverter](##ReportConverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
+A nice looking HTML-Report can be created by using the **[ReportConverter](##ReportConverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
 
 Note: Python 3 must be installed and in the Windows-PATH environment variable when using the python script.
 
@@ -68,73 +68,13 @@ More information about the ReportConverter is [here](##ReportConverter)
 **Run the detector as follows**
 
 ```bash
-drrun.exe -no_follow_children -c drace-client.dll <detector parameter> -- application.exe <app parameter>
+drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app parameter>
 # see limitations for -no_follow_children option
 ```
 
 **Command Line Options**
 
-```bash
-SYNOPSIS
-        drace-client.dll [-c <config>] [-d <detector>] [-s <sample-rate>] [-i <instr-rate>] [--lossy
-                         [--lossy-flush]] [--excl-traces] [--excl-stack] [--excl-master] [--stacksz
-                         <stacksz>] [--no-annotations] [--delay-syms] [--suplevel <level>]
-                         [--sup-races <sup-races>] [--xml-file <filename>] [--out-file <filename>]
-                         [--logfile <filename>][--extctrl] [--brkonrace] [--stats] [--version] [-h]
-                         [--heap-only]
-OPTIONS
-        DRace Options
-            -c, --config <config>
-                    config file (default: drace.ini)
-            -d, --detector <detector>
-                    race detector (default: tsan)
-            sampling options
-                -s, --sample-rate <sample-rate>
-                    sample each nth instruction (default: no sampling)
-                -i, --instr-rate <instr-rate>
-                    instrument each nth instruction (default: no sampling, 0: no instrumentation)
-            analysis scope
-                --lossy
-                    dynamically exclude fragments using lossy counting
-                --lossy-flush
-                    de-instrument flushed segments (only with --lossy)
-                --excl-traces
-                    exclude dynamorio traces
-                --excl-stack
-                    exclude stack accesses
-                --excl-master
-                    exclude first thread
-            --stacksz <stacksz>
-                    size of callstack used for race-detection (must be in [1,31], default: 31)
-            --no-annotations
-                    disable code annotation support
-            --delay-syms
-                    perform symbol lookup after application shutdown
-            --suplevel <level>
-                    suppress similar races (0=detector-default, 1=unique top-of-callstack entry,
-                    default: 1)
-            --sup-races <sup-races>
-                    race suppression file (default: race_suppressions.txt)
-            data race reporting
-                --xml-file, -x <filename>
-                    log races in valkyries xml format in this file
-                --out-file, -o <filename>
-                    log races in human readable format in this file
-            --logfile, -l <filename>
-                    write all logs to this file (can be null, stdout, stderr, or filename)
-            --extctrl
-                    use second process for symbol lookup and state-controlling (required for Dotnet)
-            --brkonrace
-                    abort execution after first race is found (for testing purpose only)
-            --stats display per-thread statistics on thread-exit
-            --version
-                    display version information
-            -h, --usage
-                    display help
-        Detector Options
-            --heap-only
-                    only analyze heap memory (not supported currently)
-```
+All available command line options can be found [here](https://github.com/siemens/drace/blob/master/README.md).
 
 ## Detectors
 
@@ -146,7 +86,7 @@ The following detectors are available:
 - fasttrack (experimental)
 - dummy
 
-Tsan is the default and fastest detector of the three and basically the one to use at the moment. Fasttrack is less optimized than tsan and has only experimental support at the moment. The dummy detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
+Tsan is the default and fastest detector of the three and basically the one to use at the moment. Fasttrack is less optimized than tsan and has only experimental support at the moment. But unlike Tsan, Fasttrack is fully open source. The dummy detector does not detect any races. It is there to evaluate the overhead of the other detectors vs the instrumentation overhead.
 
 ## ReportConverter
 
@@ -196,25 +136,29 @@ You can find an explanation **[here](##Get-the-tools)**.
 
 After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this.
 
-![8](./Images/powershell_out.png) ####some powershell snippet her####
+![8](./Images/powershell_out.png)
 
-There, you can see in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
+There, you can see DRace found either one or two data races and it shows in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
 
 4. Examine the report
 
-After opening the report, one can see in where exactly DRace found potential data races (More Information about how to read the report are [here](###Report)). This is a good starting point to figure out why the code produces data races.
+After opening the report, you can see where exactly DRace found potential data races (More information about how to read the report is [here](###Report)). This is a good starting point to figure out why the code produces data races.
 
 Now, you can start to fix the application.
 
 5. Fix the application and rerun DRace
 
-Your job is now to fix the racy parts in the source file. It is located in `./drace/sample/excercise`.
-If you think you did the trick you can recompile the example application and rerun with DRace.
+Your job is now to fix the racy parts in the source file. It is located in `./drace/sample/ShoppingRush.cpp`.
+If you think you did the trick you can recompile the example application and rerun with DRace. You should compile the application with "RelWithDebInfo" as everything gets awfully slow, when the application is compiled in "Debug" mode.
 
-You're done when the application doesn't produce any races anymore, when it is analysed with DRace.
+You're done when the application doesn't produce any races anymore, when it is analysed with DRace and still produces the correct output.
 
 6. Compare your solution with ours
 
-If you want, you can now compare your solution with the example solution provided in `./drace/sample/solution`.
+If you want, you can now compare your solution with the example solution provided in `./drace/sample/ShoppingRushSolution.cpp`.
+
+A few words to the actual problem:
+
+The pointer invalidation in line 101 (`shop.erase(elit);`) was recognized by the developer. With the locking of the mutex in line 96 the developer tried to prevent concurrent invalidations of the pointer. The remaining problem which leads to the data races is that this pointer is also used in lines 85, 89, 90 and 91. There it won't be invalidated, but an already invalidated pointer may be used. This leads to an undefined behaviour of the application. If the locking of the mutex is moved above line 85 (`int size = shop.size();`) everything is safe and should work fine.
 
 🎉🎉🎉Congrats you're done with the tutorial. 🎉🎉🎉

@@ -8,6 +8,7 @@ add_subdirectory("annotations")
 add_subdirectory("atomics")
 add_subdirectory("sampler")
 add_subdirectory("memchecker")
+add_subdirectory("shoppingrush")
 
 if(WIN32)
     add_subdirectory("lock-kinds")
