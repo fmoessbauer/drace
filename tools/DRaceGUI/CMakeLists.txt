@@ -80,7 +80,7 @@ if(Qt5_FOUND AND Boost_FOUND)
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:${GUI_TARGET}> )
 
     # install the GUI executable itself (without Qt shared modules)
-    install(TARGETS ${GUI_TARGET} DESTINATION bin)
+    install(TARGETS ${GUI_TARGET} DESTINATION ${DRACE_RUNTIME_DEST})
 
     # append licensing information to global license file
     if(LIC_FILE)

@@ -37,34 +37,34 @@ static auto msr_timeout = std::chrono::minutes(2);
 
 // Test cases
 TEST_P(DR, ConcurrentInc) {
-	run(GetParam(), "mini-apps/concurrent-inc/gp-concurrent-inc", 1, 10);
+	run(GetParam(), "gp-concurrent-inc", 1, 10);
 }
 TEST_P(DR, IncMutex) {
-	run(GetParam(), "mini-apps/inc-mutex/gp-inc-mutex", 0, 0);
+	run(GetParam(), "gp-inc-mutex", 0, 0);
 }
 #ifdef WINDOWS
 // \todo port to linux
 TEST_P(DR, LockKinds) {
-	run(GetParam(), "mini-apps/lock-kinds/gp-lock-kinds", 0, 0);
+	run(GetParam(), "gp-lock-kinds", 0, 0);
 }
 #endif
 TEST_P(DR, EmptyMain) {
-	run(GetParam(), "mini-apps/empty-main/gp-empty-main", 0, 0);
+	run(GetParam(), "gp-empty-main", 0, 0);
 }
 TEST_P(DR, Atomics) {
-	run(GetParam(), "mini-apps/atomics/gp-atomics", 0, 0);
+	run(GetParam(), "gp-atomics", 0, 0);
 }
 // TODO: Redesign test:
 //       Currently, many runs miss the race as the race often
 //       does not occur.
 //TEST_P(FlagMode, RacyAtomics) {
-//	run(GetParam(), "mini-apps/atomics/gp-atomics racy", 1, 10);
+//	run(GetParam(), "gp-atomics racy", 1, 10);
 //}
 TEST_P(DR, Annotations) {
-	run(GetParam(), "mini-apps/annotations/gp-annotations", 0, 0);
+	run(GetParam(), "gp-annotations", 0, 0);
 }
 TEST_P(DR, DisabledAnnotations) {
-	run(GetParam(), "mini-apps/annotations/gp-annotations-racy", 1, 5);
+	run(GetParam(), "gp-annotations-racy", 1, 10);
 }
 
 // Individual tests
@@ -72,23 +72,23 @@ TEST_P(DR, DisabledAnnotations) {
 TEST_P(DR, DelayedLookup) {
     // with delayed lookup all races have to be cached,
     // hence make test more difficult by disabling suppressions
-    run(std::string(GetParam()) + " --delay-syms --suplevel 0", "mini-apps/concurrent-inc/gp-concurrent-inc", 1, 210);
+    run(std::string(GetParam()) + " --delay-syms --suplevel 0", "gp-concurrent-inc", 1, 210);
 }
 
 TEST_P(DR, ExclStack) {
-	run(std::string(GetParam()) + " --excl-stack", "mini-apps/concurrent-inc/gp-concurrent-inc", 1, 10);
+	run(std::string(GetParam()) + " --excl-stack", "gp-concurrent-inc", 1, 10);
 }
 
 TEST_P(DR, ExcludeRaces) {
-	run(std::string(GetParam()) + " -c test/data/drace_excl.ini", "mini-apps/concurrent-inc/gp-concurrent-inc", 0, 0);
+	run(std::string(GetParam()) + " -c bin/data/drace_excl.ini", "gp-concurrent-inc", 0, 0);
 }
 
 #ifdef DRACE_TESTING_DOTNET
 // Dotnet Tests
 TEST_P(DR, DotnetClrRacy) {
-    bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
+    bp::child msr("bin\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 1, 30, "none");
+    run(std::string(GetParam()) + " --extctrl", "gp-cs-sync-clr", 1, 30, "none");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
@@ -96,9 +96,9 @@ TEST_P(DR, DotnetClrRacy) {
 }
 
 TEST_P(DR, DotnetClrMonitor) {
-    bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
+    bp::child msr("bin\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 0, 0, "monitor");
+    run(std::string(GetParam()) + " --extctrl", "gp-cs-sync-clr", 0, 0, "monitor");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
@@ -106,9 +106,9 @@ TEST_P(DR, DotnetClrMonitor) {
 }
 
 TEST_P(DR, DotnetClrMutex) {
-    bp::child msr("ManagedResolver\\msr --once", bp::std_out > bp::null);
+    bp::child msr("bin\\msr --once", bp::std_out > bp::null);
 
-    run(std::string(GetParam()) + " --extctrl", "mini-apps/cs-sync/gp-cs-sync-clr", 0, 0, "mutex");
+    run(std::string(GetParam()) + " --extctrl", "gp-cs-sync-clr", 0, 0, "mutex");
 
     if(!msr.wait_for(msr_timeout)){
         msr.terminate();
@@ -119,7 +119,7 @@ TEST_P(DR, DotnetClrMutex) {
 #ifdef DRACE_XML_EXPORTER
 TEST_P(DR, ReportXML) {
     std::string filename("reportXML.xml");
-    run(std::string(GetParam()) + " --xml-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc", 1, 10);
+    run(std::string(GetParam()) + " --xml-file " + filename, "gp-concurrent-inc", 1, 10);
     {
         tinyxml2::XMLDocument doc;
         ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS) << "File not found";
@@ -149,7 +149,7 @@ TEST_P(DR, ReportXML) {
 
 TEST_P(DR, ReportText) {
     std::string filename("reportText.txt");
-    run(std::string(GetParam()) + " --out-file " + filename, "mini-apps/concurrent-inc/gp-concurrent-inc", 1, 10);
+    run(std::string(GetParam()) + " --out-file " + filename, "gp-concurrent-inc", 1, 10);
     {
         std::ifstream fstr(filename);
         if (fstr.good()) {
@@ -165,11 +165,11 @@ TEST_P(DR, ReportText) {
 
 // Setup value-parameterized tests
 #if WINDOWS
-INSTANTIATE_TEST_CASE_P(Integration,
+INSTANTIATE_TEST_SUITE_P(Integration,
     DR,
 	::testing::Values("-d fasttrack", "-d tsan"));
 #else
-INSTANTIATE_TEST_CASE_P(Integration,
+INSTANTIATE_TEST_SUITE_P(Integration,
     DR,
 	::testing::Values("-d fasttrack"));
 #endif

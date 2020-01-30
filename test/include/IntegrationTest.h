@@ -48,8 +48,8 @@ public:
 	void run(const std::string & client_args, const std::string & exe, int min, int max, const std::string & app_args = "") {
 		std::stringstream command;
 		command << drrun << " -c " << drclient << " "
-				<< client_args << " -- " << "test/" << exe << exe_suffix
-				<< " " << app_args
+				<< client_args << " -- " << "bin/samples/" << exe << exe_suffix
+                << " " << app_args
 			    << " > " << logfile << " 2>&1";
 		if(verbose)
 			std::cout << ">> Issue Command: " << command.str() << std::endl;
@@ -71,7 +71,7 @@ public:
 			if (std::regex_search(output, races_match, expr)) {
 				std::string num_races_str;
 				std::copy(races_match[1].first, races_match[1].second, std::back_inserter(num_races_str));
-				
+
 				if(verbose)
 					std::cout << ">>> Detected Races: " << num_races_str << std::endl;
 

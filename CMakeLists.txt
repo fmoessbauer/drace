@@ -45,9 +45,22 @@ set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(DRACE_RUNTIME_DEST "bin"     CACHE STRING "Runtime install destination")
+set(DRACE_LIBRARY_DEST "lib"     CACHE STRING "Library install destination")
+set(DRACE_ARCHIVE_DEST "lib"     CACHE STRING "Archive install destination")
+set(DRACE_INCLUDE_DEST "include" CACHE STRING "Header install destination")
+set(DRACE_DOC_DEST     "doc"     CACHE STRING "Documentation install destination")
+
 # must be set to fixes issue in DR configure scripts on unix
-if(UNIX)
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib" CACHE STRING "Library install location")
+# also useful on windows as dlls are placed next to binaries
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
@@ -166,19 +179,13 @@ if(Doxygen_FOUND)
 
 	doxygen_add_docs(
 		doc
-		#${PROJECT_SOURCE_DIR}
 		COMMENT "Generate Code Documentation")
 
-	if(${DRACE_INSTALL_DOCS})
-		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+	if(DRACE_INSTALL_DOCS)
+		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION ${DRACE_DOC_DEST} OPTIONAL)
 	endif()
 endif()
 
-if(DRACE_ENABLE_RUNTIME)
-	install(FILES "drace.ini" DESTINATION bin)
-	install(FILES "race_suppressions.txt" DESTINATION bin)
-endif()
-
 # install config readme
-install(FILES "README.md" DESTINATION doc)
-install(FILES ${LIC_FILE} DESTINATION doc)
+install(FILES "README.md" DESTINATION ${DRACE_DOC_DEST})
+install(FILES ${LIC_FILE} DESTINATION ${DRACE_DOC_DEST})

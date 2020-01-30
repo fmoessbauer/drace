@@ -5,9 +5,10 @@ macro(build_csharp outfile source)
     set(exe "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${outfile}.exe")
     add_custom_target(${outfile} ALL DEPENDS ${exe})
     set(source_winpath "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+    set(dest_winpath "${exe}")
     string(REGEX REPLACE "/" "\\\\" source_winpath "${source_winpath}")
     add_custom_command(OUTPUT ${exe} DEPENDS ${source}
-        COMMAND ${CSC} ARGS /debug /platform:x64 /t:exe /out:${outfile}.exe
+        COMMAND ${CSC} ARGS /debug /platform:x64 /t:exe /out:${dest_winpath}
         "${source_winpath}" VERBATIM)
   endif()
 endmacro()
@@ -25,6 +26,6 @@ else()
     # TODO: Implement same for CoreCLR
 endif()
 
-if(${DRACE_INSTALL_TESTS})
-    install(FILES ${EXAMPLE}.exe ${EXAMPLE}.pdb DESTINATION bin OPTIONAL)
+if(DRACE_INSTALL_TESTS)
+    install(FILES ${EXAMPLE}.exe ${EXAMPLE}.pdb DESTINATION ${DRACE_RUNTIME_DEST} OPTIONAL)
 endif()

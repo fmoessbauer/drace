@@ -9,15 +9,15 @@
 # the LICENSE file in the top-level directory.
 
 set(FT_SOURCES
-"src/stacktrace"
-"src/varstate"
-"src/threadstate")
+    "src/stacktrace"
+    "src/varstate"
+    "src/threadstate")
 
 set(FT_TEST_SOURCES
-"test/fasttrack_test.cpp"
-"src/stacktrace"
-"src/varstate.cpp"
-"src/threadstate.cpp")
+    "test/fasttrack_test"
+    "src/stacktrace"
+    "src/varstate"
+    "src/threadstate")
 
 include(GenerateExportHeader)
 # we just need BGL which is header only, hence avoid errors by not importing as a target
@@ -33,13 +33,8 @@ if(Boost_FOUND)
         CXX_STANDARD_REQUIRED OFF
         POSITION_INDEPENDENT_CODE ON)
 
-    if(POLICY CMP0091)
-        set_target_properties(
-            "drace.detector.fasttrack.generic" PROPERTIES
-            # use static runtime (required by dynamorio)
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    elseif(WIN32)
-        target_compile_options("drace.detector.fasttrack.generic" PRIVATE "/MT$<$<CONFIG:Debug>:d>")
+    if(WIN32)
+        target_compile_options("drace.detector.fasttrack.generic" PUBLIC "/MT$<$<CONFIG:Debug>:d>")
     endif()
 
     target_include_directories("drace.detector.fasttrack.generic"
@@ -73,16 +68,11 @@ if(Boost_FOUND)
     endif()
 
     install(TARGETS "drace.detector.fasttrack.standalone"
-        RUNTIME DESTINATION bin/fasttrack COMPONENT Runtime
-        LIBRARY DESTINATION lib/fasttrack COMPONENT Runtime
-        ARCHIVE DESTINATION lib/fasttrack COMPONENT Development)
-    install(FILES ${PROJECT_SOURCE_DIR}/common/detector/Detector.h DESTINATION include/fasttrack)
-
-    # copy detector dlls to drace-client binary dir
-    add_custom_command(TARGET "drace.detector.fasttrack.standalone" POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:drace.detector.fasttrack.standalone>"
-            "${PROJECT_BINARY_DIR}/drace-client")
+        RUNTIME DESTINATION ${DRACE_RUNTIME_DEST}/fasttrack COMPONENT Runtime
+        LIBRARY DESTINATION ${DRACE_RUNTIME_DEST}/fasttrack COMPONENT Runtime
+        ARCHIVE DESTINATION ${DRACE_ARCHIVE_DEST}/fasttrack COMPONENT Development)
+    # TODO add target for drace-detector with INSTALL_INTERFACE
+    install(FILES ${PROJECT_SOURCE_DIR}/common/detector/Detector.h DESTINATION ${DRACE_INCLUDE_DEST}/fasttrack)
 
     ################ configure test module ################
     if(BUILD_TESTING)

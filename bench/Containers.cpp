@@ -24,7 +24,7 @@ std::mt19937 prng(42);
 std::uniform_real_distribution<float> dropout(0, 1);
 
 template<typename dist>
-inline uint64_t generate_key(const dist & d) {
+inline uint64_t generate_key(dist & d) {
 	return d(prng) * (std::numeric_limits<uint32_t>::max() / d.max()); // Keys shoud approx memory locations
 }
 

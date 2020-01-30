@@ -188,7 +188,7 @@ namespace drace {
             }
 
             virtual void map_shadow(void* startaddr, size_t size_in_bytes) {
-                __tsan_map_shadow(startaddr, size_in_bytes);
+                __tsan_map_shadow(startaddr, static_cast<unsigned long>(size_in_bytes));
             }
 
             virtual void func_enter(tls_t tls, void* pc) {

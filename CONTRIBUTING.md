@@ -8,7 +8,7 @@ guidelines described in the following.
 
 ### Versioning
 
-We follow the [semantic versioning](https://semver.org/) stategy. In short, the version numbers denote the following:
+We follow the [semantic versioning](https://semver.org/) strategy. In short, the version numbers denote the following:
 
 ```
 <major>.<minor>.<patch>
@@ -29,7 +29,7 @@ To make the investigation as simple as possible, please include the following in
 - DRace version: obtain it by running DRace with the `--version` flag
 - DynamoRIO version: run ` drrun -version`
 
-If possible, try to run DynamoRIO + DRace + <App> in Windbg and provide callstacks.
+If possible, try to run DynamoRIO + DRace + <App> in WinDbg and provide callstacks.
 
 ### Code Contributions
 
@@ -57,7 +57,7 @@ This example should illustrate all you need:
  * also summarized on a single ToDo list page. Very useful!
  *
  * Return values are documented like this:
- * 
+ *
  * \returns   true   if the specified number of wombats has
  *                   been successfully wombatified with the given
  *                   factor
@@ -81,7 +81,7 @@ bool foo(
 
 ## Unit Tests
 
-When fixing a bug, please add a unit test that failes until the bug is resolved.
+When fixing a bug, please add a unit test that fails until the bug is resolved.
 When adding features, a unit test is mandatory.
 
 ## Static Code Analysis
@@ -89,7 +89,7 @@ When adding features, a unit test is mandatory.
 We use [cppcheck](http://cppcheck.sourceforge.net/) to statically analyze the codebase.
 This analysis is automatically performed in the CI where we require a error-free report to pass.
 However, we do not enforce the developer to follow all rule-recommendations.
-If there is some good reason to decice against a rule, annotate this by either adding a cppcheck inline annotation, or adding a suppression in `contrib/suppressions.txt`.
+If there is some good reason to decide against a rule, annotate this by either adding a cppcheck inline annotation, or adding a suppression in `contrib/suppressions.txt`.
 
 To run cppcheck locally, execute this command in the build directory:
 

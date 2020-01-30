@@ -22,7 +22,7 @@ using drace::RaceFilter;
 //top of stack race suppression
 TEST(FilterTest, StaticSupression) {
 
-    std::string file = "race_suppressions.txt";
+    std::string file = "bin/race_suppressions.txt";
 
     // create fake detector race
     Detector::Race r;

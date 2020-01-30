@@ -1,5 +1,7 @@
 # build all mini-applications
 
+# put all sample applications into dedicated folder
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/samples")
 add_subdirectory("concurrent-inc")
 add_subdirectory("inc-mutex")
 add_subdirectory("empty-main")

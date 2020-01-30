@@ -3,7 +3,7 @@
 [![REUSE status](https://api.reuse.software/badge/github.com/siemens/drace)](https://api.reuse.software/info/github.com/siemens/drace)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2553/badge)](https://bestpractices.coreinfrastructure.org/projects/2553)
 
-DRace is a data-race detector for windows applications which uses DynamoRIO
+DRace is a data-race detector for Windows applications which uses DynamoRIO
 to dynamically instrument a binary at runtime.
 It does not require any preparations like instrumentation of the binary to check.
 While the detector should work with all binaries that use the Windows synchronization API,
@@ -164,7 +164,7 @@ The MSR then tries to locate the correct [DAC](https://github.com/dotnet/coreclr
 DLL to resolve managed program counters and symbols.
 
 The output (logs) of the MSR are just for debugging reasons.
-The resolved symbols are passed back to drace and merged with the non-managed ones.
+The resolved symbols are passed back to DRace and merged with the non-managed ones.
 
 **Note:**
 To properly detect dotnet synchronization, pdb symbol information is required.
@@ -174,7 +174,7 @@ Thereto, point the `_NT_SYMBOL_PATH` variable to a MS symbol server, as shown on
 
 ### Custom Annotations
 
-Custom synchonisation logic is supported by annotating the corresponding code sections.
+Custom synchronization logic is supported by annotating the corresponding code sections.
 Thereto we provide a header with macros in `drace-client/include/annotations/drace_annotation.h`.
 To enable these macros, define `DRACE_ANNOTATION` prior to including the header.
 
@@ -192,9 +192,9 @@ Integration tests for the complete DR-Client can be executed using the following
 ```
 # Integration Tests
 # Windows
-./test/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
+./bin/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
 #Linux
-/test/drace-system-tests --gtest_output="xml:test-system-results.xml"
+./bin/drace-system-tests --gtest_output="xml:test-system-results.xml"
 ```
 
 **Note:** Before pushing a commit, please run the integration tests.
@@ -202,8 +202,8 @@ Later on, bugs are very tricky to find.
 
 ## Build
 
-DRace is build using CMake. The only external dependency is DynamoRIO.
-For best compability with Windows 10, use the latest available weekly build.
+DRace is build using CMake. The only (mandatory) external dependency is DynamoRIO.
+For best compatibility with Windows 10, use the latest available weekly build.
 The path to your DynamoRIO installation has to be set using `-DDynamoRIO_DIR`.
 
 If you want to use the drace-gui, you must specify a path to boost and Qt5.
@@ -307,7 +307,7 @@ Standalone Components:
 
 ### Fasttrack (Standalone)
 
-- On 32 Bit architectures, only 16 bits are used to store a thread. This could theoretically cause problems as Windows TIDs are 32 bits (DWORD). If two threads would have the same last 16 bits, they would be considered as the same frame.  
+- On 32 Bit architectures, only 16 bits are used to store a thread. This could theoretically cause problems as Windows TIDs are 32 bits (DWORD). If two threads would have the same last 16 bits, they would be considered as the same frame.
 
 ## Licensing
 
@@ -323,7 +323,7 @@ When choosing only one, remove the reference to the other from the file header.
 ### External Ressources
 
 Most external ressources are located in the `vendor` directory.
-For licensing information regarding these components, we refer to the information bundled with the individual ressource.
+For licensing information regarding these components, we refer to the information bundled with the individual resource.
 
 ### License Header Format
 
@@ -335,7 +335,7 @@ We use the [REUSE](https://reuse.software/practices/) format for license and cop
  *
  * Copyright <YEAR> <COPYRIGHT HOLDER>
  *
- * SPDX-License-Identifier: MIT 
+ * SPDX-License-Identifier: MIT
  */
 ```
 
@@ -355,7 +355,7 @@ F. Mößbauer. "High Performance Dynamic Threading Analysis for Hybrid Applicati
            title = {High Performance Dynamic Threading Analysis for Hybrid Applications},
          keyword = {Concurrency Bugs; Race Condition; Program Analysis; Binary Instrumentation; Sampling; Managed Applications},
         abstract = {Verifying the correctness of multithreaded programs is a challenging task due to errors that occur sporadically. Testing, the most important verification method for decades, has proven to be ineffective in this context. On the other hand, data race detectors are very successful in finding concurrency bugs that occur due to missing synchronization. However, those tools introduce a huge runtime overhead and therefore are not applicable to the analysis of real-time applications. Additionally, hybrid binaries consisting of Dotnet and native components are beyond the scope of many data race detectors.
-In this thesis, we present a novel approach for a dynamic low-overhead data race detector. We contribute a set of fine-grained tuning techniques based on sampling and scoping. These are evaluated on real-world applications, demonstrating that the runtime overhead is reduced while still maintaining a good detection accuracy. Further, we present a proof of concept for hybrid applications and show that data races in managed Dotnet code are detectable by analyzing the 
+In this thesis, we present a novel approach for a dynamic low-overhead data race detector. We contribute a set of fine-grained tuning techniques based on sampling and scoping. These are evaluated on real-world applications, demonstrating that the runtime overhead is reduced while still maintaining a good detection accuracy. Further, we present a proof of concept for hybrid applications and show that data races in managed Dotnet code are detectable by analyzing the
 application on the binary layer. The approaches presented in this thesis are implemented in the open-source tool DRace.},
             year = {2019},
           author = {Felix M\"o\ssbauer},
