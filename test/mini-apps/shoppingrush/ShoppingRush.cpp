@@ -39,7 +39,7 @@
 #define PATIENCE 100
 #define BUDGET   200
 
-enum WalmartProduct : int {
+enum BigStoreProduct : int {
 	Couch,
 	FlatscreenTV,
 	Hammock,
@@ -47,7 +47,7 @@ enum WalmartProduct : int {
 	Ammunition
 };
 
-enum ToysRUsProduct : int {
+enum ToyStoreProduct : int {
 	Pikachu,
 	DoraTheExplorer,
 	TrumpActionToy,
@@ -55,7 +55,7 @@ enum ToysRUsProduct : int {
 	TickleMeElmo
 };
 
-enum KmartProduct : int {
+enum MarketProduct : int {
 	Diesel,
 	Fertilizer,
 	Bleach,
@@ -114,13 +114,13 @@ int shopping(std::timed_mutex & buy_mx,
 	return CHECKOUT;
 }
 
-template<typename walmart_t,
-	typename toysrus_t,
-	typename kmart_t>
+template<typename BigStore_t,
+	typename ToyStore_t,
+	typename Market_t>
 	void go_wild(int         threadid,
-		walmart_t & walmart,
-		toysrus_t & toysrus,
-		kmart_t   & kmart,
+		BigStore_t & BigStore,
+		ToyStore_t & ToyStore,
+		Market_t   & Market,
 		int         budget) {
 	std::cout << "[T " << threadid << "] started" << std::endl;
 
@@ -134,32 +134,30 @@ template<typename walmart_t,
 	while (ret_reason != CHECKOUT) {
 		int shopnr = std::rand() % 3;
 		switch (shopnr) {
-		case 0: ret_reason = shopping(shop_mx, walmart, "walmart", budget, threadid); break;
-		case 1: ret_reason = shopping(shop_mx, toysrus, "toysrus", budget, threadid); break;
-		case 2: ret_reason = shopping(shop_mx, kmart, "kmart", budget, threadid);
+		case 0: ret_reason = shopping(shop_mx, BigStore, "BigStore", budget, threadid); break;
+		case 1: ret_reason = shopping(shop_mx, ToyStore, "ToyStore", budget, threadid); break;
+		case 2: ret_reason = shopping(shop_mx, Market, "Market", budget, threadid);
 		}
 	}
 
 	std::cout << "[T " << threadid << "] finished" << std::endl;
 }
 
-void test_fun() {
-	std::cout << "Thread started" << std::endl;
-}
+
 
 int main(int argc, char** argv)
 {
 	std::cout<< "Setup playground" << std::endl;
 
 	static const int horde_size = 20;
-	static const int walmart_capacity = 100000;
-	static const int toysrus_capacity = 40000;
-	static const int kmart_capacity = 50000;
+	static const int BigStore_capacity = 100000;
+	static const int ToyStore_capacity = 40000;
+	static const int Market_capacity = 50000;
 
 	// The shopping centers:
-	std::multiset<std::pair<WalmartProduct, int>> walmart;
-	std::multiset<std::pair<ToysRUsProduct, int>> toysrus;
-	std::multiset<std::pair<KmartProduct, int>> kmart;
+	std::multiset<std::pair<BigStoreProduct, int>> BigStore;
+	std::multiset<std::pair<ToyStoreProduct, int>> ToyStore;
+	std::multiset<std::pair<MarketProduct, int>> Market;
 
 	// The dear customers:
 	std::vector<std::thread> horde;
@@ -167,21 +165,21 @@ int main(int argc, char** argv)
 	// some tweaks
 	horde.reserve(horde_size);
 
-	std::generate_n(std::inserter(walmart, walmart.begin()), walmart_capacity, make<WalmartProduct>);
-	std::generate_n(std::inserter(toysrus, toysrus.begin()), toysrus_capacity, make<ToysRUsProduct>);
-	std::generate_n(std::inserter(kmart, kmart.begin()), kmart_capacity, make<KmartProduct>);
+	std::generate_n(std::inserter(BigStore, BigStore.begin()), BigStore_capacity, make<BigStoreProduct>);
+	std::generate_n(std::inserter(ToyStore, ToyStore.begin()), ToyStore_capacity, make<ToyStoreProduct>);
+	std::generate_n(std::inserter(Market, Market.begin()), Market_capacity, make<MarketProduct>);
 
-	int num_total_products = walmart.size() + toysrus.size() + kmart.size();
+	int num_total_products = BigStore.size() + ToyStore.size() + Market.size();
 	std::cout << "Total number of products " << num_total_products << std::endl;
 
 	for (int i = 0; i < horde_size; ++i) {
-		horde.push_back(std::thread(go_wild<decltype(walmart),
-			decltype(toysrus),
-			decltype(kmart)>,
+		horde.push_back(std::thread(go_wild<decltype(BigStore),
+			decltype(ToyStore),
+			decltype(Market)>,
 			i,
-			std::ref(walmart),
-			std::ref(toysrus),
-			std::ref(kmart),
+			std::ref(BigStore),
+			std::ref(ToyStore),
+			std::ref(Market),
 			BUDGET));
 	}
 

@@ -2,7 +2,7 @@
 
 DRace is a data-race detector for windows applications which uses DynamoRIO to dynamically instrument a binary at runtime. This tutorial shall provide an overview on how to get and use DRace and the belonging tools.
 
-This `HowTo.md` provides explanations about all parts of the usage of DRace. At the end a [step by step tutorial](##Step-by-step-Tutorial) is provided, in which you can train your skills in using DRace.
+This `HowTo.md` provides explanations about all parts of the usage of DRace. At the end, a [step by step tutorial](##Step-by-step-Tutorial) is provided, in which you can train your skills in using DRace.
 
 ## Get the tools
 
@@ -31,8 +31,8 @@ It is recommended to use the latest cron build. Once the download is finished, y
 
 For new users the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quiet long and unhandy DRace command can be build in an easier fashion.
 
-Furthermore a working configuration, can be saved in a text file and restored at a later time.
-Additionally some plausability checks are exectued one the inputs. Correct and incorrect inputs are maked with green and red. The fields must be filled like described in the following.
+Furthermore, a working configuration can be saved in a text file and restored at a later time.
+Additionally, some plausability checks are exectued one the inputs. Correct and incorrect inputs are marked with green and red. The fields must be filled like described in the following.
 Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an abitrary shell.
 
 The following fields are mandatory:
@@ -69,7 +69,6 @@ More information about the ReportConverter is [here](##ReportConverter)
 
 ```bash
 drrun.exe -c drace-client.dll <detector parameter> -- application.exe <app parameter>
-# see limitations for -no_follow_children option
 ```
 
 **Command Line Options**
@@ -134,7 +133,7 @@ You can find an explanation **[here](##Get-the-tools)**.
 
 3. Execute DRace
 
-After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this.
+After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this. Please note that during runtime, a MSVC "Debug Assertion Failed" might fire, which states "erase iterator out of range". Please just click cancel and everything should be fine.
 
 ![8](./Images/powershell_out.png)
 
@@ -149,7 +148,7 @@ Now, you can start to fix the application.
 5. Fix the application and rerun DRace
 
 Your job is now to fix the racy parts in the source file. It is located in `./drace/sample/ShoppingRush.cpp`.
-If you think you did the trick you can recompile the example application and rerun with DRace. You should compile the application with "RelWithDebInfo" as everything gets awfully slow, when the application is compiled in "Debug" mode.
+If you think you did the trick you can recompile the example application and rerun with DRace. You should compile the application in "debug" mode as otherwise the race might not be exactly detected at the spot of the occurence. As already described, the debug assertion might fire. If this is the case just click "Cancel" and everything should be fine.
 
 You're done when the application doesn't produce any races anymore, when it is analysed with DRace and still produces the correct output.
 
