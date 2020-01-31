@@ -21,7 +21,7 @@ namespace symbol {
 std::string SymbolLocation::get_pretty() const {
     // we use c-style formatting here, as we cannot
     // use std::stringstream (see i#9)
-    constexpr int bufsize = 256;
+    constexpr int bufsize = 512;
     char * strbuf = (char*)dr_thread_alloc(dr_get_current_drcontext(), bufsize);
 
     dr_snprintf(strbuf, bufsize, "PC %p ", pc);

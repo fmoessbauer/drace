@@ -139,7 +139,7 @@ namespace msr {
         // theoretically a connection to the thread is not required
         // as the relevant information is passed from DRace
         // TODO: It is unclear if the stack-walk also works if the thread is not suspended
-        // 
+        //
         // The stack-walk has to be executed at or shortly after the interesting ip
         // as otherwise the history gets blurry
         HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT, FALSE, ctx.threadid);
@@ -207,19 +207,19 @@ namespace msr {
         // Get Module Name
         _resolver.GetModuleName(ip, buffer);
         bs = sym.module.size();
-        strncpy_s(sym.module.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
+        strncpy_s(sym.module.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), _TRUNCATE);
 
         // Get Function Name
         buffer = "";
         _resolver.GetMethodName(ip, buffer);
         bs = sym.function.size();
-        strncpy_s(sym.function.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
+        strncpy_s(sym.function.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), _TRUNCATE);
 
         // Get Line Info
         buffer = "";
         _resolver.GetFileLineInfo(ip, buffer);
         bs = sym.path.size();
-        strncpy_s(sym.path.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), bs);
+        strncpy_s(sym.path.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), _TRUNCATE);
         logger->debug("+ resolve IP to: {}", sym.function.data());
         _shmdriver->commit();
     }

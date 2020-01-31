@@ -42,14 +42,16 @@ namespace ipc {
 	};
 
 	/** Resolved Symbol Information */
-	struct SymbolInfo {
-		std::array<char, 128> module;
-		std::array<char, 128> function;
-		std::array<char, 256> path;
-		std::array<char, 128>  line;
-	};
+  struct SymbolInfo
+  {
+    std::array<char, 256> module;
+    std::array<char, 128> function;
+    std::array<char, 256> path;
+    unsigned line;
+    unsigned offset;
+  };
 
-	/** Basic Information for attaching */
+  /** Basic Information for attaching */
 	struct BaseInfo {
 		// process id
 		int pid;
