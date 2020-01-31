@@ -26,7 +26,8 @@ if(BUILD_TESTING)
     endif()
 
     # create library which is linked in global testing module
-    add_library(common_test OBJECT ${TEST_SOURCES})
-    target_link_libraries(common_test PRIVATE gtest "drace-common")
-    set_property(GLOBAL APPEND PROPERTY DRACE_TEST_SUITES common_test)
+    add_executable(common_test ${TEST_SOURCES})
+    target_link_libraries(common_test PRIVATE gtest gtest_main "drace-common")
+    # SHMDriver requires serial execution
+    gtest_discover_tests(common_test WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 endif()

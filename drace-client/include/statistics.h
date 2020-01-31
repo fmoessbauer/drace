@@ -32,7 +32,7 @@ namespace drace {
 	class Statistics {
 	public:
 		using ms_t = std::chrono::milliseconds;
-		using hist_t = std::vector<std::pair<uint64_t, size_t>>;
+		using hist_t = std::vector<std::pair<uintptr_t, size_t>>;
 
 		unsigned long mutex_ops{ 0 };
 		unsigned long flushes{ 0 };
@@ -40,15 +40,15 @@ namespace drace {
 		unsigned long external_flushes{ 0 };
 		unsigned long module_loads{ 0 };
 		ms_t module_load_duration{ 0 };
-		uint64_t proc_refs{ 0 };
-		uint64_t total_refs{ 0 };
+		uintptr_t proc_refs{ 0 };
+		uintptr_t total_refs{ 0 };
 
-		LossyCountingModel<uint64_t> page_hits;
-		LossyCountingModel<uint64_t> pc_hits;
+		LossyCountingModel<uintptr_t> page_hits;
+		LossyCountingModel<uintptr_t> pc_hits;
 
 		hist_t freq_hits;
 		hist_t freq_pc_hist;
-		std::vector<uint64_t> freq_pcs;
+		std::vector<uintptr_t> freq_pcs;
 
 	public:
 
@@ -59,7 +59,7 @@ namespace drace {
 			pc_hits(0.01, 0.001)
 		{ }
 
-		void print_summary(FILE * target) {
+		void print_summary(file_t target) {
 			std::stringstream s;
 			s << "mutex_ops:\t\t" << std::dec << mutex_ops << std::endl
 				<< "all-flushes:\t\t" << std::dec << flush_events << std::endl

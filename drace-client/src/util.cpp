@@ -23,7 +23,7 @@
 
 namespace drace {
 
-	FILE * log_target = nullptr;
+	file_t log_target{0};
 
     namespace util {
         bool common_prefix(const std::string& a, const std::string& b)
@@ -54,6 +54,11 @@ namespace drace {
 
         std::string basename(const std::string & fullpath) {
             return fullpath.substr(fullpath.find_last_of("/\\") + 1);
+        }
+
+        std::string without_extension(const std::string & path) {
+            size_t pos = path.find_last_of(".");
+            return path.substr(0, pos);
         }
 
         std::string to_iso_time(std::chrono::system_clock::time_point tp) {

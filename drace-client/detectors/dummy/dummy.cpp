@@ -13,6 +13,12 @@
 
 #include <detector/Detector.h>
 
+#ifdef WINDOWS
+#define DUMMY_EXPORT __declspec(dllexport)
+#else
+#define DUMMY_EXPORT
+#endif
+
 namespace drace
 {
     namespace detector
@@ -77,6 +83,6 @@ namespace drace
     }
 }
 
-extern "C" __declspec(dllexport) Detector * CreateDetector() {
+extern "C" DUMMY_EXPORT Detector * CreateDetector() {
     return new drace::detector::Dummy();
 }

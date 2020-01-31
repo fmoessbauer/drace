@@ -50,12 +50,13 @@ namespace drace {
 	{
         // set to true if at least one function is wrapped
         bool wrapped_some = false;
-		std::string modname(dr_module_preferred_name(mod));
-        // remove ".dll / .exe" part
-        modname.erase(modname.size() - 4);
+		const auto & fullname = dr_module_preferred_name(mod);
+		std::string modname = util::without_extension(fullname);
+
 		for (const auto & name : syms) {
 			LOG_NOTICE(-1, "Search for %s", name.c_str());
 			if (method == Method::EXTERNAL_MPCR) {
+                #ifdef WINDOWS
 				std::string symname = (modname + '!') + name;
 				auto sr = MSR::search_symbol(mod, symname.c_str(), full_search);
                 wrapped_some |= sr.size > 0;
@@ -66,9 +67,12 @@ namespace drace {
 						sr.adresses[i] - (size_t)mod->start,
 						(void*)(&info));
 				}
+                #endif
 			}
 			else if (method == Method::DBGSYMS)
 			{
+				#if WINDOWS
+				// \todo not supported on linux
 				wrap_info_t info{ mod, pre, post };
 				drsym_error_t err = drsym_search_symbols(
 					mod->full_path,
@@ -77,6 +81,7 @@ namespace drace {
 					(drsym_enumerate_cb)internal::wrap_function_clbck,
 					(void*)&info);
                 wrapped_some |= (err == DRSYM_SUCCESS);
+				#endif
 			}
 			else if (method == Method::EXPORTS)
 			{
@@ -127,7 +132,14 @@ namespace drace {
 			wrap_functions(mod, config.get_multi("sync", "wait_for_single_object"), false, Method::EXPORTS, event::get_arg, event::wait_for_single_obj);
 			// waitForMultipleObjects
 			wrap_functions(mod, config.get_multi("sync", "wait_for_multiple_objects"), false, Method::EXPORTS, event::wait_for_mo_getargs, event::wait_for_mult_obj);
+#else
+			wrap_functions(mod, config.get_multi("linuxsync", "acquire_excl"), false, Method::EXPORTS, event::get_arg, event::mutex_lock);
+			// mutex trylock
+			wrap_functions(mod, config.get_multi("linuxsync", "acquire_excl_try"), false, Method::EXPORTS, event::get_arg, event::mutex_trylock);
+			// mutex unlock
+			wrap_functions(mod, config.get_multi("linuxsync", "release_excl"), false, Method::EXPORTS, event::mutex_unlock, NULL);
 #endif
+
 		}
 		else {
 			LOG_INFO(0, "try to wrap non-system mutexes");
@@ -195,6 +207,32 @@ namespace drace {
 		// wrap excludes
 		wrap_functions(mod, config.get_multi("functions", "exclude_enter"), false, Method::EXPORTS, event::begin_excl, NULL);
 		wrap_functions(mod, config.get_multi("functions", "exclude_leave"), false, Method::EXPORTS, NULL, event::end_excl);
+	}
+
+    bool funwrap::wrap_generic_call(void *drcontext, void *tag, instrlist_t *bb,
+			instr_t *instr, bool for_trace,
+			bool translating, void *user_data)
+    {
+        // \todo The shadow stack instrumentation triggers many assertions
+        // when running in debug mode on a CoreCLR application
+
+        // \todo Handle dotnet calls with push addr; ret;
+
+        if (instr == instrlist_last(bb)) {
+            if (instr_is_call_direct(instr)) {
+                dr_insert_call_instrumentation(drcontext, bb, instr, (void*)event::on_func_call);
+                return true;
+            }
+            else if (instr_is_call_indirect(instr)) {
+                dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)event::on_func_call, SPILL_SLOT_1);
+                return true;
+            }
+            else if (instr_is_return(instr)) {
+                dr_insert_mbr_instrumentation(drcontext, bb, instr, (void*)event::on_func_ret, SPILL_SLOT_1);
+                return true;
+            }
+        }
+        return false;
 	}
 
 } // namespace drace

@@ -170,7 +170,7 @@ namespace drace {
 			// To avoid deadlock in flush-waiting spinlock,
 			// acquire / release must not occur concurrently
 
-            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
             if (cnt > 1) {
                 hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
             }
@@ -198,7 +198,7 @@ namespace drace {
 			void* mutex = drwrap_get_arg(wrapctx, 0);
 			//detector::happens_before(data->tid, mutex);
 
-            uint64_t cnt = (uint64_t)hashtable_lookup(&data->mutex_book, mutex);
+            uintptr_t cnt = (uintptr_t)hashtable_lookup(&data->mutex_book, mutex);
 			if (cnt == 0) {
 				LOG_TRACE(data->tid, "Mutex Error %p at : %s", mutex, module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx)).sym_name.c_str());
 				// mutex not in book
@@ -291,7 +291,7 @@ namespace drace {
 			LOG_TRACE(data->tid, "waitForSingleObject: %p (Success)", mutex);
 
             // add or increment counter in table
-            uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+            uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
             if (cnt > 1) {
                 hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
             }
@@ -332,7 +332,7 @@ namespace drace {
 				for (DWORD i = 0; i < info->ncount; ++i) {
 					HANDLE mutex = info->handles[i];
 
-                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
                     if (cnt > 1) {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }
@@ -346,7 +346,7 @@ namespace drace {
 					HANDLE mutex = info->handles[retval - WAIT_OBJECT_0];
 					LOG_TRACE(data->tid, "waitForMultipleObjects:finished one: %p", mutex);
 
-                    uint64_t cnt = (uint64_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
+                    uintptr_t cnt = (uintptr_t)hashtable_add_replace(&data->mutex_book, mutex, (void*)1);
                     if (cnt > 1) {
                         hashtable_add_replace(&data->mutex_book, mutex, (void*)++cnt);
                     }
@@ -358,15 +358,20 @@ namespace drace {
 
 			dr_thread_free(drcontext, user_data, sizeof(wfmo_args_t));
 		}
+#endif // WINDOWS
 
         void event::thread_start(void *wrapctx, void *user_data) {
+			#ifdef WINDOWS
             app_pc drcontext = drwrap_get_drcontext(wrapctx);
             per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
             HANDLE retval = util::unsafe_ptr_cast<HANDLE>(drwrap_get_retval(wrapctx));
             // the return value contains a handle to the thread, but we need the unique id
             DWORD threadid = GetThreadId(retval);
             LOG_TRACE(data->tid, "Thread started with handle: %d, ID: %d", retval, threadid);
-            detector->happens_before(data->detector_data, (void*)threadid);
+            detector->happens_before(data->detector_data, (void*)(uintptr_t)threadid);
+			#else
+			// \todo implement on linux
+			#endif
         }
 
         void event::barrier_enter(void *wrapctx, void** addr) {
@@ -428,6 +433,40 @@ namespace drace {
 			detector->happens_after(data->detector_data, identifier);
 			LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
 		}
-#endif
+
+        /// Default call instrumentation
+		void event::on_func_call(app_pc *call_ins, app_pc *target_addr) {
+            per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+
+			// TODO: possibibly racy in non-fast-mode
+            memory_tracker->analyze_access(data);
+
+			// Sampling: Possibly disable detector during this function
+			memory_tracker->switch_sampling(data);
+
+			// if lossy_flush, disable detector instead of changing the instructions
+			if (params.lossy && !params.lossy_flush && MemoryTracker::pc_in_freq(data, call_ins)) {
+				data->enabled = false;
+			}
+
+			data->stack.push(call_ins, data->detector_data);
+        }
+
+		/// Default return instrumentation
+		void event::on_func_ret(app_pc *ret_ins, app_pc *target_addr) {
+            per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+            ShadowStack & stack = data->stack;
+			MemoryTracker::analyze_access(data);
+
+			if (stack.isEmpty()) return;
+
+			ptrdiff_t diff;
+			// leave this scope / call
+			while ((diff = (byte*)target_addr - (byte*)stack.pop(data->detector_data)), !(0 <= diff && diff <= sizeof(void*)))
+			{
+				// skipping a frame
+				if (stack.isEmpty()) return;
+			}
+        }
 	} // namespace funwrap
 } // namespace drace

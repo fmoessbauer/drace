@@ -17,13 +17,22 @@ endif()
 
 project ("drace-client" LANGUAGES "C" "CXX")
 
+# prepare default values
+if(WIN32)
+	set(DEFAULT_DRACE_ENABLE_RUNTIME ON)
+	set(DEFAULT_DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe")
+else()
+	set(DEFAULT_DRACE_ENABLE_RUNTIME OFF)
+	set(DEFAULT_DRACE_CPPCHECK_BIN "cppcheck")
+endif()
+
 set(BUILD_TESTING OFF CACHE BOOL "Build Tests")
 set(DRACE_ENABLE_BENCH OFF CACHE BOOL "Build Benchmarks")
 set(DRACE_ENABLE_CPPCHECK OFF CACHE BOOL "Enable CPPCheck")
 set(BUILD_CSHARP_EXAMPLES OFF CACHE BOOL "Build C# Examples")
 set(BUILD_TOOLS ON CACHE BOOL "Build Tooling Support (e.g. Qt5 GUI)")
-set(DRACE_ENABLE_RUNTIME ON CACHE BOOL "Build Drace Runtime")
-set(DRACE_CPPCHECK_BIN "C:/Program Files/Cppcheck/cppcheck.exe" CACHE STRING "path to cppcheck binary")
+set(DRACE_ENABLE_RUNTIME ${DEFAULT_DRACE_ENABLE_RUNTIME} CACHE BOOL "Build Drace Runtime")
+set(DRACE_CPPCHECK_BIN ${DEFAULT_DRACE_CPPCHECK_BIN} CACHE STRING "path to cppcheck binary")
 set(DRACE_XML_EXPORTER ON CACHE BOOL "Build with Valkyrie compatible XML exporter")
 set(DRACE_LOGLEVEL "2" CACHE STRING "Set loglevel of DRace (0: error, 1: warning, ... 4: trace)")
 set(OPTIMIZE_FOR_NATIVE OFF CACHE BOOL "Build standalone components with -march=native")
@@ -36,9 +45,22 @@ set(DRACE_INSTALL_DOCS  ON  CACHE BOOL "Install documentation")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# DRace runtime is currently only available on windows
-if(NOT WIN32)
-	set(DRACE_ENABLE_RUNTIME OFF CACHE BOOL "" FORCE)
+set(DRACE_RUNTIME_DEST "bin"     CACHE STRING "Runtime install destination")
+set(DRACE_LIBRARY_DEST "lib"     CACHE STRING "Library install destination")
+set(DRACE_ARCHIVE_DEST "lib"     CACHE STRING "Archive install destination")
+set(DRACE_INCLUDE_DEST "include" CACHE STRING "Header install destination")
+set(DRACE_DOC_DEST     "doc"     CACHE STRING "Documentation install destination")
+
+# must be set to fixes issue in DR configure scripts on unix
+# also useful on windows as dlls are placed next to binaries
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+endif()
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeExt/modules")
@@ -81,9 +103,21 @@ file(WRITE ${LIC_FILE} "Primary DRace License: MIT\n\n")
 file(READ "LICENSE" LIC_FILE_DRACE)
 file(APPEND ${LIC_FILE} ${LIC_FILE_DRACE})
 
-define_property(GLOBAL PROPERTY DRACE_TEST_SUITES
-	BRIEF_DOCS "unit test suites"
-	FULL_DOCS "append unit tests libraries to this variable to register in testrunner")
+# setup global defines
+if(WIN32)
+	# avoid name collisions with std::min / std::max
+	add_definitions(-DNOMINMAX)
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(STATUS "Building for x86 Plattform")
+    add_definitions(-DCOMPILE_X86)
+endif()
+
+if(BUILD_TESTING)
+	message(STATUS "Build Testsuite")
+	include(CTest)
+	include(GoogleTest)
+endif()
 
 # Common Files
 add_subdirectory("common")
@@ -91,18 +125,19 @@ add_subdirectory("common")
 add_subdirectory("vendor")
 # standalone tools
 add_subdirectory("standalone")
+# Tutorial
+add_subdirectory("HowTo")
 
 if(DRACE_ENABLE_RUNTIME)
 	# DRACE
 	add_subdirectory("drace-client")
-	# Managed Stack Resolver
-	add_subdirectory("ManagedResolver")
+	if(WIN32)
+		# Managed Stack Resolver
+		add_subdirectory("ManagedResolver")
+	endif()
 endif()
 
 if(BUILD_TESTING)
-	message(STATUS "Build Testsuite")
-	include(CTest)
-	include(GoogleTest)
 	add_subdirectory("test")
 endif()
 
@@ -125,7 +160,7 @@ if(Doxygen_FOUND)
 	set(DOXYGEN_GENERATE_HTML YES)
 	set(DOXYGEN_GENERATE_MAN NO)
 	set(DOXYGEN_OUTPUT_DIRECTORY docs)
-	set(DOXYGEN_EXCLUDE_PATTERNS 
+	set(DOXYGEN_EXCLUDE_PATTERNS
 		"*DynamoRIO*"
 		"build"
 		"install"
@@ -140,25 +175,19 @@ if(Doxygen_FOUND)
 		"${PROJECT_SOURCE_DIR}/tools/ReportConverter/ReportConverterUnitTest.py"
 		"${PROJECT_SOURCE_DIR}/node_modules/*")
 	set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
-	
+
 	# work around https://gitlab.kitware.com/cmake/cmake/issues/18738
 	set(DOXYGEN_LATEX_MAKEINDEX_CMD makeindex)
 
 	doxygen_add_docs(
 		doc
-		#${PROJECT_SOURCE_DIR}
 		COMMENT "Generate Code Documentation")
 
-	if(${DRACE_INSTALL_DOCS})
-		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION doc OPTIONAL)
+	if(DRACE_INSTALL_DOCS)
+		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs/html DESTINATION ${DRACE_DOC_DEST} OPTIONAL)
 	endif()
 endif()
 
-if(DRACE_ENABLE_RUNTIME)
-	install(FILES "drace.ini" DESTINATION bin)
-	install(FILES "race_suppressions.txt" DESTINATION bin)
-endif()
-
 # install config readme
-install(FILES "README.md" DESTINATION doc)
-install(FILES ${LIC_FILE} DESTINATION doc)
+install(FILES "README.md" DESTINATION ${DRACE_DOC_DEST})
+install(FILES ${LIC_FILE} DESTINATION ${DRACE_DOC_DEST})

@@ -16,7 +16,8 @@
 #endif
 
 #include "config.h"
-#include "aligned-stack.h"
+#include "aligned-buffer.h"
+#include "shadow-stack.h"
 
 #include <string>
 #include <unordered_map>
@@ -35,7 +36,11 @@ constexpr int MUTEX_MAP_SIZE = 128;
 *   This also holds for Linux x64
 *   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
 */
-constexpr uint64_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#if COMPILE_X86
+constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
+#else
+constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
 
 // forward decls
 class Detector;
@@ -91,25 +96,18 @@ namespace drace {
         byte          enabled{ true };
         /// inverse of flush pending, jmpecxz
         std::atomic<byte> no_flush{ false };
-        /// bool external change detected
-        /// this flag is used to trigger the enable or disable
-        /// logic on this thread
-        byte enable_external{ true };
         /// local sampling state
         int sampling_pos = 0;
 
-		void         *cache;
 		thread_id_t   tid;
 
-		/// Shadow Stack
-		AlignedStack<void*, 32> stack;
 		/// track state of detector (count nr of disable / enable calls)
-		uint64        event_cnt{ 0 };
+		uintptr_t event_cnt{ 0 };
 
 		/// begin of this threads stack range
-		ULONG_PTR appstack_beg{ 0x0 };
+		uintptr_t appstack_beg{ 0x0 };
 		/// end of this threads stack range
-		ULONG_PTR appstack_end{ 0x0 };
+		uintptr_t appstack_end{ 0x0 };
 
         /**
          * as the detector cannot allocate TLS,
@@ -124,7 +122,13 @@ namespace drace {
 
         /// book-keeping of active mutexes
         hashtable_t mutex_book;
+
+        /// ShadowStack
+        ShadowStack stack;
 	};
+
+	static_assert(std::is_standard_layout<per_thread_t>::value,
+		"per_thread_t has to be POD to be safely accessed via inline assembly");
 
 	/** Thread local storage */
 	extern int      tls_idx;
@@ -174,22 +178,21 @@ namespace drace {
 
 } // namespace drace
 
-	// MSR Communication Driver
-	namespace ipc {
-		template<bool, bool>
-		class MtSyncSHMDriver;
+// MSR Communication Driver
+namespace ipc {
+    template<bool, bool>
+    class MtSyncSHMDriver;
 
-		template<typename T, bool>
-		class SharedMemory;
+    template<typename T, bool>
+    class SharedMemory;
 
-		struct ClientCB;
-	}
+    struct ClientCB;
+}
 
+#if WIN32
+// \todo currently only available on windows
 namespace drace {
 	extern std::unique_ptr<::ipc::MtSyncSHMDriver<true, true>> shmdriver;
 	extern std::unique_ptr<::ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 }
-
-// infected by windows.h and clashes with std::min/max
-#undef max
-#undef min
+#endif

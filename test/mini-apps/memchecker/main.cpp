@@ -16,14 +16,15 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 
 #define DRACE_ANNOTATION
 #include "../../../drace-client/include/annotations/drace_annotation.h"
 
 /// calculate XOR hash of memory range
-uint64_t get_hash(const uint64_t * begin, const uint64_t * end) {
-    uint64_t hash = *begin;
-    const uint64_t * item = begin;
+uintptr_t get_hash(const uintptr_t * begin, const uintptr_t * end) {
+    uintptr_t hash = *begin;
+    const uintptr_t * item = begin;
 
     while (item != end) {
         hash ^= *item;
@@ -34,19 +35,19 @@ uint64_t get_hash(const uint64_t * begin, const uint64_t * end) {
 
 void generate_block(
     int i,
-    std::vector<std::pair<uint64_t*, uint64_t*>> * blocks,
-    std::vector<uint64_t> * checksums)
+    std::vector<std::pair<uintptr_t*, uintptr_t*>> * blocks,
+    std::vector<uintptr_t> * checksums)
 {
     static std::mutex mx;
     std::mt19937_64 gen(42+i);
 
-    uint64_t * ptr = new uint64_t[i];
+    uintptr_t * ptr = new uintptr_t[i];
 
     // fill block
     std::generate(ptr, ptr + i, [&]() {return gen(); });
 
     // compute and store checksum
-    uint64_t checksum = get_hash(ptr, ptr + i);
+    uintptr_t checksum = get_hash(ptr, ptr + i);
 
     {
         mx.lock();
@@ -57,13 +58,13 @@ void generate_block(
         mx.unlock();
     }
 }
-/** 
+/**
 * Test tool to check for memory corruption and layout.
 * To also check the race reporting, we try to enforce data-races
 */
 int main(int argc, char ** argv) {
-    std::vector<std::pair<uint64_t*, uint64_t*>> blocks;
-    std::vector<uint64_t>  checksums;
+    std::vector<std::pair<uintptr_t*, uintptr_t*>> blocks;
+    std::vector<uintptr_t>  checksums;
     std::vector<std::thread> workers;
     size_t elem_allocated = 0;
 
@@ -80,12 +81,12 @@ int main(int argc, char ** argv) {
         t.join();
     }
 
-    auto alloc_mb = (elem_allocated * sizeof(uint64_t)) / (1024 * 1024);
+    auto alloc_mb = (elem_allocated * sizeof(uintptr_t)) / (1024 * 1024);
     std::cout << "Allocated " << alloc_mb << " MiB, Threads: " << workers.size() << std::endl;
 
     // validate checksums
     for (int i = 0; i < blocks.size(); ++i) {
-        uint64_t checksum = get_hash(blocks[i].first, blocks[i].second);
+        uintptr_t checksum = get_hash(blocks[i].first, blocks[i].second);
         if (checksum != checksums[i]) {
             std::cout << "Mismatch in checksum of block " << i << std::endl;
             // exit and let os cleanup memory

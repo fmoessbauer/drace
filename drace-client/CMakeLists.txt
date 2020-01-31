@@ -9,14 +9,16 @@ set(SOURCES
     "src/instr/instr-mem-full"
     "src/module/Metadata"
     "src/module/Tracker"
-    "src/MSR"
     "src/symbol/Symbols"
     "src/symbol/SymbolLocation"
     "src/util"
     "src/config"
     "src/race-filter")
+if(WIN32)
+    list(APPEND SOURCES "src/MSR")
+endif()
 
-find_package(DynamoRIO 7.0 REQUIRED)
+find_package(DynamoRIO 7.91 REQUIRED)
 
 # Bind detectors prior to first "configure_DynamoRIO_client"
 # as DR changes global vars
@@ -44,53 +46,45 @@ target_link_libraries(
 	"drace-common"   # drace and msr common libs
 	"jtilly-inih"    # ini parser
 	"hh-date"        # C++ date lib
-	"clipp"          # option parser
+    "clipp"          # option parser
+    "$<$<CXX_COMPILER_ID:Clang>:atomic>"
 )
 
 # Set loglevel
-target_compile_definitions("drace-client" PRIVATE -DLOGLEVEL=${DRACE_LOGLEVEL})
+target_compile_definitions("drace-client" PRIVATE "LOGLEVEL=${DRACE_LOGLEVEL}")
 # we need a specific base addr, hence disable this warning
-target_link_libraries("drace-client" -ignore:4281)
-target_compile_options("drace-client" PRIVATE -EHsc)
+if(WIN32)
+    target_link_libraries("drace-client" -ignore:4281)
+    target_compile_options("drace-client" PRIVATE -EHsc)
+endif()
 
 # TinyXML2
-if(${DRACE_XML_EXPORTER})
+if(DRACE_XML_EXPORTER)
 	target_link_libraries("drace-client" "tinyxml2")
-	target_compile_definitions("drace-client" PRIVATE -DDRACE_XML_EXPORTER)
+	target_compile_definitions("drace-client" PRIVATE "DRACE_XML_EXPORTER")
 endif()
 
-# Copy settings ini to root dir
-add_custom_target(copy_files ALL
-    DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
-)
-
-add_custom_command(TARGET copy_files POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_SOURCE_DIR}/drace.ini"
-		"${PROJECT_BINARY_DIR}/drace.ini")
-
-add_custom_command(TARGET copy_files POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${PROJECT_SOURCE_DIR}/race_suppressions.txt"
-		"${PROJECT_BINARY_DIR}/race_suppressions.txt")
-
-if(${DRACE_XML_EXPORTER})
-    add_dependencies(copy_files tinyxml2)
-	add_custom_command(TARGET copy_files POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:tinyxml2>"
-			"$<TARGET_FILE_DIR:drace-client>"
-		DEPENDS "tinyxml2")
-endif()
-
-if(${DRACE_ENABLE_CPPCHECK})
+if(DRACE_ENABLE_CPPCHECK)
     set_target_properties("drace-client" PROPERTIES
         CXX_CPPCHECK ${DRACE_CPPCHECK_CALL})
 endif()
-
 
 # Add licensing information on LCM
 file(READ "include/lcm/LICENSE" LIC_FILE_LCM)
 file(APPEND ${LIC_FILE} "${LIC_SEP}fmoessbauer/LossyCountingModel\n\n${LIC_FILE_LCM}")
 
-install(TARGETS "drace-client" RUNTIME DESTINATION bin COMPONENT Runtime)
+# copy configs to build tree
+add_custom_target("drace-copy-config" ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${PROJECT_SOURCE_DIR}/drace.ini"
+    "${PROJECT_SOURCE_DIR}/race_suppressions.txt"
+    "$<TARGET_FILE_DIR:drace-client>")
+# copy configs to install location
+install(FILES
+    "${PROJECT_SOURCE_DIR}/drace.ini"
+    "${PROJECT_SOURCE_DIR}/race_suppressions.txt"
+    DESTINATION "$<TARGET_FILE_DIR:drace-client>")
+
+install(TARGETS "drace-client"
+    RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME
+    LIBRARY DESTINATION ${DRACE_ARCHIVE_DEST} COMPONENT ARCHIVE)

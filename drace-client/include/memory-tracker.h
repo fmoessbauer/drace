@@ -23,9 +23,6 @@
 #include <memory>
 #include <random>
 
-// DR somewere defines max()
-#undef max
-
 namespace drace {
 	/**
 	* \brief Covers application memory tracing.
@@ -39,10 +36,10 @@ namespace drace {
 
 		/// Single memory reference
 		struct mem_ref_t {
-			void    *addr;
-            app_pc   pc;
-			uint32_t size;
-            bool     write;
+			uintptr_t addr;
+            uintptr_t pc;
+			uint32_t  size;
+            bool      write;
 		};
 
 		/// Maximum number of references between clean calls
@@ -57,6 +54,11 @@ namespace drace {
 
 		std::atomic<int> flush_active{ false };
 
+        /// \brief external change detected
+        /// this flag is used to trigger the enable or disable
+        /// logic on this thread
+        std::atomic<bool> enable_external{ true };
+
 	private:
 		size_t page_size;
 
@@ -65,16 +67,13 @@ namespace drace {
 
 		/**
          * \brief Number of instrumented calls, used for sampling
-         *
-		 * \Warning This number is racily incremented by design.
-		 *          Hence, use the largest native type to avoid partial loads
 		 */
-		unsigned long long instrum_count{ 0 };
+		std::atomic<unsigned long long> instrum_count{ 0 };
 
 		/* XCX registers */
 		drvector_t allowed_xcx;
 
-		module::Cache mc;
+		module::Cache mc{};
 
 		/// fast random numbers for sampling
 		std::mt19937 _prng;
@@ -128,12 +127,17 @@ namespace drace {
 
 		/// Sets the detector state based on the sampling condition
 		inline void switch_sampling(per_thread_t * data) {
+			// we use the highest available bit to denote if
+			// we sample (analyze) this fsection or not
+            static constexpr int flag_bit = sizeof(uintptr_t)*8-1;
 			if (!sample_ref(data)) {
 				data->enabled = false;
-				data->event_cnt |= ((uint64_t)1 << 63);
+				// set the flag
+				data->event_cnt |= ((uintptr_t)1 << flag_bit);
 			}
 			else {
-				data->event_cnt &= ~((uint64_t)1 << 63);
+				// clear the flag
+				data->event_cnt &= ~((uintptr_t)1 << flag_bit);
 				if (!data->event_cnt)
 					data->enabled = true;
 			}
@@ -141,14 +145,12 @@ namespace drace {
 
 		/// enable the detector (does not affect sampling)
 		static inline void enable(per_thread_t * data) {
-			// access the lower part of the 64bit uint
-			*((uint32_t*)(&(data->enabled))) = true;
+			data->enabled = true;
 		}
 
 		/// disable the detector (does not affect sampling)
 		static inline void disable(per_thread_t * data) {
-			// access the lower part of the 64bit uint
-			*((uint32_t*)(&(data->enabled))) = false;
+			data->enabled = false;
 		}
 
 		/// enable the detector during this scope
@@ -180,7 +182,7 @@ namespace drace {
 
 		// Instrumentation
 		/// Inserts a jump to clean call if a flush is pending
-		void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
+		void insert_jmp_on_flush(void *drcontext, instrlist_t *ilist, instr_t *where,
 			reg_id_t regxcx, reg_id_t regtls, instr_t *call_flush);
 
 		/// Instrument all memory accessing instructions

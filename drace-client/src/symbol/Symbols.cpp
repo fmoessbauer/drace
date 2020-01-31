@@ -12,8 +12,10 @@
 #include "globals.h"
 #include "symbol/Symbols.h"
 #include "Module.h"
+#ifdef WINDOWS
 #include "MSR.h"
 #include "ipc/SyncSHMDriver.h"
+#endif
 
 #include <dr_api.h>
 #include <drsyms.h>
@@ -40,8 +42,8 @@ namespace symbol {
 
 		if (modptr) {
 			// Reverse search from pc until symbol can be decoded
-			uint64_t offset = pc - modptr->base;
-			auto limit = std::max((uint64_t)0, offset - (uint64_t)max_distance);
+			uintptr_t offset = pc - modptr->base;
+			auto limit = std::max((uintptr_t)0, offset - (uintptr_t)max_distance);
 			for (; offset >= limit; --offset) {
 				drsym_error_t err = drsym_lookup_address(modptr->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
@@ -59,6 +61,9 @@ namespace symbol {
 		auto modptr = module_tracker->get_module_containing(pc);
 		// Not (Jitted PC or PC is in managed module)
 		// OR managed module, but MSR is not attached
+		#ifndef WINDOWS
+		bool shmdriver{false};
+		#endif
 		if (modptr && ((modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::NATIVE)
 			|| (modptr->modtype == module::Metadata::MOD_TYPE_FLAGS::MANAGED && !shmdriver)))
 		{
@@ -68,8 +73,8 @@ namespace symbol {
 			sloc.mod_name = dr_module_preferred_name(modptr->info);
 
 			// Reverse search from pc until symbol can be decoded
-			uint64_t offset = pc - modptr->base;
-			auto limit = std::max((uint64_t)0, offset - (uint64_t)max_distance);
+			uintptr_t offset = pc - modptr->base;
+			auto limit = std::max((uintptr_t)0, offset - (uintptr_t)max_distance);
 			for (; offset >= limit; --offset) {
 				drsym_error_t err = drsym_lookup_address(modptr->info->full_path, offset, &syminfo, DRSYM_DEMANGLE);
 				if (err == DRSYM_SUCCESS || err == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
@@ -84,6 +89,7 @@ namespace symbol {
 			}
 		}
 		else {
+			#ifdef WINDOWS
 			// Managed Code
 			if (shmdriver) {
 				const auto & sym = MSR::lookup_address(pc);
@@ -102,6 +108,7 @@ namespace symbol {
 					sloc.mod_name = "JIT";
 				}
 			}
+			#endif
 		}
 		return sloc;
 	}

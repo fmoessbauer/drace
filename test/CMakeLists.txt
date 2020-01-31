@@ -24,11 +24,17 @@ set(Boost_USE_MULTITHREADED ON)
 if(DRACE_ENABLE_RUNTIME)
 	find_package(Boost 1.65.0 REQUIRED COMPONENTS filesystem)
 
-	get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun.exe" ABSOLUTE)
+	get_filename_component(DR_NORMALIZED_PATH "${DynamoRIO_DIR}/../bin64/drrun${CMAKE_EXECUTABLE_SUFFIX}" ABSOLUTE)
 	file(TO_NATIVE_PATH ${DR_NORMALIZED_PATH} PATH_TO_DRRUN)
 	message(STATUS "Test (integration): Use DynamoRIO in ${PATH_TO_DRRUN}")
 
-	get_filename_component(DRACE_NORMALIZED_PATH "${CMAKE_CURRENT_BINARY_DIR}/../drace-client/drace-client.dll" ABSOLUTE)
+	# we cannot use generator expressions here, hence hardcode
+	if(WIN32)
+		set(DRACE_REL_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/drace-client.dll")
+	else()
+		set(DRACE_REL_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libdrace-client.so")
+	endif()
+	get_filename_component(DRACE_NORMALIZED_PATH ${DRACE_REL_PATH} ABSOLUTE)
 	file(TO_NATIVE_PATH ${DRACE_NORMALIZED_PATH} PATH_TO_DRACE)
 	message(STATUS "Test (integration): Use DRace in     ${PATH_TO_DRACE}")
 
@@ -45,22 +51,21 @@ if(DRACE_ENABLE_RUNTIME)
 	target_include_directories(${TEST_SYSTEM_TARGET} PRIVATE "include")
 
 	if(DRACE_XML_EXPORTER)
-		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_XML_EXPORTER)
+		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE DRACE_XML_EXPORTER)
 		target_link_libraries(${TEST_SYSTEM_TARGET} PRIVATE "tinyxml2")
 	endif()
-	# This introduces a circular dependency as shared libraries
-	# are copied after the target is build
-	#gtest_discover_tests(${TEST_TARGET})
-	
-	# manually build C# tests as CMake support is not available in ninja
-	find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
-	if(CSC)
-	target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE -DDRACE_TESTING_DOTNET)
-	else()
-	message(STATUS "csc not found: .NET Windows tests will be disabled")
+
+	if(WIN32)
+		target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE WINDOWS)
+		# manually build C# tests as CMake support is not available in ninja
+		find_program(CSC csc.exe DOC "Path to CSharp compiler csc.exe")
+		if(CSC)
+			target_compile_definitions(${TEST_SYSTEM_TARGET} PRIVATE DRACE_TESTING_DOTNET)
+		else()
+		message(WARNING "csc not found: .NET Windows tests will be disabled")
+		endif()
 	endif()
 endif()
-	
 
 ##### SETUP DRace UNIT TESTS #####
 add_executable(${TEST_UNIT_TARGET} ${TEST_SOURCES_UNIT})
@@ -70,13 +75,7 @@ target_link_libraries(${TEST_UNIT_TARGET} PRIVATE gtest gtest_main "drace-common
 if(UNIX)
   target_link_libraries(${TEST_UNIT_TARGET} PRIVATE "-ldl")
   set_property(TARGET ${TEST_UNIT_TARGET}
-	  APPEND PROPERTY BUILD_RPATH "${CMAKE_CURRENT_BINARY_DIR}")
-endif()
-
-# get and register all test suites
-get_property(TEST_SUITES GLOBAL PROPERTY DRACE_TEST_SUITES)
-if(TEST_SUITES)
-	target_link_libraries(${TEST_UNIT_TARGET} PRIVATE ${TEST_SUITES})
+	  APPEND PROPERTY BUILD_RPATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 endif()
 
 # enable dr mocks
@@ -90,64 +89,19 @@ gtest_discover_tests(${TEST_UNIT_TARGET}
 	WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 	PROPERTIES RUN_SERIAL ON)
 
-add_custom_target(copy_files_testing ALL)
-#DEPENDS "${PROJECT_SOURCE_DIR}/drace.ini"
-#DEPENDS "$<TARGET_FILE:drace.detector.tsan>"
-#)
-
-if(DRACE_ENABLE_RUNTIME)
-	if(DRACE_XML_EXPORTER)
-		add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:tinyxml2>"
-			"$<TARGET_FILE_DIR:${TEST_SYSTEM_TARGET}>")
-	endif()
-
-	add_custom_command(TARGET copy_files_testing POST_BUILD
+if(TARGET ${TEST_UNIT_TARGET})
+	add_custom_command(TARGET ${TEST_UNIT_TARGET} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 			"${PROJECT_SOURCE_DIR}/test/data/"
 			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>/data/")
-
-	# copy tsan dll
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:drace.detector.tsan>"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
-
-	# Copy tsan-common
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"${TSAN_BINARY_DIR}/race_windows_amd64.dll"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
-
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			"$<TARGET_FILE:drace.detector.dummy>"
-			"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
-
-			# copy gtest shared lib
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"$<TARGET_FILE:gtest>"
-		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
-			
-	add_custom_command(TARGET copy_files_testing POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"$<TARGET_FILE:drace.detector.fasttrack>"
-		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 endif()
-
-add_custom_command(TARGET copy_files_testing POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"$<TARGET_FILE:drace.detector.fasttrack.standalone>"
-		"$<TARGET_FILE_DIR:${TEST_UNIT_TARGET}>")
 
 # Prepare Guinea pigs
 add_subdirectory("mini-apps")
-		
-if(${DRACE_INSTALL_TESTS} AND DRACE_ENABLE_RUNTIME)
-	install(TARGETS ${TEST_UNIT_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
-	install(TARGETS ${TEST_SYSTEM_TARGET} RUNTIME DESTINATION bin COMPONENT RUNTIME)
-    install(FILES ${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini DESTINATION bin)
+
+if(DRACE_INSTALL_TESTS AND DRACE_ENABLE_RUNTIME)
+	install(TARGETS ${TEST_UNIT_TARGET} RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME)
+	install(TARGETS ${TEST_SYSTEM_TARGET} RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME)
+    install(FILES ${PROJECT_SOURCE_DIR}/test/data/drace_excl.ini DESTINATION ${DRACE_RUNTIME_DEST})
 endif()
 

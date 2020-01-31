@@ -53,7 +53,7 @@ namespace ipc {
 		 * explicitly cleared before use
 		 * \param dummy Ignored
 		 */
-		Ringbuffer(int dummy) { (void)(dummy); }
+		explicit Ringbuffer(int dummy) { (void)(dummy); }
 
 		/*!
 		 * \brief Intentionally empty destructor - nothing have to be released

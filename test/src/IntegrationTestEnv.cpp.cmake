@@ -19,3 +19,4 @@
 // integration tests without explicitly specifiying the path
 std::string Integration::drrun = R"(@PATH_TO_DRRUN@)";
 std::string Integration::drclient = R"(@PATH_TO_DRACE@)";
+std::string Integration::exe_suffix = R"(@CMAKE_EXECUTABLE_SUFFIX@)";

@@ -72,11 +72,20 @@ namespace drace {
 
 		template<typename InputIt>
 		void wrap_dotnet(InputIt a, InputIt b) {
-			std::for_each(a, b, [](uint64_t addr) {
+			std::for_each(a, b, [](uintptr_t addr) {
 				internal::wrap_dotnet_helper(addr);
 			});
 		}
 		/** Wraps dotnet sync primitives */
 		void wrap_sync_dotnet(const module_data_t *mod, bool native);
+
+        /**
+         * \brief Manually instrument a call / ret construct
+         * \note: mainly for the shadow stack, but also for some fast
+         *        switching of the instrumentation logic
+         */
+        bool wrap_generic_call(void *drcontext, void *tag, instrlist_t *bb,
+			instr_t *instr, bool for_trace,
+			bool translating, void *user_data);
 	}
 }

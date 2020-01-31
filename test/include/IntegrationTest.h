@@ -28,13 +28,15 @@ private:
 	static constexpr int startup_retries = 5;
 	static std::string drrun;
 	static std::string drclient;
+	static std::string exe_suffix;
 	static bool verbose;
 
 	std::string logfile;
 
 public:
-	Integration() {
-		logfile = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+	Integration()
+		: logfile(::testing::UnitTest::GetInstance()->current_test_info()->name())
+	{
 		std::replace(logfile.begin(), logfile.end(), '/', '_');
 		logfile += ".log";
 	}
@@ -43,10 +45,11 @@ public:
 		std::remove(logfile.c_str());
 	}
 
-	void run(const std::string & client_args, const std::string & exe, int min, int max) {
+	void run(const std::string & client_args, const std::string & exe, int min, int max, const std::string & app_args = "") {
 		std::stringstream command;
 		command << drrun << " -c " << drclient << " "
-				<< client_args << " -- " << "test/" << exe
+				<< client_args << " -- " << "bin/samples/" << exe << exe_suffix
+                << " " << app_args
 			    << " > " << logfile << " 2>&1";
 		if(verbose)
 			std::cout << ">> Issue Command: " << command.str() << std::endl;
@@ -68,7 +71,7 @@ public:
 			if (std::regex_search(output, races_match, expr)) {
 				std::string num_races_str;
 				std::copy(races_match[1].first, races_match[1].second, std::back_inserter(num_races_str));
-				
+
 				if(verbose)
 					std::cout << ">>> Detected Races: " << num_races_str << std::endl;
 
@@ -102,7 +105,7 @@ public:
 	// TSAN can only be initialized once, even after a finalize
 	static void SetUpTestCase() {
 		for (int i = 1; i < t_argc; ++i) {
-			if (strncmp(t_argv[i], "--dr", 8) == 0 && i<(t_argc-1)) {
+			if (i<(t_argc-1) && strncmp(t_argv[i], "--dr", 8) == 0) {
 				drrun = t_argv[i + 1];
 			}
 			else if (strncmp(t_argv[i], "-v", 4) == 0) {
@@ -118,11 +121,11 @@ public:
 		std::string dr_test(drrun + " -h > dr_avail.log");
 		int ret = std::system(dr_test.c_str());
 		if (ret) {
-			throw std::exception("drrun.exe not found");
+			throw std::runtime_error("drrun.exe not found");
 		}
 		std::ifstream f(drclient.c_str());
 		if (!f.good()) {
-			throw std::exception("DRace not found");
+			throw std::runtime_error("DRace not found");
 		}
 		f.close();
 	}

@@ -20,25 +20,25 @@ namespace drace {
 		unsigned long entries{ 0 };
 
 		inline void push(const T & val) {
-			data[entries++] = val;
+			this->data[entries++] = val;
 		}
 
 		inline T & pop() {
-			return array[--entries];
+			return this->data[--entries];
 		}
 
 		inline T* begin() const {
-			return array;
+			return this->data;
 		}
 		inline const T* cbegin() const {
-			return array;
+			return this->data;
 		}
 
 		inline T* end() const {
-			return array + entries;
+			return this->data + entries;
 		}
 		inline const T* cend() const {
-			return array + entries;
+			return this->data + entries;
 		}
 	};
 }

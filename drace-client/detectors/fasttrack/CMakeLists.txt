@@ -18,15 +18,12 @@ if(TARGET "drace.detector.fasttrack.generic")
     generate_export_header("drace.detector.fasttrack" BASE_NAME fasttrack_dr)
 
     # include exports header
-    target_include_directories("drace.detector.fasttrack" PUBLIC $<TARGET_FILE_DIR:drace.detector.fasttrack>)
+    target_include_directories("drace.detector.fasttrack" PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
     target_link_libraries("drace.detector.fasttrack" "drace.detector.fasttrack.generic")
 
-    install(TARGETS "drace.detector.fasttrack" RUNTIME DESTINATION bin COMPONENT Runtime)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_dr_export.h DESTINATION include)
+    install(TARGETS "drace.detector.fasttrack"
+        RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT Runtime
+        LIBRARY DESTINATION ${DRACE_ARCHIVE_DEST} COMPONENT ARCHIVE)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fasttrack_dr_export.h DESTINATION ${DRACE_INCLUDE_DEST})
 
-    # copy detector dlls to drace-client binary dir
-    add_custom_command(TARGET "drace.detector.fasttrack" POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:drace.detector.fasttrack>"
-            "${PROJECT_BINARY_DIR}/drace-client")
 endif()

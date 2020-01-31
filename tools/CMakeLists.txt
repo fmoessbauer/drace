@@ -8,5 +8,9 @@
 # This work is licensed under the terms of the MIT license.  See
 # the LICENSE file in the top-level directory.
 
-add_subdirectory(DRaceGUI)
+if(WIN32)
+    # \todo port executor to linux
+    add_subdirectory(DRaceGUI)
+endif()
+
 add_subdirectory(ReportConverter)

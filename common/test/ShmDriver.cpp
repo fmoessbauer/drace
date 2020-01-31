@@ -9,13 +9,27 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <random>
+#include <string>
 #include "gtest/gtest.h"
-
 #include "ipc/SyncSHMDriver.h"
 
+/**
+ * \note use unique names for SHM segments as tests
+ *       might run in parallel
+ */
+
+/**
+ * \brief Return the name with a unique suffix
+ */
+std::string getUniqueName(const std::string & name){
+	return name + std::to_string(std::random_device()());
+}
+
 TEST(SyncShmDriver, InitFinalize) {
-	ipc::SyncSHMDriver<true, false> sender("test-shm", true);
-	ipc::SyncSHMDriver<true, false> receiver("test-shm", true);
+	std::string shmseg(getUniqueName("test-shm-if"));
+	ipc::SyncSHMDriver<true, false> sender(shmseg.c_str(), true);
+	ipc::SyncSHMDriver<true, false> receiver(shmseg.c_str(), true);
 
 	sender.id(ipc::SMDataID::CONNECT);
 	sender.commit();
@@ -36,9 +50,10 @@ TEST(SyncShmDriver, Emplace) {
 		int a = 10;
 		bool b = false;
 	};
+	std::string shmseg(getUniqueName("test-shm-emplace"));
 
-	ipc::SyncSHMDriver<true, false> sender("test-shm", true);
-	ipc::SyncSHMDriver<true, false> receiver("test-shm", true);
+	ipc::SyncSHMDriver<true, false> sender(shmseg.c_str(), true);
+	ipc::SyncSHMDriver<true, false> receiver(shmseg.c_str(), true);
 
 	sender.emplace<test_t>(ipc::SMDataID::SYMBOL);
 	sender.commit();

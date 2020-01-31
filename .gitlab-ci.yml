@@ -13,10 +13,10 @@ variables:
   GIT_SUBMODULE_STRATEGY: "normal"
   DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18219-0\\bin64\\drrun.exe"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
-  http_proxy: "$CODE_PROXY"
-  https_proxy: "$CODE_PROXY"
-  no_proxy: "127.0.0.1,localhost,.siemens.de,.siemens.net,.siemens.com,.siemens.io"
-  
+  http_proxy: $CODE_PROXY
+  https_proxy: $CODE_PROXY
+  no_proxy: code.siemens.com,docker.siemens.com,devops.bt.siemens.com
+
 stages:
   - generate
   - validate
@@ -32,27 +32,114 @@ cmake:
   - .\contrib\generate-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr791
-        
+    - build-dr791
+
 compile:
   <<: *globals
   stage: build
   except:
-  - doc-*    
+  - doc-*
   script:
   - echo "Release build..."
   - .\contrib\build-ci.bat
   artifacts:
     paths:
-    - build-tsan-dr791
+    - build-dr791
   dependencies:
   - cmake
+
+cmake_linux_x64:
+  <<: *globals
+  stage: generate
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Release build..."
+  - apt-get update -y && apt-get install -y libboost-filesystem-dev wget tar cmake gcc g++ git
+  - if [ ! -d "DynamoRIO-x86_64-Linux-7.91.18271-0" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-7.91.18271/DynamoRIO-x86_64-Linux-7.91.18271-0.tar.gz; fi
+  - if [ ! -d "DynamoRIO-x86_64-Linux-7.91.18271-0" ]; then tar -xf DynamoRIO-x86_64-Linux-7.91.18271-0.tar.gz; fi
+  - sh ./contrib/generate_x64-ci.sh
+  cache:
+    key: dynamorio-cache-x64
+    paths:
+      - ./DynamoRIO-x86_64-Linux-7.91.18271-0
+  artifacts:
+    paths:
+    - build64
+
+cmake_linux_i386:
+  <<: *globals
+  stage: generate
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Release build..."
+  - dpkg --add-architecture i386
+  - apt-get update -y && apt-get install -y wget tar cmake gcc g++ git  gcc-multilib g++-multilib libboost-filesystem-dev:i386
+  - if [ ! -d "DynamoRIO-i386-Linux-7.91.18271-0" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-7.91.18271/DynamoRIO-i386-Linux-7.91.18271-0.tar.gz; fi
+  - if [ ! -d "DynamoRIO-i386-Linux-7.91.18271-0" ]; then tar -xfDynamoRIO-i386-Linux-7.91.18271-0.tar.gz; fi
+  - sh ./contrib/generate_i386-ci.sh
+  cache:
+    key: dynamorio-cache-i386
+    paths:
+      - ./DynamoRIO-i386-Linux-7.91.18271-0
+  artifacts:
+    paths:
+    - build32
+
+
+compile_linux_x64:
+  <<: *globals
+  stage: build
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Release build..."
+  - apt-get update -y
+  - apt-get install -y libboost-filesystem-dev git cmake gcc g++
+  - sh ./contrib/compile_x64-linux.sh
+  cache:
+    key: dynamorio-cache-x64
+    paths:
+      - ./DynamoRIO-x86_64-Linux-7.91.18271-0
+    policy: pull
+  artifacts:
+    paths:
+    - build64
+  dependencies:
+  - cmake_linux_x64
+
+compile_linux_i386:
+  <<: *globals
+  stage: build
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Release build..."
+  - dpkg --add-architecture i386
+  - apt-get update -y
+  - apt-get install -y git cmake gcc g++ gcc-multilib g++-multilib libboost-filesystem-dev:i386
+  - sh ./contrib/compile_i386-linux.sh
+  cache:
+    key: dynamorio-cache-i386
+    paths:
+      - ./DynamoRIO-i386-Linux-7.91.18271-0
+    policy: pull
+  artifacts:
+    paths:
+    - build32
+  dependencies:
+  - cmake_linux_i386
 
 cppcheck:
   <<: *globals
   stage: validate
   script:
-  - cd build-tsan-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
+  - cd build-dr791;  C:\opt\Cppcheck\cppcheck.exe  --project=compile_commands.json --enable=all --inline-suppr --suppressions-list=suppressions.txt --error-exitcode=1 --quiet
   dependencies:
   - cmake
 
@@ -60,27 +147,92 @@ cppcheck:
 # Test all builds
 #
 
-detector-test:
+windows-test:
   <<: *globals
   <<: *testing
   stage: test
   script:
-  - cd build-tsan-dr791
+  - cd build-dr791
   - echo "Use DR 7.91.x"
-  - .\test\drace-unit-tests.exe --gtest_output="xml:test-unit-results.xml"
-  - .\test\drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
+  - ctest -j4 -T test --output-on-failure
+  - ./bin/drace-system-tests.exe --gtest_output="xml:test-system-results.xml"
   artifacts:
+    paths:
+      - build-dr791/test-system-results.xml
+      - build-dr791/Testing/**/Test.xml
     reports:
       junit:
-      - build-tsan-dr791\test-unit-results.xml
-      - build-tsan-dr791\test-system-results.xml
+      - build-dr791/test-system-results.xml
+      - build-dr791/Testing/**/Test.xml
   dependencies:
   - compile
 
+#once the integration tests in linux are working, uncomment integration tests and dynamorio caches
+linux-x64-test:
+  <<: *globals
+  <<: *testing
+  stage: test
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Use DR 7.91.x"
+  - apt-get update -y
+  - apt-get install -y cmake
+  - cd build64
+  - ctest -j4 -T test --output-on-failure
+  #- .\test\drace-system-tests --gtest_output="xml:test-system-results.xml"
+  artifacts:
+    paths:
+    #- build64/test-system-results.xml
+    - build64/Testing/**/Test.xml
+    reports:
+      junit:
+      #- build64/test-system-results.xml
+      - build64/Testing/**/Test.xml
+  #cache:
+    #key: dynamorio-cache-x64
+    #paths:
+      #- ./DynamoRIO-x86_64-Linux-7.91.18271-0
+    #policy: pull
+  dependencies:
+  - compile_linux_x64
+
+linux-i386-test:
+  <<: *globals
+  <<: *testing
+  stage: test
+  tags:
+   - DOCKER
+  image: ubuntu:18.04
+  script:
+  - echo "Use DR 7.91.x"
+  - dpkg --add-architecture i386
+  - apt-get update -y
+  - apt-get install -y cmake gcc g++ gcc-multilib g++-multilib libboost-filesystem-dev:i386
+  - cd build32
+  - ctest -j4 -T test --output-on-failure
+  #- .\test\drace-system-tests --gtest_output="xml:test-system-results.xml"
+  artifacts:
+    paths:
+    #- build32/test-system-results.xml
+    - build32/Testing/**/Test.xml
+    reports:
+      junit:
+      #- build32/test-system-results.xml
+      - build32/Testing/**/Test.xml
+  #cache:
+    #key: dynamorio-cache-i386
+    #paths:
+      #- ./DynamoRIO-i386-Linux-7.91.18271-0
+    #policy: pull
+  dependencies:
+  - compile_linux_i386
+
 report-converter-test:
-  stage: test 
-  tags: 
-  - AWS
+  stage: test
+  tags:
+   - AWS
   script:
   - echo "Start test..."
   - python3 tools/ReportConverter/ReportConverter.py -i tools/ReportConverter/test_files/helgrind.xml
@@ -109,9 +261,9 @@ bundle:
   - Copy-Item "contrib/package-lock.json" -Destination "."
   - echo "Generate Changelog"
   - npx generate-changelog
-  - Copy-Item "CHANGELOG.md" -Destination "build-tsan-dr791/package/doc/"
+  - Copy-Item "CHANGELOG.md" -Destination "build-dr791/package/doc/"
   dependencies:
   - compile
   artifacts:
     paths:
-    - build-tsan-dr791/package
+    - build-dr791/package

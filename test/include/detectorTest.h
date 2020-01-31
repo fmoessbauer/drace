@@ -50,9 +50,8 @@ public:
               + util::LibLoaderFactory::getModuleExtension();
 
             auto & loader =*(it.first->second);
-            if(!loader.load(name.c_str())){
-                throw std::runtime_error("could not load detector");
-            }
+            if(!loader.load(name.c_str()))
+                throw std::runtime_error("could not load detector, check lib path");
             decltype(CreateDetector)* create_detector = loader["CreateDetector"];
             det_it = _detectors.emplace(GetParam(), create_detector()).first;
 

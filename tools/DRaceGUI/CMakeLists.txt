@@ -63,12 +63,13 @@ if(Qt5_FOUND AND Boost_FOUND)
         Boost::serialization )
     target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST )
 
-    find_package(WindeployQt)
-
-    if(WindeployQt_FOUND)
-        windeployqt(${GUI_TARGET} bin)
-    else()
-        message(WARN "Could not find windeployqt. Please deploy manually!")
+    if(WIN32)
+        find_package(WindeployQt)
+        if(WindeployQt_FOUND)
+            windeployqt(${GUI_TARGET} bin)
+        else()
+            message(WARNING "Could not find windeployqt. Please deploy manually!")
+        endif()
     endif()
 
     # just for convenience we copy the Qt dlls to the build folder
@@ -79,7 +80,7 @@ if(Qt5_FOUND AND Boost_FOUND)
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:${GUI_TARGET}> )
 
     # install the GUI executable itself (without Qt shared modules)
-    install(TARGETS ${GUI_TARGET} DESTINATION bin)
+    install(TARGETS ${GUI_TARGET} DESTINATION ${DRACE_RUNTIME_DEST})
 
     # append licensing information to global license file
     if(LIC_FILE)

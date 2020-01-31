@@ -16,6 +16,7 @@
 #include <mutex>
 #include <iostream>
 #include <chrono>
+#include <cmath>
 
 // exclude races on IO without adding synchronisation,
 // annotate spinlock with happens before
@@ -23,7 +24,7 @@
 #include "../../../drace-client/include/annotations/drace_annotation.h"
 #include "../../../common/ipc/spinlock.h"
 
-std::atomic<uint64_t> cntr{0};
+std::atomic<uintptr_t> cntr{0};
 
 /**
 * Here, we have one access to the racy location per period.
@@ -31,17 +32,17 @@ std::atomic<uint64_t> cntr{0};
 */
 void no_sync(
 	int tid,
-	uint64_t * racy,
+	uintptr_t * racy,
 	unsigned period,
-	uint64_t rounds,
+	uintptr_t rounds,
 	std::atomic<bool> * go)
 {
 	DRACE_ENTER_EXCLUDE();
 	while (!go->load(std::memory_order_relaxed)) { }
 	DRACE_LEAVE_EXCLUDE();
-	uint64_t tmp = 0;
-	uint64_t boundary = period / (tid + 1) - 1;
-	for (uint64_t i = 0; i < period * rounds; ++i) {
+	uintptr_t tmp = 0;
+	uintptr_t boundary = period / (tid + 1) - 1;
+	for (uintptr_t i = 0; i < period * rounds; ++i) {
 		if (i % period == boundary) {
 			// racy write
 			*racy = tmp;
@@ -60,9 +61,9 @@ void no_sync(
 */
 void sync(
 	int tid,
-	uint64_t * racy,
+	uintptr_t * racy,
 	unsigned period,
-	uint64_t rounds,
+	uintptr_t rounds,
 	std::atomic<bool> * go)
 {
 	static ipc::spinlock mx;
@@ -70,9 +71,9 @@ void sync(
 	while (!go->load(std::memory_order_relaxed)) {}
 	DRACE_LEAVE_EXCLUDE();
 
-	uint64_t tmp = 0;
-	uint64_t boundary = period / (tid + 1) - 1;
-	for (uint64_t i = 0; i < period * rounds; ++i) {
+	uintptr_t tmp = 0;
+	uintptr_t boundary = period / (tid + 1) - 1;
+	for (uintptr_t i = 0; i < period * rounds; ++i) {
 		if (i % period == tid) {
 			// racy write
 			*racy = tmp;
@@ -105,20 +106,20 @@ void watchdog(std::atomic<bool> * running) {
 	using namespace std::chrono;
 
 	DRACE_ENTER_EXCLUDE();
-	uint64_t lastval = 0;
+	uintptr_t lastval = 0;
 	auto start    = system_clock::now();
 	auto lasttime = start;
 	decltype(lasttime) curtime;
 
 	while (running->load(std::memory_order_relaxed)) {
 		std::this_thread::sleep_for(seconds(1));
-		uint64_t curval = cntr.load(std::memory_order_relaxed);
+		uintptr_t curval = cntr.load(std::memory_order_relaxed);
 		curtime = system_clock::now();
 		auto valdiff = curval - lastval;
 		auto timediff = duration_cast<milliseconds>(curtime - lasttime).count();
 		auto ops_ms = valdiff / timediff;
-		std::cout << "Perf: current " << ops_ms << " avg: " 
-			<< curval / duration_cast<milliseconds>(curtime - start).count() 
+		std::cout << "Perf: current " << ops_ms << " avg: "
+			<< curval / duration_cast<milliseconds>(curtime - start).count()
 			<< " ops/ms sum: " << curval << std::endl;
 		lastval = curval;
 		lasttime = curtime;
@@ -126,14 +127,14 @@ void watchdog(std::atomic<bool> * running) {
 	DRACE_LEAVE_EXCLUDE();
 }
 
-/** 
+/**
 * Test tool to measure sampling based race detectors
 * Param 1: Period of a race
 * Param 2: n: 2^n repetitions
 * <Param 3> 's' for synchronized test, empty for unsync test
 */
 int main(int argc, char ** argv) {
-	uint64_t racy = 0;
+	uintptr_t racy = 0;
 	std::atomic<bool> trigger{ false };
 
 	int threads_per_task = 2;
@@ -163,10 +164,10 @@ int main(int argc, char ** argv) {
 	std::thread wd_thread(&watchdog, &wd_running);
 	for (int i = 0; i < threads_per_task; ++i) {
 		if (mode_sync) {
-			threads.emplace_back(&sync, i, &racy, period, static_cast<uint64_t>(std::pow(2, rounds)), &trigger);
+			threads.emplace_back(&sync, i, &racy, period, static_cast<uintptr_t>(std::pow(2, rounds)), &trigger);
 		}
 		else {
-			threads.emplace_back(&no_sync, i, &racy, period, static_cast<uint64_t>(std::pow(2, rounds)), &trigger);
+			threads.emplace_back(&no_sync, i, &racy, period, static_cast<uintptr_t>(std::pow(2, rounds)), &trigger);
 		}
 	}
 	trigger.store(true, std::memory_order_relaxed);

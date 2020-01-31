@@ -501,7 +501,7 @@ namespace drace {
                 #if MAKE_OUTPUT
                     std::cerr << "lock is released but was never acquired by any thread" << std::endl;
                 #endif
-                    createLock(mutex)->second;
+                    createLock(mutex);
                     return;//as lock is empty (was never acquired), we can return here
                 }
 

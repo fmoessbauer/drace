@@ -1,21 +1,36 @@
 # External CMake vendor targets
 if(DRACE_ENABLE_RUNTIME)
-	# tsan + wrapper
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		message(STATUS "Use debug version of TSAN backend")
-		set(TSAN_BINARY_DIR "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/debug" CACHE INTERNAL "path to tsan binary")
-	else()
-		message(STATUS "Use release version of TSAN backend")
-		set(TSAN_BINARY_DIR "${PROJECT_SOURCE_DIR}/vendor/tsan/blob/release" CACHE INTERNAL "path to tsan binary")
-	endif()
+    # tsan + wrapper
+    add_library(tsan SHARED IMPORTED GLOBAL)
+    set_target_properties(
+        tsan PROPERTIES
+        IMPORTED_IMPLIB       "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/release/race_windows_amd64.lib"
+        IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/tsan/include"
+    )
+    # todo: copy and install this lib
 
-	find_library(TSAN_LIB NAMES "race_windows_amd64" HINTS "${TSAN_BINARY_DIR}" NO_DEFAULT_PATH)
 	add_library("tsan-common" INTERFACE)
-	target_include_directories("tsan-common" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tsan/include)
-	target_link_libraries("tsan-common" INTERFACE ${TSAN_LIB})
-	install(FILES "${TSAN_BINARY_DIR}/race_windows_amd64.dll" DESTINATION bin)
+    target_link_libraries("tsan-common" INTERFACE tsan)
+    install(TARGETS "tsan-common"
+        LIBRARY DESTINATION ${DRACE_LIBRARY_DEST} COMPONENT LIBRARY
+        RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME)
 	file(READ "tsan/LICENSE.TXT" LIC_FILE_TSAN)
-	file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
+    file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
+
+    # copy tsan dll into build tree
+    add_custom_target("copy-tsan-imported" ALL
+        DEPENDS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll")
+    add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
+        "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+    install(FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
+        "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
+        DESTINATION ${DRACE_RUNTIME_DEST})
 
 	# inih is mandatory
 	if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih/INIReader.h")
@@ -33,8 +48,8 @@ if(DRACE_ENABLE_RUNTIME)
 		add_library("tinyxml2" SHARED "${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/tinyxml2.cpp")
 		target_include_directories("tinyxml2" INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/leethomason/tinyxml2/)
 		install(TARGETS "tinyxml2"
-		RUNTIME DESTINATION bin COMPONENT Runtime
-		LIBRARY DESTINATION lib COMPONENT Libraries)
+		    RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME
+		    LIBRARY DESTINATION ${DRACE_LIBRARY_DEST} COMPONENT LIBRARY)
 		file(READ "leethomason/tinyxml2/LICENSE.txt" LIC_FILE_TINYXML2)
 		file(APPEND ${LIC_FILE} "${LIC_SEP}leethomason/tinyxml2\n\n${LIC_FILE_TINYXML2}")
 	else()
@@ -66,7 +81,7 @@ file(APPEND ${LIC_FILE} "${LIC_SEP}muellan/clipp\n\n${LIC_FILE_CLIPP}")
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib
 	set(gtest_force_shared_crt ON CACHE BOOL "static lib" FORCE)
-	add_subdirectory("google/googletest/googletest")
+	add_subdirectory("google/googletest" EXCLUDE_FROM_ALL)
 	else()
 	set(BUILD_TESTING OFF CACHE BOOL "Enable Testing" FORCE)
 endif()

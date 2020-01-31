@@ -34,6 +34,7 @@
 #include "symbols.h"
 #include "statistics.h"
 #include "DrFile.h"
+#include "util/LibLoaderFactory.h"
 #include "util/DrModuleLoader.h"
 #include "race-filter.h"
 
@@ -41,7 +42,9 @@
 #ifdef DRACE_XML_EXPORTER
 #include "sink/valkyrie.h"
 #endif
+#ifdef WINDOWS
 #include "MSR.h"
+#endif
 
 #include <clipp.h>
 #include <detector/Detector.h>
@@ -54,7 +57,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     dr_set_client_name("Race-Detection Tool 'DRace'",
         "https://github.com/siemens/drace/issues");
 
+#ifdef WINDOWS
     dr_enable_console_printing();
+#endif
 
     // Parse runtime arguments and print generated configuration
     drace::parse_args(argc, argv);
@@ -66,7 +71,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     bool success = config.loadfile(params.config_file, argv[0]);
     if (!success) {
         LOG_ERROR(-1, "error loading config file");
-        dr_flush_file(stdout);
+        dr_flush_file(drace::log_target);
         exit(1);
     }
     LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
@@ -98,7 +103,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
     // Setup Memory Tracing
     memory_tracker = std::make_unique<MemoryTracker>();
 
-    std::shared_ptr<RaceFilter> filter = std::make_shared<RaceFilter>(params.filter_file);
+    std::shared_ptr<RaceFilter> filter = std::make_shared<RaceFilter>(params.filter_file, argv[0]);
 
     // Setup Race Collector and bind lookup function
     race_collector = std::make_unique<RaceCollector>(
@@ -112,13 +117,19 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[])
 
     LOG_INFO(-1, "application pid: %i", dr_get_process_id());
 
+    // \todo port to linux
     // if we try to access a non-existing SHM,
     // DR will spuriously fail some time later
     if (params.extctrl) {
+        #if WINDOWS
         if (!MSR::connect()) {
             LOG_ERROR(-1, "MSR not available (required for --extctrl)");
             dr_abort();
         }
+        #else
+        LOG_ERROR(-1, "--extctrl is not supported on linux yet.");
+        dr_abort();
+        #endif
     }
 }
 
@@ -129,7 +140,9 @@ namespace drace {
         const char ** argv,
         const std::string & detector_name)
     {
-        std::string detector_lib("drace.detector." + detector_name + ".dll");
+        std::string detector_lib(::util::LibLoaderFactory::getModulePrefix()
+        + "drace.detector." + detector_name
+        + ::util::LibLoaderFactory::getModuleExtension());
 
         module_loader = std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
         if (!module_loader->loaded())
@@ -146,7 +159,7 @@ namespace drace {
     }
 
     static void register_report_sinks() {
-        if (drace::log_target != NULL) {
+        if (drace::log_target != 0) {
             // register the console printer
             race_collector->register_sink(
                 std::make_shared<sink::HRText>(drace::log_file)
@@ -276,7 +289,7 @@ namespace drace {
                     clipp::option("--excl-master").set(params.exclude_master) % "exclude first thread"
                     ) % "analysis scope",
                     (clipp::option("--stacksz") & clipp::integer("stacksz", params.stack_size)) %
-            ("size of callstack used for race-detection (must be in [1," + std::to_string(ShadowStack::max_size) + "], default: " + std::to_string(params.stack_size) + ")"),
+            ("size of callstack used for race-detection (must be in [1," + std::to_string(ShadowStack::maxSize()) + "], default: " + std::to_string(params.stack_size) + ")"),
             clipp::option("--no-annotations").set(params.annotations, false) % "disable code annotation support",
             clipp::option("--delay-syms").set(params.delayed_sym_lookup) % "perform symbol lookup after application shutdown",
             (clipp::option("--suplevel") & clipp::integer("level", params.suppression_level)) % "suppress similar races (0=detector-default, 1=unique top-of-callstack entry, default: 1)",

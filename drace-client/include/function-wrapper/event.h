@@ -11,6 +11,7 @@
  */
 
 #include <dr_api.h>
+#include <drmgr.h>
 
 namespace drace {
 	struct per_thread_t;
@@ -19,12 +20,14 @@ namespace drace {
 
         /// Provides callbacks for certain events, triggered by DRace
 		class event {
+			#ifdef WINDOWS
 			/// Arguments of a WaitForMultipleObjects call
 			struct wfmo_args_t {
 				DWORD          ncount;
 				BOOL           waitall;
 				const HANDLE*  handles;
 			};
+			#endif
 
 		private:
 			static void prepare_and_aquire(
@@ -90,10 +93,10 @@ namespace drace {
 
 			/// WaitForMultipleObjects Windows API call (experimental)
 			static void wait_for_mult_obj(void *wrapctx, void *user_data);
-
+#endif
             /// Thread start event on caller side
             static void thread_start(void *wrapctx, void *user_data);
-#endif
+
 			/// Call this function before a thread-barrier is entered */
 			static void barrier_enter(void *wrapctx, void **user_data);
 
@@ -108,6 +111,12 @@ namespace drace {
 
 			/// Custom annotated happens after
 			static void happens_after(void *wrapctx, void *identifier);
+
+            /// Default call instrumentation
+		    static void on_func_call(app_pc *call_ins, app_pc *target_addr);
+
+		    /// Default return instrumentation
+		    static void on_func_ret(app_pc *ret_ins, app_pc *target_addr);
 		};
 	}
 } // namespace drace

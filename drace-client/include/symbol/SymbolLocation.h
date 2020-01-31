@@ -30,7 +30,7 @@ namespace symbol {
 		std::string     mod_name;
 		std::string     sym_name;
 		std::string     file;
-		uint64_t        line{ 0 };
+		uintptr_t       line{ 0 };
 		size_t          line_offs{ 0 };
 
 		/** Pretty print symbol location */

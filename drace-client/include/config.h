@@ -34,7 +34,7 @@ namespace drace {
 		Config & operator=(const Config&) = delete;
 		Config & operator=(Config&&) = default;
 
-        explicit Config(std::string filename);
+        explicit Config(const std::string & filename);
 
         bool loadfile(
             const std::string & filename,
@@ -47,7 +47,7 @@ namespace drace {
         std::string get(
             const std::string & section,
             const std::string & key,
-            const std::string & default) const;
+            const std::string & def_val) const;
 
 		/// returns multiline ini-items as a vector
         std::vector<std::string> get_multi(
