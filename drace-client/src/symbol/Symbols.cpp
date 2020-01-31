@@ -96,6 +96,7 @@ namespace symbol {
 				sloc.mod_name = sym.module.data();
 				sloc.sym_name = sym.function.data();
 				sloc.file = sym.path.data();
+                sloc.line = sym.line;
 				// if the PC is not JITTED, try to get native module
 				if (sloc.mod_name.empty() && modptr) {
 					sloc.mod_name = dr_module_preferred_name(modptr->info);

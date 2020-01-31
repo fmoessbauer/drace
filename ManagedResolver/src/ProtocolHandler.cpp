@@ -174,8 +174,9 @@ namespace msr {
                 for (unsigned i = 0; i < filled; ++i) {
                     ATL::CString symbol;
                     ATL::CString line;
+                    uint64_t lineNumber{0};
                     _resolver.GetMethodName((void*)contexts[i].Rip, symbol);
-                    _resolver.GetFileLineInfo((void*)contexts[i].Rip, line);
+                    _resolver.GetFileLineInfo((void*)contexts[i].Rip, line, &lineNumber);
                     logger->info("+ {}: Rip is {}, symbol: {} @ {}", i, (void*)contexts[i].Rip, symbol.GetBuffer(128), line.GetBuffer(128));
                 }
             }
@@ -217,9 +218,11 @@ namespace msr {
 
         // Get Line Info
         buffer = "";
-        _resolver.GetFileLineInfo(ip, buffer);
+        uint64_t lineNumber{0};
+        _resolver.GetFileLineInfo(ip, buffer, &lineNumber);
         bs = sym.path.size();
         strncpy_s(sym.path.data(), bs, buffer.GetBuffer(static_cast<int>(bs)), _TRUNCATE);
+        sym.line = static_cast<unsigned>(lineNumber);
         logger->debug("+ resolve IP to: {}", sym.function.data());
         _shmdriver->commit();
     }
