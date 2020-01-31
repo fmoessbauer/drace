@@ -2,7 +2,7 @@
 
 DRace is a data-race detector for windows applications which uses DynamoRIO to dynamically instrument a binary at runtime. This tutorial shall provide an overview on how to get and use DRace and the belonging tools.
 
-This `HowTo.md` provides explanations about all parts of the usage of DRace. At the end, a [step by step tutorial](##Step-by-step-Tutorial) is provided, in which you can train your skills in using DRace.
+This **HowTo** provides explanations about all parts of the usage of DRace. At the end, a [step by step tutorial](#step-by-step-tutorial) is provided, in which you can train your skills in using DRace.
 
 ## Get the tools
 
@@ -32,8 +32,8 @@ It is recommended to use the latest cron build. Once the download is finished, y
 For new users the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quiet long and unhandy DRace command can be build in an easier fashion.
 
 Furthermore, a working configuration can be saved in a text file and restored at a later time.
-Additionally, some plausability checks are exectued one the inputs. Correct and incorrect inputs are marked with green and red. The fields must be filled like described in the following.
-Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an abitrary shell.
+Additionally, some plausibility checks are executed one the inputs. Correct and incorrect inputs are marked with green and red. The fields must be filled like described in the following.
+Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an arbitrary shell.
 
 The following fields are mandatory:
 
@@ -46,9 +46,9 @@ The following fields are mandatory:
 The following fields are optional:
 
 - Debug Mode: This will start DynamoRIO in the debug mode.
-- Report: This option will create an HTML-Report after the analysis has finished. To set the option the report settings must be set correctly ([here](####Report-Settings))
+- Report: This option will create an HTML-Report after the analysis has finished. To set the option the report settings must be set correctly ([here](#report-settings))
 - MSR: This option starts the managed code resolver, if one wants to analyse applications with .NET code.
-- DRace Flags: here additional DRace Flags can be set. Be carefull, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Availble DRace flags are [here](###Shell-Usage)
+- DRace Flags: here additional DRace Flags can be set. Be careful, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Availble DRace flags are [here](#shell-usage)
 
 ![1](./Images/dracegui_empty.png "Empty DRaceGUI")
 ![2](./Images/dracegui_filled.png "Filled DRaceGUI")
@@ -57,11 +57,11 @@ The following fields are optional:
 
 ![report_pic](./Images/report_settings.png)
 
-A nice looking HTML-Report can be created by using the **[ReportConverter](##ReportConverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
+A nice looking HTML-Report can be created by using the **[ReportConverter](#reportconverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
 
 Note: Python 3 must be installed and in the Windows-PATH environment variable when using the python script.
 
-More information about the ReportConverter is [here](##ReportConverter)
+More information about the ReportConverter is [here](#reportconverter)
 
 ### Shell-Usage
 
@@ -116,14 +116,31 @@ Note: If one wants to open a source file by clicking on its name, it will be ope
 
 Now a step by step example on how to use DRace with an example application will be provided.
 
-1. Install DRace and DynamoRIO (if not already installed)
+### 1. Install DRace and DynamoRIO (if not already installed)
 
-You can find an explanation **[here](##Get-the-tools)**.
+You can find an explanation **[here](#get-the-tools)**.
 
-2. Configure a DRace-Command using the GUI ([more Details](##GUI-Usage))
+### 2. Build the ShoppingRush example application
 
-    - Find the pathes to drrun, drace-client.dll and drace.ini
-    - The specified executable must be the delivered sample application `./drace/sample/ShoppingRush.exe`
+In this demo, we analyze the provided `ShoppingRush` sample application.
+The application can easily be build by cloning the DRace repository from Github and pointing CMake to this `HowTo` folder:
+
+```sh
+# assume we are in the HowTo folder
+mkdir build && cd build
+cmake ..
+cmake --build . --config RelWithDebInfo
+# application should be in .\bin\samples\RelWithDebInfo\
+```
+
+*Note: You can also use the provided prebuild version of the ShoppingRush example,
+but as the PDB files contain absolute paths to the source files, the report converter
+might not be able to find them.*
+
+### 3. Configure a DRace-Command using the GUI ([more Details](#gui-usage))
+
+    - Find the paths to drrun, drace-client.dll and drace.ini
+    - The specified executable must be the delivered sample application `./drace/sample/ShoppingRush.exe` (or `.\bin\samples\RelWithDebInfo\ShoppingRush.exe`)
     - Configure the ReportConverter
     - The report box must be ticked
     - The MSR and Debug Mode box must be unticked
@@ -131,33 +148,35 @@ You can find an explanation **[here](##Get-the-tools)**.
 
 ![7](./Images/gui_example.png)
 
-3. Execute DRace
+### 4. Execute DRace
 
-After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this. Please note that during runtime, a MSVC "Debug Assertion Failed" might fire, which states "erase iterator out of range". Please just click cancel and everything should be fine.
+After setting everything up in the GUI, it's time to hit the run button and execute DRace for the first time. A powershell window will appear and after a short while and everything went well, you will see something like this. Please note that during runtime, a MSVC "Debug Assertion Failed" might fire, which states "erase iterator out of range" (that already indicates that there is an error in the ShoppingRush application). Please just click cancel and everything should be fine.
 
 ![8](./Images/powershell_out.png)
 
 There, you can see DRace found either one or two data races and it shows in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
 
-4. Examine the report
+### 5. Examine the report
 
-After opening the report, you can see where exactly DRace found potential data races (More information about how to read the report is [here](###Report)). This is a good starting point to figure out why the code produces data races.
+After opening the report, you can see where exactly DRace found potential data races (More information about how to read the report is [here](#report)). This is a good starting point to figure out why the code produces data races.
 
 Now, you can start to fix the application.
 
-5. Fix the application and rerun DRace
+### 6. Fix the application and rerun DRace
 
-Your job is now to fix the racy parts in the source file. It is located in `./drace/sample/ShoppingRush.cpp`.
-If you think you did the trick you can recompile the example application and rerun with DRace. You should compile the application in "debug" mode as otherwise the race might not be exactly detected at the spot of the occurence. As already described, the debug assertion might fire. If this is the case just click "Cancel" and everything should be fine.
+Your job is now to fix the racy parts in the source file. It is located in `./HowTo/shoppingrush/ShoppingRush.cpp`.
+If you think you did the trick you can recompile the example application and rerun with DRace. You should compile the application in "debug" mode as otherwise the race might not be exactly detected at the spot of the occurrence. As already described, the debug assertion might fire. If this is the case just click "Cancel" and everything should be fine.
 
 You're done when the application doesn't produce any races anymore, when it is analysed with DRace and still produces the correct output.
 
-6. Compare your solution with ours
+### 7. Compare your solution with ours
 
-If you want, you can now compare your solution with the example solution provided in `./drace/sample/ShoppingRushSolution.cpp`.
+If you want, you can now compare your solution with the example solution provided in `./HowTo/shoppingrush/ShoppingRushSolution.cpp`.
 
-A few words to the actual problem:
+**A few words to the actual problem:**
 
-The pointer invalidation in line 101 (`shop.erase(elit);`) was recognized by the developer. With the locking of the mutex in line 96 the developer tried to prevent concurrent invalidations of the pointer. The remaining problem which leads to the data races is that this pointer is also used in lines 85, 89, 90 and 91. There it won't be invalidated, but an already invalidated pointer may be used. This leads to an undefined behaviour of the application. If the locking of the mutex is moved above line 85 (`int size = shop.size();`) everything is safe and should work fine.
+The iterator invalidation in line 111 (`shop.erase(elit);`) was recognized by the developer. With the locking of the mutex in line 104 the developer tried to prevent concurrent invalidations of the iterator. The remaining problem which leads to the data races is that this iterator is also used in lines 94, 96, 97 and 99.
+Additionally, the pattern `size_t size = shop.size();` ... `if(size != 0)` is also erroneous, as the size of the shop might have changed between the two statements.
+There it won't be invalidated, but an already invalidated iterator may be used. This leads to an undefined behavior of the application. If the locking of the mutex is moved above line 91 (`int size = shop.size();`) everything is safe and should work fine.
 
 🎉🎉🎉Congrats you're done with the tutorial. 🎉🎉🎉
