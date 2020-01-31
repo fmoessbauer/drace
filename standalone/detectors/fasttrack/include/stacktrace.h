@@ -23,7 +23,11 @@
 class StackTrace {
 
     typedef boost::property<boost::vertex_name_t, size_t> VertexProperty;
-    typedef boost::adjacency_list <boost::listS, boost::listS, boost::bidirectionalS, VertexProperty > StackTree;
+    typedef boost::adjacency_list <
+        boost::vecS,
+        boost::vecS,
+        boost::bidirectionalS,
+        VertexProperty> StackTree;
 
     ///holds var_address, pc, stack_length
     phmap::flat_hash_map<size_t, std::pair<size_t,
@@ -31,7 +35,7 @@ class StackTrace {
 
     ///holds to complete stack tree
     ///is needed to create the stack trace in case of a race
-    ///leafs of the tree which do not have pointer pointing to them may be deleted 
+    ///leafs of the tree which do not have pointer pointing to them may be deleted
     StackTree _local_stack;
 
     ///reference to the current stack element
