@@ -125,6 +125,8 @@ add_subdirectory("common")
 add_subdirectory("vendor")
 # standalone tools
 add_subdirectory("standalone")
+# Tutorial
+add_subdirectory("HowTo")
 
 if(DRACE_ENABLE_RUNTIME)
 	# DRACE
