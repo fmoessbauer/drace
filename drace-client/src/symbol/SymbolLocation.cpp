@@ -21,7 +21,7 @@ namespace symbol {
 std::string SymbolLocation::get_pretty() const {
     // we use c-style formatting here, as we cannot
     // use std::stringstream (see i#9)
-    constexpr int bufsize = 256;
+    constexpr int bufsize = 512;
     char * strbuf = (char*)dr_thread_alloc(dr_get_current_drcontext(), bufsize);
 
     dr_snprintf(strbuf, bufsize, "PC %p ", pc);
@@ -41,10 +41,9 @@ std::string SymbolLocation::get_pretty() const {
             "\tModule %s\n", mod_name.c_str());
 
         if (sym_name != "") {
-            // we overwrite the last \n here
             size_t len_name = strlen(strbuf);
-            dr_snprintf(strbuf + len_name-1, bufsize - len_name,
-                " - %s\n", sym_name.c_str());
+            dr_snprintf(strbuf + len_name, bufsize - len_name,
+                "\tSymbol %s\n", sym_name.c_str());
         }
 
         if (file != "") {

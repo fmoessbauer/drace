@@ -123,20 +123,20 @@ namespace msr {
 		return true;
 	}
 
-	bool ManagedResolver::GetFileLineInfo(void* ip, CStringA& lineInfo)
+	bool ManagedResolver::GetFileLineInfo(void* ip, CStringA& lineInfo, uint64_t * lineNumber)
 	{
-		return GetModuleFileLineInfo(ip, &lineInfo, NULL);
+		return GetModuleFileLineInfo(ip, &lineInfo, lineNumber, NULL);
 	}
 
 	bool ManagedResolver::GetModuleName(void* ip, CStringA& modulePath)
 	{
-		return GetModuleFileLineInfo(ip, NULL, &modulePath);
+		return GetModuleFileLineInfo(ip, NULL, NULL, &modulePath);
 	}
 
 
 	// Based on a native offset, passed in the first argument this function
 	// identifies the corresponding source file name and line number.
-	bool ManagedResolver::GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath)
+	bool ManagedResolver::GetModuleFileLineInfo(void* ip, CStringA* lineInfo, uint64_t* lineNumber, CStringA* modulePath)
 	{
 		USES_CONVERSION;
 		ULONG lineN = 0;
@@ -319,12 +319,11 @@ namespace msr {
 
 	lCollectInfoAndReturn:
 		*lineInfo += path;
-		*lineInfo += "(";
-		*lineInfo += std::to_string((uint64_t)lineN).c_str();
-		*lineInfo += ")";
+        if(lineNumber != NULL){
+            *lineNumber = (uint64_t)lineN;
+        }
 		return true;
 	}
-
 
 	bool ManagedResolver::GetMethodName(void* ip, CStringA& symbol)
 	{

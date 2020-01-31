@@ -45,12 +45,12 @@ namespace msr {
 			const char * mscordaccore_path,
 			CString& lastError);
 
-		bool GetFileLineInfo(void* ip, CStringA& lineInfo);
+		bool GetFileLineInfo(void* ip, CStringA& lineInfo, uint64_t * lineNumber);
 		bool GetModuleName(void* ip, CStringA& modulePath);
 
 		/** Based on a native offset, passed in the first argument this function
 		 * identifies the corresponding source file name and line number. */
-		bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, CStringA* modulePath);
+		bool GetModuleFileLineInfo(void* ip, CStringA* lineInfo, uint64_t* lineNumber, CStringA* modulePath);
 		bool GetMethodName(void* ip, CStringA& symbol);
 
 		void getStackTrace(void* ip);
