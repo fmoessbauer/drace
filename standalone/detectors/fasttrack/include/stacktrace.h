@@ -3,7 +3,7 @@
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright 2018 Siemens AG
+ * Copyright 2020 Siemens AG
  *
  * Authors:
  *   Felix Moessbauer <felix.moessbauer@siemens.com>
@@ -21,8 +21,10 @@
  *        with references to particular nodes.
  */
 class StackTrace {
-
-    typedef boost::property<boost::vertex_name_t, size_t> VertexProperty;
+    /// Store the address along with each vertex
+    struct VertexProperty {
+        size_t addr;
+    };
     typedef boost::adjacency_list <
         boost::vecS,
         boost::vecS,
@@ -60,7 +62,7 @@ class StackTrace {
 public:
 
     StackTrace() :
-        _ce(boost::add_vertex(0, _local_stack)),
+        _ce(boost::add_vertex({0}, _local_stack)),
         _root(_ce) { }
 
     /**
