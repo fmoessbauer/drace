@@ -1,3 +1,80 @@
+#### 1.6.0 (2020-02-05)
+
+##### Chores
+
+*  do not install googletest along with drace ([40ec63b7](https://github.com/siemens/drace/commit/40ec63b73ec74db48e0fa412cdd4ff9f80531d53))
+*  unified cmake syntax to build tests ([61f2470d](https://github.com/siemens/drace/commit/61f2470d12e020e9616388548e27abfe6c76d6e6))
+
+##### Continuous Integration
+
+*  added linux built and test steps for x64 and i386 to pipeline ([f8824631](https://github.com/siemens/drace/commit/f8824631a3c32f8ce121ad0a798fed9f08b068c8))
+
+##### Documentation Changes
+
+*  finalized drace tutorial ([67d9be4f](https://github.com/siemens/drace/commit/67d9be4f3ffcdff92c068ca9713543b316a2f9f3))
+*  cleanup readme and documentation ([0beafdd7](https://github.com/siemens/drace/commit/0beafdd72293433b8e7839607c9829babbb3ccd1))
+*  first draft of a tutorial for drace ([acdd3ef6](https://github.com/siemens/drace/commit/acdd3ef602c3619c5838a3ac9b3f2e888a37c085))
+*  make project reuse compliant ([87d7bb57](https://github.com/siemens/drace/commit/87d7bb57281788841514f4e558022373ea90adf2))
+
+##### New Features
+
+*  in race-report, put symbol name into dedicated entry ([65eefb00](https://github.com/siemens/drace/commit/65eefb00a41b8371668b6bf863b6ea3e271a5b9b))
+*  added linux mutex names to drace, start tackling [#47](https://github.com/siemens/drace/pull/47) ([e8fbc7a2](https://github.com/siemens/drace/commit/e8fbc7a2f1ab3085cc504e67b8903ea3b518601b))
+*  added linux mutex names ([d1a1e9c8](https://github.com/siemens/drace/commit/d1a1e9c816d0985da9d43b4b3a13f8673e51176c))
+*  added support for valgrind/helgrind reports [#48](https://github.com/siemens/drace/pull/48) ([78b5c701](https://github.com/siemens/drace/commit/78b5c70127b190c827d241471d8858ee68c9690c))
+*  added wild-card matching for module names [#46](https://github.com/siemens/drace/pull/46) ([aa937846](https://github.com/siemens/drace/commit/aa9378465bc2c3094a2c87f79e83433bfe83b3b0))
+*  added support for valgrind/helgrind reports [#48](https://github.com/siemens/drace/pull/48) ([2eebd17c](https://github.com/siemens/drace/commit/2eebd17cfc181c1032729fc0581717d8d649b395))
+*  adjusted error messages for report converter, tackles [#41](https://github.com/siemens/drace/pull/41) ([0b6ffa5e](https://github.com/siemens/drace/commit/0b6ffa5ed32af3466754b7bb63eb3dec20654c4d))
+*  initial (experimental) support for drace on x64 linux ([2a1d3317](https://github.com/siemens/drace/commit/2a1d331781a7cbcd9199bd2741053c5b4fa5ba62))
+
+##### Bug Fixes
+
+*  use dedicated field for line number in MSR ([723b4fe5](https://github.com/siemens/drace/commit/723b4fe53859c31b5bb3efcb0b7b10965ca0727e))
+*  properly terminate symbol c strings ([e5bb1ded](https://github.com/siemens/drace/commit/e5bb1ded9a64171d01e6c2832970379a019b7d75))
+*  resolved ccp-check issue of shoppingrush ([80d0502f](https://github.com/siemens/drace/commit/80d0502ff454c5d8d2e72f21599b8e458cb54322))
+*  manually link libatomic when using clang++ ([824163d3](https://github.com/siemens/drace/commit/824163d367b803f5c2d2b4d9b520d79bc4aa091f))
+*  use getter to work around odr issues on constexpr ([47ac1492](https://github.com/siemens/drace/commit/47ac14927edccff9b31e74b627e9e6141171abc8))
+*  upper memory space limit on windows ([ba734540](https://github.com/siemens/drace/commit/ba734540946219dbfeed98c3cd24bc9e6d8d1552))
+*  upper memory space limit on windows ([cd3a540f](https://github.com/siemens/drace/commit/cd3a540f2ebce0e7831fc31961c38463f879618e))
+*  solve multiple crashes in drace on linux ([2bbf8483](https://github.com/siemens/drace/commit/2bbf848389a0945e1f7609addb57657001d86c15))
+*  carved out many linux-only bugs ([f1cbeab0](https://github.com/siemens/drace/commit/f1cbeab098952d345eed73dfb69b30ab476de5df))
+*  removed template character (backtick) from created report to support IE ([2ac0b5f5](https://github.com/siemens/drace/commit/2ac0b5f57e5bce2fb1ab109dbe3e9332006612ad))
+
+##### Other Changes
+
+*  use embedded properties ([6957656a](https://github.com/siemens/drace/commit/6957656a0de27b3cc6b89dab915aad7f1649f625))
+*  extended HowTo, added pictures, added example app ([260c4719](https://github.com/siemens/drace/commit/260c47196d4c1c0d4d277dc5c51f9254b4141f0a))
+*  update on howto ([729d4983](https://github.com/siemens/drace/commit/729d4983856732776ed74a37b41d27598ab7aef4))
+* multicore/drace into feature/dracelinux ([7303d9c0](https://github.com/siemens/drace/commit/7303d9c0c17c3a1e9692648ad2ecf75114a2afd8))
+* multicore/drace into feature/dracelinux ([9a7e817b](https://github.com/siemens/drace/commit/9a7e817bb58e641e45736036aab490957f69e370))
+*  updates readmes ([aea81c06](https://github.com/siemens/drace/commit/aea81c066264bf98134f85083ad1e1318957a7e8))
+
+##### Performance Improvements
+
+*  use vectors in stackdepot to reduce allocations ([f6450967](https://github.com/siemens/drace/commit/f6450967bcbfa0118c99724ed8c5b764f8e5f4da))
+
+##### Refactors
+
+*  Simplify and cleanup cmake scripts ([35825aa7](https://github.com/siemens/drace/commit/35825aa78a6f3bbd08d79ba58da22122f9444fdd))
+*  split shadow stack into logic and instrumentation aspects ([534dbd59](https://github.com/siemens/drace/commit/534dbd591c83762337749137534c29f80cad699d))
+*  move enable_external to memory-tracker ([ae247d4e](https://github.com/siemens/drace/commit/ae247d4eafa0c7141502a9d693bc40742331e201))
+*  simplified enable/disable logic ([88394664](https://github.com/siemens/drace/commit/88394664f7910c6fe037565affbafdc0f803d617))
+*  fixed lots of cppcheck style warnings ([442b5a71](https://github.com/siemens/drace/commit/442b5a71bb4642850324d449fc03e573b63ec254))
+*  avoid use of fixed length types ([07189be0](https://github.com/siemens/drace/commit/07189be01f65e34a9b4b217adcf35baa846eb4ff))
+*  rework linux changes to be windows compatible ([d0006dcd](https://github.com/siemens/drace/commit/d0006dcde2f1a50619da79b0cc8df75dfa7efdb1))
+
+##### Tests
+
+*  add tests for shadow stack implementation ([1d39c88e](https://github.com/siemens/drace/commit/1d39c88ebf8046642d3663be8a7ace57917b9e3a))
+*  use unique names for global shm segments ([15f0bc7c](https://github.com/siemens/drace/commit/15f0bc7c46ed7d8e789843b5bf803700d545ddf9))
+*  gather ctest xml results in CI ([e8b81b6c](https://github.com/siemens/drace/commit/e8b81b6c1f793870fb7ebc3e3b9a56d21e503d75))
+*  use ctest to execute all unit tests ([18ab8c7f](https://github.com/siemens/drace/commit/18ab8c7fcde63c9e28f5522eff6a6e0878c63a4f))
+*  fixed annotation test to incoporate static initialization ([83d14ecf](https://github.com/siemens/drace/commit/83d14ecfc01fca5b43ad21dc3201562072fed3c2))
+*  fixed annotation test to incoporate static initialization ([2c9b4a99](https://github.com/siemens/drace/commit/2c9b4a999c98ef1c80e670a02b9e45880e73d649))
+*  fix windows specific testing issues ([eadd0a9e](https://github.com/siemens/drace/commit/eadd0a9e20513963771e8953404b07c7a93a2755))
+*  prepare integration tests for linux ([1609995e](https://github.com/siemens/drace/commit/1609995ea26ae50cb3198f56b7f265b4516ee860))
+*  add support to run detector if tests on linux ([43cf2887](https://github.com/siemens/drace/commit/43cf2887667108f70cc94704d2af3860b2d3da33))
+
 #### 1.5.0 (2020-01-08)
 
 ##### Build System / Dependencies
