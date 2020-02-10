@@ -33,10 +33,12 @@
 #endif
 
 namespace drace {
-MemoryTracker::MemoryTracker()
+MemoryTracker::MemoryTracker(const std::shared_ptr<Statistics> &stats)
     : _prng(static_cast<unsigned>(std::chrono::high_resolution_clock::now()
                                       .time_since_epoch()
-                                      .count())) {
+                                      .count())),
+      _tls_rw_mutex(dr_rwlock_create()),
+      _stats(stats) {
   /* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
   drreg_options_t ops = {sizeof(ops), 4, false};
 
@@ -77,6 +79,7 @@ MemoryTracker::MemoryTracker()
 }
 
 MemoryTracker::~MemoryTracker() {
+  dr_rwlock_destroy(_tls_rw_mutex);
   dr_nonheap_free(cc_flush, page_size);
 
   drvector_delete(&allowed_xcx);
@@ -280,13 +283,13 @@ void MemoryTracker::event_thread_exit(void *drcontext) {
 
   // as this is a exclusive lock and this is the only place
   // where stats are combined, we use it
-  dr_rwlock_write_lock(tls_rw_mutex);
-  *stats |= *(data->stats);
+  dr_rwlock_write_lock(_tls_rw_mutex);
+  *_stats |= *(data->stats);
 
   if (params.stats_show) {
     data->stats->print_summary(drace::log_target);
   }
-  dr_rwlock_write_unlock(tls_rw_mutex);
+  dr_rwlock_write_unlock(_tls_rw_mutex);
 
   // Cleanup TLS
   // As we cannot rely on current drcontext here, use provided one

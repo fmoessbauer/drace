@@ -79,12 +79,8 @@ void event::alloc_post(void *wrapctx, void *user_data) {
   // allocations with size 0 are valid if they come from
   // reallocate (in fact, that's a free)
   if (size != 0) {
-    // to avoid high pressure on the internal spinlock,
-    // we lock externally using an os lock
     // TODO: optimize tsan wrapper internally
-    dr_mutex_lock(th_mutex);
     detector->allocate(data->detector_data, pc, retval, size);
-    dr_mutex_unlock(th_mutex);
   }
 }
 

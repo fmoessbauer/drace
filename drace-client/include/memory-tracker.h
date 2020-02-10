@@ -83,11 +83,15 @@ class MemoryTracker {
   unsigned _max_period = 1;
   /// current pos in period
   int _sample_pos = 0;
+  /// application statistics instance
+  std::shared_ptr<Statistics> _stats;
+  /// mutex to guard accesses to TLS
+  void *_tls_rw_mutex;
 
   static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
  public:
-  MemoryTracker();
+  MemoryTracker(const std::shared_ptr<Statistics> &stats);
   ~MemoryTracker();
 
   static void process_buffer(void);

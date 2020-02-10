@@ -133,7 +133,6 @@ static_assert(
 
 /** Thread local storage */
 extern int tls_idx;
-extern void* tls_rw_mutex;
 
 // TODO check if global is better
 extern std::atomic<uint> runtime_tid;
@@ -144,17 +143,11 @@ class Tracker;
 }
 extern std::unique_ptr<module::Tracker> module_tracker;
 
-// Global mutex to synchronize threads
-extern void* th_mutex;
-
 class MemoryTracker;
 extern std::unique_ptr<MemoryTracker> memory_tracker;
 
 // Global Configuration
 extern drace::Config config;
-
-// Global Statistics Collector
-extern std::unique_ptr<Statistics> stats;
 
 // Detector instance
 extern std::unique_ptr<Detector> detector;

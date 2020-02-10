@@ -56,6 +56,7 @@ std::shared_ptr<drace::DrFile> log_file;
 std::chrono::system_clock::time_point app_start;
 std::chrono::system_clock::time_point app_stop;
 std::unique_ptr<drace::RaceCollector> race_collector;
+std::shared_ptr<drace::Statistics> stats;
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   using namespace drace;
@@ -82,9 +83,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   }
   LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
 
-  th_mutex = dr_mutex_create();
-  tls_rw_mutex = dr_rwlock_create();
-
   // Init DRMGR, Reserve registers
   if (!drmgr_init() || !drutil_init()) DR_ASSERT(false);
 
@@ -105,7 +103,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
 
   // Setup Memory Tracing
-  memory_tracker = std::make_unique<MemoryTracker>();
+  memory_tracker = std::make_unique<MemoryTracker>(stats);
 
   std::shared_ptr<RaceFilter> filter =
       std::make_shared<RaceFilter>(params.filter_file, argv[0]);
@@ -231,9 +229,6 @@ static void event_exit() {
   detector.reset();
 
   detector_loader.reset();
-
-  dr_mutex_destroy(th_mutex);
-  dr_rwlock_destroy(tls_rw_mutex);
 
   LOG_INFO(-1, "DRace exit");
 
