@@ -9,70 +9,54 @@
  *
  * SPDX-License-Identifier: MIT
  */
- 
-#include "LibraryLoader.h"
+
 #include <dlfcn.h>
+#include "LibraryLoader.h"
 
 namespace util {
-    class UnixLibLoader : public LibraryLoader
-    {
-        void* _lib{nullptr};
+class UnixLibLoader : public LibraryLoader {
+  void* _lib{nullptr};
 
-    public:
+ public:
+  UnixLibLoader() = default;
 
-        UnixLibLoader() = default;
+  /// LibraryLoader specialization for windows dlls
+  explicit UnixLibLoader(const char* filename) { load(filename); }
 
-        /// LibraryLoader specialization for windows dlls
-        explicit UnixLibLoader(const char * filename)
-        {
-            load(filename);
-        }
+  ~UnixLibLoader() final { unload(); }
 
-        ~UnixLibLoader() final
-        {
-            unload();
-        }
+  /**
+   * load a module
+   * \return true if module was loaded
+   */
+  bool load(const char* filename) final {
+    if (loaded()) return false;
 
-        /**
-         * load a module
-         * \return true if module was loaded
-         */
-        bool load(const char * filename) final
-        {
-            if (loaded())
-                return false;
+    _lib = dlopen(filename, RTLD_NOW);
+    return nullptr != _lib;
+  }
 
-            _lib = dlopen(filename, RTLD_NOW);
-            return nullptr != _lib;
-        }
+  /**
+   * unload the loaded module
+   * \return true if a module was loaded and is now unloaded.
+   */
+  bool unload() final {
+    if (loaded()) {
+      dlclose(_lib);
+      _lib = nullptr;
+      return true;
+    }
+    return false;
+  }
 
-        /**
-         * unload the loaded module
-         * \return true if a module was loaded and is now unloaded.
-         */
-        bool unload() final
-        {
-            if (loaded())
-            {
-                dlclose(_lib);
-                _lib = nullptr;
-                return true;
-            }
-            return false;
-        }
+  /**
+   * \return true if module is loaded
+   */
+  bool loaded() final { return _lib != nullptr; }
 
-        /**
-         * \return true if module is loaded
-         */
-        bool loaded() final
-        {
-            return _lib != nullptr;
-        }
-
-        /// Get a pointer to the requested function in this module
-        ProcedurePtr operator[](const char * proc_name) const final
-        {
-            return ProcedurePtr(reinterpret_cast<void*>(dlsym(_lib, proc_name)));
-        }
-    };
-}
+  /// Get a pointer to the requested function in this module
+  ProcedurePtr operator[](const char* proc_name) const final {
+    return ProcedurePtr(reinterpret_cast<void*>(dlsym(_lib, proc_name)));
+  }
+};
+}  // namespace util

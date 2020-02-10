@@ -15,14 +15,14 @@
 #include "../race/DecoratedRace.h"
 
 namespace drace {
-    namespace sink {
-        /**
-        * \brief Generic interface of a data-race sink
-        */
-        class Sink {
-        public:
-            virtual void process_single_race(const race::DecoratedRace & race) = 0;
-            virtual void process_all(const std::vector<race::DecoratedRace> & races) = 0;
-        };
-    }
-}
+namespace sink {
+/**
+ * \brief Generic interface of a data-race sink
+ */
+class Sink {
+ public:
+  virtual void process_single_race(const race::DecoratedRace& race) = 0;
+  virtual void process_all(const std::vector<race::DecoratedRace>& races) = 0;
+};
+}  // namespace sink
+}  // namespace drace

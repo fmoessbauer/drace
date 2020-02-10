@@ -15,23 +15,21 @@
 #include <QDialog>
 
 namespace Ui {
-   class About_Dialog;
+class About_Dialog;
 }
 
-class About_Dialog : public QDialog
-{
-    Q_OBJECT
+class About_Dialog : public QDialog {
+  Q_OBJECT
 
-public:
-    ///displays the about dialog when called
-    explicit About_Dialog(QWidget *parent = nullptr);
-    ~About_Dialog();
+ public:
+  /// displays the about dialog when called
+  explicit About_Dialog(QWidget *parent = nullptr);
+  ~About_Dialog();
 
-private slots:
+ private slots:
 
-
-private:
-    Ui::About_Dialog *ui;
+ private:
+  Ui::About_Dialog *ui;
 };
 
-#endif // ABOUT_DIALOG_H
+#endif  // ABOUT_DIALOG_H

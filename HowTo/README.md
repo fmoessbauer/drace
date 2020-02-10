@@ -175,8 +175,8 @@ If you want, you can now compare your solution with the example solution provide
 
 **A few words to the actual problem:**
 
-The iterator invalidation in line 111 (`shop.erase(elit);`) was recognized by the developer. With the locking of the mutex in line 104 the developer tried to prevent concurrent invalidations of the iterator. The remaining problem which leads to the data races is that this iterator is also used in lines 94, 96, 97 and 99.
+The iterator invalidation in line 91 (`shop.erase(elit);`) was recognized by the developer. With the locking of the mutex in line 85 the developer tried to prevent concurrent invalidations of the iterator. The remaining problem which leads to the data races is that this iterator is also used in lines 76, 78 and 79.
 Additionally, the pattern `size_t size = shop.size();` ... `if(size != 0)` is also erroneous, as the size of the shop might have changed between the two statements.
-There it won't be invalidated, but an already invalidated iterator may be used. This leads to an undefined behavior of the application. If the locking of the mutex is moved above line 91 (`int size = shop.size();`) everything is safe and should work fine.
+There it won't be invalidated, but an already invalidated iterator may be used. This leads to an undefined behavior of the application. If the locking of the mutex is moved above line 74 (`int size = shop.size();`) everything is safe and should work fine.
 
 🎉🎉🎉Congrats you're done with the tutorial. 🎉🎉🎉

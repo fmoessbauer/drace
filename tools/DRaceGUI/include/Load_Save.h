@@ -11,27 +11,25 @@
 
 #ifndef LOAD_SAVE_H
 #define LOAD_SAVE_H
-#include <string>
-#include <fstream>
 #include <QString>
-#include "Report_Handler.h"
+#include <fstream>
+#include <string>
 #include "Command_Handler.h"
 #include "Data_Handler.h"
+#include "Report_Handler.h"
 
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
+class Load_Save {
+  Report_Handler* rh;
+  Command_Handler* ch;
 
-class Load_Save
-{
-    Report_Handler* rh;
-    Command_Handler* ch;
+ public:
+  Load_Save(Report_Handler* r, Command_Handler* c);
 
-public:
-    Load_Save(Report_Handler* r, Command_Handler* c);
-
-    bool load(std::string path);
-    void save(std::string path);
+  bool load(std::string path);
+  void save(std::string path);
 };
 
-#endif // LOAD_SAVE_H
+#endif  // LOAD_SAVE_H

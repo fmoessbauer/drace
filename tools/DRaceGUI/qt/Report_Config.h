@@ -14,34 +14,33 @@
 
 #include <QDialog>
 #include <QFileDialog>
+#include <QMessagebox>
 #include "Report_Handler.h"
 #include "boost/filesystem.hpp"
-#include <QMessagebox>
 
 namespace Ui {
 class Report_Config;
 }
 
-class Report_Config : public QDialog
-{
-    Q_OBJECT
+class Report_Config : public QDialog {
+  Q_OBJECT
 
-public:
-    ///ui box to set the path of the report converter
-    explicit Report_Config(Report_Handler * rh,  QWidget *parent = nullptr);
-    ~Report_Config();
+ public:
+  /// ui box to set the path of the report converter
+  explicit Report_Config(Report_Handler *rh, QWidget *parent = nullptr);
+  ~Report_Config();
 
-private slots:
-    void on_buttonBox_rejected();
-    void on_buttonBox_accepted();
-    void on_report_conv_path_clicked();
-    void on_report_name_textChanged(const QString &arg1);
-    void on_report_conv_input_textChanged(const QString &arg1);
+ private slots:
+  void on_buttonBox_rejected();
+  void on_buttonBox_accepted();
+  void on_report_conv_path_clicked();
+  void on_report_name_textChanged(const QString &arg1);
+  void on_report_conv_input_textChanged(const QString &arg1);
 
-private:
-    Ui::Report_Config *ui;
-    Report_Handler* r_handler;
-    QString path_cache;
+ private:
+  Ui::Report_Config *ui;
+  Report_Handler *r_handler;
+  QString path_cache;
 };
 
-#endif // REPORT_CONFIG_H
+#endif  // REPORT_CONFIG_H

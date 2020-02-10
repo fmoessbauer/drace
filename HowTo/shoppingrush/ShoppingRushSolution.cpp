@@ -34,23 +34,20 @@
 #include <thread>
 #include <vector>
 
-
 #define CHECKOUT 0
 #define TIMEOUT 1
 #define PATIENCE 100
 #define BUDGET 200
 
-enum BigStoreProduct : int
-{
+enum BigStoreProduct : int {
   Couch,
   FlatscreenTV,
   Hammock,
-  CofeeMachine,
+  CoffeeMachine,
   Ammunition
 };
 
-enum ToyStoreProduct : int
-{
+enum ToyStoreProduct : int {
   Pikachu,
   DoraTheExplorer,
   TrumpActionToy,
@@ -58,69 +55,48 @@ enum ToyStoreProduct : int
   TickleMeElmo
 };
 
-enum MarketProduct : int
-{
-  Diesel,
-  Fertilizer,
-  Bleach,
-  RubberGlove,
-  Soap
-};
+enum MarketProduct : int { Diesel, Fertilizer, Bleach, RubberGlove, Soap };
 
-template<typename ProductT>
-std::pair<ProductT, int> make()
-{
-  return std::make_pair(
-    static_cast<ProductT>(std::rand() % 5), std::rand() % 100);
+template <typename ProductT>
+std::pair<ProductT, int> make() {
+  return std::make_pair(static_cast<ProductT>(std::rand() % 5),
+                        std::rand() % 100);
 }
 
-template<typename shop_t>
-int shopping(
-  std::timed_mutex& buy_mx,
-  shop_t& shop,
-  const std::string& shopname,
-  int& budget,
-  const int threadid)
-{
+template <typename shop_t>
+int shopping(std::timed_mutex& buy_mx, shop_t& shop,
+             const std::string& shopname, int& budget, const int threadid) {
   bool checkout = false;
 
-  while (!checkout)
-  {
+  while (!checkout) {
     // try to buy things, but only if shop is not empty
 
     // be careful, erase modifies the shop, hence lock here
     std::unique_lock<std::timed_mutex> buy_lock(buy_mx, std::defer_lock);
 
-    if (!buy_lock.try_lock_for(std::chrono::milliseconds(PATIENCE)))
-    {
+    if (!buy_lock.try_lock_for(std::chrono::milliseconds(PATIENCE))) {
       std::cout << "[T " << threadid << ", " << shopname << "] timeout"
                 << std::endl;
       return TIMEOUT;
     }
 
     size_t size = shop.size();
-    if (size != 0)
-    {
+    if (size != 0) {
       auto elit = shop.begin();
       // find random product in shop
       std::advance(elit, (std::rand() % size));
-      if (std::get<1>(*elit) < budget)
-      {
+      if (std::get<1>(*elit) < budget) {
         budget -= std::get<1>(*elit);
 
         // remove item from shop
         shop.erase(elit);
         std::cout << "[T " << threadid << ", " << shopname
                   << "] bought item, new budget " << budget << std::endl;
-      }
-      else
-      {
+      } else {
         std::cout << "[T " << threadid << "] budget exhausted" << std::endl;
         checkout = true;
       }
-    }
-    else
-    {
+    } else {
       std::cout << "[T " << threadid << "] no more products in this shop"
                 << std::endl;
       checkout = true;
@@ -129,14 +105,9 @@ int shopping(
   return CHECKOUT;
 }
 
-template<typename BigStore_t, typename ToyStore_t, typename Market_t>
-void go_wild(
-  int threadid,
-  BigStore_t& BigStore,
-  ToyStore_t& ToyStore,
-  Market_t& Market,
-  int budget)
-{
+template <typename BigStore_t, typename ToyStore_t, typename Market_t>
+void go_wild(int threadid, BigStore_t& BigStore, ToyStore_t& ToyStore,
+             Market_t& Market, int budget) {
   std::cout << "[T " << threadid << "] started" << std::endl;
 
   // ----------------------------------
@@ -146,11 +117,9 @@ void go_wild(
 
   // reason why a customer returns from a shop
   int ret_reason = -1;
-  while (ret_reason != CHECKOUT)
-  {
+  while (ret_reason != CHECKOUT) {
     int shopnr = std::rand() % 3;
-    switch (shopnr)
-    {
+    switch (shopnr) {
       case 0:
         ret_reason = shopping(shop_mx, BigStore, "BigStore", budget, threadid);
         break;
@@ -165,8 +134,7 @@ void go_wild(
   std::cout << "[T " << threadid << "] finished" << std::endl;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   std::cout << "Setup playground" << std::endl;
 
   static const int horde_size = 20;
@@ -185,35 +153,23 @@ int main(int argc, char** argv)
   // some tweaks
   horde.reserve(horde_size);
 
-  std::generate_n(
-    std::inserter(BigStore, BigStore.begin()),
-    BigStore_capacity,
-    make<BigStoreProduct>);
-  std::generate_n(
-    std::inserter(ToyStore, ToyStore.begin()),
-    ToyStore_capacity,
-    make<ToyStoreProduct>);
-  std::generate_n(
-    std::inserter(Market, Market.begin()),
-    Market_capacity,
-    make<MarketProduct>);
+  std::generate_n(std::inserter(BigStore, BigStore.begin()), BigStore_capacity,
+                  make<BigStoreProduct>);
+  std::generate_n(std::inserter(ToyStore, ToyStore.begin()), ToyStore_capacity,
+                  make<ToyStoreProduct>);
+  std::generate_n(std::inserter(Market, Market.begin()), Market_capacity,
+                  make<MarketProduct>);
 
   size_t num_total_products = BigStore.size() + ToyStore.size() + Market.size();
   std::cout << "Total number of products " << num_total_products << std::endl;
 
-  for (int i = 0; i < horde_size; ++i)
-  {
+  for (int i = 0; i < horde_size; ++i) {
     horde.push_back(std::thread(
-      go_wild<decltype(BigStore), decltype(ToyStore), decltype(Market)>,
-      i,
-      std::ref(BigStore),
-      std::ref(ToyStore),
-      std::ref(Market),
-      BUDGET));
+        go_wild<decltype(BigStore), decltype(ToyStore), decltype(Market)>, i,
+        std::ref(BigStore), std::ref(ToyStore), std::ref(Market), BUDGET));
   }
 
-  for (auto& t : horde)
-  {
+  for (auto& t : horde) {
     t.join();
   }
   std::cout << "Black friday ended" << std::endl;

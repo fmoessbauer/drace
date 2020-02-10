@@ -15,80 +15,70 @@
 #include <array>
 
 namespace drace {
-	/**
-    * \brief shadow stack implementation for stack-tracing
-    *
-	* This class implements a shadow stack, used for
-	* getting stack traces for race detection
-	* Whenever a call has been detected, the memory-refs buffer is
-	* flushed as all memory-refs happend in the current function.
-	* This avoids storing a stack-trace per memory-entry.
-	*/
-	class ShadowStack {
-	public:
-    private:
-        /**
-         * \brief maximum number of stack entries.
-         * That's one less than in the detector,
-         * as there the last element represents the
-         * racy pc
-         */
-		static constexpr int max_size = Detector::max_stack_size-1;
+/**
+ * \brief shadow stack implementation for stack-tracing
+ *
+ * This class implements a shadow stack, used for
+ * getting stack traces for race detection
+ * Whenever a call has been detected, the memory-refs buffer is
+ * flushed as all memory-refs happend in the current function.
+ * This avoids storing a stack-trace per memory-entry.
+ */
+class ShadowStack {
+ public:
+ private:
+  /**
+   * \brief maximum number of stack entries.
+   * That's one less than in the detector,
+   * as there the last element represents the
+   * racy pc
+   */
+  static constexpr int max_size = Detector::max_stack_size - 1;
 
-        std::array<void*, max_size> _data;
-        int _entries{0};
-        Detector * _detector{nullptr};
+  std::array<void*, max_size> _data;
+  int _entries{0};
+  Detector* _detector{nullptr};
 
-	public:
+ public:
+  ShadowStack() = default;
+  explicit ShadowStack(Detector* det) : _detector(det) {}
 
-        ShadowStack() = default;
-        explicit ShadowStack(Detector * det)
-        : _detector(det) { }
+  inline void bindDetector(Detector* det) { _detector = det; }
 
-        inline void bindDetector(Detector * det){
-            _detector = det;
-        }
+  /// return true if the stack is empty
+  inline bool isEmpty() const { return _entries == 0; }
 
-        /// return true if the stack is empty
-        inline bool isEmpty() const {
-            return _entries == 0;
-        }
+  /**
+   * \brief Push a pc on the stack.
+   * \note more pushes than stack-size are allowed, but ignored
+   */
+  inline void push(void* addr, void* det_data) {
+    if (_entries >= max_size) return;
+    _detector->func_enter(det_data, addr);
+    _data[_entries++] = addr;
+  }
 
-		/**
-        * \brief Push a pc on the stack.
-        * \note more pushes than stack-size are allowed, but ignored
-		*/
-		inline void push(void *addr, void* det_data)
-		{
-			if (_entries >= max_size) return;
-			_detector->func_enter(det_data, addr);
-			_data[_entries++] = addr;
-		}
+  /**
+   * \brief pop the top element of the stack
+   * \note more pops than stack-elements are not allowed
+   *       (caller is responsible)
+   */
+  inline void* pop(void* det_data) {
+#ifdef DYNAMORIO_API
+    DR_ASSERT(_entries > 0);
+#endif
+    --_entries;
 
-        /**
-         * \brief pop the top element of the stack
-         * \note more pops than stack-elements are not allowed
-         *       (caller is responsible)
-         */
-		inline void *pop(void* det_data)
-		{
-            #ifdef DYNAMORIO_API
-			DR_ASSERT(_entries > 0);
-            #endif
-			--_entries;
+    _detector->func_exit(det_data);
+    return _data[_entries];
+  }
 
-			_detector->func_exit(det_data);
-			return _data[_entries];
-		}
+  inline size_t size() const { return _entries; }
 
-        inline size_t size() const {
-            return _entries;
-        }
-
-        static constexpr size_t maxSize() {
-            // this getter is to work around ODR limitations
-            // in C++11
-            return max_size;
-        }
-	};
-} // namespace drace
+  static constexpr size_t maxSize() {
+    // this getter is to work around ODR limitations
+    // in C++11
+    return max_size;
+  }
+};
+}  // namespace drace

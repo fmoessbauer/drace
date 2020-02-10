@@ -10,27 +10,29 @@ if(DRACE_ENABLE_RUNTIME)
     )
     # todo: copy and install this lib
 
-	add_library("tsan-common" INTERFACE)
-    target_link_libraries("tsan-common" INTERFACE tsan)
-    install(TARGETS "tsan-common"
-        LIBRARY DESTINATION ${DRACE_LIBRARY_DEST} COMPONENT LIBRARY
-        RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME)
-	file(READ "tsan/LICENSE.TXT" LIC_FILE_TSAN)
-    file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
+	if(WIN32)
+		add_library("tsan-common" INTERFACE)
+		target_link_libraries("tsan-common" INTERFACE tsan)
+		install(TARGETS "tsan-common"
+			LIBRARY DESTINATION ${DRACE_LIBRARY_DEST} COMPONENT LIBRARY
+			RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME)
+		file(READ "tsan/LICENSE.TXT" LIC_FILE_TSAN)
+		file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
 
-    # copy tsan dll into build tree
-    add_custom_target("copy-tsan-imported" ALL
-        DEPENDS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll")
-    add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
-        "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
-        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+		# copy tsan dll into build tree
+		add_custom_target("copy-tsan-imported" ALL
+			DEPENDS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll")
+		add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
+			"$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
+			${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-    install(FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
-        "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
-        DESTINATION ${DRACE_RUNTIME_DEST})
+		install(FILES
+			"${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
+			"$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
+			DESTINATION ${DRACE_RUNTIME_DEST})
+	endif()
 
 	# inih is mandatory
 	if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jtilly/inih/INIReader.h")

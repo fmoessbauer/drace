@@ -17,7 +17,6 @@
 // doxygen
 
 namespace drace {
-	/// Module Tracking
-	namespace module {
-	}
-}
+/// Module Tracking
+namespace module {}
+}  // namespace drace

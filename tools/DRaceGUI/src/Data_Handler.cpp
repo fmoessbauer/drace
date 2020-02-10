@@ -11,47 +11,44 @@
 
 #include "Data_Handler.h"
 
+void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
+  report_name = rh->get_rep_name().toStdString();
+  report_converter = rh->get_rep_conv_cmd().toStdString();
+  report_is_python = rh->get_is_python();
+  create_report = rh->get_create_report();
 
-void Data_Handler::get_data(Report_Handler * rh, Command_Handler * ch)
-{
-    report_name         = rh->get_rep_name().toStdString();
-    report_converter    = rh->get_rep_conv_cmd().toStdString();
-    report_is_python    = rh->get_is_python();
-    create_report       = rh->get_create_report();
+  auto data = ch->get_command_array();
+  dynamorio = data[Command_Handler::DYNAMORIO].toStdString();
+  dr_debug = data[Command_Handler::DR_DEBUG].toStdString();
+  drace = data[Command_Handler::DRACE].toStdString();
+  detector = data[Command_Handler::DETECTOR].toStdString();
+  flags = data[Command_Handler::FLAGS].toStdString();
+  ext_ctrl = data[Command_Handler::EXT_CTRL].toStdString();
+  configuration = data[Command_Handler::CONFIGURATION].toStdString();
+  execuatable = data[Command_Handler::EXECUTABLE].toStdString();
 
-    auto data = ch->get_command_array();
-    dynamorio       = data[Command_Handler::DYNAMORIO].toStdString();
-    dr_debug        = data[Command_Handler::DR_DEBUG].toStdString();
-    drace           = data[Command_Handler::DRACE].toStdString();
-    detector        = data[Command_Handler::DETECTOR].toStdString();
-    flags           = data[Command_Handler::FLAGS].toStdString();
-    ext_ctrl        = data[Command_Handler::EXT_CTRL].toStdString();
-    configuration   = data[Command_Handler::CONFIGURATION].toStdString();
-    execuatable     = data[Command_Handler::EXECUTABLE].toStdString();
-
-    msr = ch->get_msr_path().toStdString();
+  msr = ch->get_msr_path().toStdString();
 }
 
-void Data_Handler::set_data(Report_Handler * rh, Command_Handler * ch)
-{
-    //reset report handler members
-    rh->set_report_name(QString(report_name.c_str()));
-    rh->set_report_converter(QString(report_converter.c_str()));
-    rh->set_create_state(create_report);
-    rh->set_is_python(report_is_python);
+void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
+  // reset report handler members
+  rh->set_report_name(QString(report_name.c_str()));
+  rh->set_report_converter(QString(report_converter.c_str()));
+  rh->set_create_state(create_report);
+  rh->set_is_python(report_is_python);
 
-    //report handler sets now the new report command in the commandhandler
-    rh->set_report_command();
+  // report handler sets now the new report command in the commandhandler
+  rh->set_report_command();
 
-    //reset command handler members
-    ch->command[Command_Handler::DYNAMORIO] = QString(dynamorio.c_str());
-    ch->command[Command_Handler::DR_DEBUG] = QString(dr_debug.c_str());
-    ch->command[Command_Handler::DRACE] = QString(drace.c_str());
-    ch->command[Command_Handler::DETECTOR] = QString(detector.c_str());
-    ch->command[Command_Handler::FLAGS] = QString(flags.c_str());
-    ch->command[Command_Handler::EXT_CTRL] = QString(ext_ctrl.c_str());
-    ch->command[Command_Handler::CONFIGURATION] = QString(configuration.c_str());
-    ch->command[Command_Handler::EXECUTABLE] = QString(execuatable.c_str());
+  // reset command handler members
+  ch->command[Command_Handler::DYNAMORIO] = QString(dynamorio.c_str());
+  ch->command[Command_Handler::DR_DEBUG] = QString(dr_debug.c_str());
+  ch->command[Command_Handler::DRACE] = QString(drace.c_str());
+  ch->command[Command_Handler::DETECTOR] = QString(detector.c_str());
+  ch->command[Command_Handler::FLAGS] = QString(flags.c_str());
+  ch->command[Command_Handler::EXT_CTRL] = QString(ext_ctrl.c_str());
+  ch->command[Command_Handler::CONFIGURATION] = QString(configuration.c_str());
+  ch->command[Command_Handler::EXECUTABLE] = QString(execuatable.c_str());
 
-    ch->set_msr(QString(msr.c_str()));
+  ch->set_msr(QString(msr.c_str()));
 }

@@ -10,69 +10,71 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "sink.h"
 #include "../DrFile.h"
 #include "../race-collector.h"
+#include "sink.h"
 
 #include <sstream>
 
 namespace drace {
-	/// data-race exporter
-	namespace sink {
-		/// A Race exporter which creates human readable output
-		class HRText : public Sink {
-		public:
-			using self_t = HRText;
+/// data-race exporter
+namespace sink {
+/// A Race exporter which creates human readable output
+class HRText : public Sink {
+ public:
+  using self_t = HRText;
 
-		private:
-			std::shared_ptr<DrFile> _target;
+ private:
+  std::shared_ptr<DrFile> _target;
 
-		public:
-			HRText() = delete;
-			HRText(const self_t &) = delete;
-			explicit HRText(self_t &&) = default;
+ public:
+  HRText() = delete;
+  HRText(const self_t &) = delete;
+  explicit HRText(self_t &&) = default;
 
-			explicit HRText(std::shared_ptr<DrFile> target)
-				: _target(target)
-			{ }
+  explicit HRText(std::shared_ptr<DrFile> target) : _target(target) {}
 
-			virtual void process_single_race(const race::DecoratedRace & race) override {
-                file_t handle = _target->get();
-                dr_fprintf(handle, "----- DATA Race at %8lld ms runtime -----\n", race.elapsed.count());
+  virtual void process_single_race(const race::DecoratedRace &race) override {
+    file_t handle = _target->get();
+    dr_fprintf(handle, "----- DATA Race at %8lld ms runtime -----\n",
+               race.elapsed.count());
 
-				for (int i = 0; i != 2; ++i) {
-					race::ResolvedAccess ac = (i == 0) ? race.first : race.second;
+    for (int i = 0; i != 2; ++i) {
+      race::ResolvedAccess ac = (i == 0) ? race.first : race.second;
 
-                    dr_fprintf(handle, "Access %i tid: %i %s to/from %p with size %i. Stack (size %i)\n",
-                        i, ac.thread_id, (ac.write ? "write" : "read"), (void*)ac.accessed_memory,
-                        ac.access_size, ac.stack_size);
+      dr_fprintf(
+          handle,
+          "Access %i tid: %i %s to/from %p with size %i. Stack (size %i)\n", i,
+          ac.thread_id, (ac.write ? "write" : "read"),
+          (void *)ac.accessed_memory, ac.access_size, ac.stack_size);
 
-					if (ac.onheap) {
-                        dr_fprintf(handle, "Block begin at %p, size %u\n", ac.heap_block_begin, ac.heap_block_size);
-			        }
+      if (ac.onheap) {
+        dr_fprintf(handle, "Block begin at %p, size %u\n", ac.heap_block_begin,
+                   ac.heap_block_size);
+      }
 
-					if (race.is_resolved) {
-						// stack is stored in reverse order, hence print inverted
-						int ssize = static_cast<int>(ac.resolved_stack.size());
-						for (int p = 0; p < ssize; ++p) {
-                            std::string pretty(ac.resolved_stack[ssize - 1 - p].get_pretty());
-                            dr_fprintf(handle, "%#04x %s", (int)p, pretty.c_str());
-						}
-					}
-					else {
-                        dr_fprintf(handle, "-> (unresolved stack size: %u)\n", ac.stack_size);
-					}
-				}
-				dr_fprintf(handle, "--------------------------------------------\n");
-                dr_flush_file(handle);
-            }
+      if (race.is_resolved) {
+        // stack is stored in reverse order, hence print inverted
+        int ssize = static_cast<int>(ac.resolved_stack.size());
+        for (int p = 0; p < ssize; ++p) {
+          std::string pretty(ac.resolved_stack[ssize - 1 - p].get_pretty());
+          dr_fprintf(handle, "%#04x %s", (int)p, pretty.c_str());
+        }
+      } else {
+        dr_fprintf(handle, "-> (unresolved stack size: %u)\n", ac.stack_size);
+      }
+    }
+    dr_fprintf(handle, "--------------------------------------------\n");
+    dr_flush_file(handle);
+  }
 
-			virtual void process_all(const std::vector<race::DecoratedRace> & races) override {
-				for (auto & r : races) {
-					process_single_race(r);
-				}
-			}
-		};
+  virtual void process_all(
+      const std::vector<race::DecoratedRace> &races) override {
+    for (auto &r : races) {
+      process_single_race(r);
+    }
+  }
+};
 
-	} // namespace sink
-} // namespace drace
+}  // namespace sink
+}  // namespace drace

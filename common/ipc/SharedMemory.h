@@ -10,125 +10,120 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <windows.h>
-#include <stdio.h>
 #include <conio.h>
+#include <stdio.h>
 #include <tchar.h>
+#include <windows.h>
 
 #include <stdexcept>
 
 namespace ipc {
-	/**
-	* Provides a shared memory abstraction for two participating units
-	* To synchronize accesses, \cnotify() and \cwait() can be used.
-	* Internally this is mapped to two windows events,
-	* one for sending and one for receiving.
-	*/
-	template<
-		/// Type of shared memory. Object is constructed in place
-		typename T = byte,
-		/// If true, no exceptions are used. To check liveness, use \cvalid()
-		bool nothrow = false>
-		class SharedMemory {
-		bool   _creator;
-		HANDLE _event_in;
-		HANDLE _event_out;
-		HANDLE _hMapFile;
-		T*     _buffer{ nullptr };
-		public:
-			SharedMemory(const char * name, bool create = false)
-				: _creator(create)
-			{
-				if (_creator) {
-					_hMapFile = CreateFileMapping(
-						INVALID_HANDLE_VALUE,    // use paging file
-						NULL,                    // default security
-						PAGE_READWRITE,          // read/write access
-						0,                       // maximum object size (high-order DWORD)
-						sizeof(T),				 // maximum object size (low-order DWORD)
-						name);                   // name of mapping object
-				}
-				else {
-					_hMapFile = OpenFileMapping(
-						FILE_MAP_ALL_ACCESS,   // read/write access
-						FALSE,                 // do not inherit the name
-						name);
-				}
+/**
+ * Provides a shared memory abstraction for two participating units
+ * To synchronize accesses, \cnotify() and \cwait() can be used.
+ * Internally this is mapped to two windows events,
+ * one for sending and one for receiving.
+ */
+template <
+    /// Type of shared memory. Object is constructed in place
+    typename T = byte,
+    /// If true, no exceptions are used. To check liveness, use \cvalid()
+    bool nothrow = false>
+class SharedMemory {
+  bool _creator;
+  HANDLE _event_in;
+  HANDLE _event_out;
+  HANDLE _hMapFile;
+  T* _buffer{nullptr};
 
-				if (nullptr == _hMapFile) {
-					if (nothrow) return;
-					throw std::runtime_error("error creating/attaching file mapping");
-				}
+ public:
+  SharedMemory(const char* name, bool create = false) : _creator(create) {
+    if (_creator) {
+      _hMapFile =
+          CreateFileMapping(INVALID_HANDLE_VALUE,  // use paging file
+                            NULL,                  // default security
+                            PAGE_READWRITE,        // read/write access
+                            0,  // maximum object size (high-order DWORD)
+                            sizeof(T),  // maximum object size (low-order DWORD)
+                            name);      // name of mapping object
+    } else {
+      _hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS,  // read/write access
+                                  FALSE,  // do not inherit the name
+                                  name);
+    }
 
-				_buffer = reinterpret_cast<T*>(MapViewOfFile(_hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0));
-				if (nullptr == _buffer) {
-					if (nothrow) return;
-					throw std::runtime_error("error creating file view");
-				}
+    if (nullptr == _hMapFile) {
+      if (nothrow) return;
+      throw std::runtime_error("error creating/attaching file mapping");
+    }
 
-				// Create Event for notification
-				std::string evtname("Global\\");
-				evtname += name;
+    _buffer = reinterpret_cast<T*>(
+        MapViewOfFile(_hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0));
+    if (nullptr == _buffer) {
+      if (nothrow) return;
+      throw std::runtime_error("error creating file view");
+    }
 
-				if (_creator) {
-					_event_in = CreateEvent(NULL, false, false, (evtname + "-in").c_str());
-					_event_out = CreateEvent(NULL, false, false, (evtname + "-out").c_str());
-				}
-				else {
-					_event_in = OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-in").c_str());
-					_event_out = OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-out").c_str());
-				}
-				if (_event_in == NULL || _event_out == NULL) {
-					if (nothrow) return;
-					throw std::runtime_error("error creating notification event");
-				}
+    // Create Event for notification
+    std::string evtname("Global\\");
+    evtname += name;
 
-				new (_buffer) T;
-			}
+    if (_creator) {
+      _event_in = CreateEvent(NULL, false, false, (evtname + "-in").c_str());
+      _event_out = CreateEvent(NULL, false, false, (evtname + "-out").c_str());
+    } else {
+      _event_in = OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-in").c_str());
+      _event_out =
+          OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-out").c_str());
+    }
+    if (_event_in == NULL || _event_out == NULL) {
+      if (nothrow) return;
+      throw std::runtime_error("error creating notification event");
+    }
 
-			~SharedMemory() {
-				if (nullptr != _event_in) CloseHandle(_event_in);
-				if (nullptr != _event_out) CloseHandle(_event_out);
+    new (_buffer) T;
+  }
 
-				// destruct object in buffer;
-				if (nullptr != _buffer) _buffer->~T();
+  ~SharedMemory() {
+    if (nullptr != _event_in) CloseHandle(_event_in);
+    if (nullptr != _event_out) CloseHandle(_event_out);
 
-				if (nullptr != _buffer) UnmapViewOfFile(_buffer);
-				if (nullptr != _hMapFile) CloseHandle(_hMapFile);
-			}
+    // destruct object in buffer;
+    if (nullptr != _buffer) _buffer->~T();
 
-			T* get() {
-				return _buffer;
-			}
+    if (nullptr != _buffer) UnmapViewOfFile(_buffer);
+    if (nullptr != _hMapFile) CloseHandle(_hMapFile);
+  }
 
-			void notify() const {
-				const HANDLE & evt = _creator ? _event_in : _event_out;
-				if (!SetEvent(evt)) {
-					if (nothrow) return;
-					throw std::runtime_error("error in SetEvent");
-				}
-			}
+  T* get() { return _buffer; }
 
-			template<typename duration = std::chrono::milliseconds>
-			bool wait(const duration & d = std::chrono::milliseconds(100)) const {
-				using ms_t = std::chrono::milliseconds;
+  void notify() const {
+    const HANDLE& evt = _creator ? _event_in : _event_out;
+    if (!SetEvent(evt)) {
+      if (nothrow) return;
+      throw std::runtime_error("error in SetEvent");
+    }
+  }
 
-				const HANDLE & evt = _creator ? _event_out : _event_in;
-				DWORD result = WaitForSingleObject(evt, (DWORD)(std::chrono::duration_cast<ms_t>(d).count()));
-				switch (result)
-				{
-					// Event fired
-				case WAIT_OBJECT_0:
-					return true;
-				case WAIT_TIMEOUT:
-					return false;
-					// An error occurred
-				default:
-					if (!nothrow)
-						throw std::runtime_error("WaitForSingleObject failed");
-					return false;
-				}
-			}
-	};
+  template <typename duration = std::chrono::milliseconds>
+  bool wait(const duration& d = std::chrono::milliseconds(100)) const {
+    using ms_t = std::chrono::milliseconds;
 
-} // namespace ipc
+    const HANDLE& evt = _creator ? _event_out : _event_in;
+    DWORD result = WaitForSingleObject(
+        evt, (DWORD)(std::chrono::duration_cast<ms_t>(d).count()));
+    switch (result) {
+        // Event fired
+      case WAIT_OBJECT_0:
+        return true;
+      case WAIT_TIMEOUT:
+        return false;
+        // An error occurred
+      default:
+        if (!nothrow) throw std::runtime_error("WaitForSingleObject failed");
+        return false;
+    }
+  }
+};
+
+}  // namespace ipc

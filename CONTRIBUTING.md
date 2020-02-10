@@ -36,7 +36,24 @@ If possible, try to run DynamoRIO + DRace + <App> in WinDbg and provide callstac
 Since version 1.0.4 we follow the [Conventional Changelog](https://www.conventionalcommits.org/en/) strategy.
 Please write your commit message according to this standard.
 
-## Doxygen Style
+## Code Style
+
+To ensure a good readability of our codebase, we follow and enforce style guides.
+
+### Source Code
+
+We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to ensure a consistent formatting of our codebase.
+To this, we provide both a `.editorconfig` and a `.clang-format` file to format the code according to the project's rules.
+The `.editorconfig` is just for convenience to setup the editor similar to the formatting rules.
+This includes (among others) configuration for line endings, tabs and spaces.
+
+Please make sure that you format the source code using clang-format and the provided `.clang-format` rule file.
+If you use Visual Studio Code, an option is to use the clang-format extension and set `"editor.formatOnSave": true`.
+In addition, we provide a bash script `contrib/format-files.sh` to format the complete code-base.
+This can be executed in a MinGW terminal, or in the git bash.
+Unfortunately, we cannot accept code contributions which do comply with these rules.
+
+### Doxygen Style
 
 We use the
 [`JAVADOC_AUTOBRIEF` Doxygen style](http://www.stack.nl/~dimitri/doxygen/manual/docblocks.html).

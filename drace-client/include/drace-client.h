@@ -11,30 +11,28 @@
  */
 
 namespace drace {
-	// Events
-    /// callback on DynamoRio exit
-	static void event_exit(void);
-    /// global callback for thread init in target application
-	static void event_thread_init(void *drcontext);
-    /// global callback for thread exit in target application
-	static void event_thread_exit(void *drcontext);
+// Events
+/// callback on DynamoRio exit
+static void event_exit(void);
+/// global callback for thread init in target application
+static void event_thread_init(void *drcontext);
+/// global callback for thread exit in target application
+static void event_thread_exit(void *drcontext);
 
-	// Runtime Configuration
+// Runtime Configuration
 
-    /// parse CLI arguments
-    static void parse_args(int argc, const char **argv);
+/// parse CLI arguments
+static void parse_args(int argc, const char **argv);
 
-    /// load and initialize detector
-    static void register_detector(
-        int argc,
-        const char **argv,
-        const std::string & detector_name);
+/// load and initialize detector
+static void register_detector(int argc, const char **argv,
+                              const std::string &detector_name);
 
-    /// register sinks for race reporting
-    static void register_report_sinks();
-    /// output current runtime configuration
-	static void print_config();
+/// register sinks for race reporting
+static void register_report_sinks();
+/// output current runtime configuration
+static void print_config();
 
-    /// generate data-race summary
-	static void generate_summary();
-}
+/// generate data-race summary
+static void generate_summary();
+}  // namespace drace

@@ -10,17 +10,17 @@
  */
 #include "threadstate.h"
 
-ThreadState::ThreadState(VectorClock::TID own_tid, std::shared_ptr<ThreadState> parent)
-:id(VectorClock::make_id(own_tid))
-{
-    vc.insert({ own_tid, id });
-    if (parent != nullptr) {
-        //if parent exists vector clock
-        vc = parent->vc;
-    }
+ThreadState::ThreadState(VectorClock::TID own_tid,
+                         const std::shared_ptr<ThreadState>& parent)
+    : id(VectorClock::make_id(own_tid)) {
+  vc.insert({own_tid, id});
+  if (parent != nullptr) {
+    // if parent exists vector clock
+    vc = parent->vc;
+  }
 }
 
 void ThreadState::inc_vc() {
-    id++; //as the lower 32 bits are clock just increase it by ine
-    vc[VectorClock::make_tid(id)] = id;
+  id++;  // as the lower 32 bits are clock just increase it by ine
+  vc[VectorClock::make_tid(id)] = id;
 }

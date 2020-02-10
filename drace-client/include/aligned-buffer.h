@@ -11,92 +11,86 @@
  */
 
 #include <dr_api.h>
+#include <memory>
 
 namespace drace {
-	/// Aligned Buffer, allocated in DR's thread local storage of instantiator
-	template<typename T, size_t alignment>
-	class AlignedBuffer {
-		/// unaligned buffer begin
-		void *   _mem{ nullptr };
+/// Aligned Buffer, allocated in DR's thread local storage of instantiator
+template <typename T, size_t alignment>
+class AlignedBuffer {
+  /// unaligned buffer begin
+  void* _mem{nullptr};
 
-		/// size of the buffer in bytes
-		size_t   _size_in_bytes{ 0 };
+  /// size of the buffer in bytes
+  size_t _size_in_bytes{0};
 
-		/// dr context at allocation time. Use this context for deallocation
-		void *   _alloc_ctx;
+  /// dr context at allocation time. Use this context for deallocation
+  void* _alloc_ctx;
 
-        T * _data{ nullptr };
+  T* _data{nullptr};
 
-	public:
-		using self_t = AlignedBuffer<T, alignment>;
+ public:
+  using self_t = AlignedBuffer<T, alignment>;
 
-	public:
-		AlignedBuffer() = default;
-		AlignedBuffer(const self_t & other) = delete;
-		explicit AlignedBuffer(self_t && other) = default;
+ public:
+  AlignedBuffer() = default;
+  AlignedBuffer(const self_t& other) = delete;
+  explicit AlignedBuffer(self_t&& other) = default;
 
-		self_t & operator= (const self_t & other) = delete;
-		self_t & operator= (self_t && other) = default;
+  self_t& operator=(const self_t& other) = delete;
+  self_t& operator=(self_t&& other) = default;
 
-		explicit AlignedBuffer(const size_t & capacity, void* drcontext = dr_get_current_drcontext())
-			: _alloc_ctx(drcontext)
-		{
-			allocate(_alloc_ctx, capacity);
-		}
+  explicit AlignedBuffer(const size_t& capacity,
+                         void* drcontext = dr_get_current_drcontext())
+      : _alloc_ctx(drcontext) {
+    allocate(_alloc_ctx, capacity);
+  }
 
-		/// Clears the old buffer and allocates a new one with the specified capacity
-		void resize(size_t capacity, void* drcontext = dr_get_current_drcontext()) {
-			_alloc_ctx = drcontext;
-			deallocate(_alloc_ctx);
-			allocate(_alloc_ctx, capacity);
-		}
+  /// Clears the old buffer and allocates a new one with the specified capacity
+  void resize(size_t capacity, void* drcontext = dr_get_current_drcontext()) {
+    _alloc_ctx = drcontext;
+    deallocate(_alloc_ctx);
+    allocate(_alloc_ctx, capacity);
+  }
 
-		/// Frees the allocated tls, hence has to be called in same thread as allocation
-		~AlignedBuffer() {
-			deallocate(_alloc_ctx);
-		}
+  /// Frees the allocated tls, hence has to be called in same thread as
+  /// allocation
+  ~AlignedBuffer() { deallocate(_alloc_ctx); }
 
-		/**
-         * \brief deallocate this buffer using the provided drcontext.
-		 * If no context is provided, the context at allocation time is used
-		 */
-		void deallocate(void* drcontext = nullptr) {
-			if (_size_in_bytes != 0) {
-				if (nullptr == drcontext) {
-					drcontext = _alloc_ctx;
-				}
-				dr_thread_free(drcontext, _mem, _size_in_bytes);
-				_size_in_bytes = 0;
-				_data = nullptr;
-			}
-		}
+  /**
+   * \brief deallocate this buffer using the provided drcontext.
+   * If no context is provided, the context at allocation time is used
+   */
+  void deallocate(void* drcontext = nullptr) {
+    if (_size_in_bytes != 0) {
+      if (nullptr == drcontext) {
+        drcontext = _alloc_ctx;
+      }
+      dr_thread_free(drcontext, _mem, _size_in_bytes);
+      _size_in_bytes = 0;
+      _data = nullptr;
+    }
+  }
 
-		inline const T & operator[](int pos) const {
-			return _data[pos];
-		}
-		inline T & operator[](int pos) {
-			return _data[pos];
-		}
+  inline const T& operator[](int pos) const { return _data[pos]; }
+  inline T& operator[](int pos) { return _data[pos]; }
 
-        inline T * data() const {
-            return _data;
-        }
+  inline T* data() const { return _data; }
 
-	private:
-		void allocate(void* drcontext, size_t capacity) {
-			if (capacity != 0) {
-				_size_in_bytes = capacity * sizeof(T) + alignment;
-				// copy this as value is modified by std::align
-				size_t space_size = _size_in_bytes;
-				_mem = dr_thread_alloc(drcontext, _size_in_bytes);
-                // std::align changes pointer to memspace, hence copy
-                void * mem_align = _mem;
-                DR_ASSERT_MSG(
-                    std::align(alignment, capacity, mem_align, space_size) != nullptr,
-                    "could not allocate aligned memory");
-                _data = (T*)mem_align;
-				DR_ASSERT(((uintptr_t)_data % alignment) == 0);
-			}
-		}
-	};
-}
+ private:
+  void allocate(void* drcontext, size_t capacity) {
+    if (capacity != 0) {
+      _size_in_bytes = capacity * sizeof(T) + alignment;
+      // copy this as value is modified by std::align
+      size_t space_size = _size_in_bytes;
+      _mem = dr_thread_alloc(drcontext, _size_in_bytes);
+      // std::align changes pointer to memspace, hence copy
+      void* mem_align = _mem;
+      DR_ASSERT_MSG(
+          std::align(alignment, capacity, mem_align, space_size) != nullptr,
+          "could not allocate aligned memory");
+      _data = (T*)mem_align;
+      DR_ASSERT(((uintptr_t)_data % alignment) == 0);
+    }
+  }
+};
+}  // namespace drace

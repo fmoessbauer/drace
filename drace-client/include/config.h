@@ -12,46 +12,40 @@
 
 #include "util.h"
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include <INIReader.h>
 
 namespace drace {
-	/// Handles dynamic config information from configuration file
-	class Config {
-	private:
-		std::unique_ptr<INIReader> _reader;
-		std::set<std::string>      _sections;
+/// Handles dynamic config information from configuration file
+class Config {
+ private:
+  std::unique_ptr<INIReader> _reader;
+  std::set<std::string> _sections;
 
-		std::map<std::string, std::string> _kvstore;
-	public:
-		Config() = default;
-		Config(const Config &) = delete;
-		Config(Config &&) = default;
+  std::map<std::string, std::string> _kvstore;
 
-		Config & operator=(const Config&) = delete;
-		Config & operator=(Config&&) = default;
+ public:
+  Config() = default;
+  Config(const Config &) = delete;
+  Config(Config &&) = default;
 
-        explicit Config(const std::string & filename);
+  Config &operator=(const Config &) = delete;
+  Config &operator=(Config &&) = default;
 
-        bool loadfile(
-            const std::string & filename,
-            const std::string & hint);
+  explicit Config(const std::string &filename);
 
-        void set(
-            const std::string & key,
-            const std::string & val);
+  bool loadfile(const std::string &filename, const std::string &hint);
 
-        std::string get(
-            const std::string & section,
-            const std::string & key,
-            const std::string & def_val) const;
+  void set(const std::string &key, const std::string &val);
 
-		/// returns multiline ini-items as a vector
-        std::vector<std::string> get_multi(
-            const std::string & section,
-            const std::string & key) const;
-	};
-}
+  std::string get(const std::string &section, const std::string &key,
+                  const std::string &def_val) const;
+
+  /// returns multiline ini-items as a vector
+  std::vector<std::string> get_multi(const std::string &section,
+                                     const std::string &key) const;
+};
+}  // namespace drace

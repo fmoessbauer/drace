@@ -19,34 +19,33 @@
 #include "UnixLibLoader.h"
 #endif
 
-namespace util
-{
-    class LibLoaderFactory {
-        public:
-        static std::shared_ptr<LibraryLoader> getLoader() {
-            #ifdef WIN32
-            return std::make_shared<WindowsLibLoader>();
-            #else
-            return std::make_shared<UnixLibLoader>();
-            #endif
-        }
+namespace util {
+class LibLoaderFactory {
+ public:
+  static std::shared_ptr<LibraryLoader> getLoader() {
+#ifdef WIN32
+    return std::make_shared<WindowsLibLoader>();
+#else
+    return std::make_shared<UnixLibLoader>();
+#endif
+  }
 
-        /// return the filename extension of a shared module (e.g. '.dll')
-        static std::string getModuleExtension() {
-            #ifdef WIN32
-            return ".dll";
-            #else
-            return ".so";
-            #endif
-        }
+  /// return the filename extension of a shared module (e.g. '.dll')
+  static std::string getModuleExtension() {
+#ifdef WIN32
+    return ".dll";
+#else
+    return ".so";
+#endif
+  }
 
-        /// return the prefix of a shared module (e.g. 'lib')
-        static std::string getModulePrefix() {
-            #ifdef WIN32
-            return "";
-            #else
-            return "lib";
-            #endif
-        }
-    };
-} // namespace util
+  /// return the prefix of a shared module (e.g. 'lib')
+  static std::string getModulePrefix() {
+#ifdef WIN32
+    return "";
+#else
+    return "lib";
+#endif
+  }
+};
+}  // namespace util

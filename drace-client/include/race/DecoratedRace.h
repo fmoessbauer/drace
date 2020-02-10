@@ -10,39 +10,31 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "ResolvedAccess.h"
-#include <chrono>
 #include <detector/Detector.h>
+#include <chrono>
+#include "ResolvedAccess.h"
 
 namespace drace {
-    namespace race {
-        /**
-         * \brief Single data-race with two access entries
-         */
-        class DecoratedRace {
-        public:
-            ResolvedAccess first;
-            ResolvedAccess second;
-            std::chrono::milliseconds elapsed;
-            bool           is_resolved{ false };
+namespace race {
+/**
+ * \brief Single data-race with two access entries
+ */
+class DecoratedRace {
+ public:
+  ResolvedAccess first;
+  ResolvedAccess second;
+  std::chrono::milliseconds elapsed;
+  bool is_resolved{false};
 
-            DecoratedRace(
-                const Detector::Race & r,
+  DecoratedRace(const Detector::Race& r,
                 /// elapsed time since program start
-                const std::chrono::milliseconds & ttr)
-                : first(r.first),
-                second(r.second),
-                elapsed(ttr) { }
+                const std::chrono::milliseconds& ttr)
+      : first(r.first), second(r.second), elapsed(ttr) {}
 
-            DecoratedRace(
-                const ResolvedAccess & a,
-                const ResolvedAccess & b,
+  DecoratedRace(const ResolvedAccess& a, const ResolvedAccess& b,
                 /// elapsed time since program start
-                const std::chrono::milliseconds & ttr)
-                : first(a),
-                second(b),
-                elapsed(ttr),
-                is_resolved(true) { }
-        };
-    }
-}
+                const std::chrono::milliseconds& ttr)
+      : first(a), second(b), elapsed(ttr), is_resolved(true) {}
+};
+}  // namespace race
+}  // namespace drace
