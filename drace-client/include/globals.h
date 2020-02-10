@@ -136,12 +136,7 @@ extern int tls_idx;
 extern void* tls_rw_mutex;
 
 // TODO check if global is better
-extern std::atomic<int> num_threads_active;
 extern std::atomic<uint> runtime_tid;
-
-// Start time of the application
-extern std::chrono::system_clock::time_point app_start;
-extern std::chrono::system_clock::time_point app_stop;
 
 // Global Module Shadow Data
 namespace module {
@@ -155,13 +150,6 @@ extern void* th_mutex;
 class MemoryTracker;
 extern std::unique_ptr<MemoryTracker> memory_tracker;
 
-class RaceCollector;
-extern std::unique_ptr<RaceCollector> race_collector;
-
-class DrFile;
-/// global logging destination
-extern std::shared_ptr<DrFile> log_file;
-
 // Global Configuration
 extern drace::Config config;
 
@@ -170,12 +158,6 @@ extern std::unique_ptr<Statistics> stats;
 
 // Detector instance
 extern std::unique_ptr<Detector> detector;
-
-// Module loader
-namespace util {
-class DrModuleLoader;
-}
-extern std::unique_ptr<util::DrModuleLoader> module_loader;
 
 }  // namespace drace
 

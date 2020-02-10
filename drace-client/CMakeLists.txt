@@ -13,7 +13,8 @@ set(SOURCES
     "src/symbol/SymbolLocation"
     "src/util"
     "src/config"
-    "src/race-filter")
+    "src/race-filter"
+    "src/race-collector")
 if(WIN32)
     list(APPEND SOURCES "src/MSR")
 endif()

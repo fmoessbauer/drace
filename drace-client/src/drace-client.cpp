@@ -50,6 +50,13 @@
 #include <detector/Detector.h>
 #include <version/version.h>
 
+std::unique_ptr<drace::util::DrModuleLoader> detector_loader;
+std::shared_ptr<drace::DrFile> log_file;
+// Start time of the application
+std::chrono::system_clock::time_point app_start;
+std::chrono::system_clock::time_point app_stop;
+std::unique_ptr<drace::RaceCollector> race_collector;
+
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   using namespace drace;
 
@@ -137,26 +144,25 @@ static void register_detector(int argc, const char **argv,
                            "drace.detector." + detector_name +
                            ::util::LibLoaderFactory::getModuleExtension());
 
-  module_loader =
+  detector_loader =
       std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
-  if (!module_loader->loaded()) {
+  if (!detector_loader->loaded()) {
     LOG_ERROR(0, "could not load library %s", detector_lib.c_str());
     dr_abort();
   }
 
   decltype(CreateDetector) *create_detector =
-      (*module_loader)["CreateDetector"];
+      (*detector_loader)["CreateDetector"];
 
   detector = std::unique_ptr<Detector>(create_detector());
-  detector->init(argc, argv, race_collector_add_race);
+  detector->init(argc, argv, RaceCollector::race_collector_add_race);
   LOG_INFO(0, "Detector %s initialized", detector_lib.c_str());
 }
 
 static void register_report_sinks() {
   if (drace::log_target != 0) {
     // register the console printer
-    race_collector->register_sink(
-        std::make_shared<sink::HRText>(drace::log_file));
+    race_collector->register_sink(std::make_shared<sink::HRText>(log_file));
   }
 
   // when using direct lookup, we stream the races
@@ -224,7 +230,7 @@ static void event_exit() {
   detector->finalize();
   detector.reset();
 
-  module_loader.reset();
+  detector_loader.reset();
 
   dr_mutex_destroy(th_mutex);
   dr_rwlock_destroy(tls_rw_mutex);
@@ -243,18 +249,13 @@ static void event_thread_init(void *drcontext) {
                                         std::memory_order_relaxed)) {
     LOG_INFO(tid, "Runtime Thread tagged");
   }
-  num_threads_active.fetch_add(1, std::memory_order_relaxed);
 
   memory_tracker->event_thread_init(drcontext);
   LOG_INFO(tid, "Thread started");
 }
 
 static void event_thread_exit(void *drcontext) {
-  using namespace drace;
-  num_threads_active.fetch_sub(1, std::memory_order_relaxed);
-
   memory_tracker->event_thread_exit(drcontext);
-
   LOG_INFO(dr_get_thread_id(drcontext), "Thread exited");
 }
 
@@ -360,8 +361,7 @@ static void parse_args(int argc, const char **argv) {
   }
 
   // setup logging target
-  drace::log_file =
-      std::make_shared<DrFile>(params.logfile, DR_FILE_WRITE_OVERWRITE);
+  log_file = std::make_shared<DrFile>(params.logfile, DR_FILE_WRITE_OVERWRITE);
   if (log_file->good()) {
     drace::log_target = log_file->get();
   }
