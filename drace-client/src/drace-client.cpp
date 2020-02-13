@@ -86,7 +86,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     dr_flush_file(drace::log_target);
     exit(1);
   }
-  LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
+  LOG_NOTICE(-1, "size of ShadowThreadState %i bytes",
+             sizeof(ShadowThreadState));
 
   // Init DRMGR, Reserve registers
   if (!drmgr_init() || !drutil_init()) DR_ASSERT(false);

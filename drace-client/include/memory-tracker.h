@@ -11,6 +11,7 @@
  */
 
 #include "Module.h"
+#include "ShadowThreadState.h"
 #include "statistics.h"
 
 #include <dr_api.h>
@@ -110,8 +111,8 @@ class MemoryTracker {
 
   static void process_buffer(void);
   static void clear_buffer(void);
-  static void analyze_access(per_thread_t *data);
-  static void flush_all_threads(per_thread_t *data, bool self = true,
+  static void analyze_access(ShadowThreadState *data);
+  static void flush_all_threads(ShadowThreadState *data, bool self = true,
                                 bool flush_external = false);
 
   // Events
@@ -135,7 +136,7 @@ class MemoryTracker {
                                         void *user_data);
 
   /// Returns true if this reference should be sampled
-  inline bool sample_ref(per_thread_t *data) {
+  inline bool sample_ref(ShadowThreadState *data) {
     --data->sampling_pos;
     if (params.sampling_rate == 1) return true;
     if (data->sampling_pos == 0) {
@@ -148,7 +149,7 @@ class MemoryTracker {
   }
 
   /// Sets the detector state based on the sampling condition
-  inline void switch_sampling(per_thread_t *data) {
+  inline void switch_sampling(ShadowThreadState *data) {
     // we use the highest available bit to denote if
     // we sample (analyze) this fsection or not
     static constexpr int flag_bit = sizeof(uintptr_t) * 8 - 1;
@@ -164,20 +165,20 @@ class MemoryTracker {
   }
 
   /// enable the detector (does not affect sampling)
-  static inline void enable(per_thread_t *data) { data->enabled = true; }
+  static inline void enable(ShadowThreadState *data) { data->enabled = true; }
 
   /// disable the detector (does not affect sampling)
-  static inline void disable(per_thread_t *data) { data->enabled = false; }
+  static inline void disable(ShadowThreadState *data) { data->enabled = false; }
 
   /// enable the detector during this scope
-  static inline void enable_scope(per_thread_t *data) {
+  static inline void enable_scope(ShadowThreadState *data) {
     if (--data->event_cnt <= 0) {
       enable(data);
     }
   }
 
   /// disable the detector during this scope
-  static inline void disable_scope(per_thread_t *data) {
+  static inline void disable_scope(ShadowThreadState *data) {
     disable(data);
     data->event_cnt++;
   }
@@ -188,9 +189,9 @@ class MemoryTracker {
    *
    * We only consider traces, as other parts are not performance critical
    */
-  static void update_cache(per_thread_t *data);
+  static void update_cache(ShadowThreadState *data);
 
-  static bool pc_in_freq(per_thread_t *data, void *bb);
+  static bool pc_in_freq(ShadowThreadState *data, void *bb);
 
  private:
   void code_cache_init(void);
@@ -224,7 +225,7 @@ class MemoryTracker {
 
   /// Read data from external CB and modify instrumentation / detection
   /// accordingly
-  void handle_ext_state(per_thread_t *data);
+  void handle_ext_state(ShadowThreadState *data);
 
   void update_sampling();
 };

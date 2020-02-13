@@ -78,8 +78,8 @@ void RaceCollector::race_collector_add_race(const Detector::Race* r) {
   // for benchmarking and testing
   if (params.break_on_race) {
     void* drcontext = dr_get_current_drcontext();
-    per_thread_t* data =
-        (per_thread_t*)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+    ShadowThreadState* data = (ShadowThreadState*)drmgr_get_tls_field(
+        drcontext, MemoryTracker::tls_idx);
     data->stats->print_summary(drace::log_target);
     dr_flush_file(drace::log_target);
     dr_abort();

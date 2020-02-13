@@ -48,7 +48,7 @@ MemoryTracker::MemoryTracker(const std::shared_ptr<Statistics> &stats)
 
   /* Ensure that atomic and native type have equal size as otherwise
      instrumentation reads invalid value */
-  using no_flush_t = decltype(per_thread_t::no_flush);
+  using no_flush_t = decltype(ShadowThreadState::no_flush);
 
 #ifdef WINDOWS
   // this requires C++17, but is available in MSVC with C++11
@@ -116,7 +116,7 @@ inline std::vector<uintptr_t> get_pcs_from_hist(
   return result;
 }
 
-void MemoryTracker::update_cache(per_thread_t *data) {
+void MemoryTracker::update_cache(ShadowThreadState *data) {
   // TODO: optimize this
   const auto &new_freq =
       data->stats->pc_hits.computeOutput<Statistics::hist_t>();
@@ -142,13 +142,13 @@ void MemoryTracker::update_cache(per_thread_t *data) {
   data->stats->freq_pc_hist = new_freq;
 }
 
-bool MemoryTracker::pc_in_freq(per_thread_t *data, void *bb) {
+bool MemoryTracker::pc_in_freq(ShadowThreadState *data, void *bb) {
   const auto &freq_pcs = data->stats->freq_pcs;
   return std::binary_search(freq_pcs.begin(), freq_pcs.end(),
                             ((uintptr_t)bb >> MemoryTracker::HIST_PC_RES));
 }
 
-void MemoryTracker::analyze_access(per_thread_t *data) {
+void MemoryTracker::analyze_access(ShadowThreadState *data) {
   DR_ASSERT(data != nullptr);
 
   if (data->detector_data == nullptr) {
@@ -231,11 +231,11 @@ void MemoryTracker::analyze_access(per_thread_t *data) {
  */
 void MemoryTracker::event_thread_init(void *drcontext) {
   /* allocate thread private data */
-  void *tls_buffer = dr_thread_alloc(drcontext, sizeof(per_thread_t));
+  void *tls_buffer = dr_thread_alloc(drcontext, sizeof(ShadowThreadState));
   drmgr_set_tls_field(drcontext, tls_idx, tls_buffer);
 
   // Initialize struct at given location (placement new)
-  per_thread_t *data = new (tls_buffer) per_thread_t;
+  ShadowThreadState *data = new (tls_buffer) ShadowThreadState;
 
   data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
   data->buf_ptr = data->mem_buf.data();
@@ -278,7 +278,8 @@ void MemoryTracker::event_thread_init(void *drcontext) {
 }
 
 void MemoryTracker::event_thread_exit(void *drcontext) {
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+  ShadowThreadState *data =
+      (ShadowThreadState *)drmgr_get_tls_field(drcontext, tls_idx);
 
   flush_all_threads(data, true, false);
 
@@ -306,8 +307,8 @@ void MemoryTracker::event_thread_exit(void *drcontext) {
   dr_thread_free(drcontext, data->stats, sizeof(Statistics));
 
   // deconstruct struct
-  data->~per_thread_t();
-  dr_thread_free(drcontext, data, sizeof(per_thread_t));
+  data->~ShadowThreadState();
+  dr_thread_free(drcontext, data, sizeof(ShadowThreadState));
 }
 
 /* We transform string loops into regular loops so we can more easily
@@ -362,8 +363,8 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag,
 
   // Do not instrument if block is frequent TODO: check correctness
   if (params.lossy_flush && for_trace && instrument_bb) {
-    per_thread_t *data =
-        (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+    ShadowThreadState *data =
+        (ShadowThreadState *)drmgr_get_tls_field(drcontext, tls_idx);
     if (pc_in_freq(data, bb_addr)) {
       instrument_bb = INSTR_FLAGS::NONE;
     }
@@ -449,7 +450,8 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
 /* clean_call dumps the memory reference info into the analyzer */
 void MemoryTracker::process_buffer(void) {
   void *drcontext = dr_get_current_drcontext();
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+  ShadowThreadState *data =
+      (ShadowThreadState *)drmgr_get_tls_field(drcontext, tls_idx);
 
   analyze_access(data);
   data->stats->flushes++;
@@ -457,7 +459,8 @@ void MemoryTracker::process_buffer(void) {
 
 void MemoryTracker::clear_buffer(void) {
   void *drcontext = dr_get_current_drcontext();
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+  ShadowThreadState *data =
+      (ShadowThreadState *)drmgr_get_tls_field(drcontext, tls_idx);
   mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data();
   uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data->buf_ptr - mem_ref);
 
@@ -470,7 +473,7 @@ void MemoryTracker::clear_buffer(void) {
 /* Request a flush of all non-disabled threads.
  *  \Warning: This function read-locks the TLS mutex
  */
-void MemoryTracker::flush_all_threads(per_thread_t *data, bool self,
+void MemoryTracker::flush_all_threads(ShadowThreadState *data, bool self,
                                       bool flush_external) {
   if (self) process_buffer();
 }
@@ -500,7 +503,7 @@ void MemoryTracker::code_cache_init(void) {
   dr_memory_protect(cc_flush, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
 }
 
-void MemoryTracker::handle_ext_state(per_thread_t *data) {
+void MemoryTracker::handle_ext_state(ShadowThreadState *data) {
 #ifdef WINDOWS
   if (shmdriver) {
     bool shm_ext_state = extcb->get()->enabled.load(std::memory_order_relaxed);

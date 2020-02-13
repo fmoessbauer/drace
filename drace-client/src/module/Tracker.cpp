@@ -168,8 +168,8 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
 
   auto start = std::chrono::system_clock::now();
 
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
   thread_id_t tid = data->tid;
 

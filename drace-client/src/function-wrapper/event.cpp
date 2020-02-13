@@ -10,6 +10,7 @@
  */
 
 #include <detector/Detector.h>
+#include "ShadowThreadState.h"
 #include "function-wrapper.h"
 #include "globals.h"
 #include "memory-tracker.h"
@@ -39,7 +40,7 @@
 namespace drace {
 namespace funwrap {
 
-void event::beg_excl_region(per_thread_t *data) {
+void event::beg_excl_region(ShadowThreadState *data) {
   // We do not flush here, as in disabled state no
   // refs are recorded
   // memory_tracker->process_buffer();
@@ -47,7 +48,7 @@ void event::beg_excl_region(per_thread_t *data) {
   MemoryTracker::disable_scope(data);
 }
 
-void event::end_excl_region(per_thread_t *data) {
+void event::end_excl_region(ShadowThreadState *data) {
   LOG_TRACE(data->tid, "End excluded region");
   MemoryTracker::enable_scope(data);
 }
@@ -55,14 +56,14 @@ void event::end_excl_region(per_thread_t *data) {
 // TODO: On Linux size is arg 0
 void event::alloc_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
 
   MemoryTracker::flush_all_threads(data);
   // Save allocate size to user_data
   // we use the pointer directly to avoid an allocation
-  // per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext,
-  // MemoryTracker::tls_idx);
+  // ShadowThreadState * data =
+  // (ShadowThreadState*)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
   *user_data = drwrap_get_arg(wrapctx, 2);
 }
 
@@ -74,8 +75,8 @@ void event::alloc_post(void *wrapctx, void *user_data) {
   void *pc = drwrap_get_func(wrapctx);
   size_t size = reinterpret_cast<size_t>(user_data);
 
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   // allocations with size 0 are valid if they come from
@@ -88,8 +89,8 @@ void event::alloc_post(void *wrapctx, void *user_data) {
 
 void event::realloc_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
 
   MemoryTracker::flush_all_threads(data);
 
@@ -105,8 +106,8 @@ void event::realloc_pre(void *wrapctx, void **user_data) {
 // TODO: On Linux addr is arg 0
 void event::free_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   MemoryTracker::flush_all_threads(data);
@@ -117,8 +118,8 @@ void event::free_pre(void *wrapctx, void **user_data) {
 
 void event::free_post(void *wrapctx, void *user_data) {
   // app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  // per_thread_t * data = (per_thread_t*)drmgr_get_tls_field(drcontext,
-  // MemoryTracker::tls_idx);
+  // ShadowThreadState * data =
+  // (ShadowThreadState*)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
 
   // end_excl_region(data);
   // dr_fprintf(STDERR, "<< [%i] post free\n", data->tid);
@@ -126,8 +127,8 @@ void event::free_post(void *wrapctx, void *user_data) {
 
 void event::begin_excl(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   beg_excl_region(data);
@@ -136,8 +137,8 @@ void event::begin_excl(void *wrapctx, void **user_data) {
 void event::end_excl(void *wrapctx, void *user_data) {
   SKIP_ON_EXCEPTION(wrapctx);
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   end_excl_region(data);
@@ -155,8 +156,8 @@ void event::prepare_and_aquire(void *wrapctx, void *mutex, bool write,
                                bool trylock) {
   SKIP_ON_EXCEPTION(wrapctx);
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   if (params.exclude_master && data->tid == runtime_tid) return;
@@ -194,8 +195,8 @@ void event::prepare_and_aquire(void *wrapctx, void *mutex, bool write,
 void event::prepare_and_release(void *wrapctx, bool write) {
   SKIP_ON_EXCEPTION(wrapctx);
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   if (params.exclude_master && data->tid == runtime_tid) return;
@@ -231,8 +232,8 @@ void event::get_arg(void *wrapctx, OUT void **user_data) {
   *user_data = drwrap_get_arg(wrapctx, 0);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   // we flush here to avoid tracking sync-function itself
   MemoryTracker::flush_all_threads(data);
 }
@@ -286,8 +287,8 @@ void event::wait_for_single_obj(void *wrapctx, void *mutex) {
   SKIP_ON_EXCEPTION(wrapctx);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   LOG_TRACE(data->tid, "waitForSingleObject: %p\n", mutex);
@@ -313,8 +314,8 @@ void event::wait_for_single_obj(void *wrapctx, void *mutex) {
 
 void event::wait_for_mo_getargs(void *wrapctx, OUT void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   wfmo_args_t *args =
@@ -335,8 +336,8 @@ void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
   SKIP_ON_EXCEPTION(wrapctx);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DWORD retval = util::unsafe_ptr_cast<DWORD>(drwrap_get_retval(wrapctx));
 
   wfmo_args_t *info = (wfmo_args_t *)user_data;
@@ -380,8 +381,8 @@ void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
 void event::thread_start(void *wrapctx, void *user_data) {
 #ifdef WINDOWS
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   HANDLE retval = util::unsafe_ptr_cast<HANDLE>(drwrap_get_retval(wrapctx));
   // the return value contains a handle to the thread, but we need the unique id
   DWORD threadid = GetThreadId(retval);
@@ -395,8 +396,8 @@ void event::thread_start(void *wrapctx, void *user_data) {
 
 void event::barrier_enter(void *wrapctx, void **addr) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
   *addr = drwrap_get_arg(wrapctx, 0);
   LOG_TRACE(static_cast<detector::tid_t>(data->tid), "barrier enter %p", *addr);
@@ -409,8 +410,8 @@ void event::barrier_leave(void *wrapctx, void *addr) {
   SKIP_ON_EXCEPTION(wrapctx);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   LOG_TRACE(data->tid, "barrier passed");
@@ -423,8 +424,8 @@ void event::barrier_leave(void *wrapctx, void *addr) {
 void event::barrier_leave_or_cancel(void *wrapctx, void *addr) {
   SKIP_ON_EXCEPTION(wrapctx);
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
 
   bool passed = (bool)drwrap_get_retval(wrapctx);
@@ -442,8 +443,8 @@ void event::happens_before(void *wrapctx, void *identifier) {
   SKIP_ON_EXCEPTION(wrapctx);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
   detector->happens_before(data->detector_data, identifier);
   LOG_TRACE(data->tid, "happens-before @ %p", identifier);
@@ -453,8 +454,8 @@ void event::happens_after(void *wrapctx, void *identifier) {
   SKIP_ON_EXCEPTION(wrapctx);
 
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
-  per_thread_t *data =
-      (per_thread_t *)drmgr_get_tls_field(drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
   DR_ASSERT(nullptr != data);
   detector->happens_after(data->detector_data, identifier);
   LOG_TRACE(data->tid, "happens-after  @ %p", identifier);
@@ -462,7 +463,7 @@ void event::happens_after(void *wrapctx, void *identifier) {
 
 /// Default call instrumentation
 void event::on_func_call(app_pc *call_ins, app_pc *target_addr) {
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
       dr_get_current_drcontext(), MemoryTracker::tls_idx);
 
   // TODO: possibibly racy in non-fast-mode
@@ -482,7 +483,7 @@ void event::on_func_call(app_pc *call_ins, app_pc *target_addr) {
 
 /// Default return instrumentation
 void event::on_func_ret(app_pc *ret_ins, app_pc *target_addr) {
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
       dr_get_current_drcontext(), MemoryTracker::tls_idx);
   ShadowStack &stack = data->stack;
   MemoryTracker::analyze_access(data);
