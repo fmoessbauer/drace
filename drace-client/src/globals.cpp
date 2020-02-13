@@ -24,12 +24,10 @@
 
 namespace drace {
 
-/// File-based configuration
 InstrumentationConfig config;
-/// Runtime / CLI configuration
 RuntimeConfig params;
 
-std::atomic<uint> runtime_tid{0};
+std::atomic<unsigned> runtime_tid{0};
 
 std::unique_ptr<MemoryTracker> memory_tracker;
 std::unique_ptr<module::Tracker> module_tracker;

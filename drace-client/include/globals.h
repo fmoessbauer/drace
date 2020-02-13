@@ -17,20 +17,9 @@
 
 #include "InstrumentationConfig.h"
 #include "RuntimeConfig.h"
-#include "aligned-buffer.h"
-#include "shadow-stack.h"
 
 #include <atomic>
-#include <chrono>
 #include <memory>
-#include <string>
-#include <unordered_map>
-
-#include <dr_api.h>
-#include <hashtable.h>
-
-/// max number of individual mutexes per thread
-constexpr int MUTEX_MAP_SIZE = 128;
 
 // forward decls
 class Detector;
@@ -38,23 +27,25 @@ class Detector;
 /// DRace instrumentation framework
 namespace drace {
 
-// Global Configuration
+/// File-based configuration
 extern InstrumentationConfig config;
+/// Runtime / CLI configuration
 extern RuntimeConfig params;
 
-// TODO check if global is better
-extern std::atomic<uint> runtime_tid;
+/// id of master thread
+extern std::atomic<unsigned> runtime_tid;
 
-// Global Module Shadow Data
 namespace module {
 class Tracker;
 }
+/// Global Module Shadow Data
 extern std::unique_ptr<module::Tracker> module_tracker;
 
 class MemoryTracker;
+/// Memory tracing subsystem
 extern std::unique_ptr<MemoryTracker> memory_tracker;
 
-// Detector instance
+/// Detector instance
 extern std::unique_ptr<Detector> detector;
 
 }  // namespace drace
@@ -73,7 +64,9 @@ struct ClientCB;
 #if WIN32
 // \todo currently only available on windows
 namespace drace {
+/// shared memory driver for communication between drace and msr
 extern std::unique_ptr<::ipc::MtSyncSHMDriver<true, true>> shmdriver;
+/// external control-block to configure drace during execution
 extern std::unique_ptr<::ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 }  // namespace drace
 #endif

@@ -12,6 +12,7 @@
 #include "RuntimeConfig.h"
 #include "DrFile.h"
 #include "globals.h"
+#include "shadow-stack.h"
 #include "version/version.h"
 
 #include <clipp.h>
