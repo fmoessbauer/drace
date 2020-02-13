@@ -16,6 +16,7 @@
 #include "sink/sink.h"
 
 #include <chrono>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <unordered_map>
