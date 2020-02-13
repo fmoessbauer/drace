@@ -33,6 +33,10 @@
 #endif
 
 namespace drace {
+
+// static MemoryTracker variables
+int MemoryTracker::tls_idx{0};
+
 MemoryTracker::MemoryTracker(const std::shared_ptr<Statistics> &stats)
     : _prng(static_cast<unsigned>(std::chrono::high_resolution_clock::now()
                                       .time_since_epoch()

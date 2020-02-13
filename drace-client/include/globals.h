@@ -131,9 +131,6 @@ static_assert(
     std::is_standard_layout<per_thread_t>::value,
     "per_thread_t has to be POD to be safely accessed via inline assembly");
 
-/** Thread local storage */
-extern int tls_idx;
-
 // TODO check if global is better
 extern std::atomic<uint> runtime_tid;
 

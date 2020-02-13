@@ -21,10 +21,6 @@
 #include <detector/Detector.h>
 
 namespace drace {
-/**
- * Thread local storage metadata has to be globally accessable
- */
-int tls_idx;
 
 // Global Config Object
 drace::Config config;

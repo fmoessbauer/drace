@@ -51,6 +51,9 @@ class MemoryTracker {
   /// update code-cache after this number of flushes (must be power of two)
   static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
+  /// identifier for per_thread TLS data
+  static int tls_idx;
+
   std::atomic<int> flush_active{false};
 
   /// \brief external change detected
