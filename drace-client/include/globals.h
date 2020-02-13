@@ -15,6 +15,7 @@
 #define LOGLEVEL 3
 #endif
 
+#include "DrThreadLocal.h"
 #include "InstrumentationConfig.h"
 #include "RuntimeConfig.h"
 
@@ -34,6 +35,10 @@ extern RuntimeConfig params;
 
 /// id of master thread
 extern std::atomic<unsigned> runtime_tid;
+
+class ShadowThreadState;
+/// shadow state of each application thread
+extern DrThreadLocal<ShadowThreadState> thread_state;
 
 namespace module {
 class Tracker;

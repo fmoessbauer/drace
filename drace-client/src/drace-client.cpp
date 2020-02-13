@@ -25,6 +25,7 @@
 #include <string>
 
 #include "DrFile.h"
+#include "DrThreadLocal.h"
 #include "Module.h"
 #include "drace-client.h"
 #include "function-wrapper.h"
@@ -226,15 +227,19 @@ static void event_exit() {
 
   funwrap::finalize();
 
-  // Cleanup DR extensions
-  drutil_exit();
-  drmgr_exit();
-
   // Finalize Detector
   detector->finalize();
   detector.reset();
 
   detector_loader.reset();
+
+  // call destructor prior to DR shutdown
+  // as internally, drmgr is used
+  thread_state.~DrThreadLocal();
+
+  // Cleanup DR extensions
+  drutil_exit();
+  drmgr_exit();
 
   LOG_INFO(-1, "DRace exit");
 
@@ -242,7 +247,6 @@ static void event_exit() {
 }
 
 static void event_thread_init(void *drcontext) {
-  using namespace drace;
   thread_id_t tid = dr_get_thread_id(drcontext);
   // assume that the first event comes from the runtime thread
   unsigned empty_tid = 0;
@@ -250,34 +254,22 @@ static void event_thread_init(void *drcontext) {
                                         std::memory_order_relaxed)) {
     LOG_INFO(tid, "Runtime Thread tagged");
   }
-
-  // require: TLS segment is initialized
-  // TODO: move to class
-  DR_ASSERT(MemoryTracker::tls_idx != MemoryTracker::TLS_IDX_INVALID);
-  // allocate thread private data
-  void *tls_buffer = dr_thread_alloc(drcontext, sizeof(ShadowThreadState));
-  drmgr_set_tls_field(drcontext, MemoryTracker::tls_idx, tls_buffer);
-  // Initialize struct at given location (placement new)
-  ShadowThreadState *data = new (tls_buffer) ShadowThreadState(drcontext);
+  ShadowThreadState &data = thread_state.addSlot(drcontext, drcontext);
 
   memory_tracker->event_thread_init(drcontext, data);
   LOG_INFO(tid, "Thread started");
 }
 
 static void event_thread_exit(void *drcontext) {
-  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
-      drcontext, MemoryTracker::tls_idx);
+  ShadowThreadState &data = thread_state.getSlot(drcontext);
   memory_tracker->event_thread_exit(drcontext, data);
 
-  // deconstruct struct
-  data->~ShadowThreadState();
-  dr_thread_free(drcontext, data, sizeof(ShadowThreadState));
+  // deconstruct thread state
+  thread_state.removeSlot(drcontext);
   LOG_INFO(dr_get_thread_id(drcontext), "Thread exited");
 }
 
 static void generate_summary() {
-  using namespace drace;
-
   // with delayed lookup we cannot stream, hence we write
   // the report here
   if (params.delayed_sym_lookup) {

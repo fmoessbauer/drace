@@ -92,8 +92,8 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist,
   reg1: memory address of access
   reg3: wiped / unknown state
   */
-  drmgr_insert_read_tls_field(drcontext, MemoryTracker::tls_idx, ilist, where,
-                              reg3);
+  drmgr_insert_read_tls_field(drcontext, thread_state.getTlsIndex(), ilist,
+                              where, reg3);
 
   /* Jump if tracing is disabled */
   /* load enabled flag into reg2 */

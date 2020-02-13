@@ -1,7 +1,7 @@
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright 2018 Siemens AG
+ * Copyright 2020 Siemens AG
  *
  * Authors:
  *   Felix Moessbauer <felix.moessbauer@siemens.com>
@@ -10,8 +10,10 @@
  */
 
 #include "globals.h"
+#include "DrThreadLocal.h"
 #include "Module.h"
 #include "RuntimeConfig.h"
+#include "ShadowThreadState.h"
 #include "memory-tracker.h"
 #include "symbols.h"
 
@@ -29,6 +31,7 @@ RuntimeConfig params;
 
 std::atomic<unsigned> runtime_tid{0};
 
+DrThreadLocal<ShadowThreadState> thread_state;
 std::unique_ptr<MemoryTracker> memory_tracker;
 std::unique_ptr<module::Tracker> module_tracker;
 
