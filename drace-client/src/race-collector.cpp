@@ -80,7 +80,7 @@ void RaceCollector::race_collector_add_race(const Detector::Race* r) {
     void* drcontext = dr_get_current_drcontext();
     ShadowThreadState* data = (ShadowThreadState*)drmgr_get_tls_field(
         drcontext, MemoryTracker::tls_idx);
-    data->stats->print_summary(drace::log_target);
+    data->stats.print_summary(drace::log_target);
     dr_flush_file(drace::log_target);
     dr_abort();
   }

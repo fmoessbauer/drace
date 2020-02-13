@@ -251,12 +251,27 @@ static void event_thread_init(void *drcontext) {
     LOG_INFO(tid, "Runtime Thread tagged");
   }
 
-  memory_tracker->event_thread_init(drcontext);
+  // require: TLS segment is initialized
+  // TODO: move to class
+  DR_ASSERT(MemoryTracker::tls_idx != MemoryTracker::TLS_IDX_INVALID);
+  // allocate thread private data
+  void *tls_buffer = dr_thread_alloc(drcontext, sizeof(ShadowThreadState));
+  drmgr_set_tls_field(drcontext, MemoryTracker::tls_idx, tls_buffer);
+  // Initialize struct at given location (placement new)
+  ShadowThreadState *data = new (tls_buffer) ShadowThreadState(drcontext);
+
+  memory_tracker->event_thread_init(drcontext, data);
   LOG_INFO(tid, "Thread started");
 }
 
 static void event_thread_exit(void *drcontext) {
-  memory_tracker->event_thread_exit(drcontext);
+  ShadowThreadState *data = (ShadowThreadState *)drmgr_get_tls_field(
+      drcontext, MemoryTracker::tls_idx);
+  memory_tracker->event_thread_exit(drcontext, data);
+
+  // deconstruct struct
+  data->~ShadowThreadState();
+  dr_thread_free(drcontext, data, sizeof(ShadowThreadState));
   LOG_INFO(dr_get_thread_id(drcontext), "Thread exited");
 }
 

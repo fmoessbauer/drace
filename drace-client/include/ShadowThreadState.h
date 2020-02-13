@@ -12,6 +12,7 @@
 
 #include "aligned-buffer.h"
 #include "shadow-stack.h"
+#include "statistics.h"
 
 #include <dr_api.h>
 #include <hashtable.h>
@@ -20,15 +21,9 @@
 #include <type_traits>
 
 namespace drace {
-// forward decls
-class Statistics;
 
 /**
  * \brief Per Thread data (thread-private)
- *
- * \warning Initialisation is done in the thread-creation event
- *          in \see MemoryTracker.
- *          Prior thread-creation events must not use this data
  */
 class ShadowThreadState {
  public:
@@ -60,14 +55,18 @@ class ShadowThreadState {
   /// buffer containing memory accesses
   AlignedBuffer<byte, 64> mem_buf;
 
-  /// Statistics
-  Statistics* stats;
-
   /// book-keeping of active mutexes
   hashtable_t mutex_book;
 
   /// ShadowStack
   ShadowStack stack;
+
+  /// Statistics
+  Statistics stats;
+
+ public:
+  explicit ShadowThreadState(void* drcontext);
+  ~ShadowThreadState();
 };
 
 static_assert(std::is_standard_layout<ShadowThreadState>::value,

@@ -189,7 +189,7 @@ void event::prepare_and_aquire(void *wrapctx, void *mutex, bool write,
   detector->acquire(data->detector_data, mutex, (int)cnt, write);
   // detector::happens_after(data->tid, mutex);
 
-  data->stats->mutex_ops++;
+  data->stats.mutex_ops++;
 }
 
 void event::prepare_and_release(void *wrapctx, bool write) {
@@ -309,7 +309,7 @@ void event::wait_for_single_obj(void *wrapctx, void *mutex) {
 
   MemoryTracker::flush_all_threads(data);
   detector->acquire(data->detector_data, mutex, (int)cnt, 1);
-  data->stats->mutex_ops++;
+  data->stats.mutex_ops++;
 }
 
 void event::wait_for_mo_getargs(void *wrapctx, OUT void **user_data) {
@@ -355,7 +355,7 @@ void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
       }
 
       detector->acquire(data->detector_data, (void *)mutex, (int)cnt, true);
-      data->stats->mutex_ops++;
+      data->stats.mutex_ops++;
     }
   }
   if (!info->waitall) {
@@ -370,7 +370,7 @@ void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
       }
 
       detector->acquire(data->detector_data, (void *)mutex, (int)cnt, true);
-      data->stats->mutex_ops++;
+      data->stats.mutex_ops++;
     }
   }
 

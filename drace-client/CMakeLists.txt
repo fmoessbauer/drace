@@ -1,6 +1,7 @@
 set(SOURCES
     "src/globals"
     "src/drace-client"
+    "src/ShadowThreadState"
     "src/function-wrapper.cpp"
     "src/function-wrapper/internal"
     "src/function-wrapper/event"

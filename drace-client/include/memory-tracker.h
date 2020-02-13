@@ -63,17 +63,18 @@ class MemoryTracker {
   /// update code-cache after this number of flushes (must be power of two)
   static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
+  /// invalid tls id
+  static constexpr int TLS_IDX_INVALID = -1;
+
   /// identifier for per_thread TLS data
   static int tls_idx;
 
-  std::atomic<int> flush_active{false};
-
+ private:
   /// \brief external change detected
   /// this flag is used to trigger the enable or disable
   /// logic on this thread
-  std::atomic<bool> enable_external{true};
+  std::atomic<bool> _enable_external{true};
 
- private:
   size_t page_size;
 
   /// Code Caches
@@ -116,9 +117,9 @@ class MemoryTracker {
                                 bool flush_external = false);
 
   // Events
-  void event_thread_init(void *drcontext);
+  void event_thread_init(void *drcontext, ShadowThreadState *data);
 
-  void event_thread_exit(void *drcontext);
+  void event_thread_exit(void *drcontext, ShadowThreadState *data);
 
   /** We transform string loops into regular loops so we can more easily
    * monitor every memory reference they make.
@@ -129,7 +130,7 @@ class MemoryTracker {
   dr_emit_flags_t event_app_analysis(void *drcontext, void *tag,
                                      instrlist_t *bb, bool for_trace,
                                      bool translating, OUT void **user_data);
-  /** Instrument application instructions */
+  /// Instrument application instructions
   dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
                                         instrlist_t *bb, instr_t *instr,
                                         bool for_trace, bool translating,
@@ -229,8 +230,6 @@ class MemoryTracker {
 
   void update_sampling();
 };
-
-extern std::unique_ptr<MemoryTracker> memory_tracker;
 
 static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag,
                                                      instrlist_t *bb,

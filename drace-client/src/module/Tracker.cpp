@@ -266,10 +266,10 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
   }
 #endif
 
-  data->stats->module_load_duration +=
+  data->stats.module_load_duration +=
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now() - start);
-  data->stats->module_loads++;
+  data->stats.module_loads++;
 }
 
 /* Module unload event implementation. As this function is passed
