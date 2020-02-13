@@ -32,17 +32,6 @@
 /// max number of individual mutexes per thread
 constexpr int MUTEX_MAP_SIZE = 128;
 
-/** Upper limit of process address space according to
- *   https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-limits-for-windows-and-windows-server-releases
- *   This also holds for Linux x64
- *   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
- */
-#if COMPILE_X86
-constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
-#else
-constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
-#endif
-
 // forward decls
 class Detector;
 

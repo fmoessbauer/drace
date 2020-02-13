@@ -41,6 +41,17 @@ class MemoryTracker {
     bool write;
   };
 
+  /** Upper limit of process address space according to
+   *   https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-limits-for-windows-and-windows-server-releases
+   *   This also holds for Linux x64
+   *   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
+   */
+#if COMPILE_X86
+  static constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
+#else
+  static constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
+
   /// Maximum number of references between clean calls
   static constexpr int MAX_NUM_MEM_REFS = 64;
   static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
