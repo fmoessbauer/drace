@@ -58,6 +58,7 @@ std::chrono::system_clock::time_point app_stop;
 std::unique_ptr<drace::RaceCollector> race_collector;
 std::shared_ptr<drace::Statistics> stats;
 
+/// DRace main entry point
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   using namespace drace;
 
@@ -85,7 +86,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   if (!success) {
     LOG_ERROR(-1, "error loading config file");
     dr_flush_file(drace::log_target);
-    exit(1);
+    dr_abort_with_code(1);
   }
   LOG_NOTICE(-1, "size of ShadowThreadState %i bytes",
              sizeof(ShadowThreadState));
@@ -98,23 +99,19 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   drmgr_register_thread_init_event(event_thread_init);
   drmgr_register_thread_exit_event(event_thread_exit);
 
-  // Setup Statistics Collector
-  stats = std::make_unique<Statistics>(0);
-
   // Setup Function Wrapper
   DR_ASSERT(funwrap::init());
 
+  // Setup Statistics Collector
+  stats = std::make_unique<Statistics>(0);
   auto symbol_table = std::make_shared<symbol::Symbols>();
-
   // Setup Module Tracking
   module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
-
   // Setup Memory Tracing
   memory_tracker = std::make_unique<MemoryTracker>(stats);
 
   std::shared_ptr<RaceFilter> filter =
       std::make_shared<RaceFilter>(params.filter_file, argv[0]);
-
   // Setup Race Collector and bind lookup function
   race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup,
                                                    symbol_table, filter);
@@ -214,7 +211,7 @@ static void event_exit() {
 
   if (params.stats_show) {
     // TODO: workaround for i#9. After print_summary is fixed, remove this guard
-    stats->print_summary(drace::log_target);
+    stats->print_summary(log_target);
   }
 
   LOG_INFO(-1, "found %i possible data-races", race_collector->num_races());
