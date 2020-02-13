@@ -10,11 +10,12 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include "ShadowThreadState.h"
+
 #include <dr_api.h>
 #include <drmgr.h>
 
 namespace drace {
-struct per_thread_t;
 
 namespace funwrap {
 
@@ -36,8 +37,8 @@ class event {
   static inline void prepare_and_release(void *wrapctx, bool write);
 
  public:
-  static void beg_excl_region(per_thread_t *data);
-  static void end_excl_region(per_thread_t *data);
+  static void beg_excl_region(ShadowThreadState &data);
+  static void end_excl_region(ShadowThreadState &data);
 
   static void alloc_pre(void *wrapctx, void **user_data);
   static void alloc_post(void *wrapctx, void *user_data);

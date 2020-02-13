@@ -20,7 +20,7 @@
 
 namespace drace {
 /// Handles dynamic config information from configuration file
-class Config {
+class InstrumentationConfig {
  private:
   std::unique_ptr<INIReader> _reader;
   std::set<std::string> _sections;
@@ -28,14 +28,14 @@ class Config {
   std::map<std::string, std::string> _kvstore;
 
  public:
-  Config() = default;
-  Config(const Config &) = delete;
-  Config(Config &&) = default;
+  InstrumentationConfig() = default;
+  InstrumentationConfig(const InstrumentationConfig &) = delete;
+  InstrumentationConfig(InstrumentationConfig &&) = default;
 
-  Config &operator=(const Config &) = delete;
-  Config &operator=(Config &&) = default;
+  InstrumentationConfig &operator=(const InstrumentationConfig &) = delete;
+  InstrumentationConfig &operator=(InstrumentationConfig &&) = default;
 
-  explicit Config(const std::string &filename);
+  explicit InstrumentationConfig(const std::string &filename);
 
   bool loadfile(const std::string &filename, const std::string &hint);
 

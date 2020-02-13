@@ -11,9 +11,9 @@
  */
 
 /**
-* \brief This template is processed by cmake and adds the current
-* git tag and commit hash to the binary.
-*/
+ * \brief This template is processed by cmake and adds the current
+ * git tag and commit hash to the binary.
+ */
 
-const char * DRACE_BUILD_VERSION = "1.6.x (git)";
-const char * DRACE_BUILD_HASH = "@GIT_HEAD_SHA1@";
+static const char* DRACE_BUILD_VERSION = "1.6.x (git)";
+static const char* DRACE_BUILD_HASH = "@GIT_HEAD_SHA1@";

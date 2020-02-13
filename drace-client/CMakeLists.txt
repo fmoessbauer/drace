@@ -1,6 +1,7 @@
 set(SOURCES
     "src/globals"
     "src/drace-client"
+    "src/ShadowThreadState"
     "src/function-wrapper.cpp"
     "src/function-wrapper/internal"
     "src/function-wrapper/event"
@@ -12,8 +13,10 @@ set(SOURCES
     "src/symbol/Symbols"
     "src/symbol/SymbolLocation"
     "src/util"
-    "src/config"
-    "src/race-filter")
+    "src/InstrumentationConfig"
+    "src/RuntimeConfig"
+    "src/race-filter"
+    "src/race-collector")
 if(WIN32)
     list(APPEND SOURCES "src/MSR")
 endif()

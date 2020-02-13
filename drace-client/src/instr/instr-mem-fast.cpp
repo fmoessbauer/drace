@@ -24,7 +24,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
                 "type size not correct");
   static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
   static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
-  static_assert(sizeof(per_thread_t::enabled) == 1, "type size not correct");
+  static_assert(sizeof(ShadowThreadState::enabled) == 1,
+                "type size not correct");
 
   instr_t *instr;
   opnd_t opnd1, opnd2;
@@ -72,12 +73,13 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   reg1: memory address of access
   reg3: wiped / unknown state
   */
-  drmgr_insert_read_tls_field(drcontext, tls_idx, ilist, where, reg3);
+  drmgr_insert_read_tls_field(drcontext, thread_state.getTlsIndex(), ilist,
+                              where, reg3);
 
   /* Jump if tracing is disabled */
   /* load enabled flag into reg2 */
   opnd1 = opnd_create_reg(reg_resize_to_opsz(reg2, OPSZ_1));
-  opnd2 = OPND_CREATE_MEM8(reg3, offsetof(per_thread_t, enabled));
+  opnd2 = OPND_CREATE_MEM8(reg3, offsetof(ShadowThreadState, enabled));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
@@ -88,7 +90,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
 
   /* Load data->buf_ptr into reg2 */
   opnd1 = opnd_create_reg(reg2);
-  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
+  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_ptr));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
@@ -130,7 +132,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Update the data->buf_ptr */
-  opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_ptr));
+  opnd1 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_ptr));
   opnd2 = opnd_create_reg(reg2);
   instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
@@ -141,7 +143,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
    */
   /* lea [reg2 - buf_end] => reg2 */
   opnd1 = opnd_create_reg(reg1);
-  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(per_thread_t, buf_end));
+  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_end));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
   opnd1 = opnd_create_reg(reg2);

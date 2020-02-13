@@ -10,8 +10,8 @@
  */
 
 #include "function-wrapper.h"
+#include "InstrumentationConfig.h"
 #include "MSR.h"
-#include "config.h"
 #include "globals.h"
 #include "memory-tracker.h"
 

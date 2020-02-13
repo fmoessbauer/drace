@@ -13,6 +13,7 @@
 #include "globals.h"
 
 #include "function-wrapper.h"
+#include "memory-tracker.h"
 #include "statistics.h"
 #include "symbol/Symbols.h"
 #include "util.h"
@@ -166,13 +167,9 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
   using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
 
   auto start = std::chrono::system_clock::now();
-
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
-  DR_ASSERT(nullptr != data);
-  thread_id_t tid = data->tid;
+  ShadowThreadState &data = thread_state.getSlot(drcontext);
 
   auto modptr = module_tracker->register_module(mod, loaded);
-
   std::string mod_name = dr_module_preferred_name(mod);
 
   // wrap functions
@@ -219,7 +216,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
     if (util::common_prefix(basename, "System.")) {
       // TODO: This is highly experimental
       // Check impact on correctness
-      LOG_NOTICE(data->tid, "Detected %s", basename.c_str());
+      LOG_NOTICE(data.tid, "Detected %s", basename.c_str());
       modptr->instrument = INSTR_FLAGS::STACK;
       if (!util::common_prefix(basename, "System.Private")) {
         modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(
@@ -227,7 +224,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
       }
     } else {
       // Not a System DLL
-      LOG_NOTICE(data->tid, "Detected %s", basename.c_str());
+      LOG_NOTICE(data.tid, "Detected %s", basename.c_str());
       modptr->instrument = INSTR_FLAGS::STACK;
       modptr->modtype = (Metadata::MOD_TYPE_FLAGS)(
           modptr->modtype | Metadata::MOD_TYPE_FLAGS::SYNC);
@@ -246,7 +243,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
     }
   }
 
-  LOG_INFO(tid,
+  LOG_INFO(data.tid,
            "Track module: %20s, beg : %p, end : %p, instrument : %s, debug "
            "info : %s, full path : %s",
            mod_name.c_str(), modptr->base, modptr->end,
@@ -264,10 +261,10 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
   }
 #endif
 
-  data->stats->module_load_duration +=
+  data.stats.module_load_duration +=
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now() - start);
-  data->stats->module_loads++;
+  data.stats.module_loads++;
 }
 
 /* Module unload event implementation. As this function is passed

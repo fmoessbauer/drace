@@ -23,26 +23,32 @@
 #include "MSR.h"
 #include "Module.h"
 #include "function-wrapper.h"
+#include "ipc/DrLock.h"
 #include "memory-tracker.h"
 #include "shadow-stack.h"
 #include "statistics.h"
 #include "symbols.h"
+
 #if WINDOWS
 #include "ipc/SMData.h"
 #include "ipc/SharedMemory.h"
 #endif
 
+#include <mutex>  // for lock_guard
+
 namespace drace {
-MemoryTracker::MemoryTracker()
+
+MemoryTracker::MemoryTracker(const std::shared_ptr<Statistics> &stats)
     : _prng(static_cast<unsigned>(std::chrono::high_resolution_clock::now()
                                       .time_since_epoch()
-                                      .count())) {
+                                      .count())),
+      _stats(stats) {
   /* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
   drreg_options_t ops = {sizeof(ops), 4, false};
 
   /* Ensure that atomic and native type have equal size as otherwise
      instrumentation reads invalid value */
-  using no_flush_t = decltype(per_thread_t::no_flush);
+  using no_flush_t = decltype(ShadowThreadState::no_flush);
 
 #ifdef WINDOWS
   // this requires C++17, but is available in MSVC with C++11
@@ -55,9 +61,6 @@ MemoryTracker::MemoryTracker()
 
   DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
   page_size = dr_page_size();
-
-  tls_idx = drmgr_register_tls_field();
-  DR_ASSERT(tls_idx != -1);
 
   // Prepare vector with allowed registers for REG2
   drreg_init_and_fill_vector(&allowed_xcx, false);
@@ -109,15 +112,14 @@ inline std::vector<uintptr_t> get_pcs_from_hist(
   return result;
 }
 
-void MemoryTracker::update_cache(per_thread_t *data) {
+void MemoryTracker::update_cache(ShadowThreadState &data) {
   // TODO: optimize this
-  const auto &new_freq =
-      data->stats->pc_hits.computeOutput<Statistics::hist_t>();
-  LOG_NOTICE(data->tid, "Flush Cache with size %i", new_freq.size());
+  const auto &new_freq = data.stats.pc_hits.computeOutput<Statistics::hist_t>();
+  LOG_NOTICE(data.tid, "Flush Cache with size %i", new_freq.size());
   if (params.lossy_flush) {
     void *drcontext = dr_get_current_drcontext();
     const auto &pc_new = get_pcs_from_hist(new_freq);
-    const auto &pc_old = data->stats->freq_pcs;
+    const auto &pc_old = data.stats.freq_pcs;
 
     std::vector<uintptr_t> difference;
     difference.reserve(pc_new.size() + pc_old.size());
@@ -130,66 +132,63 @@ void MemoryTracker::update_cache(per_thread_t *data) {
     for (const auto pc : difference) {
       flush_region(drcontext, pc);
     }
-    data->stats->freq_pcs = pc_new;
+    data.stats.freq_pcs = pc_new;
   }
-  data->stats->freq_pc_hist = new_freq;
+  data.stats.freq_pc_hist = new_freq;
 }
 
-bool MemoryTracker::pc_in_freq(per_thread_t *data, void *bb) {
-  const auto &freq_pcs = data->stats->freq_pcs;
+bool MemoryTracker::pc_in_freq(ShadowThreadState &data, void *bb) {
+  const auto &freq_pcs = data.stats.freq_pcs;
   return std::binary_search(freq_pcs.begin(), freq_pcs.end(),
                             ((uintptr_t)bb >> MemoryTracker::HIST_PC_RES));
 }
 
-void MemoryTracker::analyze_access(per_thread_t *data) {
-  DR_ASSERT(data != nullptr);
-
-  if (data->detector_data == nullptr) {
+void MemoryTracker::analyze_access(ShadowThreadState &data) {
+  if (data.detector_data == nullptr) {
     // Thread starts with a pending clean-call
     // We missed a fork
     // 1. Flush all threads (except this thread)
     // 2. Fork thread
-    LOG_TRACE(data->tid, "Missed a fork, do it now");
+    LOG_TRACE(data.tid, "Missed a fork, do it now");
     detector->fork(runtime_tid.load(std::memory_order_relaxed),
-                   static_cast<Detector::tid_t>(data->tid),
-                   &(data->detector_data));
+                   static_cast<Detector::tid_t>(data.tid),
+                   &(data.detector_data));
     // arc between parent thread and this thread
-    detector->happens_after(data->detector_data,
-                            (void *)(uintptr_t)(data->tid));
+    detector->happens_after(data.detector_data, (void *)(uintptr_t)(data.tid));
     clear_buffer();
     return;
   }
 
   // toggle detector on external state change
   // avoid expensive mod by comparing with bitmask
-  if ((data->stats->flushes & (0xF - 1)) == (0xF - 1)) {
+  if ((data.stats.flushes & (0xF - 1)) == (0xF - 1)) {
     // lessen impact of expensive SHM accesses
     memory_tracker->handle_ext_state(data);
   }
 
-  if (data->enabled) {
-    mem_ref_t *mem_ref = reinterpret_cast<mem_ref_t *>(data->mem_buf.data());
+  if (data.enabled) {
+    mem_ref_t *mem_ref = reinterpret_cast<mem_ref_t *>(data.mem_buf.data());
     uintptr_t num_refs = static_cast<uintptr_t>(
-        reinterpret_cast<mem_ref_t *>(data->buf_ptr) - mem_ref);
+        reinterpret_cast<mem_ref_t *>(data.buf_ptr) - mem_ref);
 
     if (num_refs > 0) {
-      // dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data->tid,
-      // data->no_flush.load(std::memory_order_relaxed), num_refs);
-      DR_ASSERT(data->detector_data != nullptr);
+      // dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data.tid,
+      // data.no_flush.load(std::memory_order_relaxed), num_refs);
+      DR_ASSERT(data.detector_data != nullptr);
 
       // Lossy count first mem-ref (all are adiacent as after each call is
       // flushed)
       if (params.lossy) {
-        data->stats->pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
-        if ((data->stats->flushes & (CC_UPDATE_PERIOD - 1)) ==
+        data.stats.pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
+        if ((data.stats.flushes & (CC_UPDATE_PERIOD - 1)) ==
             (CC_UPDATE_PERIOD - 1)) {
           update_cache(data);
         }
       }
 
-      for (; mem_ref < (mem_ref_t *)data->buf_ptr; ++mem_ref) {
-        if (params.excl_stack && (mem_ref->addr > data->appstack_beg) &&
-            (mem_ref->addr < data->appstack_end)) {
+      for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
+        if (params.excl_stack && (mem_ref->addr > data.appstack_beg) &&
+            (mem_ref->addr < data.appstack_end)) {
           // this reference points into the stack range, skip
           continue;
         }
@@ -200,107 +199,79 @@ void MemoryTracker::analyze_access(per_thread_t *data) {
 
         if (mem_ref->write) {
           detector->write(
-              data->detector_data, reinterpret_cast<void *>(mem_ref->pc),
+              data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
               reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
-          // printf("[%i] WRITE %p, PC: %p\n", data->tid, mem_ref->addr,
+          // printf("[%i] WRITE %p, PC: %p\n", data.tid, mem_ref->addr,
           // mem_ref->pc);
         } else {
           detector->read(
-              data->detector_data, reinterpret_cast<void *>(mem_ref->pc),
+              data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
               reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
-          // printf("[%i] READ  %p, PC: %p\n", data->tid, mem_ref->addr,
+          // printf("[%i] READ  %p, PC: %p\n", data.tid, mem_ref->addr,
           // mem_ref->pc);
         }
-        ++(data->stats->proc_refs);
+        ++(data.stats.proc_refs);
       }
-      data->stats->total_refs += num_refs;
+      data.stats.total_refs += num_refs;
     }
   }
-  data->buf_ptr = data->mem_buf.data();
+  data.buf_ptr = data.mem_buf.data();
 }
 
 /*
  * Thread init Event
  */
-void MemoryTracker::event_thread_init(void *drcontext) {
-  /* allocate thread private data */
-  void *tls_buffer = dr_thread_alloc(drcontext, sizeof(per_thread_t));
-  drmgr_set_tls_field(drcontext, tls_idx, tls_buffer);
-
-  // Initialize struct at given location (placement new)
-  per_thread_t *data = new (tls_buffer) per_thread_t;
-
-  data->mem_buf.resize(MEM_BUF_SIZE, drcontext);
-  data->buf_ptr = data->mem_buf.data();
-  /* set buf_end to be negative of address of buffer end for the lea later */
-  data->buf_end =
-      (-1) * reinterpret_cast<intptr_t>(data->mem_buf.data() + MEM_BUF_SIZE);
-
-  data->tid = dr_get_thread_id(drcontext);
-
-  hashtable_init(&(data->mutex_book), 8, HASH_INTPTR, false);
-
-  // set first sampling period
-  data->sampling_pos = params.sampling_rate;
-  data->stack.bindDetector(detector.get());
+void MemoryTracker::event_thread_init(void *drcontext,
+                                      ShadowThreadState &data) {
+  data.mem_buf.resize(MEM_BUF_SIZE, drcontext);
+  data.buf_ptr = data.mem_buf.data();
+  // set buf_end to be negative of address of buffer end for the lea later
+  data.buf_end =
+      (-1) * reinterpret_cast<intptr_t>(data.mem_buf.data() + MEM_BUF_SIZE);
 
   // this is the master thread
-  if (params.exclude_master && (data->tid == runtime_tid)) {
+  if (params.exclude_master && (data.tid == runtime_tid)) {
     disable_scope(data);
   }
-
-  data->stats = reinterpret_cast<Statistics *>(
-      dr_thread_alloc(drcontext, sizeof(Statistics)));
-  new (data->stats) Statistics(data->tid);
 
 #ifdef WINDOWS
   // TODO: emulate this for windows 7, linux
   // determin stack range of this thread
-  if (runtime_tid.load(std::memory_order_relaxed) != data->tid) {
+  if (runtime_tid.load(std::memory_order_relaxed) != data.tid) {
     if (!dr_using_app_state(drcontext)) dr_switch_to_app_state(drcontext);
     // dr does not support this natively, so make syscall in app context
-    GetCurrentThreadStackLimits(&(data->appstack_beg), &(data->appstack_end));
-    LOG_NOTICE(data->tid, "stack from %p to %p", data->appstack_beg,
-               data->appstack_end);
+    GetCurrentThreadStackLimits(&(data.appstack_beg), &(data.appstack_end));
+    LOG_NOTICE(data.tid, "stack from %p to %p", data.appstack_beg,
+               data.appstack_end);
   } else {
     // TODO: this lookup cannot be performed on master thread, as state is not
     // valid. See drmem#xxx
-    LOG_NOTICE(data->tid, "stack range cannot be detected");
+    LOG_NOTICE(data.tid, "stack range cannot be detected");
   }
 #endif
 }
 
-void MemoryTracker::event_thread_exit(void *drcontext) {
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
-
+void MemoryTracker::event_thread_exit(void *drcontext,
+                                      ShadowThreadState &data) {
   flush_all_threads(data, true, false);
 
   detector->join(runtime_tid.load(std::memory_order_relaxed),
-                 static_cast<Detector::tid_t>(data->tid));
+                 static_cast<Detector::tid_t>(data.tid));
 
   // as this is a exclusive lock and this is the only place
   // where stats are combined, we use it
-  dr_rwlock_write_lock(tls_rw_mutex);
-  *stats |= *(data->stats);
+  {
+    std::lock_guard<DrLock> lg(_tls_rw_mutex);
+    *_stats |= data.stats;
 
-  if (params.stats_show) {
-    data->stats->print_summary(drace::log_target);
+    if (params.stats_show) {
+      data.stats.print_summary(drace::log_target);
+    }
   }
-  dr_rwlock_write_unlock(tls_rw_mutex);
 
   // Cleanup TLS
   // As we cannot rely on current drcontext here, use provided one
-  data->mem_buf.deallocate(drcontext);
-
-  hashtable_delete(&(data->mutex_book));
-
-  // free statistics
-  data->stats->~Statistics();
-  dr_thread_free(drcontext, data->stats, sizeof(Statistics));
-
-  // deconstruct struct
-  data->~per_thread_t();
-  dr_thread_free(drcontext, data, sizeof(per_thread_t));
+  data.mem_buf.deallocate(drcontext);
 }
 
 /* We transform string loops into regular loops so we can more easily
@@ -355,8 +326,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag,
 
   // Do not instrument if block is frequent TODO: check correctness
   if (params.lossy_flush && for_trace && instrument_bb) {
-    per_thread_t *data =
-        (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+    ShadowThreadState &data = thread_state.getSlot(drcontext);
     if (pc_in_freq(data, bb_addr)) {
       instrument_bb = INSTR_FLAGS::NONE;
     }
@@ -440,35 +410,34 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
 }
 
 /* clean_call dumps the memory reference info into the analyzer */
-void MemoryTracker::process_buffer(void) {
+void MemoryTracker::process_buffer() {
   void *drcontext = dr_get_current_drcontext();
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
+  ShadowThreadState &data = thread_state.getSlot(drcontext);
 
   analyze_access(data);
-  data->stats->flushes++;
+  data.stats.flushes++;
 }
 
-void MemoryTracker::clear_buffer(void) {
-  void *drcontext = dr_get_current_drcontext();
-  per_thread_t *data = (per_thread_t *)drmgr_get_tls_field(drcontext, tls_idx);
-  mem_ref_t *mem_ref = (mem_ref_t *)data->mem_buf.data();
-  uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data->buf_ptr - mem_ref);
+void MemoryTracker::clear_buffer() {
+  ShadowThreadState &data = thread_state.getSlot();
+  mem_ref_t *mem_ref = (mem_ref_t *)data.mem_buf.data();
+  uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data.buf_ptr - mem_ref);
 
-  data->stats->proc_refs += num_refs;
-  data->stats->flushes++;
-  data->buf_ptr = data->mem_buf.data();
-  data->no_flush.store(true, std::memory_order_relaxed);
+  data.stats.proc_refs += num_refs;
+  data.stats.flushes++;
+  data.buf_ptr = data.mem_buf.data();
+  data.no_flush.store(true, std::memory_order_relaxed);
 }
 
 /* Request a flush of all non-disabled threads.
  *  \Warning: This function read-locks the TLS mutex
  */
-void MemoryTracker::flush_all_threads(per_thread_t *data, bool self,
+void MemoryTracker::flush_all_threads(ShadowThreadState &data, bool self,
                                       bool flush_external) {
   if (self) process_buffer();
 }
 
-void MemoryTracker::code_cache_init(void) {
+void MemoryTracker::code_cache_init() {
   void *drcontext;
   instrlist_t *ilist;
   instr_t *where;
@@ -493,14 +462,14 @@ void MemoryTracker::code_cache_init(void) {
   dr_memory_protect(cc_flush, page_size, DR_MEMPROT_READ | DR_MEMPROT_EXEC);
 }
 
-void MemoryTracker::handle_ext_state(per_thread_t *data) {
+void MemoryTracker::handle_ext_state(ShadowThreadState &data) {
 #ifdef WINDOWS
   if (shmdriver) {
     bool shm_ext_state = extcb->get()->enabled.load(std::memory_order_relaxed);
-    if (enable_external.load(std::memory_order_relaxed) != shm_ext_state) {
+    if (_enable_external.load(std::memory_order_relaxed) != shm_ext_state) {
       LOG_INFO(0, "externally switched state: %s",
                shm_ext_state ? "ON" : "OFF");
-      enable_external.store(shm_ext_state, std::memory_order_relaxed);
+      _enable_external.store(shm_ext_state, std::memory_order_relaxed);
       if (!shm_ext_state) {
         funwrap::event::beg_excl_region(data);
       } else {

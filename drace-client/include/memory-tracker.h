@@ -11,6 +11,8 @@
  */
 
 #include "Module.h"
+#include "ShadowThreadState.h"
+#include "ipc/DrLock.h"
 #include "statistics.h"
 
 #include <dr_api.h>
@@ -41,6 +43,17 @@ class MemoryTracker {
     bool write;
   };
 
+  /** Upper limit of process address space according to
+   *   https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-limits-for-windows-and-windows-server-releases
+   *   This also holds for Linux x64
+   *   https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
+   */
+#if COMPILE_X86
+  static constexpr uintptr_t PROC_ADDR_LIMIT = 0xBFFFFFFF;
+#else
+  static constexpr uintptr_t PROC_ADDR_LIMIT = 0x00007FFF'FFFFFFFF;
+#endif
+
   /// Maximum number of references between clean calls
   static constexpr int MAX_NUM_MEM_REFS = 64;
   static constexpr int MEM_BUF_SIZE = sizeof(mem_ref_t) * MAX_NUM_MEM_REFS;
@@ -51,14 +64,12 @@ class MemoryTracker {
   /// update code-cache after this number of flushes (must be power of two)
   static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
 
-  std::atomic<int> flush_active{false};
-
+ private:
   /// \brief external change detected
   /// this flag is used to trigger the enable or disable
   /// logic on this thread
-  std::atomic<bool> enable_external{true};
+  std::atomic<bool> _enable_external{true};
 
- private:
   size_t page_size;
 
   /// Code Caches
@@ -83,23 +94,27 @@ class MemoryTracker {
   unsigned _max_period = 1;
   /// current pos in period
   int _sample_pos = 0;
+  /// application statistics instance
+  std::shared_ptr<Statistics> _stats;
+  /// mutex to guard accesses to TLS
+  DrLock _tls_rw_mutex;
 
   static const std::mt19937::result_type _max_value = decltype(_prng)::max();
 
  public:
-  MemoryTracker();
+  MemoryTracker(const std::shared_ptr<Statistics> &stats);
   ~MemoryTracker();
 
   static void process_buffer(void);
   static void clear_buffer(void);
-  static void analyze_access(per_thread_t *data);
-  static void flush_all_threads(per_thread_t *data, bool self = true,
+  static void analyze_access(ShadowThreadState &data);
+  static void flush_all_threads(ShadowThreadState &data, bool self = true,
                                 bool flush_external = false);
 
   // Events
-  void event_thread_init(void *drcontext);
+  void event_thread_init(void *drcontext, ShadowThreadState &data);
 
-  void event_thread_exit(void *drcontext);
+  void event_thread_exit(void *drcontext, ShadowThreadState &data);
 
   /** We transform string loops into regular loops so we can more easily
    * monitor every memory reference they make.
@@ -110,18 +125,18 @@ class MemoryTracker {
   dr_emit_flags_t event_app_analysis(void *drcontext, void *tag,
                                      instrlist_t *bb, bool for_trace,
                                      bool translating, OUT void **user_data);
-  /** Instrument application instructions */
+  /// Instrument application instructions
   dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
                                         instrlist_t *bb, instr_t *instr,
                                         bool for_trace, bool translating,
                                         void *user_data);
 
   /// Returns true if this reference should be sampled
-  inline bool sample_ref(per_thread_t *data) {
-    --data->sampling_pos;
+  inline bool sample_ref(ShadowThreadState &data) {
+    --data.sampling_pos;
     if (params.sampling_rate == 1) return true;
-    if (data->sampling_pos == 0) {
-      data->sampling_pos = std::uniform_int_distribution<unsigned>{
+    if (data.sampling_pos == 0) {
+      data.sampling_pos = std::uniform_int_distribution<unsigned>{
           memory_tracker->_min_period,
           memory_tracker->_max_period}(memory_tracker->_prng);
       return true;
@@ -130,38 +145,38 @@ class MemoryTracker {
   }
 
   /// Sets the detector state based on the sampling condition
-  inline void switch_sampling(per_thread_t *data) {
+  inline void switch_sampling(ShadowThreadState &data) {
     // we use the highest available bit to denote if
     // we sample (analyze) this fsection or not
     static constexpr int flag_bit = sizeof(uintptr_t) * 8 - 1;
     if (!sample_ref(data)) {
-      data->enabled = false;
+      data.enabled = false;
       // set the flag
-      data->event_cnt |= ((uintptr_t)1 << flag_bit);
+      data.event_cnt |= ((uintptr_t)1 << flag_bit);
     } else {
       // clear the flag
-      data->event_cnt &= ~((uintptr_t)1 << flag_bit);
-      if (!data->event_cnt) data->enabled = true;
+      data.event_cnt &= ~((uintptr_t)1 << flag_bit);
+      if (!data.event_cnt) data.enabled = true;
     }
   }
 
   /// enable the detector (does not affect sampling)
-  static inline void enable(per_thread_t *data) { data->enabled = true; }
+  static inline void enable(ShadowThreadState &data) { data.enabled = true; }
 
   /// disable the detector (does not affect sampling)
-  static inline void disable(per_thread_t *data) { data->enabled = false; }
+  static inline void disable(ShadowThreadState &data) { data.enabled = false; }
 
   /// enable the detector during this scope
-  static inline void enable_scope(per_thread_t *data) {
-    if (--data->event_cnt <= 0) {
+  static inline void enable_scope(ShadowThreadState &data) {
+    if (--data.event_cnt <= 0) {
       enable(data);
     }
   }
 
   /// disable the detector during this scope
-  static inline void disable_scope(per_thread_t *data) {
+  static inline void disable_scope(ShadowThreadState &data) {
     disable(data);
-    data->event_cnt++;
+    data.event_cnt++;
   }
 
   /**
@@ -170,9 +185,9 @@ class MemoryTracker {
    *
    * We only consider traces, as other parts are not performance critical
    */
-  static void update_cache(per_thread_t *data);
+  static void update_cache(ShadowThreadState &data);
 
-  static bool pc_in_freq(per_thread_t *data, void *bb);
+  static bool pc_in_freq(ShadowThreadState &data, void *bb);
 
  private:
   void code_cache_init(void);
@@ -206,12 +221,10 @@ class MemoryTracker {
 
   /// Read data from external CB and modify instrumentation / detection
   /// accordingly
-  void handle_ext_state(per_thread_t *data);
+  void handle_ext_state(ShadowThreadState &data);
 
   void update_sampling();
 };
-
-extern std::unique_ptr<MemoryTracker> memory_tracker;
 
 static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag,
                                                      instrlist_t *bb,

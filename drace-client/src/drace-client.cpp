@@ -25,6 +25,7 @@
 #include <string>
 
 #include "DrFile.h"
+#include "DrThreadLocal.h"
 #include "Module.h"
 #include "drace-client.h"
 #include "function-wrapper.h"
@@ -48,8 +49,16 @@
 
 #include <clipp.h>
 #include <detector/Detector.h>
-#include <version/version.h>
 
+std::unique_ptr<drace::util::DrModuleLoader> detector_loader;
+std::shared_ptr<drace::DrFile> log_file;
+// Start time of the application
+std::chrono::system_clock::time_point app_start;
+std::chrono::system_clock::time_point app_stop;
+std::unique_ptr<drace::RaceCollector> race_collector;
+std::shared_ptr<drace::Statistics> stats;
+
+/// DRace main entry point
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   using namespace drace;
 
@@ -61,8 +70,14 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
 #endif
 
   // Parse runtime arguments and print generated configuration
-  drace::parse_args(argc, argv);
-  drace::print_config();
+  params.parse_args(argc, argv);
+  // setup logging (IO) target
+  log_file = std::make_shared<DrFile>(params.logfile, DR_FILE_WRITE_OVERWRITE);
+  if (log_file->good()) {
+    log_target = log_file->get();
+  }
+
+  params.print_config();
 
   // time app start
   app_start = std::chrono::system_clock::now();
@@ -71,12 +86,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   if (!success) {
     LOG_ERROR(-1, "error loading config file");
     dr_flush_file(drace::log_target);
-    exit(1);
+    dr_abort_with_code(1);
   }
-  LOG_NOTICE(-1, "size of per_thread_t %i bytes", sizeof(per_thread_t));
-
-  th_mutex = dr_mutex_create();
-  tls_rw_mutex = dr_rwlock_create();
+  LOG_NOTICE(-1, "size of ShadowThreadState %i bytes",
+             sizeof(ShadowThreadState));
 
   // Init DRMGR, Reserve registers
   if (!drmgr_init() || !drutil_init()) DR_ASSERT(false);
@@ -86,23 +99,19 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   drmgr_register_thread_init_event(event_thread_init);
   drmgr_register_thread_exit_event(event_thread_exit);
 
-  // Setup Statistics Collector
-  stats = std::make_unique<Statistics>(0);
-
   // Setup Function Wrapper
   DR_ASSERT(funwrap::init());
 
+  // Setup Statistics Collector
+  stats = std::make_unique<Statistics>(0);
   auto symbol_table = std::make_shared<symbol::Symbols>();
-
   // Setup Module Tracking
   module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
-
   // Setup Memory Tracing
-  memory_tracker = std::make_unique<MemoryTracker>();
+  memory_tracker = std::make_unique<MemoryTracker>(stats);
 
   std::shared_ptr<RaceFilter> filter =
       std::make_shared<RaceFilter>(params.filter_file, argv[0]);
-
   // Setup Race Collector and bind lookup function
   race_collector = std::make_unique<RaceCollector>(params.delayed_sym_lookup,
                                                    symbol_table, filter);
@@ -137,26 +146,25 @@ static void register_detector(int argc, const char **argv,
                            "drace.detector." + detector_name +
                            ::util::LibLoaderFactory::getModuleExtension());
 
-  module_loader =
+  detector_loader =
       std::make_unique<::drace::util::DrModuleLoader>(detector_lib.c_str());
-  if (!module_loader->loaded()) {
+  if (!detector_loader->loaded()) {
     LOG_ERROR(0, "could not load library %s", detector_lib.c_str());
     dr_abort();
   }
 
   decltype(CreateDetector) *create_detector =
-      (*module_loader)["CreateDetector"];
+      (*detector_loader)["CreateDetector"];
 
   detector = std::unique_ptr<Detector>(create_detector());
-  detector->init(argc, argv, race_collector_add_race);
+  detector->init(argc, argv, RaceCollector::race_collector_add_race);
   LOG_INFO(0, "Detector %s initialized", detector_lib.c_str());
 }
 
 static void register_report_sinks() {
   if (drace::log_target != 0) {
     // register the console printer
-    race_collector->register_sink(
-        std::make_shared<sink::HRText>(drace::log_file));
+    race_collector->register_sink(std::make_shared<sink::HRText>(log_file));
   }
 
   // when using direct lookup, we stream the races
@@ -203,7 +211,7 @@ static void event_exit() {
 
   if (params.stats_show) {
     // TODO: workaround for i#9. After print_summary is fixed, remove this guard
-    stats->print_summary(drace::log_target);
+    stats->print_summary(log_target);
   }
 
   LOG_INFO(-1, "found %i possible data-races", race_collector->num_races());
@@ -216,18 +224,19 @@ static void event_exit() {
 
   funwrap::finalize();
 
-  // Cleanup DR extensions
-  drutil_exit();
-  drmgr_exit();
-
   // Finalize Detector
   detector->finalize();
   detector.reset();
 
-  module_loader.reset();
+  detector_loader.reset();
 
-  dr_mutex_destroy(th_mutex);
-  dr_rwlock_destroy(tls_rw_mutex);
+  // call destructor prior to DR shutdown
+  // as internally, drmgr is used
+  thread_state.~DrThreadLocal();
+
+  // Cleanup DR extensions
+  drutil_exit();
+  drmgr_exit();
 
   LOG_INFO(-1, "DRace exit");
 
@@ -235,7 +244,6 @@ static void event_exit() {
 }
 
 static void event_thread_init(void *drcontext) {
-  using namespace drace;
   thread_id_t tid = dr_get_thread_id(drcontext);
   // assume that the first event comes from the runtime thread
   unsigned empty_tid = 0;
@@ -243,169 +251,22 @@ static void event_thread_init(void *drcontext) {
                                         std::memory_order_relaxed)) {
     LOG_INFO(tid, "Runtime Thread tagged");
   }
-  num_threads_active.fetch_add(1, std::memory_order_relaxed);
+  ShadowThreadState &data = thread_state.addSlot(drcontext, drcontext);
 
-  memory_tracker->event_thread_init(drcontext);
+  memory_tracker->event_thread_init(drcontext, data);
   LOG_INFO(tid, "Thread started");
 }
 
 static void event_thread_exit(void *drcontext) {
-  using namespace drace;
-  num_threads_active.fetch_sub(1, std::memory_order_relaxed);
+  ShadowThreadState &data = thread_state.getSlot(drcontext);
+  memory_tracker->event_thread_exit(drcontext, data);
 
-  memory_tracker->event_thread_exit(drcontext);
-
+  // deconstruct thread state
+  thread_state.removeSlot(drcontext);
   LOG_INFO(dr_get_thread_id(drcontext), "Thread exited");
 }
 
-static void parse_args(int argc, const char **argv) {
-  params.argc = argc;
-  params.argv = argv;
-
-  bool display_help = false;
-  auto drace_cli = clipp::group(
-      (clipp::option("-c", "--config") &
-       clipp::value("config", params.config_file)) %
-          ("config file (default: " + params.config_file + ")"),
-      (clipp::option("-d", "--detector") &
-       clipp::value("detector", params.detector)) %
-          ("race detector (default: " + params.detector + ")"),
-      ((clipp::option("-s", "--sample-rate") &
-        clipp::integer("sample-rate", params.sampling_rate)) %
-           "sample each nth instruction (default: no sampling)",
-       (clipp::option("-i", "--instr-rate") &
-        clipp::integer("instr-rate", params.instr_rate)) %
-           "instrument each nth instruction (default: no sampling, 0: no "
-           "instrumentation)") %
-          "sampling options",
-      ((clipp::option("--lossy").set(params.lossy) %
-        "dynamically exclude fragments using lossy counting") &
-           (clipp::option("--lossy-flush").set(params.lossy_flush) %
-            "de-instrument flushed segments (only with --lossy)"),
-       clipp::option("--excl-traces").set(params.excl_traces) %
-           "exclude dynamorio traces",
-       clipp::option("--excl-stack").set(params.excl_stack) %
-           "exclude stack accesses",
-       clipp::option("--excl-master").set(params.exclude_master) %
-           "exclude first thread") %
-          "analysis scope",
-      (clipp::option("--stacksz") &
-       clipp::integer("stacksz", params.stack_size)) %
-          ("size of callstack used for race-detection (must be in [1," +
-           std::to_string(ShadowStack::maxSize()) +
-           "], default: " + std::to_string(params.stack_size) + ")"),
-      clipp::option("--no-annotations").set(params.annotations, false) %
-          "disable code annotation support",
-      clipp::option("--delay-syms").set(params.delayed_sym_lookup) %
-          "perform symbol lookup after application shutdown",
-      (clipp::option("--suplevel") &
-       clipp::integer("level", params.suppression_level)) %
-          "suppress similar races (0=detector-default, 1=unique "
-          "top-of-callstack entry, default: 1)",
-      (clipp::option("--sup-races") &
-       clipp::value("sup-races", params.filter_file)) %
-          ("race suppression file (default: " + params.filter_file + ")"),
-      (
-#ifdef DRACE_XML_EXPORTER
-          (clipp::option("--xml-file", "-x") &
-           clipp::value("filename", params.xml_file)) %
-              "log races in valkyries xml format in this file",
-#endif
-          (clipp::option("--out-file", "-o") &
-           clipp::value("filename", params.out_file)) %
-              "log races in human readable format in this file") %
-          "data race reporting",
-      (clipp::option("--logfile", "-l") &
-       clipp::value("filename", params.logfile)) %
-          "write all logs to this file (can be null, stdout, stderr, or "
-          "filename)",
-      clipp::option("--extctrl").set(params.extctrl) %
-          "use second process for symbol lookup and state-controlling "
-          "(required for Dotnet)",
-      // for testing reasons only. Abort execution after the first race was
-      // detected
-      clipp::option("--brkonrace").set(params.break_on_race) %
-          "abort execution after first race is found (for testing purpose "
-          "only)",
-      clipp::option("--stats").set(params.stats_show) %
-          "display per-thread statistics on thread-exit",
-      (clipp::option("--version")([]() {
-         dr_printf(
-             "DRace, a dynamic data race detector\nVersion: %s\nHash: %s\n",
-             DRACE_BUILD_VERSION, DRACE_BUILD_HASH);
-         dr_abort();
-       }) %
-       "display version information"),
-      clipp::option("-h", "--usage").set(display_help) % "display help");
-  auto detector_cli = clipp::group(
-      // we just name the options here to provide a well-defined cli.
-      // The detector parses the argv itself
-      clipp::option("--heap-only") %
-      "only analyze heap memory (not supported currently)");
-  auto cli =
-      ((drace_cli % "DRace Options"), (detector_cli % ("Detector Options")));
-
-  if (!clipp::parse(argc, const_cast<char **>(argv), cli) || display_help) {
-    std::stringstream out;
-    out << clipp::make_man_page(cli, util::basename(argv[0])) << std::endl;
-    std::string outstr = out.str();
-    // dr_fprintf does not print anything if input buffer
-    // is too large hence, chunk it
-    const auto chunks = util::split(outstr, "\n");
-    for (const auto &chunk : chunks) {
-      dr_write_file(STDERR, chunk.c_str(), chunk.size());
-      dr_write_file(STDERR, "\n", 1);
-    }
-    dr_abort();
-  }
-
-  // setup logging target
-  drace::log_file =
-      std::make_shared<DrFile>(params.logfile, DR_FILE_WRITE_OVERWRITE);
-  if (log_file->good()) {
-    drace::log_target = log_file->get();
-  }
-}
-
-static void print_config() {
-  dr_fprintf(
-      drace::log_target,
-      "< Runtime Configuration:\n"
-      "< Race Detector:\t%s\n"
-      "< Sampling Rate:\t%i\n"
-      "< Instr. Rate:\t\t%i\n"
-      "< Lossy:\t\t%s\n"
-      "< Lossy-Flush:\t\t%s\n"
-      "< Exclude Traces:\t%s\n"
-      "< Exclude Stack:\t%s\n"
-      "< Exclude Master:\t%s\n"
-      "< Annotation Sup.:\t%s\n"
-      "< Delayed Sym Lookup:\t%s\n"
-      "< Config File:\t\t%s\n"
-      "< Output File:\t\t%s\n"
-      "< XML File:\t\t%s\n"
-      "< Stack-Size:\t\t%i\n"
-      "< External Ctrl:\t%s\n"
-      "< Log Target:\t\t%s\n"
-      "< Private Caches:\t%s\n",
-      params.detector.c_str(), params.sampling_rate, params.instr_rate,
-      params.lossy ? "ON" : "OFF", params.lossy_flush ? "ON" : "OFF",
-      params.excl_traces ? "ON" : "OFF", params.excl_stack ? "ON" : "OFF",
-      params.exclude_master ? "ON" : "OFF", params.annotations ? "ON" : "OFF",
-      params.delayed_sym_lookup ? "ON" : "OFF", params.config_file.c_str(),
-      params.out_file != "" ? params.out_file.c_str() : "OFF",
-#ifdef DRACE_XML_EXPORTER
-      params.xml_file != "" ? params.xml_file.c_str() : "OFF",
-#else
-      "Unsupported (build without XML exporter)",
-#endif
-      params.stack_size, params.extctrl ? "ON" : "OFF", params.logfile.c_str(),
-      dr_using_all_private_caches() ? "ON" : "OFF");
-}
-
 static void generate_summary() {
-  using namespace drace;
-
   // with delayed lookup we cannot stream, hence we write
   // the report here
   if (params.delayed_sym_lookup) {
@@ -436,5 +297,4 @@ static void generate_summary() {
 #endif
   }
 }
-
 }  // namespace drace

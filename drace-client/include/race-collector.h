@@ -10,25 +10,23 @@
  * SPDX-License-Identifier: MIT
  */
 #include <detector/Detector.h>
-#include <drmgr.h>
 
 #include "ipc/DrLock.h"
-#include "race-filter.h"
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
-#include "statistics.h"
-#include "symbol/Symbols.h"
 
-#include <atomic>
 #include <chrono>
-#include <iomanip>
-#include <iostream>
-#include <shared_mutex>
-#include <sstream>
+#include <memory>
+#include <mutex>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
 namespace drace {
+
+// forward-decls
+class RaceFilter;
+
 /**
  * \brief collects all detected races and manages symbol resolving
  *
@@ -40,6 +38,9 @@ class RaceCollector {
  public:
   /** Maximum number of races to collect in delayed mode */
   static constexpr int MAX = 200;
+
+ private:
+  static RaceCollector* _instance;
 
  private:
   using RaceCollectionT = std::vector<race::DecoratedRace>;
@@ -72,6 +73,7 @@ class RaceCollector {
 
   {
     _races.reserve(1);
+    _instance = this;
   }
 
   ~RaceCollector() {}
@@ -80,7 +82,7 @@ class RaceCollector {
    * register a sink that is notified on each race
    * \note not-threadsafe
    */
-  void register_sink(const std::shared_ptr<sink::Sink>& sink) {
+  inline void register_sink(const std::shared_ptr<sink::Sink>& sink) {
     _sinks.push_back(sink);
   }
 
@@ -88,59 +90,14 @@ class RaceCollector {
    *
    * \note threadsafe
    */
-  void add_race(const Detector::Race* r) {
-    if (num_races() > MAX) return;
-
-#ifdef WINDOWS
-    auto ttr = std::chrono::duration_cast<std::chrono::milliseconds>(
-        clock_t::now() - _start_time);
-#else
-    // \todo when running under DR, calling clock::now()
-    //       leads to a segfault
-    auto ttr = std::chrono::milliseconds(0);
-#endif
-
-    std::lock_guard<DrLock> lock(_races_lock);
-
-    if (!filter_duplicates(r) && !filter_excluded(r)) {
-      DR_ASSERT(r->first.stack_size > 0);
-      DR_ASSERT(r->second.stack_size > 0);
-
-      _races.emplace_back(*r, ttr);
-      if (!_delayed_lookup) {
-        resolve_race(_races.back());
-        if (_filter->check_suppress(_races.back())) {
-          return;
-        }
-      }
-      forward_race(_races.back());
-      // destroy race in streaming mode
-      if (!_delayed_lookup) {
-        _races.pop_back();
-      }
-      _race_count += 1;
-    }
-  }
+  void add_race(const Detector::Race* r);
 
   /**
    * Resolves all unresolved race entries
    *
    * \note threadsafe
    */
-  void resolve_all() {
-    std::lock_guard<DrLock> lock(_races_lock);
-
-    for (auto r = _races.begin(); r != _races.end();) {
-      resolve_race(*r);
-      if (_filter->check_suppress(*r)) {
-        _race_count -= 1;
-        r = _races.erase(
-            r);  // erase returns iterator to element after the erased one
-      } else {
-        r++;
-      }
-    }
-  }
+  void resolve_all();
 
   /**
    * In delayed mode, return data-races.
@@ -148,67 +105,42 @@ class RaceCollector {
    *
    * \note not-threadsafe
    */
-  const std::vector<race::DecoratedRace>& get_races() const { return _races; }
+  inline const std::vector<race::DecoratedRace>& get_races() const {
+    return _races;
+  }
 
   /**
    * return the number of observed races
    */
-  unsigned long num_races() const { return _race_count; }
+  inline unsigned long num_races() const { return _race_count; }
+
+  /**
+   * This function provides a callback to the RaceCollector::add_race
+   * on the singleton object. As we have to pass this callback to
+   * as a function pointer to c, we cannot use std::bind
+   */
+  static void race_collector_add_race(const Detector::Race* r);
 
  private:
   /**
    * Filter false-positive data-races
    * \return true if race is suppressed
    */
-  bool filter_excluded(const Detector::Race* r) {
-    DR_ASSERT(r != nullptr);
-    if (r->first.stack_size == 0 || r->second.stack_size == 0) return false;
-
-    // PC is null
-    if (r->first.stack_trace[r->first.stack_size - 1] == 0x0) return true;
-    if (r->second.stack_trace[r->second.stack_size - 1] == 0x0) return true;
-
-    return false;
-  }
+  bool filter_excluded(const Detector::Race* r);
 
   /**
    * suppress this race if similar race is already reported
    * \return true if race is suppressed
    * \note   not-threadsafe
    */
-  bool filter_duplicates(const Detector::Race* r) {
-    // TODO: add more precise control over suppressions
-    if (params.suppression_level == 0) return false;
-
-    uintptr_t hash = r->first.stack_trace[0] ^ (r->second.stack_trace[0] << 1);
-    if (_racy_stacks.count(hash) == 0) {
-      // suppress this race
-      _racy_stacks.insert(hash);
-      return false;
-    }
-    return true;
-  }
+  bool filter_duplicates(const Detector::Race* r);
 
   /** Takes a detector Access Entry, resolves symbols and converts it to a
    * ResolvedAccess */
-  void resolve_symbols(race::ResolvedAccess& ra) {
-    for (unsigned i = 0; i < ra.stack_size; ++i) {
-      ra.resolved_stack.emplace_back(
-          _syms->get_symbol_info((app_pc)ra.stack_trace[i]));
-    }
-
-#if 0
-            // TODO: possibly use this information to refine callstack
-            void* drcontext = dr_get_current_drcontext();
-            dr_mcontext_t mc;
-            mc.size = sizeof(dr_mcontext_t);
-            mc.flags = DR_MC_ALL;
-            dr_get_mcontext(drcontext, &mc);
-#endif
-  }
+  void resolve_symbols(race::ResolvedAccess& ra);
 
   /** resolve a single race */
-  void resolve_race(race::DecoratedRace& race) {
+  inline void resolve_race(race::DecoratedRace& race) {
     if (!race.is_resolved) {
       resolve_symbols(race.first);
       resolve_symbols(race.second);
@@ -227,22 +159,5 @@ class RaceCollector {
     }
   }
 };
-
-/**
- * This function provides a callback to the RaceCollector::add_race
- * on the singleton object. As we have to pass this callback to
- * as a function pointer to c, we cannot use std::bind
- */
-static void race_collector_add_race(const Detector::Race* r) {
-  race_collector->add_race(r);
-  // for benchmarking and testing
-  if (params.break_on_race) {
-    void* drcontext = dr_get_current_drcontext();
-    per_thread_t* data = (per_thread_t*)drmgr_get_tls_field(drcontext, tls_idx);
-    data->stats->print_summary(drace::log_target);
-    dr_flush_file(drace::log_target);
-    dr_abort();
-  }
-}
 
 }  // namespace drace
