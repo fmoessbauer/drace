@@ -15,8 +15,9 @@
 #define LOGLEVEL 3
 #endif
 
+#include "InstrumentationConfig.h"
+#include "RuntimeConfig.h"
 #include "aligned-buffer.h"
-#include "config.h"
 #include "shadow-stack.h"
 
 #include <atomic>
@@ -48,36 +49,9 @@ class Detector;
 /// DRace instrumentation framework
 namespace drace {
 
-/// Runtime parameters
-struct params_t {
-  unsigned sampling_rate{1};
-  unsigned instr_rate{1};
-  bool lossy{false};
-  bool lossy_flush{false};
-  bool excl_traces{false};
-  bool excl_stack{false};
-  bool exclude_master{false};
-  bool delayed_sym_lookup{false};
-  /// search for annotations in modules of target application
-  bool annotations{true};
-  unsigned suppression_level{1};
-  /** Use external controller */
-  bool extctrl{false};
-  bool break_on_race{false};
-  bool stats_show{false};
-  unsigned stack_size{31};
-  std::string config_file{"drace.ini"};
-  std::string out_file;
-  std::string xml_file;
-  std::string logfile{"stderr"};
-  std::string detector{"tsan"};
-  std::string filter_file{"race_suppressions.txt"};
-
-  // Raw arguments
-  int argc;
-  const char** argv;
-};
-extern params_t params;
+// Global Configuration
+extern InstrumentationConfig config;
+extern RuntimeConfig params;
 
 class Statistics;
 
@@ -142,9 +116,6 @@ extern std::unique_ptr<module::Tracker> module_tracker;
 
 class MemoryTracker;
 extern std::unique_ptr<MemoryTracker> memory_tracker;
-
-// Global Configuration
-extern drace::Config config;
 
 // Detector instance
 extern std::unique_ptr<Detector> detector;

@@ -11,8 +11,10 @@
 
 #include "globals.h"
 #include "Module.h"
+#include "RuntimeConfig.h"
 #include "memory-tracker.h"
 #include "symbols.h"
+
 #if WIN32
 #include "ipc/MtSyncSHMDriver.h"
 #include "ipc/SharedMemory.h"
@@ -22,8 +24,10 @@
 
 namespace drace {
 
-// Global Config Object
-drace::Config config;
+/// File-based configuration
+InstrumentationConfig config;
+/// Runtime / CLI configuration
+RuntimeConfig params;
 
 std::atomic<uint> runtime_tid{0};
 
@@ -34,9 +38,6 @@ std::unique_ptr<module::Tracker> module_tracker;
 std::unique_ptr<ipc::MtSyncSHMDriver<true, true>> shmdriver;
 std::unique_ptr<ipc::SharedMemory<ipc::ClientCB, true>> extcb;
 #endif
-
-/* Runtime parameters */
-params_t params;
 
 std::unique_ptr<Detector> detector;
 

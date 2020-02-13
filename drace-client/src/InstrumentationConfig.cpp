@@ -9,8 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "config.h"
-#include <dr_api.h>
+#include "InstrumentationConfig.h"
 #include "util.h"
 
 #include <memory>
@@ -18,15 +17,17 @@
 #include <vector>
 
 #include <INIReader.h>
+#include <dr_api.h>
 
 namespace drace {
 /// Handles dynamic config information from configuration file
-Config::Config(const std::string& filename)
+InstrumentationConfig::InstrumentationConfig(const std::string& filename)
     : _reader(std::make_unique<INIReader>(filename)) {
   _sections = _reader->Sections();
 }
 
-bool Config::loadfile(const std::string& filename, const std::string& hint) {
+bool InstrumentationConfig::loadfile(const std::string& filename,
+                                     const std::string& hint) {
   std::string filepath = filename;
 
   for (int i = 0; i < 2; ++i) {
@@ -52,12 +53,14 @@ bool Config::loadfile(const std::string& filename, const std::string& hint) {
   return true;
 }
 
-void Config::set(const std::string& key, const std::string& val) {
+void InstrumentationConfig::set(const std::string& key,
+                                const std::string& val) {
   _kvstore[key] = val;
 }
 
-std::string Config::get(const std::string& section, const std::string& key,
-                        const std::string& def_val) const {
+std::string InstrumentationConfig::get(const std::string& section,
+                                       const std::string& key,
+                                       const std::string& def_val) const {
   if (_kvstore.count(key) > 0) {
     return _kvstore.at(key);
   }
@@ -65,8 +68,8 @@ std::string Config::get(const std::string& section, const std::string& key,
 }
 
 /// returns multiline ini-items as a vector
-std::vector<std::string> Config::get_multi(const std::string& section,
-                                           const std::string& key) const {
+std::vector<std::string> InstrumentationConfig::get_multi(
+    const std::string& section, const std::string& key) const {
   const auto& val = _reader->Get(section, key, "");
   if (val == "") {
     return std::vector<std::string>();

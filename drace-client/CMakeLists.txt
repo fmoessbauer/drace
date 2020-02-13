@@ -12,7 +12,8 @@ set(SOURCES
     "src/symbol/Symbols"
     "src/symbol/SymbolLocation"
     "src/util"
-    "src/config"
+    "src/InstrumentationConfig"
+    "src/RuntimeConfig"
     "src/race-filter"
     "src/race-collector")
 if(WIN32)
