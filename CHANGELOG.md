@@ -1,3 +1,27 @@
+#### 1.6.1 (2020-03-26)
+
+##### Chores
+
+*  fix install location of drace config files ([ba1ab105](https://github.com/siemens/drace/commit/ba1ab1053a366684cce19e3b06fb25b3def05a93))
+
+##### Refactors
+
+*  minor changes to improve code readability ([a593bc82](https://github.com/siemens/drace/commit/a593bc82dba2ecd8049deb96944dfcd868afe967))
+*  use wrapper around TLS ([d25e8ee0](https://github.com/siemens/drace/commit/d25e8ee0a2a4fdfb7ded3bf5605b01d08e7a65cf))
+*  flatten ShadowThreadState ([e5864985](https://github.com/siemens/drace/commit/e586498502eb23091e7dc05c79d302c355112ec1))
+*  cleanup global variables ([b9a6683a](https://github.com/siemens/drace/commit/b9a6683a92712de0d99fb0c01d7c42d249d83050))
+*  carve out ShadowThreadState ([706c8d00](https://github.com/siemens/drace/commit/706c8d00e4f1ec5d15809a19071069cadf2de69c))
+*  move memory limit specs to memory-tracker ([7c24e896](https://github.com/siemens/drace/commit/7c24e896b2d93753ae7f12c57f20ab74b36726bb))
+*  carve out configuration modules ([16b23ab6](https://github.com/siemens/drace/commit/16b23ab6fd75d79cb714ef9d6dd9a8beed0e87cf))
+*  move resp of tls to memory-tracker ([ec4bbd2d](https://github.com/siemens/drace/commit/ec4bbd2dfae986c2758af28e157110a3d81994fe))
+*  further reduce globals ([8ec96366](https://github.com/siemens/drace/commit/8ec9636652fd66ac055f9e34094bb39b4c768c1c))
+*  carve out global variables into dedicated components ([b0299798](https://github.com/siemens/drace/commit/b02997988be5aa582e96625eee33ab3783aba71c))
+* **linux:**  add missing memory header ([5e91f341](https://github.com/siemens/drace/commit/5e91f341484aae6b8db00ef1760b9415dfd78eb7))
+
+##### Code Style Changes
+
+*  clang-format of every C or C++ source file (*.hpp, *.h, *.cpp) ([e1bbd482](https://github.com/siemens/drace/commit/e1bbd482130273c43f2839c066ecaab9e8cde388))
+
 #### 1.6.0 (2020-02-05)
 
 ##### Chores
