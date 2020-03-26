@@ -86,7 +86,7 @@ add_custom_target("drace-copy-config" ALL
 install(FILES
     "${PROJECT_SOURCE_DIR}/drace.ini"
     "${PROJECT_SOURCE_DIR}/race_suppressions.txt"
-    DESTINATION "$<TARGET_FILE_DIR:drace-client>")
+    DESTINATION "${DRACE_RUNTIME_DEST}")
 
 install(TARGETS "drace-client"
     RUNTIME DESTINATION ${DRACE_RUNTIME_DEST} COMPONENT RUNTIME
