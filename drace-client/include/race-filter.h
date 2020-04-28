@@ -17,7 +17,7 @@
 #include <race/DecoratedRace.h>
 #include <chrono>
 #include <iostream>
-#include <set>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -29,11 +29,12 @@ namespace drace {
 class RaceFilter {
   std::vector<std::string> rtos_list;  // race top of stack
   std::vector<std::string> race_list;
-  std::set<uint64_t> addr_list;
+  std::map<uint64_t, unsigned, std::greater<uint64_t>> addr_list;
   void normalize_string(std::string &expr);
 
   bool check_race(const drace::race::DecoratedRace &race) const;
   bool check_rtos(const drace::race::DecoratedRace &race) const;
+  bool addr_is_suppressed(uint64_t addr) const;
   void init(std::istream &content);
 
  public:
@@ -50,8 +51,15 @@ class RaceFilter {
   /// print a list of suppression criteria
   void print_list() const;
 
-  /// add an address to the suppression list
-  void suppress_addr(uint64_t addr);
+  /**
+   * \brief add an address to the suppression list
+   *
+   * The address is rounded down to an 8-byte boundary,
+   * the size is rounded up to an 8-byte boundary.
+   *
+   * \todo use interval trees and exact addresses
+   */
+  void suppress_addr(uint64_t addr, unsigned size = 8);
 };
 
 }  // namespace drace

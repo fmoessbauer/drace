@@ -151,7 +151,7 @@ TEST(FilterTest, In_Stack_Race) {
 }
 
 // in stack race suprression
-TEST(FilterTest, SuppressedAddr) {
+TEST(FilterTest, SuppAddrPrecise) {
   constexpr uint64_t addr = 0x42;
   std::chrono::milliseconds time(100);
   Detector::Race r1;
@@ -172,6 +172,32 @@ TEST(FilterTest, SuppressedAddr) {
 
   RaceFilter filter;
   filter.suppress_addr(0x42);
+  EXPECT_TRUE(filter.check_suppress(d1));
+  EXPECT_TRUE(filter.check_suppress(d2));
+  EXPECT_FALSE(filter.check_suppress(d3));
+}
+
+// in stack race suprression
+TEST(FilterTest, SuppAddrRange) {
+  std::chrono::milliseconds time(100);
+  Detector::Race r1;
+  r1.first.accessed_memory = 42;
+  r1.second.accessed_memory = 21;
+
+  Detector::Race r2;
+  r2.first.accessed_memory = 0xc0c0;
+  r2.second.accessed_memory = 59;
+
+  Detector::Race r3;
+  r3.first.accessed_memory = 0xc0c0;
+  r3.second.accessed_memory = 60;
+
+  drace::race::DecoratedRace d1(r1, time);
+  drace::race::DecoratedRace d2(r2, time);
+  drace::race::DecoratedRace d3(r3, time);
+
+  RaceFilter filter;
+  filter.suppress_addr(40, 20);
   EXPECT_TRUE(filter.check_suppress(d1));
   EXPECT_TRUE(filter.check_suppress(d2));
   EXPECT_FALSE(filter.check_suppress(d3));

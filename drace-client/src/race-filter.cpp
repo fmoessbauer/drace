@@ -134,13 +134,24 @@ bool RaceFilter::check_rtos(const drace::race::DecoratedRace& race) const {
   return false;
 }
 
+bool RaceFilter::addr_is_suppressed(uint64_t addr) const {
+  auto it = addr_list.lower_bound(addr);
+  if (it == addr_list.end()) {
+    return false;
+  }
+  if (addr < (it->first + it->second)) {
+    return true;
+  }
+  return false;
+}
+
 bool RaceFilter::check_race(const drace::race::DecoratedRace& race) const {
   // get the top stack elements
   auto stack1 = race.first.resolved_stack;
   auto stack2 = race.second.resolved_stack;
 
-  if (addr_list.count(race.first.accessed_memory) ||
-      addr_list.count(race.second.accessed_memory)) {
+  if (addr_is_suppressed(race.first.accessed_memory) ||
+      addr_is_suppressed(race.second.accessed_memory)) {
     // memory addr is excluded
     return true;
   }
@@ -164,7 +175,10 @@ bool RaceFilter::check_race(const drace::race::DecoratedRace& race) const {
   return false;
 }
 
-void RaceFilter::suppress_addr(uint64_t addr) { addr_list.emplace(addr); }
+void RaceFilter::suppress_addr(uint64_t addr, unsigned size) {
+  // round down, round up
+  addr_list.emplace(addr, size);
+}
 
 void RaceFilter::print_list() const {
   std::cout << "Suppressed TOS functions: " << std::endl;
@@ -177,7 +191,7 @@ void RaceFilter::print_list() const {
   }
   std::cout << "Suppressed addresses: " << std::endl;
   for (const auto& addr : addr_list) {
-    std::cout << addr << std::endl;
+    std::cout << (addr.first << 3) << std::endl;
   }
 }
 }  // namespace drace

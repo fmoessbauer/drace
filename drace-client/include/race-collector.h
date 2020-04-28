@@ -12,6 +12,7 @@
 #include <detector/Detector.h>
 
 #include "ipc/DrLock.h"
+#include "race-filter.h"
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
 
@@ -28,7 +29,7 @@ namespace drace {
 class RaceFilter;
 
 /**
- * \brief collects all detected races and manages symbol resolving
+ * \brief Singleton to collect all detected races and to manage symbol resolving
  *
  * Note for developers: Be very cautious with concurrency in this class.
  * Locking has to be avoided if possible, as this might interfere with
@@ -115,6 +116,11 @@ class RaceCollector {
   inline unsigned long num_races() const { return _race_count; }
 
   /**
+   * get a reference to the filtering object
+   */
+  inline RaceFilter& get_racefilter() { return *_filter; }
+
+  /**
    * This function provides a callback to the RaceCollector::add_race
    * on the singleton object. As we have to pass this callback to
    * as a function pointer to c, we cannot use std::bind
@@ -122,9 +128,9 @@ class RaceCollector {
   static void race_collector_add_race(const Detector::Race* r);
 
   /**
-   * get a reference to the filtering object
+   * \brief get instance to this singleton
    */
-  inline RaceFilter& get_racefilter() { return *_filter; }
+  inline static RaceCollector& get_instance() { return *_instance; }
 
  private:
   /**
