@@ -22,10 +22,11 @@
 #include "util.h"
 #endif
 
-drace::RaceFilter::RaceFilter(std::istream& content) { init(content); }
+namespace drace {
 
-drace::RaceFilter::RaceFilter(const std::string& filename,
-                              const std::string& hint) {
+RaceFilter::RaceFilter(std::istream& content) { init(content); }
+
+RaceFilter::RaceFilter(const std::string& filename, const std::string& hint) {
   std::ifstream f;
   f.open(filename);
   if (f.good()) {
@@ -52,7 +53,7 @@ drace::RaceFilter::RaceFilter(const std::string& filename,
   f.close();
 }
 
-void drace::RaceFilter::init(std::istream& content) {
+void RaceFilter::init(std::istream& content) {
   std::string entry;
   while (std::getline(content, entry)) {
     // omit lines which start with a '#' -> comments
@@ -78,7 +79,7 @@ void drace::RaceFilter::init(std::istream& content) {
   }
 }
 
-void drace::RaceFilter::normalize_string(std::string& expr) {
+void RaceFilter::normalize_string(std::string& expr) {
   size_t pos = 0;
 
   // make tsan wildcard * to regex wildcard .*
@@ -107,14 +108,18 @@ void drace::RaceFilter::normalize_string(std::string& expr) {
   }
 }
 
-bool drace::RaceFilter::check_suppress(const drace::race::DecoratedRace& race) {
+bool RaceFilter::check_suppress(const drace::race::DecoratedRace& race) const {
   if (check_race(race) || check_rtos(race)) {
     return true;
   }
   return false;  // not in list -> do not suppress
 }
 
-bool drace::RaceFilter::check_rtos(const drace::race::DecoratedRace& race) {
+bool RaceFilter::check_rtos(const drace::race::DecoratedRace& race) const {
+  if (!race.first.stack_size || !race.second.stack_size) {
+    // no callstacks
+    return false;
+  }
   // get the top stack elements
   const std::string& top1_sym = race.first.resolved_stack.back().sym_name;
   const std::string& top2_sym = race.second.resolved_stack.back().sym_name;
@@ -129,11 +134,16 @@ bool drace::RaceFilter::check_rtos(const drace::race::DecoratedRace& race) {
   return false;
 }
 
-bool drace::RaceFilter::check_race(const drace::race::DecoratedRace& race) {
+bool RaceFilter::check_race(const drace::race::DecoratedRace& race) const {
   // get the top stack elements
   auto stack1 = race.first.resolved_stack;
   auto stack2 = race.second.resolved_stack;
 
+  if (addr_list.count(race.first.accessed_memory) ||
+      addr_list.count(race.second.accessed_memory)) {
+    // memory addr is excluded
+    return true;
+  }
   for (auto it = race_list.begin(); it != race_list.end(); ++it) {
     std::regex expr(*it);
     std::smatch m;
@@ -154,7 +164,9 @@ bool drace::RaceFilter::check_race(const drace::race::DecoratedRace& race) {
   return false;
 }
 
-void drace::RaceFilter::print_list() {
+void RaceFilter::suppress_addr(uint64_t addr) { addr_list.emplace(addr); }
+
+void RaceFilter::print_list() const {
   std::cout << "Suppressed TOS functions: " << std::endl;
   for (auto it = rtos_list.begin(); it != rtos_list.end(); ++it) {
     std::cout << *it << std::endl;
@@ -163,4 +175,9 @@ void drace::RaceFilter::print_list() {
   for (auto it = race_list.begin(); it != race_list.end(); ++it) {
     std::cout << *it << std::endl;
   }
+  std::cout << "Suppressed addresses: " << std::endl;
+  for (const auto& addr : addr_list) {
+    std::cout << addr << std::endl;
+  }
 }
+}  // namespace drace

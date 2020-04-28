@@ -121,6 +121,11 @@ class RaceCollector {
    */
   static void race_collector_add_race(const Detector::Race* r);
 
+  /**
+   * get a reference to the filtering object
+   */
+  inline RaceFilter& get_racefilter() { return *_filter; }
+
  private:
   /**
    * Filter false-positive data-races
