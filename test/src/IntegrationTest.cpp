@@ -52,7 +52,7 @@ TEST_P(DR, Atomics) { run(GetParam(), "gp-atomics", 0, 0); }
 //}
 TEST_P(DR, Annotations) { run(GetParam(), "gp-annotations", 0, 0); }
 TEST_P(DR, DisabledAnnotations) {
-  run(GetParam(), "gp-annotations-racy", 1, 10);
+  run(GetParam(), "gp-annotations-racy", 1, 20);
 }
 
 // Individual tests
@@ -135,7 +135,7 @@ TEST_P(DR, ReportXML) {
     ASSERT_TRUE(frame);
     const auto* offset = frame->FirstChildElement("offset");
     ASSERT_TRUE(offset);
-    EXPECT_EQ(offset->UnsignedText(), 0u);
+    EXPECT_LE(offset->UnsignedText(), 20u);
   }
   std::remove(filename.c_str());
 }
