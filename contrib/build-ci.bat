@@ -7,6 +7,7 @@ echo "=== Build drace-TSAN DR 7.91.x ==="
 cd build-dr791
 cmake --build . || goto :error
 cmake --build . --target install || goto :error
+cmake --build . --target doc || goto :error
 cd ..
 goto :EOF
 
