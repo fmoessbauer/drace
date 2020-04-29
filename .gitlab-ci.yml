@@ -157,7 +157,7 @@ linux_i386:cmake:
   artifacts:
     paths:
     - build32
-    
+
 ### Compile ###
 
 windows_x64:compile:
@@ -180,11 +180,9 @@ linux_x64:compile:
   stage: build
   tags:
    - DOCKER
-  image: ubuntu:18.04
+  image: docker.siemens.com/multicore/drace:buildamd64-ci
   script:
   - echo "Release build..."
-  - apt-get update -y
-  - apt-get install -y libboost-filesystem-dev git cmake gcc g++
   - sh ./contrib/compile_x64-linux.sh
   cache:
     key: dynamorio-cache-x64
@@ -203,12 +201,9 @@ linux_i386:compile:
   stage: build
   tags:
    - DOCKER
-  image: ubuntu:18.04
+  image: docker.siemens.com/multicore/drace:buildi386-ci
   script:
   - echo "Release build..."
-  - dpkg --add-architecture i386
-  - apt-get update -y
-  - apt-get install -y git cmake gcc g++ gcc-multilib g++-multilib libboost-filesystem-dev:i386
   - sh ./contrib/compile_i386-linux.sh
   cache:
     key: dynamorio-cache-i386
