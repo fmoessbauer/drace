@@ -307,3 +307,16 @@ windows_x64:bundle:
   artifacts:
     paths:
     - build-dr791/package
+
+pages:
+  stage: package
+  variables:
+    GIT_STRATEGY: "none"
+  needs: ["windows_x64:compile"]
+  script:
+    - mv build-dr791/doc/html/ public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
