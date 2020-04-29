@@ -25,8 +25,8 @@ namespace detector {
 class Printer : public Detector {
  public:
   virtual bool init(int argc, const char** argv, Callback rc_clb) {
-    return true;
     printf("init\n");
+    return true;
   }
 
   virtual void finalize() { printf("%p | finalize       |\n", nullptr); }
