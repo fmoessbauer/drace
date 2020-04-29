@@ -137,8 +137,10 @@ void event::dotnet_leave(void *wrapctx, void *user_data) {}
 
 void event::suppr_addr(void *wrapctx, void **user_data) {
   void *addr = drwrap_get_arg(wrapctx, 0);
-  RaceCollector::get_instance().get_racefilter().suppress_addr(
-      util::unsafe_ptr_cast<uint64_t>(addr));
+  auto &rc_inst = RaceCollector::get_instance();
+
+  std::lock_guard<RaceCollector::MutexT> lg(rc_inst.get_mutex());
+  rc_inst.get_racefilter().suppress_addr(util::unsafe_ptr_cast<uint64_t>(addr));
 }
 
 // --------------------------------------------------------------------------------------

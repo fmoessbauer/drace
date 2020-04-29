@@ -37,8 +37,10 @@ class RaceFilter;
  */
 class RaceCollector {
  public:
-  /** Maximum number of races to collect in delayed mode */
+  /// Maximum number of races to collect in delayed mode
   static constexpr int MAX = 200;
+  /// Exact type of mutex (implements \ref std::mutex interface)
+  using MutexT = DrLock;
 
  private:
   static RaceCollector* _instance;
@@ -51,7 +53,7 @@ class RaceCollector {
 
   RaceCollectionT _races;
   /// guards all accesses to the _races container
-  DrLock _races_lock;
+  MutexT _races_lock;
   unsigned long _race_count{0};
 
   bool _delayed_lookup{false};
@@ -131,6 +133,11 @@ class RaceCollector {
    * \brief get instance to this singleton
    */
   inline static RaceCollector& get_instance() { return *_instance; }
+
+  /**
+   * \brief get race-collector mutex
+   */
+  inline MutexT& get_mutex() { return _races_lock; }
 
  private:
   /**

@@ -25,6 +25,12 @@ namespace drace {
 
 /**
  * \brief Filter data-races based on various criteria
+ *
+ * The class itself is not threadsafe. When using in combination with the \ref
+ * RaceCollector, make sure to synchronize calls to non const data structures
+ * using the RaceCollector mutex.
+ *
+ * \see RaceCollector::get_mutex()
  */
 class RaceFilter {
   std::vector<std::string> rtos_list;  // race top of stack
@@ -32,9 +38,27 @@ class RaceFilter {
   std::map<uint64_t, unsigned, std::greater<uint64_t>> addr_list;
   void normalize_string(std::string &expr);
 
+  /**
+   * \brief check if the race contains symbols which are suppressed
+   * \return true if suppressed
+   * \note threadsafe
+   */
   bool check_race(const drace::race::DecoratedRace &race) const;
+
+  /**
+   * \brief check if the top-of-stack symbol is suppressed
+   * \return true if suppressed
+   * \note threadsafe
+   */
   bool check_rtos(const drace::race::DecoratedRace &race) const;
+
+  /**
+   * \brief check if the racy memory-location is suppressed
+   * \return true if suppressed
+   * \note not-threadsafe
+   */
   bool addr_is_suppressed(uint64_t addr) const;
+
   void init(std::istream &content);
 
  public:
@@ -46,20 +70,26 @@ class RaceFilter {
   /// constructor which takes a filename and path
   RaceFilter(const std::string &filename, const std::string &hint = {});
 
-  /// return true if race should be suppressed
+  /**
+   * \brief return true if race should be suppressed
+   *
+   * \note not-threadsafe
+   */
   bool check_suppress(const drace::race::DecoratedRace &race) const;
+
   /// print a list of suppression criteria
   void print_list() const;
 
   /**
    * \brief add an address to the suppression list
    *
-   * The address is rounded down to an 8-byte boundary,
-   * the size is rounded up to an 8-byte boundary.
+   * \note not-threadsafe
    *
    * \todo use interval trees and exact addresses
    */
-  void suppress_addr(uint64_t addr, unsigned size = 8);
+  void suppress_addr(uint64_t addr,
+                     /// size in bytes
+                     unsigned size = 8);
 };
 
 }  // namespace drace
