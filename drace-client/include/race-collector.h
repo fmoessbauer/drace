@@ -12,6 +12,7 @@
 #include <detector/Detector.h>
 
 #include "ipc/DrLock.h"
+#include "race-filter.h"
 #include "race/DecoratedRace.h"
 #include "sink/sink.h"
 
@@ -28,7 +29,7 @@ namespace drace {
 class RaceFilter;
 
 /**
- * \brief collects all detected races and manages symbol resolving
+ * \brief Singleton to collect all detected races and to manage symbol resolving
  *
  * Note for developers: Be very cautious with concurrency in this class.
  * Locking has to be avoided if possible, as this might interfere with
@@ -36,8 +37,10 @@ class RaceFilter;
  */
 class RaceCollector {
  public:
-  /** Maximum number of races to collect in delayed mode */
+  /// Maximum number of races to collect in delayed mode
   static constexpr int MAX = 200;
+  /// Exact type of mutex (implements \ref std::mutex interface)
+  using MutexT = DrLock;
 
  private:
   static RaceCollector* _instance;
@@ -50,7 +53,7 @@ class RaceCollector {
 
   RaceCollectionT _races;
   /// guards all accesses to the _races container
-  DrLock _races_lock;
+  MutexT _races_lock;
   unsigned long _race_count{0};
 
   bool _delayed_lookup{false};
@@ -115,11 +118,26 @@ class RaceCollector {
   inline unsigned long num_races() const { return _race_count; }
 
   /**
+   * get a reference to the filtering object
+   */
+  inline RaceFilter& get_racefilter() { return *_filter; }
+
+  /**
    * This function provides a callback to the RaceCollector::add_race
    * on the singleton object. As we have to pass this callback to
    * as a function pointer to c, we cannot use std::bind
    */
   static void race_collector_add_race(const Detector::Race* r);
+
+  /**
+   * \brief get instance to this singleton
+   */
+  inline static RaceCollector& get_instance() { return *_instance; }
+
+  /**
+   * \brief get race-collector mutex
+   */
+  inline MutexT& get_mutex() { return _races_lock; }
 
  private:
   /**

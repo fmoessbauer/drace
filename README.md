@@ -105,6 +105,7 @@ DRace is shipped with the following detector backends:
 - tsan (internal ThreadSanitizer)
 - fasttrack (note: experimental)
 - dummy (no detection at all)
+- printer (print all calls to the detector)
 
 #### tsan
 

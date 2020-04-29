@@ -33,7 +33,7 @@ namespace ipc {
  * \note this spinlock is cache-coherence friendly and
  *       has optimizations for hyper-threading CPUs
  */
-class spinlock : public std::mutex {
+class spinlock {
   std::atomic<bool> _locked{false};
 
  public:
