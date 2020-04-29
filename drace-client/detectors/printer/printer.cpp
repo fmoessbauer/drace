@@ -14,15 +14,15 @@
 #include <detector/Detector.h>
 
 #ifdef WINDOWS
-#define DUMMY_EXPORT __declspec(dllexport)
+#define PRINTER_EXPORT __declspec(dllexport)
 #else
-#define DUMMY_EXPORT
+#define PRINTER_EXPORT
 #endif
 
 namespace drace {
 namespace detector {
 /// Fake detector that stubs the \ref Detector interface
-class Dummy : public Detector {
+class Printer : public Detector {
  public:
   virtual bool init(int argc, const char** argv, Callback rc_clb) {
     return true;
@@ -108,6 +108,6 @@ class Dummy : public Detector {
 }  // namespace detector
 }  // namespace drace
 
-extern "C" DUMMY_EXPORT Detector* CreateDetector() {
-  return new drace::detector::Dummy();
+extern "C" PRINTER_EXPORT Detector* CreateDetector() {
+  return new drace::detector::Printer();
 }
