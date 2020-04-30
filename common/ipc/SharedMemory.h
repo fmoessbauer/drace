@@ -72,9 +72,10 @@ class SharedMemory {
       _event_in = CreateEvent(NULL, false, false, (evtname + "-in").c_str());
       _event_out = CreateEvent(NULL, false, false, (evtname + "-out").c_str());
     } else {
-      _event_in = OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-in").c_str());
-      _event_out =
-          OpenEvent(EVENT_ALL_ACCESS, false, (evtname + "-out").c_str());
+      _event_in = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE, false,
+                            (evtname + "-in").c_str());
+      _event_out = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE, false,
+                             (evtname + "-out").c_str());
     }
     if (_event_in == NULL || _event_out == NULL) {
       if (nothrow) return;
