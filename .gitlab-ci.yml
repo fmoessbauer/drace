@@ -11,17 +11,17 @@
 variables:
   PROJECT_NAME: "DRace"
   GIT_SUBMODULE_STRATEGY: "normal"
-  DRRUN_EXE: "C:\\opt\\DynamoRIO-Windows-7.91.18219-0\\bin64\\drrun.exe"
+  DR_VERSION: "7.91.18369"
   _NT_SYMBOL_PATH: "SRV*c:\\symbolcache\\*https://msdl.microsoft.com/download/symbols"
   http_proxy: $CODE_PROXY
   https_proxy: $CODE_PROXY
   no_proxy: code.siemens.com,docker.siemens.com,devops.bt.siemens.com
 
 stages:
-  - inspect
-  - build
-  - test
-  - package
+- inspect
+- build
+- test
+- package
 
 ### non architecture dependent tasks ###
 cppcheck:
@@ -86,13 +86,13 @@ linux_x64:compile:
   image: docker.siemens.com/multicore/drace:buildamd64-ci
   script:
   - echo "Release build..."
-  - if [ ! -d "DynamoRIO-x86_64-Linux-7.91.18271-0" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-7.91.18271/DynamoRIO-x86_64-Linux-7.91.18271-0.tar.gz; fi
-  - if [ ! -d "DynamoRIO-x86_64-Linux-7.91.18271-0" ]; then tar -xf DynamoRIO-x86_64-Linux-7.91.18271-0.tar.gz; fi
+  - if [ ! -d "DynamoRIO-Linux-${DR_VERSION}" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-${DR_VERSION}/DynamoRIO-Linux-${DR_VERSION}.tar.gz; fi
+  - if [ ! -d "DynamoRIO-Linux-${DR_VERSION}" ]; then tar -xf DynamoRIO-Linux-${DR_VERSION}.tar.gz; fi
   - sh ./contrib/compile-linux-x64.sh
   cache:
-    key: dynamorio-cache-x64
+    key: dynamorio-cache-linux
     paths:
-      - ./DynamoRIO-x86_64-Linux-7.91.18271-0
+    - ./DynamoRIO-Linux-${DR_VERSION}
   artifacts:
     paths:
     - build64
@@ -105,13 +105,13 @@ linux_i386:compile:
   image: docker.siemens.com/multicore/drace:buildi386-ci
   script:
   - echo "Release build..."
-  - if [ ! -d "DynamoRIO-i386-Linux-7.91.18271-0" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-7.91.18271/DynamoRIO-i386-Linux-7.91.18271-0.tar.gz; fi
-  - if [ ! -d "DynamoRIO-i386-Linux-7.91.18271-0" ]; then tar -xfDynamoRIO-i386-Linux-7.91.18271-0.tar.gz; fi
+  - if [ ! -d "DynamoRIO-Linux-${DR_VERSION}" ]; then wget https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-${DR_VERSION}/DynamoRIO-Linux-${DR_VERSION}.tar.gz; fi
+  - if [ ! -d "DynamoRIO-Linux-${DR_VERSION}" ]; then tar -xfDynamoRIO-Linux-${DR_VERSION}.tar.gz; fi
   - sh ./contrib/compile-linux-i386.sh
   cache:
-    key: dynamorio-cache-i386
+    key: dynamorio-cache-linux
     paths:
-      - ./DynamoRIO-i386-Linux-7.91.18271-0
+    - ./DynamoRIO-Linux-${DR_VERSION}
   artifacts:
     paths:
     - build32
@@ -130,8 +130,8 @@ windows_x64:test:
   - ./bin/drace-system-tests.exe --gtest_output="xml:test-system-results.xml" --gtest_filter="*/0"
   artifacts:
     paths:
-      - build-dr791/test-system-results.xml
-      - build-dr791/Testing/**/Test.xml
+    - build-dr791/test-system-results.xml
+    - build-dr791/Testing/**/Test.xml
     reports:
       junit:
       - build-dr791/test-system-results.xml
@@ -193,7 +193,9 @@ windows_x64:bundle:
   - echo "Generate Changelog"
   - npx generate-changelog
   - Copy-Item "CHANGELOG.md" -Destination "build-dr791/package/doc/"
-  needs: ["windows_x64:compile"]
+  dependencies:
+  - windows_x64:compile
+  - windows_x64:test
   artifacts:
     paths:
     - build-dr791/package
@@ -202,11 +204,13 @@ pages:
   stage: package
   variables:
     GIT_STRATEGY: "none"
-  needs: ["windows_x64:compile"]
+  dependencies:
+  - windows_x64:compile
+  - windows_x64:test
   script:
-    - mv build-dr791/doc/html/ public/
+  - mv build-dr791/doc/html/ public/
   artifacts:
     paths:
-      - public
+    - public
   only:
-    - master
+  - master

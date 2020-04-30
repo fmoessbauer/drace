@@ -1,5 +1,5 @@
 root=$(pwd)
-dynamorio32=${root}"/DynamoRIO-i386-Linux-7.91.18271-0/cmake"
+dynamorio32=${root}"/DynamoRIO-Linux-${DR_VERSION}/cmake"
 
 mkdir build32
 cd build32
