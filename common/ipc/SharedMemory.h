@@ -65,7 +65,7 @@ class SharedMemory {
     }
 
     // Create Event for notification
-    std::string evtname("Global\\");
+    std::string evtname("Local\\");
     evtname += name;
 
     if (_creator) {
