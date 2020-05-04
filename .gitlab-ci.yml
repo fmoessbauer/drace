@@ -187,12 +187,16 @@ linux_i386:test:
 windows_x64:bundle:
   <<: *globals
   stage: package
+  tags:
+   - DOCKER
+  # for packaging, we just need NPM, hence run in linux container
+  image: docker.siemens.com/multicore/drace:buildamd64-ci
   script:
-  - Copy-Item "contrib/package.json" -Destination "."
-  - Copy-Item "contrib/package-lock.json" -Destination "."
+  - cp "contrib/package.json" "."
+  - cp "contrib/package-lock.json" "."
   - echo "Generate Changelog"
   - npx generate-changelog
-  - Copy-Item "CHANGELOG.md" -Destination "build-dr791/package/doc/"
+  - cp "CHANGELOG.md" "build-dr791/package/doc/"
   dependencies:
   - windows_x64:compile
   - windows_x64:test
@@ -204,9 +208,11 @@ pages:
   stage: package
   variables:
     GIT_STRATEGY: "none"
-  dependencies:
-  - windows_x64:compile
-  - windows_x64:test
+  needs:
+  - job: "windows_x64:compile"
+    artifacts: true
+  - job: "windows_x64:test"
+    artifacts: false
   script:
   - mv build-dr791/doc/html/ public/
   artifacts:
