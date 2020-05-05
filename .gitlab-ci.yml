@@ -195,11 +195,9 @@ windows_x64:bundle:
   # for packaging, we just need NPM, hence run in linux container
   image: docker.siemens.com/multicore/drace:buildamd64-ci
   script:
-  - cp "contrib/package.json" "."
-  - cp "contrib/package-lock.json" "."
   - echo "Generate Changelog"
-  - npx generate-changelog
-  - cp "CHANGELOG.md" "win64-dr${DR_ABI}/package/doc/"
+  - cd contrib && npx generate-changelog -f ../CHANGELOG
+  - cd .. && cp "CHANGELOG.md" "win64-dr${DR_ABI}/package/doc/"
   dependencies:
   - windows_x64:compile
   - windows_x64:test
