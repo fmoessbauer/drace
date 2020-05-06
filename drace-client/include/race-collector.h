@@ -66,8 +66,7 @@ class RaceCollector {
   std::shared_ptr<RaceFilter> _filter;
 
  public:
-  RaceCollector(bool delayed_lookup,
-                const std::shared_ptr<symbol::Symbols>& symbols,
+  RaceCollector(bool delayed_lookup, std::shared_ptr<symbol::Symbols> symbols,
                 std::shared_ptr<RaceFilter> filter)
       : _delayed_lookup(delayed_lookup),
         _syms(symbols),
@@ -141,30 +140,19 @@ class RaceCollector {
 
  private:
   /**
-   * Filter false-positive data-races
-   * \return true if race is suppressed
-   */
-  bool filter_excluded(const Detector::Race* r);
-
-  /**
    * suppress this race if similar race is already reported
    * \return true if race is suppressed
    * \note   not-threadsafe
    */
   bool filter_duplicates(const Detector::Race* r);
 
-  /** Takes a detector Access Entry, resolves symbols and converts it to a
+  /**
+   * Takes a detector Access Entry, resolves symbols and converts it to a
    * ResolvedAccess */
   void resolve_symbols(race::ResolvedAccess& ra);
 
   /** resolve a single race */
-  inline void resolve_race(race::DecoratedRace& race) {
-    if (!race.is_resolved) {
-      resolve_symbols(race.first);
-      resolve_symbols(race.second);
-    }
-    race.is_resolved = true;
-  }
+  void resolve_race(race::DecoratedRace& race);
 
   /**
    * forward a single race to the sinks

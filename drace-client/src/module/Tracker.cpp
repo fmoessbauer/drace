@@ -65,7 +65,7 @@ Tracker::~Tracker() {
   dr_rwlock_destroy(mod_lock);
 }
 
-Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const {
+const Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const {
   lock_read();
   auto m_it = _modules_idx.lower_bound(pc);
 
@@ -86,7 +86,9 @@ Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const {
 
 Tracker::PMetadata Tracker::register_module(const module_data_t *mod,
                                             bool loaded) {
-  using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
+  using module::INSTR_FLAGS;
+  using module::MOD_TYPE_FLAGS;
+
   // first check if module is already registered
   lock_read();
   auto modptr = get_module_containing(mod->start);
@@ -112,7 +114,7 @@ Tracker::PMetadata Tracker::register_module(const module_data_t *mod,
   modptr->instrument = def_instr_flags;
 
 #ifdef WINDOWS
-  if (modptr->modtype == Metadata::MANAGED && !shmdriver) {
+  if (modptr->modtype == MOD_TYPE_FLAGS::MANAGED && !shmdriver) {
     LOG_WARN(0, "managed module detected, but MSR not available");
   }
 #endif
@@ -177,6 +179,7 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
       util::common_prefix(mod_name, "KERNELBASE") ||
       util::common_prefix(mod_name, "libc")) {
     funwrap::wrap_mutexes(mod, true);
+    funwrap::wrap_excludes(mod);
   } else if (util::common_prefix(mod_name, "KERNEL")) {
     funwrap::wrap_allocations(mod);
     funwrap::wrap_thread_start_sys(mod);
