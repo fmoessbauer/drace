@@ -73,6 +73,18 @@ TEST_P(DR, ExcludeRaces) {
       "gp-concurrent-inc", 0, 0);
 }
 
+/// Make sure, the tutorial works as expected
+TEST_P(DR, HowTo) { run(GetParam(), "shoppingrush-sol", 0, 0); }
+
+TEST_P(DR, NoIoRaces) {
+  // this test only works with Fasttrack due to the 32 bit
+  // addr analysis of tsan
+  if (std::string(GetParam()).compare("fasttrack") == 0) {
+    run(std::string(GetParam()) + " --sup-races bin/data/racesup_incl_io.txt",
+        "shoppingrush-sol", 0, 0);
+  }
+}
+
 #ifdef DRACE_TESTING_DOTNET
 // Dotnet Tests
 TEST_P(DR, DotnetClrRacy) {
@@ -162,7 +174,7 @@ TEST_P(DR, ReportText) {
 // Setup value-parameterized tests
 #if WINDOWS
 INSTANTIATE_TEST_SUITE_P(Integration, DR,
-                         ::testing::Values("-d fasttrack", "-d tsan"));
+                         ::testing::Values("fasttrack", "tsan"));
 #else
-INSTANTIATE_TEST_SUITE_P(Integration, DR, ::testing::Values("-d fasttrack"));
+INSTANTIATE_TEST_SUITE_P(Integration, DR, ::testing::Values("fasttrack"));
 #endif
