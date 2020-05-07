@@ -65,7 +65,7 @@ Tracker::~Tracker() {
   dr_rwlock_destroy(mod_lock);
 }
 
-const Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const {
+Tracker::PMetadata Tracker::get_module_containing(const app_pc pc) const {
   lock_read();
   auto m_it = _modules_idx.lower_bound(pc);
 
@@ -179,7 +179,6 @@ void event_module_load(void *drcontext, const module_data_t *mod, bool loaded) {
       util::common_prefix(mod_name, "KERNELBASE") ||
       util::common_prefix(mod_name, "libc")) {
     funwrap::wrap_mutexes(mod, true);
-    funwrap::wrap_excludes(mod);
   } else if (util::common_prefix(mod_name, "KERNEL")) {
     funwrap::wrap_allocations(mod);
     funwrap::wrap_thread_start_sys(mod);

@@ -145,7 +145,6 @@ bool RaceFilter::in_silent_module(const Detector::Race* race) const {
     return true;
   }
 #endif
-  // TODO: STUB
   return false;
 }
 

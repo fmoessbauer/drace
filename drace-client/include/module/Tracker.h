@@ -50,7 +50,7 @@ class Tracker {
    *
    * \note threadsafe
    */
-  const PMetadata get_module_containing(const app_pc pc) const;
+  PMetadata get_module_containing(const app_pc pc) const;
 
   /**
    * \brief Registers a module and sets flags accordingly
