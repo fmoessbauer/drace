@@ -73,8 +73,11 @@ TEST_P(DR, ExcludeRaces) {
       "gp-concurrent-inc", 0, 0);
 }
 
+TEST_P(DR, FaultInApp) { run(GetParam(), "gp-segfault", 0, 0); }
+
 /// Make sure, the tutorial works as expected
-TEST_P(DR, HowTo) { run(GetParam(), "shoppingrush-sol", 0, 0); }
+TEST_P(DR, HowToTask) { run(GetParam(), "shoppingrush", 1, 10); }
+TEST_P(DR, HowToSolution) { run(GetParam(), "shoppingrush-sol", 0, 0); }
 
 TEST_P(DR, NoIoRaces) {
   // this test only works with Fasttrack due to the 32 bit
