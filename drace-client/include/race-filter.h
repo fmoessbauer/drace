@@ -36,6 +36,7 @@ class RaceFilter {
   std::vector<std::string> rtos_list;  // race top of stack
   std::vector<std::string> race_list;
   std::map<uint64_t, unsigned, std::greater<uint64_t>> addr_list;
+
   void normalize_string(std::string &expr);
 
   /**
@@ -51,6 +52,20 @@ class RaceFilter {
    * \note threadsafe
    */
   bool check_rtos(const drace::race::DecoratedRace &race) const;
+
+  /**
+   * \brief check if the racy-address belongs to an excluded module
+   * \return true if suppressed
+   * \note threadsafe
+   */
+  bool in_silent_module(const Detector::Race *race) const;
+
+  /**
+   * \brief at least one of the callstacks contains garbage data
+   * \return true if suppressed
+   * \note threadsafe
+   */
+  bool stack_implausible(const Detector::Race *race) const;
 
   /**
    * \brief check if the racy memory-location is suppressed
@@ -76,6 +91,13 @@ class RaceFilter {
    * \note not-threadsafe
    */
   bool check_suppress(const drace::race::DecoratedRace &race) const;
+
+  /**
+   * \brief check if the information in the race is plausible
+   * \return true if suppressed
+   * \note threadsafe
+   */
+  bool check_implausible(const Detector::Race *r) const;
 
   /// print a list of suppression criteria
   void print_list() const;

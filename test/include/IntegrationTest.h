@@ -46,7 +46,7 @@ class Integration : public ::testing::Test {
   void run(const std::string& client_args, const std::string& exe, int min,
            int max, const std::string& app_args = "") {
     std::stringstream command;
-    command << drrun << " -c " << drclient << " " << client_args << " -- "
+    command << drrun << " -c " << drclient << " -d " << client_args << " -- "
             << "bin/samples/" << exe << exe_suffix << " " << app_args << " > "
             << logfile << " 2>&1";
     if (verbose)

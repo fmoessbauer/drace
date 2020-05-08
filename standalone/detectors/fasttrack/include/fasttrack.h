@@ -483,11 +483,25 @@ class Fasttrack : public Detector {
 
   void join(tid_t parent, tid_t child) final {
     std::lock_guard<LockT> exLockT(g_lock);
-    ts_ptr del_thread = threads[child];
+    auto del_thread_it = threads.find(child);
+    auto parent_it = threads.find(parent);
+    // TODO: we should never see invalid ids here.
+    // However, after an application fault like in the howto,
+    // at least one thread is joined multiple times
+    if (del_thread_it == threads.end() || parent_it == threads.end()) {
+#if MAKE_OUTPUT
+      std::cerr << "invalid thread IDs in join (" << parent << "," << child
+                << ")" << std::endl;
+#endif
+      return;
+    }
+
+    ts_ptr del_thread = del_thread_it->second;
+    ts_ptr par_thread = parent_it->second;
     del_thread->inc_vc();
     // pass incremented clock of deleted thread to parent
-    threads[parent]->update(*del_thread);
-    threads.erase(child);
+    par_thread->update(*del_thread);
+    threads.erase(del_thread_it);
     cleanup(child);
   }
 

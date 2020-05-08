@@ -66,8 +66,7 @@ class RaceCollector {
   std::shared_ptr<RaceFilter> _filter;
 
  public:
-  RaceCollector(bool delayed_lookup,
-                const std::shared_ptr<symbol::Symbols>& symbols,
+  RaceCollector(bool delayed_lookup, std::shared_ptr<symbol::Symbols> symbols,
                 std::shared_ptr<RaceFilter> filter)
       : _delayed_lookup(delayed_lookup),
         _syms(symbols),
@@ -82,29 +81,27 @@ class RaceCollector {
   ~RaceCollector() {}
 
   /**
-   * register a sink that is notified on each race
+   * \brief register a sink that is notified on each race
    * \note not-threadsafe
    */
   inline void register_sink(const std::shared_ptr<sink::Sink>& sink) {
     _sinks.push_back(sink);
   }
 
-  /** Adds a race and updates histogram
-   *
+  /**
+   * \brief Adds a race and updates histogram
    * \note threadsafe
    */
   void add_race(const Detector::Race* r);
 
   /**
-   * Resolves all unresolved race entries
-   *
+   * \brief Resolves all unresolved race entries
    * \note threadsafe
    */
   void resolve_all();
 
   /**
-   * In delayed mode, return data-races.
-   * Otherwise return empty container
+   * \brief In delayed mode, return data-races. Otherwise return empty container
    *
    * \note not-threadsafe
    */
@@ -113,19 +110,19 @@ class RaceCollector {
   }
 
   /**
-   * return the number of observed races
+   * \brief return the number of observed races
    */
   inline unsigned long num_races() const { return _race_count; }
 
   /**
-   * get a reference to the filtering object
+   * \brief get a reference to the filtering object
    */
   inline RaceFilter& get_racefilter() { return *_filter; }
 
   /**
-   * This function provides a callback to the RaceCollector::add_race
-   * on the singleton object. As we have to pass this callback to
-   * as a function pointer to c, we cannot use std::bind
+   * \brief This function provides a callback to the \ref
+   * RaceCollector::add_race on the singleton object. As we have to pass this
+   * callback to as a function pointer to c, we cannot use \ref std::bind
    */
   static void race_collector_add_race(const Detector::Race* r);
 
@@ -141,30 +138,19 @@ class RaceCollector {
 
  private:
   /**
-   * Filter false-positive data-races
-   * \return true if race is suppressed
-   */
-  bool filter_excluded(const Detector::Race* r);
-
-  /**
    * suppress this race if similar race is already reported
    * \return true if race is suppressed
    * \note   not-threadsafe
    */
   bool filter_duplicates(const Detector::Race* r);
 
-  /** Takes a detector Access Entry, resolves symbols and converts it to a
+  /**
+   * Takes a detector Access Entry, resolves symbols and converts it to a
    * ResolvedAccess */
   void resolve_symbols(race::ResolvedAccess& ra);
 
   /** resolve a single race */
-  inline void resolve_race(race::DecoratedRace& race) {
-    if (!race.is_resolved) {
-      resolve_symbols(race.first);
-      resolve_symbols(race.second);
-    }
-    race.is_resolved = true;
-  }
+  void resolve_race(race::DecoratedRace& race);
 
   /**
    * forward a single race to the sinks

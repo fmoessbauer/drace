@@ -19,7 +19,9 @@
 #ifdef TESTING
 #include <exception>
 #else
-#include "util.h"
+#include <globals.h>
+#include <module/Tracker.h>
+#include <util.h>
 #endif
 
 namespace drace {
@@ -134,6 +136,28 @@ bool RaceFilter::check_rtos(const drace::race::DecoratedRace& race) const {
   return false;
 }
 
+bool RaceFilter::in_silent_module(const Detector::Race* race) const {
+#ifndef TESTING
+  // filter out accesses into modules we do not instrument
+  const auto module = module_tracker->get_module_containing(
+      (app_pc)(race->first.accessed_memory));
+  if (module && !(module->instrument & module::INSTR_FLAGS::MEMORY)) {
+    return true;
+  }
+#endif
+  return false;
+}
+
+bool RaceFilter::stack_implausible(const Detector::Race* race) const {
+  if (race->first.stack_size == 0 || race->second.stack_size == 0) return false;
+
+  // PC is null
+  if (race->first.stack_trace[race->first.stack_size - 1] == 0x0) return true;
+  if (race->second.stack_trace[race->second.stack_size - 1] == 0x0) return true;
+
+  return false;
+}
+
 bool RaceFilter::addr_is_suppressed(uint64_t addr) const {
   auto it = addr_list.lower_bound(addr);
   if (it == addr_list.end()) {
@@ -193,5 +217,12 @@ void RaceFilter::print_list() const {
   for (const auto& addr : addr_list) {
     std::cout << (addr.first << 3) << std::endl;
   }
+}
+
+bool RaceFilter::check_implausible(const Detector::Race* r) const {
+  if (stack_implausible(r) || in_silent_module(r)) {
+    return true;
+  }
+  return false;
 }
 }  // namespace drace
