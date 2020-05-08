@@ -1,3 +1,30 @@
+#### 1.7.1 (2020-05-08)
+
+##### Chores
+
+*  cleanup in improved filtering ([915c6c8b](https://github.com/siemens/drace/commit/915c6c8b96a06bf49f6014f259a202f7d423af4d))
+
+##### New Features
+
+*  filter races that happen in an excluded module ([65514318](https://github.com/siemens/drace/commit/6551431840932aa73741e9549a761f09f7a62d65))
+
+##### Bug Fixes
+
+*  avoid false positive in static initialization ([adf40eac](https://github.com/siemens/drace/commit/adf40eacb7a693cbb6db5f6339482fefdf9462de))
+*  repair no-instrumentation support ([14c73fb8](https://github.com/siemens/drace/commit/14c73fb8688aa928b2a71680fa7562f221f5e4db))
+*  correctly handle faults in application ([1114dce2](https://github.com/siemens/drace/commit/1114dce2150d71af30ff8348af9a2a15bec31873))
+*  validate dr path against dr 8.x ([286850e5](https://github.com/siemens/drace/commit/286850e564e4f3841527513e44d671d96d2a0535))
+
+##### Other Changes
+
+*  check validity of tids in join event ([d4459faa](https://github.com/siemens/drace/commit/d4459faa683a022eb47e8c45e48384ce20f7ab48))
+* cout ([3cdaa6b9](https://github.com/siemens/drace/commit/3cdaa6b906bf05891011ce0ada3c08f623e5d072))
+
+##### Tests
+
+*  add linux support for segfault test ([de57243f](https://github.com/siemens/drace/commit/de57243f260771b1b1491d11e3da12c61fcab59b))
+*  vaildate shoppingrush example from howto guide ([1baf7305](https://github.com/siemens/drace/commit/1baf7305d6e796f9d4320cf41085f38c4baa9379))
+
 #### 1.7.0 (2020-05-05)
 
 ##### Chores
