@@ -291,8 +291,6 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag,
                                                   OUT void **user_data) {
   using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
 
-  if (translating) return DR_EMIT_DEFAULT;
-
   if (for_trace && params.excl_traces) {
     *user_data = (void *)INSTR_FLAGS::STACK;
     return DR_EMIT_DEFAULT;

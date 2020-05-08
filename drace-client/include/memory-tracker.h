@@ -154,7 +154,7 @@ class MemoryTracker {
 #else
     constexpr short shift = 3;
 #endif
-    if (params.instr_rate == 0 ||
+    if (params.instr_rate != 0 &&
         ((uintptr_t)(tag) >> shift) % params.instr_rate == 0) {
       return true;
     }
