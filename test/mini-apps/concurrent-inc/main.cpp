@@ -1,7 +1,7 @@
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright 2018 Siemens AG
+ * Copyright 2020 Siemens AG
  *
  * Authors:
  *   Felix Moessbauer <felix.moessbauer@siemens.com>
@@ -14,9 +14,9 @@
 #include <thread>
 
 #define NUM_INCREMENTS 10000
-#define USE_HEAP
 
-// std::mutex mx;
+// #define USE_HEAP   // race on the heap
+// #define USE_STATIC // race on a static variable
 
 void inc(int* v) {
   for (int i = 0; i < NUM_INCREMENTS; ++i) {
@@ -39,6 +39,9 @@ int main() {
 #ifdef USE_HEAP
   int* mem = new int[1];
   *mem = 0;
+#elif USE_STATIC
+  static int var = 0;
+  int* mem = &var;
 #else
   int var = 0;
   int* mem = &var;
