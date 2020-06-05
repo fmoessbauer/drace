@@ -59,7 +59,7 @@ void event::alloc_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
   ShadowThreadState &data = thread_state.getSlot(drcontext);
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
   // Save allocate size to user_data
   // we use the pointer directly to avoid an allocation
   // ShadowThreadState * data =
@@ -89,7 +89,7 @@ void event::realloc_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
   ShadowThreadState &data = thread_state.getSlot(drcontext);
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
 
   // first deallocate, then allocate again
   void *old_addr = drwrap_get_arg(wrapctx, 2);
@@ -105,7 +105,7 @@ void event::free_pre(void *wrapctx, void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
   ShadowThreadState &data = thread_state.getSlot(drcontext);
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
 
   void *addr = drwrap_get_arg(wrapctx, 2);
   detector->deallocate(data.detector_data, addr);
@@ -213,7 +213,7 @@ void event::prepare_and_release(void *wrapctx, bool write) {
   // To avoid deadlock in flush-waiting spinlock,
   // acquire / release must not occur concurrently
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
   LOG_TRACE(data.tid, "Release %p : %s", mutex,
             module_tracker->_syms->get_symbol_info(drwrap_get_func(wrapctx))
                 .sym_name.c_str());
@@ -226,7 +226,7 @@ void event::get_arg(void *wrapctx, OUT void **user_data) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
   ShadowThreadState &data = thread_state.getSlot(drcontext);
   // we flush here to avoid tracking sync-function itself
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
 }
 
 void event::get_arg_dotnet(void *wrapctx, OUT void **user_data) {
@@ -296,7 +296,7 @@ void event::wait_for_single_obj(void *wrapctx, void *mutex) {
     hashtable_add_replace(&data.mutex_book, mutex, (void *)++cnt);
   }
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
   detector->acquire(data.detector_data, mutex, (int)cnt, 1);
   data.stats.mutex_ops++;
 }
@@ -328,7 +328,7 @@ void event::wait_for_mult_obj(void *wrapctx, void *user_data) {
 
   wfmo_args_t *info = (wfmo_args_t *)user_data;
 
-  MemoryTracker::flush_all_threads(data);
+  MemoryTracker::process_buffer_ctx(data);
   if (info->waitall && (retval == WAIT_OBJECT_0)) {
     LOG_TRACE(data.tid, "waitForMultipleObjects:finished all");
     for (DWORD i = 0; i < info->ncount; ++i) {

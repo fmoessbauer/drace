@@ -100,11 +100,32 @@ class MemoryTracker {
   MemoryTracker(const std::shared_ptr<Statistics> &stats);
   ~MemoryTracker();
 
+  /// clean_call dumps the memory reference info into the analyzer
   static void process_buffer(void);
+  /**
+   * \brief same as \ref process_buffer, but takes a thread context
+   * This function should be used when the current thread context is already
+   * available (avoids double lookups).
+   *
+   * \note we use a different symbol here, as the \ref process_buffer must not
+   * be overloaded
+   */
+  inline static void process_buffer_ctx(ShadowThreadState &data) {
+    analyze_access(data);
+    data.stats.flushes++;
+  }
+
   static void clear_buffer(void);
   static void analyze_access(ShadowThreadState &data);
-  static void flush_all_threads(ShadowThreadState &data, bool self = true,
-                                bool flush_external = false);
+
+  /**
+   * \brief prepare a thread for memory tracking
+   *
+   * This only happens once per thread. Hence, we use a dedicated
+   * non-inlined function for that to push this rare-case out of
+   * the hot path.
+   */
+  static void delayed_initialize_thread(ShadowThreadState &data);
 
   // Events
   void event_thread_init(void *drcontext, ShadowThreadState &data);
