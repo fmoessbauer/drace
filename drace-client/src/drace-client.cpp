@@ -27,6 +27,7 @@
 #include "DrFile.h"
 #include "DrThreadLocal.h"
 #include "Module.h"
+#include "RuntimeStats.h"
 #include "drace-client.h"
 #include "function-wrapper.h"
 #include "globals.h"
@@ -34,7 +35,6 @@
 #include "race-collector.h"
 #include "race-filter.h"
 #include "shadow-stack.h"
-#include "statistics.h"
 #include "symbols.h"
 #include "util/DrModuleLoader.h"
 #include "util/LibLoaderFactory.h"
@@ -56,7 +56,7 @@ std::shared_ptr<drace::DrFile> log_file;
 std::chrono::system_clock::time_point app_start;
 std::chrono::system_clock::time_point app_stop;
 std::unique_ptr<drace::RaceCollector> race_collector;
-std::shared_ptr<drace::Statistics> stats;
+std::shared_ptr<drace::RuntimeStats> stats;
 
 /// DRace main entry point
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
@@ -103,7 +103,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
   DR_ASSERT(funwrap::init());
 
   // Setup Statistics Collector
-  stats = std::make_unique<Statistics>(0);
+  stats = std::make_unique<RuntimeStats>();
   auto symbol_table = std::make_shared<symbol::Symbols>();
   // Setup Module Tracking
   module_tracker = std::make_unique<drace::module::Tracker>(symbol_table);
