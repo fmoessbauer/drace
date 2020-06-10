@@ -29,10 +29,10 @@ It is recommended to use the latest cron build. Once the download is finished, y
 
 ### GUI-Usage
 
-For new users the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quiet long and unhandy DRace command can be build in an easier fashion.
+For new users, the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quite long and unhandy DRace command can be built in an easier fashion.
 
 Furthermore, a working configuration can be saved in a text file and restored at a later time.
-Additionally, some plausibility checks are executed one the inputs. Correct and incorrect inputs are marked with green and red. The fields must be filled like described in the following.
+Additionally, some plausibility checks are executed on the inputs. Correct and incorrect inputs are marked with green and red respectively. The fields must be filled as described in the following.
 Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an arbitrary shell.
 
 The following fields are mandatory:
@@ -46,9 +46,9 @@ The following fields are mandatory:
 The following fields are optional:
 
 - Debug Mode: This will start DynamoRIO in the debug mode.
-- Report: This option will create an HTML-Report after the analysis has finished. To set the option the report settings must be set correctly ([here](#report-settings))
+- Report: This option will create an HTML-Report after the analysis has finished. To set the option, the report settings must be set correctly ([here](#report-settings))
 - MSR: This option starts the managed code resolver, if one wants to analyse applications with .NET code.
-- DRace Flags: here additional DRace Flags can be set. Be careful, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Availble DRace flags are [here](#shell-usage)
+- DRace Flags: here additional DRace Flags can be set. Be careful, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Available DRace flags are [here](#shell-usage)
 
 ![1](./Images/dracegui_empty.png "Empty DRaceGUI")
 ![2](./Images/dracegui_filled.png "Filled DRaceGUI")
@@ -77,7 +77,7 @@ All available command line options can be found [here](https://github.com/siemen
 
 ## Detectors
 
-DRace is shipped with three different detector backends. The detector backend is evaluating the program trace which comes from DRace and reports the actual data race.
+DRace is shipped with three different detector backends. The detector backend evaluates the program trace which comes from DRace and reports the actual data race.
 
 The following detectors are available:
 
@@ -102,7 +102,7 @@ Linux:
 ```
 
 ### Report
-The generated Report looks like the following example pictures. The first picture shows an overview, whereas the second one shows a single error entry. The labels  pretty much explain all the elements of the report.
+The generated Report looks like the following example pictures. The first picture shows an overview, whereas the second one shows a single error entry. The labels pretty much explain all the elements of the report.
 
 Note: If one wants to open a source file by clicking on its name, it will be opened with **VSCode**, if it is installed and the exe of it is in Windows-PATH (must be installed before the report was created). Otherwise, just a new browser tab with the file will be opened.
 
@@ -123,7 +123,7 @@ You can find an explanation **[here](#get-the-tools)**.
 ### 2. Build the ShoppingRush example application
 
 In this demo, we analyze the provided `ShoppingRush` sample application.
-The application can easily be build by cloning the DRace repository from Github and pointing CMake to this `HowTo` folder:
+The application can easily be built by cloning the DRace repository from Github and pointing CMake to this `HowTo` folder:
 
 ```sh
 # assume we are in the HowTo folder
@@ -133,7 +133,7 @@ cmake --build . --config RelWithDebInfo
 # application should be in .\bin\samples\RelWithDebInfo\
 ```
 
-*Note: You can also use the provided prebuild version of the ShoppingRush example,
+*Note: You can also use the provided prebuilt version of the ShoppingRush example,
 but as the PDB files contain absolute paths to the source files, the report converter
 might not be able to find them.*
 
@@ -179,4 +179,4 @@ The iterator invalidation in line 91 (`shop.erase(elit);`) was recognized by the
 Additionally, the pattern `size_t size = shop.size();` ... `if(size != 0)` is also erroneous, as the size of the shop might have changed between the two statements.
 There it won't be invalidated, but an already invalidated iterator may be used. This leads to an undefined behavior of the application. If the locking of the mutex is moved above line 74 (`int size = shop.size();`) everything is safe and should work fine.
 
-🎉🎉🎉Congrats you're done with the tutorial. 🎉🎉🎉
+🎉🎉🎉Congrats, you're done with the tutorial. 🎉🎉🎉
