@@ -93,11 +93,11 @@ DRace has the option to create xml reports which contain the detected data races
 
 ```
 Windows:
-    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
-    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
+    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
 
 Linux:
-    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
 
 ```
 

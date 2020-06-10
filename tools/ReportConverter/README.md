@@ -14,13 +14,13 @@ Besides the script, the folder `/resources` is also needed for execution.
 ### Example
 Windows:
 ```bash
-    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
 
-    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    ReportConverter.exe -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
 ```
 Linux:
 ```bash
-    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems]
+    python3 ReportConverter.py -i inputFile [-o outputDirectory -b blacklistItems -w whitelistItems -s sourceDirectories]
 ```
 ### Required Parameter:
 ```bash
@@ -41,6 +41,10 @@ Linux:
 - -w: sourcefiles can be specifically included
 
     -w "C:/just/show/this/files, C:/public" # exclusively includes all files in the specified folders and all their subfolders
+
+- -s: directories (not necessarily direct parent ones) to sourcefiles can be specified
+
+    -s "C:/dir1/possible/sourcedir, C:/dir2/possible/sourcedir" # in case of application source relocation, recursively searches through the directories for valid paths to sourcefile(s) 
 ```
 *Info:* 
 - blacklist wins over whitelist (-> whitelisted files and subfolders can be blacklisted and therefore be excluded)
@@ -59,6 +63,7 @@ Mandatory (only standard python libs):
 - shutil
 - pathlib
 - argparse
+- functools
 
 Optional (for chart creation):
 - matplotlib
