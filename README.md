@@ -227,7 +227,7 @@ A sample VisualStudio `CMakeSettings.json` is given here:
   "inheritEnvironments": [ "msvc_x64_x64" ],
   "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
   "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-  "cmakeCommandArgs": "-DBUILD_TESTING=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake" -DBOOST_ROOT=<PATH-TO-BOOST> -DCMAKE_PREFIX_PATH=<PATH-TO-QT>\\msvc2017_64\\lib\\cmake\\Qt5,
+  "cmakeCommandArgs": "-DBUILD_TESTING=1 -DDynamoRIO_DIR=<PATH-TO-DYNAMORIO>/cmake -DBOOST_ROOT=<PATH-TO-BOOST> -DCMAKE_PREFIX_PATH=<PATH-TO-QT>\\msvc2017_64\\lib\\cmake\\Qt5",
   "buildCommandArgs": "-v",
   "ctestCommandArgs": ""
 }
@@ -322,9 +322,9 @@ If two licenses are specified in a file header, you are free to pick the one tha
 You can also continue to use the file under the dual license.
 When choosing only one, remove the reference to the other from the file header.
 
-### External Ressources
+### External Resources
 
-Most external ressources are located in the `vendor` directory.
+Most external resources are located in the `vendor` directory.
 For licensing information regarding these components, we refer to the information bundled with the individual resource.
 
 ### License Header Format

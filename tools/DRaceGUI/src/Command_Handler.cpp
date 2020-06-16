@@ -20,7 +20,12 @@ QString Command_Handler::make_entry(const QString &path, uint position,
   if (path != "") {
     QString temp = path;
     if (temp.contains(QRegExp("\\s+")) && !no_quotes) {
-      temp = "\'" + temp + "\'";
+      // if drrun is enclosed in quotation marks, prefix with a '.'
+      if (position == 0) {
+        temp = ".\'" + temp + "\'";
+      } else {
+        temp = "\'" + temp + "\'";
+      }
     }
     if (prefix != "") {
       temp = prefix + " " + temp;
