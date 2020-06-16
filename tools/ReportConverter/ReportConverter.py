@@ -22,6 +22,7 @@ import datetime
 import html
 import sys
 from subprocess import check_call, STDOUT, DEVNULL
+from functools import lru_cache
 
 try:
     import matplotlib
@@ -65,6 +66,9 @@ if NUMBEROFCODELINES % 2:
     print('Number of maximum of displayed code lines must be even, but is:')
     print(str(NUMBEROFCODELINES))
     sys.exit(-1)
+
+#Source Directories
+SOURCE_DIRECTORIES = list()
 
 class ReportCreator:
     _htmlTemplatesPath = str(g_HTMLTEMPLATES)
@@ -293,6 +297,11 @@ class ReportCreator:
 
         for frame in frames:
             self._readFrame(frame) #reads all frame values and fills member var
+            
+            # updates frame dir if valid sourceDirectories are given, otherwise returns same value
+            newDir = self.SCM.searchSourceDirectories(self._frameValues["dir"], self._frameValues["file"])
+            self._frameValues["dir"] = adjText(newDir)
+
             noPreview = False 
             buttonID = "button_" + str(self._errorNumber) + "_" + str(position) + "_" + str(elementNumber)
             strOutputID = outputID+str(position)
@@ -489,6 +498,8 @@ class ReportCreator:
             self._errorNumber += 1
             self._strErrors += newError
 
+        self.SCM.searchSourceDirectories.cache_clear()
+
     def _createHeader(self):
         hasErrors = self._reportRoot.find('error') != None
         headerInformation = self._getHeader()
@@ -661,6 +672,44 @@ class SourceCodeManagement:
             firstLine = srcObject[1] - NUMBEROFCODELINES//2
             return  firstLine #srcObject[1] is line of interest of snippet
 
+    @lru_cache(maxsize=100)
+    def searchSourceDirectories(self, dir, file):  
+        if pathlib.Path(pathlib.Path(dir) / file).is_file():
+            # path to file in xml file is valid
+            return dir 
+        else:
+            # path to file in xml file is NOT valid
+            if not SOURCE_DIRECTORIES:
+                # no sourceDirectories args given
+                print(f"Cannot find file '{file}' in directory '{dir}'.")
+                return dir
+            else:
+                print(f"Cannot find file '{file}' in directory '{dir}'. Searching through given source directories ...")
+                # search in sourceDirectories given from args if applicable
+                for customDirPath in SOURCE_DIRECTORIES:
+                    customDir = pathlib.Path(customDirPath) 
+                    fileInstances = customDir.glob(f'**/{file}') # generator for found file instances
+                    try:
+                        f1 = next(fileInstances)
+                        try:
+                            f2 = next(fileInstances)
+                            # Check if next found file f2 has a parent directory which supersets that of first found file f1
+                            if str(f1.resolve().parent) == str(f2.resolve().parent)[:len(str(f1.resolve().parent))]:
+                                return str(f2.resolve().parent) # second valid file instance in customDirPath
+                            else:
+                                return str(f1.resolve().parent) # first valid file instance in customDirPath
+
+                        except StopIteration:
+                            # Only one valid file instance found in customDirPath
+                            return str(f1.resolve().parent)
+                    except StopIteration:
+                        # No file instance found in customDirPath element
+                        continue
+
+                # Search for file instances in given sourceDirectories failed    
+                print(f"Cannot find file '{file}' in given source directories.")
+                return dir
+
 
 def adjText(text): #change html symbols e.g. & -> &amp;
     text = text.replace('`', '\'')
@@ -689,12 +738,13 @@ def returnDateString():
     return date.strftime('%Y%m%d_%H%M')
 
 def main():
-    global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, DEBUG
+    global SOURCEFILE_BL, SOURCEFILE_WL, WHITELISTING, SOURCE_DIRECTORIES, DEBUG
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--inputFile", help='define <input_file>', type=str)
     parser.add_argument("-o", "--outputDirectory", help='define <output_directory>', type=str)
     parser.add_argument("-b", "--blacklist", help='add blacklist entries <entry1,entry2 ...>', type=str)
-    parser.add_argument("-w", "--whitelist", help='add whitelist entries entries <entry1,entry2 ...>', type=str)
+    parser.add_argument("-w", "--whitelist", help='add whitelist entries <entry1,entry2 ...>', type=str)
+    parser.add_argument("-s", "--sourceDirectories", help='add source directories <entry1,entry2 ...>', type=str)
     parser.add_argument("--Debug", help='Debug Mode', action="store_true")
     args = parser.parse_args()
     
@@ -732,6 +782,9 @@ def main():
     if args.whitelist != None:
         parseArgumentString(SOURCEFILE_WL, args.whitelist)
         WHITELISTING = True
+    
+    if args.sourceDirectories != None:
+        parseArgumentString(SOURCE_DIRECTORIES, args.sourceDirectories)
     #end of args handling
 
     
@@ -761,13 +814,13 @@ def main():
         shutil.copytree(str(g_CSSPATH.resolve()), str(targetDirectory / "css"))
         shutil.copytree(str(g_JSPATH.resolve()), str(targetDirectory / "js"))
         shutil.copy(str((resourcesPath / 'legend.png').resolve()), str(targetDirectory))
-        print("Report creation successfull")
+        print("Report creation successful")
         print("Report is at:")
         print(targetDirectory)
         return 0
 
     else:
-        print("Report creation was NOT successfull")
+        print("Report creation was NOT successful")
         targetDirectory.rmdir()
         return -1
 
