@@ -21,6 +21,14 @@ if(WIN32)
     list(APPEND SOURCES "src/MSR")
 endif()
 
+if(NOT CMAKE_BUILD_TYPE AND "${CMAKE_GENERATOR}" MATCHES "Visual Studio")
+  message(FATAL_ERROR "When using a Visual Studio generator, you have to set the CMAKE_BUILD_TYPE. "
+                       "This type has to match the one used in the compile step: "
+                       "'cmake --build . --config <type>' "
+                       "Alternatively, use Ninja. "
+                       "For details, see https://github.com/siemens/drace/issues/53")
+endif()
+
 find_package(DynamoRIO 7.91 REQUIRED)
 
 # Bind detectors prior to first "configure_DynamoRIO_client"
