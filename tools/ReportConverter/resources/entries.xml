@@ -131,6 +131,7 @@ $("button").click(function() {
 <h5>Error Type: *ERROR_TYPE*</h5>
 <p class='reduced-margin'>*XWHAT_TEXT_1*</p>
 <p class='reduced-margin'>*XWHAT_TEXT_2*</p>
+<div>*RESOLVED_ADDRESS_ENTRY*</div>
 <hr />
 <div class="row reduced-margin"><div class="col s6">
 <h5>Call Stack 1</h5>
