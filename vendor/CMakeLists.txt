@@ -29,6 +29,8 @@ if(DRACE_ENABLE_RUNTIME)
 		add_custom_target("copy-tsan-imported" ALL
 			DEPENDS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll")
 		add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll
+			COMMAND ${CMAKE_COMMAND} -E make_directory
+			${FULL_RUNTIME_OUTPUT_DIRECTORY}
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
 			"$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
