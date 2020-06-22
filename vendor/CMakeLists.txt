@@ -19,14 +19,22 @@ if(DRACE_ENABLE_RUNTIME)
 		file(READ "tsan/LICENSE.TXT" LIC_FILE_TSAN)
 		file(APPEND ${LIC_FILE} "${LIC_SEP}LLVM-ThreadSanitizer\n\n${LIC_FILE_TSAN}")
 
-		# copy tsan dll into build tree
+    # copy tsan dll into build tree
+    if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
+      # msbuild places files in a bin/<type> folder
+      set(FULL_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
+    else()
+      set(FULL_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    endif()
 		add_custom_target("copy-tsan-imported" ALL
 			DEPENDS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll")
 		add_custom_command(OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/race_windows_amd64.dll
+			COMMAND ${CMAKE_COMMAND} -E make_directory
+			${FULL_RUNTIME_OUTPUT_DIRECTORY}
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			"${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
 			"$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/debug/race_windows_amd64.pdb>"
-			${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+			${FULL_RUNTIME_OUTPUT_DIRECTORY})
 
 		install(FILES
 			"${CMAKE_CURRENT_SOURCE_DIR}/tsan/blob/$<IF:$<CONFIG:Debug>,debug,release>/race_windows_amd64.dll"
