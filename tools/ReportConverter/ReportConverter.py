@@ -484,6 +484,30 @@ class ReportCreator:
             newError = newError.replace('*XWHAT_TEXT_1*', adjText(errortext1))
             newError = newError.replace('*XWHAT_TEXT_2*', adjText(errortext2))
 
+            # Resolved Address info
+            resolvedaddress = error.find('resolvedaddress')
+            if resolvedaddress != None:
+                raModname = resolvedaddress.find('modname')
+                resolvedaddressEntry = "<h5>Resolved Address</h5>" + "<p class='reduced-margin'><b>Module Name: </b>" \
+                    + adjText(raModname.text) + "</p>"
+                
+                raSymname = resolvedaddress.find('symname')
+                if raSymname != None:
+                    resolvedaddressEntry = resolvedaddressEntry + "<p class='reduced-margin'><b>Symbol Name: </b>" \
+                    + adjText(raSymname.text) + "</p>"
+
+                raFile = resolvedaddress.find('file')
+                if raFile != None:
+                    raLine = resolvedaddress.find('line')
+                    raOffset = resolvedaddress.find('offset')
+                    resolvedaddressEntry = resolvedaddressEntry + "<p class='reduced-margin'><b>File: </b>" + adjText(raFile.text) + "</p> <p class='reduced-margin'><b>Line: </b>" \
+                        + adjText(raLine.text) + "</p> <p class='reduced-margin'><b>Offset: </b>" + adjText(raOffset.text) + "</p>"
+            
+            else:
+                resolvedaddressEntry = ""
+
+            newError = newError.replace('*RESOLVED_ADDRESS_ENTRY*', resolvedaddressEntry)
+
             self._errorHeading = str() #reset errorHeading, will be filled filled by _createCallStack
             newError = newError.replace('*CALL_STACK_ENTRIES_1*', self._createCallStack(error, 0, outputID))
             if errortext2 != "":

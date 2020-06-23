@@ -164,6 +164,36 @@ class Valkyrie : public Sink {
     p.PushText(std::to_string(race.elapsed.count()).c_str());
     p.CloseElement();
 
+    if (!race.resolved_addr.mod_name.empty()) {
+      p.OpenElement("resolvedaddress");
+
+      p.OpenElement("modname");
+      p.PushText(race.resolved_addr.mod_name.c_str());
+      p.CloseElement();
+
+      if (!race.resolved_addr.sym_name.empty()) {
+        p.OpenElement("symname");
+        p.PushText(race.resolved_addr.sym_name.c_str());
+        p.CloseElement();
+      }
+
+      if (!race.resolved_addr.file.empty()) {
+        p.OpenElement("file");  // TODO: resolve mapping filename to
+                                // race.resolved_addr.file
+        p.PushText(race.resolved_addr.file.c_str());
+        p.CloseElement();
+        p.OpenElement("line");  // TODO: line information might not be
+                                // available for non-C#
+        p.PushText(std::to_string(race.resolved_addr.line).c_str());
+        p.CloseElement();
+        p.OpenElement("offset");
+        p.PushText(std::to_string(race.resolved_addr.line_offs).c_str());
+        p.CloseElement();
+      }
+
+      p.CloseElement();
+    }
+
     {
       p.OpenElement("xwhat");
       p.OpenElement("text");
