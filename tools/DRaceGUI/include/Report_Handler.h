@@ -58,7 +58,7 @@ class Report_Handler {
   void set_is_python(bool state);
   bool set_report_command();
 
-  /// evaluates if the report cnoverter is valid, and sets it if so
+  /// evaluates if the report converter is valid, and sets it if so
   bool eval_rep_conv(QString name, QObject* parent);
 
   bool command_valid();
