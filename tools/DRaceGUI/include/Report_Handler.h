@@ -31,6 +31,9 @@ class Report_Handler {
   /// default report name
   QString rep_name = "test_report.xml";
 
+  /// general source directories to the application
+  QString rep_srcdirs = "";
+
   /// holds the state of the report check box
   bool create_report = false;
 
@@ -49,12 +52,14 @@ class Report_Handler {
 
   QString get_rep_conv_cmd() { return rep_conv_cmd; }
   QString get_rep_name() { return rep_name; }
+  QString get_rep_srcdirs() { return rep_srcdirs; }
   bool get_is_python() { return is_python; }
   bool get_create_report() { return create_report; }
 
   void set_report_name(QString name);
   /// sets the report converter without validity check
   void set_report_converter(QString path);
+  void set_report_srcdirs(QString dirs);
   void set_is_python(bool state);
   bool set_report_command();
 

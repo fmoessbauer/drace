@@ -17,6 +17,11 @@ Report_Config::Report_Config(Report_Handler *rh, QWidget *parent)
   ui->setupUi(this);
   ui->report_conv_input->setText(r_handler->get_rep_conv_cmd());
   ui->report_name->setText(r_handler->get_rep_name());
+  QStringList srcdirs =
+      (r_handler->get_rep_srcdirs()).split(",", QString::SkipEmptyParts);
+  for (const auto &dir : srcdirs) {
+    ui->report_srcdirs_list->addItem(dir);
+  }
 }
 
 Report_Config::~Report_Config() { delete ui; }
@@ -26,6 +31,7 @@ void Report_Config::on_buttonBox_rejected() { this->close(); }
 void Report_Config::on_buttonBox_accepted() {
   QString path = ui->report_conv_input->text();
   QString name = ui->report_name->text();
+  QListWidget *srcdirs_list = ui->report_srcdirs_list;
 
   // check if filename is valid
   if (boost::filesystem::portable_name(name.toStdString())) {
@@ -45,6 +51,13 @@ void Report_Config::on_buttonBox_accepted() {
     msg.exec();
     return;
   }
+  // join srcdirs input into one string
+  QStringList srcdirs;
+  for (int i = 0; i < srcdirs_list->count(); ++i) {
+    srcdirs.append(srcdirs_list->item(i)->text());
+  }
+
+  r_handler->set_report_srcdirs(srcdirs.join(","));
 
   if (r_handler->eval_rep_conv(path, this)) {
     r_handler->set_report_command();
@@ -70,6 +83,25 @@ void Report_Config::on_report_conv_path_clicked() {
     path_cache = path;
     ui->report_conv_input->setText(path);
   }
+}
+
+void Report_Config::on_report_srcdirs_add_clicked() {
+  QString dir = QFileDialog::getExistingDirectory(
+      this, tr("Open Directory"), path_cache, QFileDialog::ShowDirsOnly);
+  if (dir != "") {
+    path_cache = dir;
+    QListWidget *srcdirs_list = ui->report_srcdirs_list;
+    QListWidgetItem *item = new QListWidgetItem(srcdirs_list);
+    item->setText(dir);
+    ui->report_srcdirs_list->addItem(item);
+  }
+}
+
+void Report_Config::on_report_srcdirs_discard_clicked() {
+  QListWidget *srcdirs_list = ui->report_srcdirs_list;
+  int row = srcdirs_list->currentRow();
+  QListWidgetItem *item = srcdirs_list->takeItem(row);
+  delete item;
 }
 
 void Report_Config::on_report_name_textChanged(const QString &arg1) {

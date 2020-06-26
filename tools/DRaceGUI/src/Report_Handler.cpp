@@ -72,6 +72,8 @@ void Report_Handler::set_report_name(QString name) {
 
 void Report_Handler::set_report_converter(QString path) { rep_conv_cmd = path; }
 
+void Report_Handler::set_report_srcdirs(QString dirs) { rep_srcdirs = dirs; }
+
 void Report_Handler::set_is_python(bool state) { is_python = state; }
 
 /// sets, when the actual report creation command is valid, the current command
@@ -113,5 +115,14 @@ QString Report_Handler::make_command() {
     output_name = "\'" + rep_name + "\'";
   }
 
-  return (converter + " -i " + output_name);
+  QString base_cmd = converter + " -i " + output_name;
+  if (rep_srcdirs != "") {
+    QString output_dirs = rep_srcdirs;
+    if (rep_srcdirs.contains(QRegExp("\\s+"))) {
+      output_dirs = "\'" + rep_srcdirs + "\'";
+    }
+    return (base_cmd + " -s " + output_dirs);
+  } else {
+    return (base_cmd);
+  }
 }

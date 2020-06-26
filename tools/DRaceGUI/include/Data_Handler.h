@@ -18,8 +18,9 @@
 #include "Report_Handler.h"
 
 class Data_Handler {
-  std::string report_name, report_converter, dynamorio, dr_debug, drace,
-      detector, flags, ext_ctrl, configuration, execuatable, msr;
+  std::string report_name, report_converter, report_srcdirs, dynamorio,
+      dr_debug, drace, detector, flags, ext_ctrl, configuration, execuatable,
+      msr;
 
   bool report_is_python, create_report;
 
@@ -30,6 +31,7 @@ class Data_Handler {
   void serialize(Archive& ar, const unsigned int version) {
     ar& report_name;
     ar& report_converter;
+    ar& report_srcdirs;
     ar& dynamorio;
     ar& dr_debug;
     ar& drace;
