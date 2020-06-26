@@ -107,10 +107,10 @@ void Report_Handler::set_create_state(bool state) { create_report = state; }
 QString Report_Handler::make_command() {
   QString converter = rep_conv_cmd, output_name = rep_name;
   if (rep_conv_cmd.contains(QRegExp("\\s+"))) {
-    converter = "\"" + rep_conv_cmd + "\"";
+    converter = "\'" + rep_conv_cmd + "\'";
   }
   if (rep_name.contains(QRegExp("\\s+"))) {
-    output_name = "\"" + rep_name + "\"";
+    output_name = "\'" + rep_name + "\'";
   }
 
   return (converter + " -i " + output_name);
