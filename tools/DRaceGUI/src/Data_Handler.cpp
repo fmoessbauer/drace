@@ -14,6 +14,7 @@
 void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
   report_name = rh->get_rep_name().toStdString();
   report_converter = rh->get_rep_conv_cmd().toStdString();
+  report_srcdirs = rh->get_rep_srcdirs().toStdString();
   report_is_python = rh->get_is_python();
   create_report = rh->get_create_report();
 
@@ -34,6 +35,7 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
   // reset report handler members
   rh->set_report_name(QString(report_name.c_str()));
   rh->set_report_converter(QString(report_converter.c_str()));
+  rh->set_report_srcdirs(QString(report_srcdirs.c_str()));
   rh->set_create_state(create_report);
   rh->set_is_python(report_is_python);
 

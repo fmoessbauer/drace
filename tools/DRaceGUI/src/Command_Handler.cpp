@@ -20,12 +20,7 @@ QString Command_Handler::make_entry(const QString &path, uint position,
   if (path != "") {
     QString temp = path;
     if (temp.contains(QRegExp("\\s+")) && !no_quotes) {
-      // if drrun is enclosed in quotation marks, prefix with a '.'
-      if (position == 0) {
-        temp = ".\'" + temp + "\'";
-      } else {
-        temp = "\'" + temp + "\'";
-      }
+      temp = "\'" + temp + "\'";
     }
     if (prefix != "") {
       temp = prefix + " " + temp;
@@ -51,6 +46,12 @@ QString Command_Handler::updateCommand(const QString &arg1, uint position) {
 
 QString Command_Handler::make_command() {
   entire_command = "";
+  // if drrun is enclosed in quotation marks, prefix with a '.'
+  if (command[0] != "") {
+    if (command[0].contains(QRegExp("\\s+"))) {
+      entire_command.prepend(".");
+    }
+  }
   for (int it = 0; it <= (REPORT_CMD); it++) {
     if (command[it] != "") {
       entire_command.append(command[it]);
