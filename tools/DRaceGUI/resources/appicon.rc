@@ -1,0 +1,4 @@
+;DRace, a dynamic data race detector
+;Copyright 2018 Siemens AG
+;SPDX-License-Identifier: MIT
+IDI_ICON1 ICON DISCARDABLE "icon.ico"

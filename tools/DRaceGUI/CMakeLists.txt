@@ -52,6 +52,9 @@ find_package(Boost 1.65.0 COMPONENTS system filesystem serialization)
 if(Qt5_FOUND AND Boost_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
 
+    if(WIN32)
+        list(APPEND SOURCES "resources/appicon.rc")
+    endif()
     add_executable(${GUI_TARGET} WIN32 ${SOURCES})
     target_include_directories(${GUI_TARGET} PRIVATE "include")
     target_link_libraries(${GUI_TARGET} PRIVATE
