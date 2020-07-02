@@ -1,12 +1,12 @@
 {
   "name": "drace",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Data-race detector for windows applications build on top of DynamoRIO",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "generate-changelog": "^1.7.1"
+    "generate-changelog": "^1.8.0"
   },
   "devDependencies": {},
   "repository": {
