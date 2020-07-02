@@ -25,7 +25,9 @@ function(ConfigureExample Output Sources)
     if(WIN32)
         install(FILES $<TARGET_PDB_FILE:${Output}> DESTINATION  ${DRACE_RUNTIME_DEST} OPTIONAL)
     endif()
+    # install source files so they are part of the package as well
+    install(FILES ${Sources} DESTINATION ${DRACE_RUNTIME_DEST})
 endfunction()
 
-ConfigureExample(${EXAMPLE} "ShoppingRush")
-ConfigureExample(${EXAMPLE_SOL} "ShoppingRushSolution")
+ConfigureExample(${EXAMPLE} "ShoppingRush.cpp")
+ConfigureExample(${EXAMPLE_SOL} "ShoppingRushSolution.cpp")
