@@ -188,6 +188,8 @@ if(Doxygen_FOUND)
 	endif()
 endif()
 
+# make sure we have a doc directory
+install(DIRECTORY DESTINATION ${DRACE_DOC_DEST})
 # install config readme
-install(FILES "README.md" DESTINATION ${DRACE_DOC_DEST})
-install(FILES ${LIC_FILE} DESTINATION ${DRACE_DOC_DEST})
+install(FILES "README.md" DESTINATION .)
+install(FILES ${LIC_FILE} DESTINATION .)
