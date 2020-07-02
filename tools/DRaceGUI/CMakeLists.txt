@@ -1,14 +1,16 @@
 #
- # DRace, a dynamic data race detector
- #
- # Copyright 2018 Siemens AG
- #
- # Authors:
- #   Felix Moessbauer <felix.moessbauer@siemens.com>
- #
- # SPDX-License-Identifier: MIT
- #
-
+# DRace, a dynamic data race detector
+#
+# Copyright 2020 Siemens AG
+#
+# Authors:
+#   Felix Moessbauer <felix.moessbauer@siemens.com>
+#
+# SPDX-License-Identifier: MIT
+#
+cmake_minimum_required(VERSION 3.5)
+set(GUI_TARGET "drace-gui")
+project(${GUI_TARGET} LANGUAGES CXX)
 
 set(SOURCES
     "src/Load_Save.cpp"
@@ -27,13 +29,6 @@ set(SOURCES
     "qt/Report_Config.h"
     "qt/Report_Config.ui"
 )
-
-set(GUI_TARGET "drace-gui")
-
-cmake_minimum_required(VERSION 3.5)
-
-project(${GUI_TARGET} LANGUAGES CXX)
-
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC ON)
@@ -57,14 +52,13 @@ if(Qt5_FOUND AND Boost_FOUND)
     endif()
     add_executable(${GUI_TARGET} WIN32 ${SOURCES})
     target_include_directories(${GUI_TARGET} PRIVATE "include")
-    target_link_libraries(${GUI_TARGET} PRIVATE
-        Qt5::Widgets )
+    target_link_libraries(${GUI_TARGET} PRIVATE Qt5::Widgets)
 
     target_link_libraries(${GUI_TARGET} PRIVATE
         Boost::system
         Boost::filesystem
-        Boost::serialization )
-    target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST )
+        Boost::serialization)
+    target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST)
 
     if(WIN32)
         find_package(WindeployQt)
@@ -78,9 +72,9 @@ if(Qt5_FOUND AND Boost_FOUND)
     # just for convenience we copy the Qt dlls to the build folder
     # to be able to run the drace-gui from there
     add_custom_command(TARGET ${GUI_TARGET} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:${GUI_TARGET}>
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:${GUI_TARGET}>
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:${GUI_TARGET}> )
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:${GUI_TARGET}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:${GUI_TARGET}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:${GUI_TARGET}>)
 
     # install the GUI executable itself (without Qt shared modules)
     install(TARGETS ${GUI_TARGET} DESTINATION ${DRACE_RUNTIME_DEST})
@@ -90,5 +84,4 @@ if(Qt5_FOUND AND Boost_FOUND)
         file(READ "LICENSE.md" LIC_FILE_QT)
         file(APPEND ${LIC_FILE} "${LIC_SEP}DRace GUI\n\n${LIC_FILE_QT}")
     endif()
-
 endif()
