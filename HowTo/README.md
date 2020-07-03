@@ -59,6 +59,8 @@ The following fields are optional:
 
 A nice looking HTML-Report can be created by using the **[ReportConverter](#reportconverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
 
+An optional parameter of the Report Converter that could also be specified is the citing of general directories to the source files of the application under test. This is useful especially when the executable is a prebuilt binary, whereby source paths might point to the build environment. Therefore, multiple parent directories could be specified to be recursively searched into for the application's source files.
+
 Note: Python 3 must be installed and in the Windows-PATH environment variable when using the python script.
 
 More information about the ReportConverter is [here](#reportconverter)
