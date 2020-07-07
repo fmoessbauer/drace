@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>420</width>
-    <height>553</height>
+    <width>460</width>
+    <height>630</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,16 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="5" column="0" colspan="4">
-     <widget class="QLineEdit" name="drace_path_input"/>
-    </item>
-    <item row="4" column="0">
-     <widget class="QLabel" name="label_7">
-      <property name="text">
-       <string>DRace - Path</string>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="0" colspan="2">
      <widget class="QLabel" name="label_2">
       <property name="text">
@@ -32,28 +22,51 @@
       </property>
      </widget>
     </item>
-    <item row="17" column="0" colspan="5">
-     <widget class="QPushButton" name="run_button">
-      <property name="text">
-       <string>RUN</string>
-      </property>
-     </widget>
-    </item>
-    <item row="16" column="0" colspan="4">
-     <widget class="QTextBrowser" name="command_output">
+    <item row="0" column="0">
+     <widget class="QLabel" name="label">
       <property name="font">
        <font>
-        <pointsize>8</pointsize>
+        <pointsize>14</pointsize>
        </font>
+      </property>
+      <property name="text">
+       <string>DRaceGUI</string>
       </property>
      </widget>
     </item>
-    <item row="10" column="0" colspan="2">
-     <widget class="QLabel" name="label_4">
+    <item row="9" column="0" colspan="4">
+     <widget class="QLineEdit" name="config_file_input"/>
+    </item>
+    <item row="11" column="4">
+     <widget class="QPushButton" name="exe_path_btn">
       <property name="text">
-       <string>Executable (exe under test)</string>
+       <string>Browse</string>
       </property>
      </widget>
+    </item>
+    <item row="14" column="0" colspan="2">
+     <widget class="QLabel" name="label_10">
+      <property name="text">
+       <string>DRace Flags (use single quotes when needed)</string>
+      </property>
+     </widget>
+    </item>
+    <item row="8" column="0" colspan="2">
+     <widget class="QLabel" name="label_5">
+      <property name="text">
+       <string>Configuration File</string>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="2">
+     <widget class="QRadioButton" name="fasttrack_btn">
+      <property name="text">
+       <string>Fasttrack</string>
+      </property>
+     </widget>
+    </item>
+    <item row="11" column="0" colspan="4">
+     <widget class="QLineEdit" name="exe_input"/>
     </item>
     <item row="0" column="4">
      <widget class="QLabel" name="drace_link">
@@ -75,29 +88,8 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="11" column="0" colspan="4">
-     <widget class="QLineEdit" name="exe_input"/>
-    </item>
-    <item row="8" column="0" colspan="2">
-     <widget class="QLabel" name="label_5">
-      <property name="text">
-       <string>Configuration File</string>
-      </property>
-     </widget>
-    </item>
-    <item row="15" column="0" colspan="2">
-     <widget class="QLabel" name="label_8">
-      <property name="text">
-       <string>Command</string>
-      </property>
-     </widget>
-    </item>
-    <item row="14" column="0">
-     <widget class="QCheckBox" name="report_creation">
-      <property name="text">
-       <string>Report</string>
-      </property>
-     </widget>
+    <item row="5" column="0" colspan="4">
+     <widget class="QLineEdit" name="drace_path_input"/>
     </item>
     <item row="5" column="4">
      <widget class="QPushButton" name="drace_path_btn">
@@ -106,105 +98,7 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="14" column="1">
-     <widget class="QCheckBox" name="msr_box">
-      <property name="text">
-       <string>MSR</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0" colspan="4">
-     <widget class="QLineEdit" name="dr_path_input">
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QLabel" name="label">
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>DRaceGUI</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0" colspan="2">
-     <widget class="QCheckBox" name="dr_debug">
-      <property name="text">
-       <string>Debug Mode</string>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="2">
-     <widget class="QRadioButton" name="fasttrack_btn">
-      <property name="text">
-       <string>Fasttrack</string>
-      </property>
-     </widget>
-    </item>
-    <item row="9" column="4">
-     <widget class="QPushButton" name="config_browse_btn">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-    <item row="13" column="0" colspan="5">
-     <widget class="QLineEdit" name="flag_input"/>
-    </item>
-    <item row="12" column="0" colspan="2">
-     <widget class="QLabel" name="label_10">
-      <property name="text">
-       <string>DRace Flags (use single quotes when needed)</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="4">
-     <widget class="QPushButton" name="dr_path_btn">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-    <item row="11" column="4">
-     <widget class="QPushButton" name="exe_path_btn">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-    <item row="9" column="0" colspan="4">
-     <widget class="QLineEdit" name="config_file_input"/>
-    </item>
-    <item row="6" column="0" colspan="2">
-     <widget class="QLabel" name="label_9">
-      <property name="text">
-       <string>Select Detector Backend</string>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="0">
-     <widget class="QRadioButton" name="tsan_btn">
-      <property name="text">
-       <string>TSAN</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="1">
-     <widget class="QRadioButton" name="dummy_btn">
-      <property name="text">
-       <string>Dummy</string>
-      </property>
-     </widget>
-    </item>
-    <item row="16" column="4">
+    <item row="18" column="4">
      <widget class="QPushButton" name="copy_button">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -219,6 +113,122 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
+    <item row="7" column="1">
+     <widget class="QRadioButton" name="dummy_btn">
+      <property name="text">
+       <string>Dummy</string>
+      </property>
+     </widget>
+    </item>
+    <item row="15" column="0" colspan="5">
+     <widget class="QLineEdit" name="flag_input"/>
+    </item>
+    <item row="7" column="0">
+     <widget class="QRadioButton" name="tsan_btn">
+      <property name="text">
+       <string>TSAN</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="4">
+     <widget class="QLineEdit" name="dr_path_input">
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="17" column="0" colspan="2">
+     <widget class="QLabel" name="label_8">
+      <property name="text">
+       <string>Command</string>
+      </property>
+     </widget>
+    </item>
+    <item row="19" column="0" colspan="5">
+     <widget class="QPushButton" name="run_button">
+      <property name="text">
+       <string>RUN</string>
+      </property>
+     </widget>
+    </item>
+    <item row="18" column="0" colspan="4">
+     <widget class="QTextBrowser" name="command_output">
+      <property name="font">
+       <font>
+        <pointsize>8</pointsize>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item row="16" column="0">
+     <widget class="QCheckBox" name="report_creation">
+      <property name="text">
+       <string>Report</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0" colspan="2">
+     <widget class="QCheckBox" name="dr_debug">
+      <property name="text">
+       <string>Debug Mode</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="text">
+       <string>DRace - Path</string>
+      </property>
+     </widget>
+    </item>
+    <item row="16" column="1">
+     <widget class="QCheckBox" name="msr_box">
+      <property name="text">
+       <string>MSR</string>
+      </property>
+     </widget>
+    </item>
+    <item row="9" column="4">
+     <widget class="QPushButton" name="config_browse_btn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="4">
+     <widget class="QPushButton" name="dr_path_btn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0" colspan="2">
+     <widget class="QLabel" name="label_9">
+      <property name="text">
+       <string>Select Detector Backend</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="0" colspan="2">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>Executable (exe under test)</string>
+      </property>
+     </widget>
+    </item>
+    <item row="13" column="0" colspan="5">
+     <widget class="QLineEdit" name="exe_args_input"/>
+    </item>
+    <item row="12" column="0" colspan="3">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Argument(s) for executable (use single quotes when needed)</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -226,7 +236,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>420</width>
+     <width>460</width>
      <height>21</height>
     </rect>
    </property>

@@ -200,6 +200,10 @@ void DRaceGUI::on_exe_input_textChanged(const QString &arg1) {
       ch->make_entry(arg1, Command_Handler::EXECUTABLE, "--"));
 }
 
+void DRaceGUI::on_exe_args_input_textChanged(const QString &arg1) {
+  ui->command_output->setText(ch->make_exe_args_entry(arg1));
+}
+
 void DRaceGUI::on_flag_input_textChanged(const QString &arg1) {
   ui->command_output->setText(ch->make_flag_entry(arg1));
 }
@@ -299,6 +303,8 @@ void DRaceGUI::set_boxes_after_load() {
   QString exe = ch->command[Command_Handler::EXECUTABLE];
   exe.remove(0, 3);  // exe cmd is -- EXECUTEABLE -> remove "-- "
   ui->exe_input->setText(remove_quotes(exe));
+
+  ui->exe_args_input->setText(ch->command[Command_Handler::EXECUTABLE_ARGS]);
 
   ui->flag_input->setText(ch->command[Command_Handler::FLAGS]);
 

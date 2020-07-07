@@ -29,7 +29,8 @@ class Command_Handler {
   static constexpr uint EXT_CTRL = 6;
   static constexpr uint CONFIGURATION = 7;
   static constexpr uint EXECUTABLE = 8;
-  static constexpr uint REPORT_CMD = 9;
+  static constexpr uint EXECUTABLE_ARGS = 9;
+  static constexpr uint REPORT_CMD = 10;
 
  private:
   QString entire_command;
@@ -54,6 +55,9 @@ class Command_Handler {
 
   /// sets the flag entry
   QString make_flag_entry(const QString& arg1);
+
+  /// sets the argument(s) (if any) of the executable under test
+  QString make_exe_args_entry(const QString& arg1);
 
   /// makes a command entry into the command array and updates the
   /// entire_command

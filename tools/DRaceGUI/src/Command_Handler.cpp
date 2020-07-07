@@ -80,6 +80,14 @@ QString Command_Handler::make_flag_entry(const QString &arg1) {
   return updateCommand(to_append, FLAGS);
 }
 
+QString Command_Handler::make_exe_args_entry(const QString &arg1) {
+  if (arg1 != "") {
+    return updateCommand(arg1, EXECUTABLE_ARGS);
+  } else {
+    return updateCommand("", EXECUTABLE_ARGS);
+  }
+}
+
 bool Command_Handler::validate_and_set_msr(bool on, QObject *parent) {
   QString cmd = "";
   make_extctrl(false);
