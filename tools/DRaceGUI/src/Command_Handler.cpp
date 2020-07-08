@@ -62,22 +62,11 @@ QString Command_Handler::make_command() {
 }
 
 QString Command_Handler::make_flag_entry(const QString &arg1) {
-  QList<QString> split_string =
-      arg1.split(QRegExp("\\s+"));  // regex of one or many whitespaces
-
-  QString to_append;
-  for (auto it = split_string.begin(); it != split_string.end(); it++) {
-    QString temp = *it;
-    if (temp.contains(" ")) {
-      temp = "\"" + *it + "\"";
-    }
-    if (it == split_string.begin()) {
-      to_append = temp;
-    } else {
-      to_append += (" " + temp);
-    }
+  if (arg1 != "") {
+    return updateCommand(arg1, FLAGS);
+  } else {
+    return updateCommand("", FLAGS);
   }
-  return updateCommand(to_append, FLAGS);
 }
 
 QString Command_Handler::make_exe_args_entry(const QString &arg1) {
