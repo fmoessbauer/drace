@@ -24,7 +24,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
                 "type size not correct");
   static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
   static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
-  static_assert(sizeof(ShadowThreadState::enabled) == 1,
+  static_assert(sizeof(ShadowThreadState::enabled) == sizeof(uintptr_t),
                 "type size not correct");
 
   instr_t *instr;
@@ -78,8 +78,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
 
   /* Jump if tracing is disabled */
   /* load enabled flag into reg2 */
-  opnd1 = opnd_create_reg(reg_resize_to_opsz(reg2, OPSZ_1));
-  opnd2 = OPND_CREATE_MEM8(reg3, offsetof(ShadowThreadState, enabled));
+  opnd1 = opnd_create_reg(reg2);
+  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, enabled));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 

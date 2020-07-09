@@ -30,10 +30,18 @@ class ShadowThreadState {
   byte* buf_ptr;
   ptr_int_t buf_end;
 
-  /// Represents the detector state.
-  byte enabled{true};
-  /// inverse of flush pending, jmpecxz
-  std::atomic<byte> no_flush{false};
+  /**
+   * \brief Represents the detector state
+   * \note has to be ptr-sized, as put into (E|R)cx register
+   */
+  uintptr_t enabled{true};
+
+  /**
+   * \brief inverse of flush pending, jmpecxz
+   * \note has to be ptr-sized, as put into (E|R)cx register
+   */
+  std::atomic<uintptr_t> no_flush{false};
+
   /// local sampling state
   int sampling_pos = 0;
 

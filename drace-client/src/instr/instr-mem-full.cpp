@@ -25,8 +25,8 @@ void MemoryTracker::insert_jmp_on_flush(void *drcontext, instrlist_t *ilist,
   // jmp .clean_call
   //
 
-  opnd1 = opnd_create_reg(reg_resize_to_opsz(regxcx, OPSZ_1));
-  opnd2 = OPND_CREATE_MEM8(regtls, offsetof(ShadowThreadState, no_flush));
+  opnd1 = opnd_create_reg(regxcx);
+  opnd2 = OPND_CREATE_MEMPTR(regtls, offsetof(ShadowThreadState, no_flush));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
@@ -97,8 +97,8 @@ void MemoryTracker::instrument_mem_full(void *drcontext, instrlist_t *ilist,
 
   /* Jump if tracing is disabled */
   /* load enabled flag into reg2 */
-  opnd1 = opnd_create_reg(reg_resize_to_opsz(reg2, OPSZ_1));
-  opnd2 = OPND_CREATE_MEM8(reg3, offsetof(ShadowThreadState, enabled));
+  opnd1 = opnd_create_reg(reg2);
+  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, enabled));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
