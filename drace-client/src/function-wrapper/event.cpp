@@ -44,7 +44,6 @@ namespace funwrap {
 void event::beg_excl_region(ShadowThreadState &data) {
   // We do not flush here, as in disabled state no
   // refs are recorded
-  // memory_tracker->process_buffer();
   LOG_TRACE(data.tid, "Begin excluded region");
   MemoryTracker::disable_scope(data);
 }
@@ -177,8 +176,7 @@ void event::prepare_and_aquire(void *wrapctx, void *mutex, bool write,
     hashtable_add_replace(&data.mutex_book, mutex, (void *)++cnt);
   }
 
-  LOG_TRACE(data.tid, "Mutex book size: %i, count: %i, mutex: %p\n",
-            data.mutex_book.size(), cnt, mutex);
+  LOG_TRACE(data.tid, "Mutex count: %i, mutex: %p\n", cnt, mutex);
 
   detector->acquire(data.detector_data, mutex, (int)cnt, write);
   // detector::happens_after(data.tid, mutex);
@@ -383,7 +381,7 @@ void event::barrier_enter(void *wrapctx, void **addr) {
   app_pc drcontext = drwrap_get_drcontext(wrapctx);
   ShadowThreadState &data = thread_state.getSlot(drcontext);
   *addr = drwrap_get_arg(wrapctx, 0);
-  LOG_TRACE(static_cast<detector::tid_t>(data.tid), "barrier enter %p", *addr);
+  LOG_TRACE(data.tid, "barrier enter %p", *addr);
   // each thread enters the barrier individually
 
   detector->happens_before(data.detector_data, *addr);
