@@ -18,13 +18,22 @@ DRaceGUI::DRaceGUI(QWidget *parent)
   rh = new Report_Handler(ch, this);
   ui->setupUi(this);
 
-  ui->dr_path_input->setText("drrun.exe");
+  // check if drrun.exe is in the same folder
+  QString drrun_temp = "drrun.exe";
+  QFileInfo drrun = drrun_temp;
+  if (drrun.exists()) {
+    ui->dr_path_input->setText(drrun.absoluteFilePath());
+  } else {
+    ui->dr_path_input->setText(drrun_temp);
+  }
+
   ui->command_output->setText(ch->get_command());
 
-  // check if drace-client.dll is in same folder
-  std::fstream drace_client("drace-client.dll", std::fstream::in);
-  if (drace_client.good()) {
-    ui->drace_path_input->setText("drace-client.dll");
+  // check if drace-client.dll is in the same folder
+  QString dr_temp = "drace-client.dll";
+  QFileInfo drace_client = dr_temp;
+  if (drace_client.exists()) {
+    ui->drace_path_input->setText(drace_client.absoluteFilePath());
   }
 }
 
@@ -181,7 +190,7 @@ void DRaceGUI::on_drace_path_input_textChanged(const QString &arg1) {
   QPalette pal;
   pal.setColor(QPalette::Base, Qt::red);
 
-  if (arg1.endsWith("drace-client.dll")) {
+  if (arg1.endsWith("drace-client.dll") && QFileInfo(arg1).exists()) {
     pal.setColor(QPalette::Base, Qt::green);
 
     if (ui->config_file_input->text()
