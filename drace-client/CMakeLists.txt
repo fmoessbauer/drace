@@ -7,7 +7,6 @@ set(SOURCES
     "src/function-wrapper/event"
     "src/memory-tracker"
     "src/instr/instr-mem-fast"
-    "src/instr/instr-mem-full"
     "src/module/Metadata"
     "src/module/Tracker"
     "src/symbol/Symbols"
