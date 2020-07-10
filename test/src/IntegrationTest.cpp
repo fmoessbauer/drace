@@ -76,7 +76,7 @@ TEST_P(DR, ExcludeRaces) {
 TEST_P(DR, FaultInApp) { run(GetParam(), "gp-segfault", 0, 0); }
 
 /// Make sure, the tutorial works as expected
-TEST_P(DR, HowToTask) { run(GetParam(), "shoppingrush", 1, 10); }
+TEST_P(DR, HowToTask) { run(GetParam(), "shoppingrush", 1, 20); }
 TEST_P(DR, HowToSolution) { run(GetParam(), "shoppingrush-sol", 0, 0); }
 
 TEST_P(DR, NoIoRaces) {
@@ -124,12 +124,10 @@ TEST_P(DR, DotnetClrMutex) {
 
 #ifdef DRACE_XML_EXPORTER
 TEST_P(DR, ReportXML) {
-  std::string filename("reportXML.xml");
-  run(std::string(GetParam()) + " --xml-file " + filename, "gp-concurrent-inc",
-      1, 10);
+  run(GetParam(), "gp-concurrent-inc", 1, 10);
   {
     tinyxml2::XMLDocument doc;
-    ASSERT_EQ(doc.LoadFile(filename.c_str()), tinyxml2::XML_SUCCESS)
+    ASSERT_EQ(doc.LoadFile("gp-concurrent-inc.xml"), tinyxml2::XML_SUCCESS)
         << "File not found";
     const auto errornode =
         doc.FirstChildElement("valgrindoutput")->FirstChildElement("error");
@@ -152,7 +150,6 @@ TEST_P(DR, ReportXML) {
     ASSERT_TRUE(offset);
     EXPECT_LE(offset->UnsignedText(), 20u);
   }
-  std::remove(filename.c_str());
 }
 #endif
 

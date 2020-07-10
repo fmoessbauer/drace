@@ -133,7 +133,7 @@ windows_x64:test:
   - ./bin/drace-system-tests.exe --gtest_output="xml:test-system-results.xml" --gtest_filter="*/0"
   artifacts:
     paths:
-    - win64-dr${DR_ABI}/test-system-results.xml
+    - win64-dr${DR_ABI}/*.xml
     - win64-dr${DR_ABI}/Testing/**/Test.xml
     reports:
       junit:
