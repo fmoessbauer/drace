@@ -42,6 +42,7 @@ The following fields are mandatory:
 - Select Detector: Select one of the available detectors (more information about detectors are [here](##Detectors))
 - Configuration File: Path to ```drace.ini```
 - Executable: Path to the application under test
+    - Argument(s) for Executable: In case the application under test requires arguments
 
 The following fields are optional:
 

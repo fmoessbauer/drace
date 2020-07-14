@@ -57,6 +57,7 @@ class DRaceGUI : public QMainWindow {
   void on_dr_path_input_textChanged(const QString &arg1);
   void on_drace_path_input_textChanged(const QString &arg1);
   void on_exe_input_textChanged(const QString &arg1);
+  void on_exe_args_input_textChanged(const QString &arg1);
   void on_flag_input_textChanged(const QString &arg1);
   void on_config_file_input_textChanged(const QString &arg1);
 

@@ -26,7 +26,8 @@ void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
   flags = data[Command_Handler::FLAGS].toStdString();
   ext_ctrl = data[Command_Handler::EXT_CTRL].toStdString();
   configuration = data[Command_Handler::CONFIGURATION].toStdString();
-  execuatable = data[Command_Handler::EXECUTABLE].toStdString();
+  executable = data[Command_Handler::EXECUTABLE].toStdString();
+  executable_args = data[Command_Handler::EXECUTABLE_ARGS].toStdString();
 
   msr = ch->get_msr_path().toStdString();
 }
@@ -50,7 +51,9 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
   ch->command[Command_Handler::FLAGS] = QString(flags.c_str());
   ch->command[Command_Handler::EXT_CTRL] = QString(ext_ctrl.c_str());
   ch->command[Command_Handler::CONFIGURATION] = QString(configuration.c_str());
-  ch->command[Command_Handler::EXECUTABLE] = QString(execuatable.c_str());
+  ch->command[Command_Handler::EXECUTABLE] = QString(executable.c_str());
+  ch->command[Command_Handler::EXECUTABLE_ARGS] =
+      QString(executable_args.c_str());
 
   ch->set_msr(QString(msr.c_str()));
 }

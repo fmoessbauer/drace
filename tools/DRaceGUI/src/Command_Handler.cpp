@@ -52,7 +52,7 @@ QString Command_Handler::make_command() {
       entire_command.prepend(".");
     }
   }
-  for (int it = 0; it <= (REPORT_CMD); it++) {
+  for (int it = 0; it < (_END_OF_COMMAND_TYPE_); it++) {
     if (command[it] != "") {
       entire_command.append(command[it]);
       entire_command.append(" ");
@@ -62,22 +62,19 @@ QString Command_Handler::make_command() {
 }
 
 QString Command_Handler::make_flag_entry(const QString &arg1) {
-  QList<QString> split_string =
-      arg1.split(QRegExp("\\s+"));  // regex of one or many whitespaces
-
-  QString to_append;
-  for (auto it = split_string.begin(); it != split_string.end(); it++) {
-    QString temp = *it;
-    if (temp.contains(" ")) {
-      temp = "\"" + *it + "\"";
-    }
-    if (it == split_string.begin()) {
-      to_append = temp;
-    } else {
-      to_append += (" " + temp);
-    }
+  if (arg1 != "") {
+    return updateCommand(arg1, FLAGS);
+  } else {
+    return updateCommand("", FLAGS);
   }
-  return updateCommand(to_append, FLAGS);
+}
+
+QString Command_Handler::make_exe_args_entry(const QString &arg1) {
+  if (arg1 != "") {
+    return updateCommand(arg1, EXECUTABLE_ARGS);
+  } else {
+    return updateCommand("", EXECUTABLE_ARGS);
+  }
 }
 
 bool Command_Handler::validate_and_set_msr(bool on, QObject *parent) {
