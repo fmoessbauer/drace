@@ -52,7 +52,7 @@ QString Command_Handler::make_command() {
       entire_command.prepend(".");
     }
   }
-  for (int it = 0; it <= (REPORT_CMD); it++) {
+  for (int it = 0; it < (_END_OF_COMMAND_TYPE_); it++) {
     if (command[it] != "") {
       entire_command.append(command[it]);
       entire_command.append(" ");

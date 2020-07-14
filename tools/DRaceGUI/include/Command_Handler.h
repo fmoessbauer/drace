@@ -20,17 +20,20 @@
 
 class Command_Handler {
  public:
-  static constexpr uint DYNAMORIO = 0;
-  static constexpr uint DR_DEBUG = 1;
-  static constexpr uint DRACE = 2;
-  static constexpr uint DETECTOR = 3;
-  static constexpr uint FLAGS = 4;
-  static constexpr uint REPORT_FLAG = 5;
-  static constexpr uint EXT_CTRL = 6;
-  static constexpr uint CONFIGURATION = 7;
-  static constexpr uint EXECUTABLE = 8;
-  static constexpr uint EXECUTABLE_ARGS = 9;
-  static constexpr uint REPORT_CMD = 10;
+  enum Command_Type : uint {
+    DYNAMORIO,
+    DR_DEBUG,
+    DRACE,
+    DETECTOR,
+    FLAGS,
+    REPORT_FLAG,
+    EXT_CTRL,
+    CONFIGURATION,
+    EXECUTABLE,
+    EXECUTABLE_ARGS,
+    REPORT_CMD,
+    _END_OF_COMMAND_TYPE_
+  };
 
  private:
   QString entire_command;
@@ -51,7 +54,7 @@ class Command_Handler {
   Command_Handler(QString default_detector = "tsan");
 
   /// the command array holds each part of the command as a QString
-  QString command[(REPORT_CMD + 1)];
+  QString command[_END_OF_COMMAND_TYPE_];
 
   /// sets the flag entry
   QString make_flag_entry(const QString& arg1);
