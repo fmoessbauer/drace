@@ -12,28 +12,45 @@
 #include "draceGUI.h"
 #include "./ui_draceGUI.h"
 
-DRaceGUI::DRaceGUI(QWidget *parent)
+DRaceGUI::DRaceGUI(QString config, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::DRaceGUI) {
   ch = new Command_Handler();
   rh = new Report_Handler(ch, this);
   ui->setupUi(this);
 
-  // check if drrun.exe is in the same folder
-  QString drrun_temp = "drrun.exe";
-  QFileInfo drrun = drrun_temp;
-  if (drrun.exists()) {
-    ui->dr_path_input->setText(drrun.absoluteFilePath());
-  } else {
-    ui->dr_path_input->setText(drrun_temp);
+  if (config != "") {
+    // open drace with pre-filled data from the input config file
+    Load_Save ls(rh, ch);
+    if (ls.load(config.toStdString())) {
+      // restore all the data to the boxes if config file is valid
+      set_boxes_after_load();
+    } else {
+      QMessageBox temp;
+      temp.setIcon(QMessageBox::Warning);
+      temp.setText("File is not valid!");
+      temp.exec();
+    }
   }
 
-  ui->command_output->setText(ch->get_command());
+  else {
+    // open drace with empty gui
+    QString drrun_temp = "drrun.exe";
+    QFileInfo drrun = drrun_temp;
+    // check if drrun.exe is in the same folder
+    if (drrun.exists()) {
+      ui->dr_path_input->setText(drrun.absoluteFilePath());
+    } else {
+      ui->dr_path_input->setText(drrun_temp);
+    }
 
-  // check if drace-client.dll is in the same folder
-  QString dr_temp = "drace-client.dll";
-  QFileInfo drace_client = dr_temp;
-  if (drace_client.exists()) {
-    ui->drace_path_input->setText(drace_client.absoluteFilePath());
+    ui->command_output->setText(ch->get_command());
+
+    // check if drace-client.dll is in the same folder
+    QString dr_temp = "drace-client.dll";
+    QFileInfo drace_client = dr_temp;
+    if (drace_client.exists()) {
+      ui->drace_path_input->setText(drace_client.absoluteFilePath());
+    }
   }
 }
 
