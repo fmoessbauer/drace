@@ -31,8 +31,7 @@ It is recommended to use the latest cron build. Once the download is finished, y
 
 For new users, the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quite long and unhandy DRace command can be built in an easier fashion.
 
-Furthermore, a working configuration can be saved in a text file and restored at a later time.
-Additionally, some plausibility checks are executed on the inputs. Correct and incorrect inputs are marked with green and red respectively. The fields must be filled as described in the following.
+Some plausibility checks are executed on the inputs, whereby correct and incorrect inputs are marked with green and red respectively. The fields must be filled as described in the following.
 Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an arbitrary shell.
 
 The following fields are mandatory:
@@ -51,6 +50,8 @@ The following fields are optional:
 - MSR: This option starts the managed code resolver, if one wants to analyse applications with .NET code.
 - DRace Flags: here additional DRace Flags can be set. Be careful, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Available DRace flags are [here](#shell-usage)
 
+Furthermore, a working configuration can be saved in a default `.drc` file type, or in any other file type (for instance a text file) by clicking on *File->Save Configuration As.* This configuration could also be restored at a later time by clicking on *File->Load Configuration.*
+
 ![1](./Images/dracegui_empty.png "Empty DRaceGUI")
 ![2](./Images/dracegui_filled.png "Filled DRaceGUI")
 
@@ -65,6 +66,16 @@ An optional parameter of the Report Converter that could also be specified is th
 Note: Python 3 must be installed and in the Windows-PATH environment variable when using the python script.
 
 More information about the ReportConverter is [here](#reportconverter)
+
+#### Other Settings
+
+Other settings can be managed under "Tools > Options".
+
+![options](./Images/options.png)
+
+*Configuration File Settings:*
+
+The user is able to save configuration data from DRaceGUI with specialized `.drc` files by default. Click on "Set" to associate the default configuration file type `.drc` with the DRaceGUI, which would enable the user to interact with saved configuration files easily. When double-clicked, these `.drc` configuration files would open the DRaceGUI with the configuration data pre-loaded into the DRaceGUI. Click on "Revert" to undo a successful association.
 
 ### Shell-Usage
 

@@ -28,6 +28,7 @@
 #include "Load_Save.h"
 #include "Report_Handler.h"
 #include "about_dialog.h"
+#include "options_dialog.h"
 #include "report_config.h"
 
 QT_BEGIN_NAMESPACE
@@ -77,6 +78,7 @@ class DRaceGUI : public QMainWindow {
   void on_actionSave_Config_triggered();
   void on_actionConfigure_Report_triggered();
   void on_actionHelp_triggered();
+  void on_actionOptions_triggered();
 
  private:
   Ui::DRaceGUI *ui;

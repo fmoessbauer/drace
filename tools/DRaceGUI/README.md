@@ -20,6 +20,7 @@ If the install target of DRace is built, the ```drace-gui.exe``` can be found in
 - If custom DRace flags are set with the text input, potentially needed quotes must be set by the user
 - The RUN button only works, if the command meets certain validation criteria (this does not mean that a command is valid, when RUN works).
 - The report settings can be adjusted in Report->Configure Report
+- Further settings can be found under *Tools->Options*, for instance setting the configuration file with the default extension to be able to open with the DRaceGUI by default.
 
 
 

@@ -257,8 +257,15 @@ void DRaceGUI::on_actionAbout_triggered() {
 }
 
 void DRaceGUI::on_actionLoad_Config_triggered() {
-  QString path =
-      QFileDialog::getOpenFileName(this, "Open File", load_save_path);
+  QString temp_sel =
+      "DRace Configuration File (*" + Options_Dialog::CONFIG_EXT + ")";
+  const char *selected_filter = temp_sel.toStdString().c_str();
+  QString selfilter = tr(selected_filter);
+  QString temp_filter = "All files(*.*);; DRace Configuration File (*" +
+                        Options_Dialog::CONFIG_EXT + ")";
+  const char *filter = temp_filter.toStdString().c_str();
+  QString path = QFileDialog::getOpenFileName(this, "Open File", load_save_path,
+                                              tr(filter), &selfilter);
   if (path != "") {
     load_save_path = path;
     Load_Save ls(rh, ch);
@@ -274,8 +281,15 @@ void DRaceGUI::on_actionLoad_Config_triggered() {
 }
 
 void DRaceGUI::on_actionSave_Config_triggered() {
-  QString path =
-      QFileDialog::getSaveFileName(this, "Save file", load_save_path);
+  QString temp_sel =
+      "DRace Configuration File (*" + Options_Dialog::CONFIG_EXT + ")";
+  const char *selected_filter = temp_sel.toStdString().c_str();
+  QString selfilter = tr(selected_filter);
+  QString temp_filter = "All files(*.*);; DRace Configuration File (*" +
+                        Options_Dialog::CONFIG_EXT + ")";
+  const char *filter = temp_filter.toStdString().c_str();
+  QString path = QFileDialog::getSaveFileName(this, "Save file", load_save_path,
+                                              tr(filter), &selfilter);
   if (path != "") {
     load_save_path = path;
     Load_Save ls(rh, ch);
@@ -295,6 +309,11 @@ void DRaceGUI::on_actionHelp_triggered() {
   temp.setIcon(QMessageBox::Warning);
   temp.setText("This feature is not avaliable!");
   temp.exec();
+}
+
+void DRaceGUI::on_actionOptions_triggered() {
+  Options_Dialog options_window;
+  options_window.exec();
 }
 
 QString DRaceGUI::remove_quotes(QString str) {

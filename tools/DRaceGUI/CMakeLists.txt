@@ -28,6 +28,9 @@ set(SOURCES
     "qt/Report_Config.cpp"
     "qt/Report_Config.h"
     "qt/Report_Config.ui"
+    "qt/Options_Dialog.cpp"
+    "qt/Options_Dialog.h"
+    "qt/Options_Dialog.ui"
 )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
