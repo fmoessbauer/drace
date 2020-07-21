@@ -52,8 +52,9 @@ The following fields are optional:
 
 Furthermore, a working configuration can be saved in a default `.drc` file type, or in any other file type (for instance a text file) by clicking on *File->Save Configuration As.* This configuration could also be restored at a later time by clicking on *File->Load Configuration.*
 
-![1](./Images/dracegui_empty.png "Empty DRaceGUI")
-![2](./Images/dracegui_filled.png "Filled DRaceGUI")
+| Empty DRaceGUI | Filled DRaceGUI |
+| :-----: | :-----: |
+| ![1](./Images/dracegui_empty.png "Empty DRaceGUI") | ![2](./Images/dracegui_filled.png "Filled DRaceGUI") |
 
 #### Report-Settings
 
