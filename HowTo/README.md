@@ -56,11 +56,11 @@ Furthermore, a working configuration can be saved in a default `.drc` file type,
 | :-----: | :-----: |
 | ![1](./Images/dracegui_empty.png "Empty DRaceGUI") | ![2](./Images/dracegui_filled.png "Filled DRaceGUI") |
 
-#### Report-Settings
+#### Report Settings
 
 ![report_pic](./Images/report_settings.png)
 
-A nice looking HTML-Report can be created by using the **[ReportConverter](#reportconverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in "Report > Configure Report". Also a name for the xml report which is created by DRace must be specified (or just use the default value).
+A nice looking HTML-Report can be created by using the **[ReportConverter](#reportconverter)**. The GUI extends the command such that the ReportConverter is used. Therefore, the path to the Python script `ReportConverter.py` or the `ReportConverter.exe` must be specified in *Report->Configure Report*. Also a name for the xml report which is created by DRace must be specified (or just use the default value).
 
 An optional parameter of the Report Converter that could also be specified is the citing of general directories to the source files of the application under test. This is useful especially when the executable is a prebuilt binary, whereby source paths might point to the build environment. Therefore, multiple parent directories could be specified to be recursively searched into for the application's source files.
 
@@ -70,7 +70,7 @@ More information about the ReportConverter is [here](#reportconverter)
 
 #### Other Settings
 
-Other settings can be managed under "Tools > Options".
+Other settings can be managed under *Tools->Options*.
 
 ![options](./Images/options.png)
 
@@ -150,16 +150,17 @@ cmake --build . --config RelWithDebInfo
 
 *Note: You can also use the provided prebuilt version of the ShoppingRush example,
 but as the PDB files contain absolute paths to the source files, the report converter
-might not be able to find them.*
+might not be able to find them. For complete report generation, please add the directory 
+of the ShoppingRush source files to the source directories while configuring the report converter.*
 
 ### 3. Configure a DRace-Command using the GUI ([more Details](#gui-usage))
 
-    - Find the paths to drrun, drace-client.dll and drace.ini
-    - The specified executable must be the delivered sample application `./drace/sample/ShoppingRush.exe` (or `.\bin\samples\RelWithDebInfo\ShoppingRush.exe`)
-    - Configure the ReportConverter
-    - The report box must be ticked
-    - The MSR and Debug Mode box must be unticked
-    - Use TSAN as detector
+- Find the paths to drrun, drace-client.dll and drace.ini
+- The specified executable must be the delivered sample application `.\drace\samples\shoppingrush.exe` (or `.\bin\samples\RelWithDebInfo\shoppingrush.exe`)
+- Configure the ReportConverter
+- The report box must be ticked
+- The MSR and Debug Mode box must be unticked
+- Use TSAN as detector
 
 ![7](./Images/gui_example.png)
 
