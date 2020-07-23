@@ -15,7 +15,11 @@
 
 int main(int argc, char *argv[]) {
   QApplication a(argc, argv);
-  DRaceGUI w;
+  QString config = "";
+  if (argc == 2) {
+    config = argv[1];
+  }
+  DRaceGUI w(config);
   w.show();
   return a.exec();
 }
