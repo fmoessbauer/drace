@@ -302,8 +302,6 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
   using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
   auto instrument_instr =
       (INSTR_FLAGS)(util::unsafe_ptr_cast<uintptr_t>(user_data));
-  // we treat all atomic accesses as reads
-  bool instr_is_atomic{false};
 
   if (instr_get_app_pc(instr) == NULL || !instr_is_app(instr))
     return DR_EMIT_DEFAULT;
@@ -338,7 +336,7 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
   }
 
   // atomic instruction
-  if (instr_get_prefix_flag(instr, PREFIX_LOCK)) instr_is_atomic = true;
+  const bool instr_is_atomic = instr_get_prefix_flag(instr, PREFIX_LOCK);
 
   // Sampling: Only instrument some instructions
   if (!sample_bb(tag)) {
@@ -358,13 +356,14 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
     for (int i = 0; i < instr_num_dsts(instr); i++) {
       opnd_t dst = instr_get_dst(instr, i);
       if (opnd_is_memory_reference(dst)) {
+        // we treat all atomic accesses as reads
         instrument_mem(drcontext, bb, instr, dst, !instr_is_atomic);
       }
     }
   }
 
   return DR_EMIT_DEFAULT;
-}  // namespace drace
+}
 
 void MemoryTracker::process_buffer() {
   ShadowThreadState &data = thread_state.getSlot();
@@ -373,8 +372,8 @@ void MemoryTracker::process_buffer() {
 
 void MemoryTracker::clear_buffer() {
   ShadowThreadState &data = thread_state.getSlot();
-  mem_ref_t *mem_ref = (mem_ref_t *)data.mem_buf.data();
-  uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data.buf_ptr - mem_ref);
+  const mem_ref_t *mem_ref = (mem_ref_t *)data.mem_buf.data();
+  const uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data.buf_ptr - mem_ref);
 
   data.stats.proc_refs += num_refs;
   data.stats.flushes++;
@@ -422,7 +421,7 @@ void MemoryTracker::handle_ext_state(ShadowThreadState &data) {
       }
     }
     // set sampling rate
-    unsigned sampling_rate =
+    const unsigned sampling_rate =
         extcb->get()->sampling_rate.load(std::memory_order_relaxed);
     if (sampling_rate != params.sampling_rate) {
       LOG_INFO(0, "externally changed sampling rate to: %i", sampling_rate);
