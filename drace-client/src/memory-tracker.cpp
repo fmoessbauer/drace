@@ -142,78 +142,42 @@ bool MemoryTracker::pc_in_freq(ShadowThreadState &data, void *bb) {
 
 void MemoryTracker::analyze_access(ShadowThreadState &data) {
   if (data.detector_data == nullptr) {
-    // Thread starts with a pending clean-call
-    // We missed a fork
-    // 1. Flush all threads (except this thread)
-    // 2. Fork thread
-    LOG_TRACE(data.tid, "Missed a fork, do it now");
-    detector->fork(runtime_tid.load(std::memory_order_relaxed),
-                   static_cast<Detector::tid_t>(data.tid),
-                   &(data.detector_data));
-    // arc between parent thread and this thread
-    detector->happens_after(data.detector_data, (void *)(uintptr_t)(data.tid));
-    clear_buffer();
-    return;
+    delayed_initialize_thread(data);
   }
 
   // toggle detector on external state change
   // avoid expensive mod by comparing with bitmask
-  if ((data.stats.flushes & (0xF - 1)) == (0xF - 1)) {
+  if (params.extctrl && (data.stats.flushes & (0xF - 1)) == (0xF - 1)) {
     // lessen impact of expensive SHM accesses
     memory_tracker->handle_ext_state(data);
   }
 
-  if (data.enabled) {
-    mem_ref_t *mem_ref = reinterpret_cast<mem_ref_t *>(data.mem_buf.data());
-    uintptr_t num_refs = static_cast<uintptr_t>(
-        reinterpret_cast<mem_ref_t *>(data.buf_ptr) - mem_ref);
-
-    if (num_refs > 0) {
-      // dr_printf("[%i] Process buffer, noflush: %i, refs: %i\n", data.tid,
-      // data.no_flush.load(std::memory_order_relaxed), num_refs);
-      DR_ASSERT(data.detector_data != nullptr);
-
-      // Lossy count first mem-ref (all are adiacent as after each call is
-      // flushed)
-      if (params.lossy) {
-        data.stats.pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
-        if ((data.stats.flushes & (CC_UPDATE_PERIOD - 1)) ==
-            (CC_UPDATE_PERIOD - 1)) {
-          update_cache(data);
-        }
-      }
-
-      for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
-        if (params.excl_stack && (mem_ref->addr > data.appstack_beg) &&
-            (mem_ref->addr < data.appstack_end)) {
-          // this reference points into the stack range, skip
-          continue;
-        }
-        if (mem_ref->addr > PROC_ADDR_LIMIT) {
-          // outside process address space
-          continue;
-        }
-
-        if (mem_ref->write) {
-          detector->write(
-              data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
-              reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
-          // printf("[%i] WRITE %p, PC: %p\n", data.tid, mem_ref->addr,
-          // mem_ref->pc);
-        } else {
-          detector->read(
-              data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
-              reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
-          // printf("[%i] READ  %p, PC: %p\n", data.tid, mem_ref->addr,
-          // mem_ref->pc);
-        }
-        ++(data.stats.proc_refs);
-      }
-      data.stats.total_refs += num_refs;
-    }
+  mem_ref_t *mem_ref = reinterpret_cast<mem_ref_t *>(data.mem_buf.data());
+  const uintptr_t num_refs = static_cast<uintptr_t>(
+      reinterpret_cast<mem_ref_t *>(data.buf_ptr) - mem_ref);
+#ifdef DEBUG
+  if (!data.enabled) {
+    DR_ASSERT_MSG(num_refs == 0, "Instrumentation disabled, but got mem refs");
   }
+#endif
+
+  lossy_count_if_enabled(data, mem_ref);
+
+  for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
+    if (filtered_memref(data, mem_ref)) continue;
+
+    if (mem_ref->write) {
+      detector->write(data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
+                      reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
+    } else {
+      detector->read(data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
+                     reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
+    }
+    ++(data.stats.proc_refs);
+  }
+  data.stats.total_refs += num_refs;
   data.buf_ptr = data.mem_buf.data();
-}
+}  // namespace drace
 
 /*
  * Thread init Event
@@ -250,7 +214,7 @@ void MemoryTracker::event_thread_init(void *drcontext,
 
 void MemoryTracker::event_thread_exit(void *drcontext,
                                       ShadowThreadState &data) {
-  flush_all_threads(data, true, false);
+  process_buffer_ctx(data);
 
   detector->join(runtime_tid.load(std::memory_order_relaxed),
                  static_cast<Detector::tid_t>(data.tid));
@@ -338,12 +302,9 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
   using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
   auto instrument_instr =
       (INSTR_FLAGS)(util::unsafe_ptr_cast<uintptr_t>(user_data));
-  // we treat all atomic accesses as reads
-  bool instr_is_atomic{false};
 
-  if (instr_get_app_pc(instr) == NULL) return DR_EMIT_DEFAULT;
-
-  if (!instr_is_app(instr)) return DR_EMIT_DEFAULT;
+  if (instr_get_app_pc(instr) == NULL || !instr_is_app(instr))
+    return DR_EMIT_DEFAULT;
 
   if (instrument_instr & INSTR_FLAGS::STACK) {
     // Instrument ShadowStack TODO: This sometimes crashes in Dotnet modules
@@ -375,7 +336,7 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
   }
 
   // atomic instruction
-  if (instr_get_prefix_flag(instr, PREFIX_LOCK)) instr_is_atomic = true;
+  const bool instr_is_atomic = instr_get_prefix_flag(instr, PREFIX_LOCK);
 
   // Sampling: Only instrument some instructions
   if (!sample_bb(tag)) {
@@ -395,40 +356,29 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
     for (int i = 0; i < instr_num_dsts(instr); i++) {
       opnd_t dst = instr_get_dst(instr, i);
       if (opnd_is_memory_reference(dst)) {
+        // we treat all atomic accesses as reads
         instrument_mem(drcontext, bb, instr, dst, !instr_is_atomic);
       }
     }
   }
 
   return DR_EMIT_DEFAULT;
-}  // namespace drace
+}
 
-/* clean_call dumps the memory reference info into the analyzer */
 void MemoryTracker::process_buffer() {
-  void *drcontext = dr_get_current_drcontext();
-  ShadowThreadState &data = thread_state.getSlot(drcontext);
-
-  analyze_access(data);
-  data.stats.flushes++;
+  ShadowThreadState &data = thread_state.getSlot();
+  process_buffer_ctx(data);
 }
 
 void MemoryTracker::clear_buffer() {
   ShadowThreadState &data = thread_state.getSlot();
-  mem_ref_t *mem_ref = (mem_ref_t *)data.mem_buf.data();
-  uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data.buf_ptr - mem_ref);
+  const mem_ref_t *mem_ref = (mem_ref_t *)data.mem_buf.data();
+  const uintptr_t num_refs = (uintptr_t)((mem_ref_t *)data.buf_ptr - mem_ref);
 
   data.stats.proc_refs += num_refs;
   data.stats.flushes++;
   data.buf_ptr = data.mem_buf.data();
   data.no_flush.store(true, std::memory_order_relaxed);
-}
-
-/* Request a flush of all non-disabled threads.
- *  \Warning: This function read-locks the TLS mutex
- */
-void MemoryTracker::flush_all_threads(ShadowThreadState &data, bool self,
-                                      bool flush_external) {
-  if (self) process_buffer();
 }
 
 void MemoryTracker::code_cache_init() {
@@ -471,7 +421,7 @@ void MemoryTracker::handle_ext_state(ShadowThreadState &data) {
       }
     }
     // set sampling rate
-    unsigned sampling_rate =
+    const unsigned sampling_rate =
         extcb->get()->sampling_rate.load(std::memory_order_relaxed);
     if (sampling_rate != params.sampling_rate) {
       LOG_INFO(0, "externally changed sampling rate to: %i", sampling_rate);
@@ -491,6 +441,16 @@ void MemoryTracker::update_sampling() {
   }
   _min_period = std::max(params.sampling_rate - delta, 1u);
   _max_period = params.sampling_rate + delta;
+}
+
+void MemoryTracker::delayed_initialize_thread(ShadowThreadState &data) {
+  // Thread starts with a pending clean-call
+  LOG_TRACE(data.tid, "Missed a fork, do it now");
+  detector->fork(runtime_tid.load(std::memory_order_relaxed),
+                 static_cast<Detector::tid_t>(data.tid), &(data.detector_data));
+  // arc between parent thread and this thread
+  detector->happens_after(data.detector_data, (void *)(uintptr_t)(data.tid));
+  clear_buffer();
 }
 
 }  // namespace drace

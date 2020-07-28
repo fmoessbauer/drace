@@ -100,11 +100,32 @@ class MemoryTracker {
   MemoryTracker(const std::shared_ptr<Statistics> &stats);
   ~MemoryTracker();
 
+  /// clean_call dumps the memory reference info into the analyzer
   static void process_buffer(void);
+  /**
+   * \brief same as \ref process_buffer, but takes a thread context
+   * This function should be used when the current thread context is already
+   * available (avoids double lookups).
+   *
+   * \note we use a different symbol here, as the \ref process_buffer must not
+   * be overloaded
+   */
+  inline static void process_buffer_ctx(ShadowThreadState &data) {
+    analyze_access(data);
+    data.stats.flushes++;
+  }
+
   static void clear_buffer(void);
   static void analyze_access(ShadowThreadState &data);
-  static void flush_all_threads(ShadowThreadState &data, bool self = true,
-                                bool flush_external = false);
+
+  /**
+   * \brief prepare a thread for memory tracking
+   *
+   * This only happens once per thread. Hence, we use a dedicated
+   * non-inlined function for that to push this rare-case out of
+   * the hot path.
+   */
+  static void delayed_initialize_thread(ShadowThreadState &data);
 
   // Events
   void event_thread_init(void *drcontext, ShadowThreadState &data);
@@ -241,6 +262,40 @@ class MemoryTracker {
   void handle_ext_state(ShadowThreadState &data);
 
   void update_sampling();
+
+  /**
+   * \brief Lossy count first mem-ref
+   *
+   *  (all are adiacent as after each call is flushed)
+   */
+  static inline void lossy_count_if_enabled(ShadowThreadState &data,
+                                            const mem_ref_t *mem_ref) {
+    if (params.lossy) {
+      data.stats.pc_hits.processItem(mem_ref->pc >> HIST_PC_RES);
+      if ((data.stats.flushes & (CC_UPDATE_PERIOD - 1)) ==
+          (CC_UPDATE_PERIOD - 1)) {
+        update_cache(data);
+      }
+    }
+  }
+
+  /**
+   * \brief checks if the memory reference is filtered
+   * \return false if it should be processed
+   */
+  static inline bool filtered_memref(const ShadowThreadState &data,
+                                     const mem_ref_t *mem_ref) {
+    if (params.excl_stack && (mem_ref->addr > data.appstack_beg) &&
+        (mem_ref->addr < data.appstack_end)) {
+      // this reference points into the stack range, skip
+      return true;
+    }
+    if (mem_ref->addr > PROC_ADDR_LIMIT) {
+      // outside process address space
+      return true;
+    }
+    return false;
+  }
 };
 
 static inline dr_emit_flags_t instr_event_bb_app2app(void *drcontext, void *tag,

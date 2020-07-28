@@ -36,7 +36,7 @@ class ShadowStack {
   static constexpr int max_size = Detector::max_stack_size - 1;
 
   std::array<void*, max_size> _data;
-  int _entries{0};
+  unsigned char _entries{0};
   Detector* _detector{nullptr};
 
  public:
@@ -46,7 +46,7 @@ class ShadowStack {
   inline void bindDetector(Detector* det) { _detector = det; }
 
   /// return true if the stack is empty
-  inline bool isEmpty() const { return _entries == 0; }
+  constexpr bool isEmpty() { return _entries == 0; }
 
   /**
    * \brief Push a pc on the stack.
@@ -54,8 +54,8 @@ class ShadowStack {
    */
   inline void push(void* addr, void* det_data) {
     if (_entries >= max_size) return;
-    _detector->func_enter(det_data, addr);
     _data[_entries++] = addr;
+    _detector->func_enter(det_data, addr);
   }
 
   /**
@@ -64,16 +64,14 @@ class ShadowStack {
    *       (caller is responsible)
    */
   inline void* pop(void* det_data) {
+    _detector->func_exit(det_data);
 #ifdef DYNAMORIO_API
     DR_ASSERT(_entries > 0);
 #endif
-    --_entries;
-
-    _detector->func_exit(det_data);
-    return _data[_entries];
+    return _data[--_entries];
   }
 
-  inline size_t size() const { return _entries; }
+  constexpr size_t size() { return _entries; }
 
   static constexpr size_t maxSize() {
     // this getter is to work around ODR limitations
