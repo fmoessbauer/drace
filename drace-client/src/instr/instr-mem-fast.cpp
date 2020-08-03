@@ -23,7 +23,7 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   static_assert(sizeof(mem_ref_t::pc) == sizeof(uintptr_t),
                 "type size not correct");
   static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
-  static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
+  // static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
   static_assert(sizeof(ShadowThreadState::enabled) == sizeof(uintptr_t),
                 "type size not correct");
 
@@ -59,9 +59,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
    * if(!enabled){
    *   jmp .restore
    *}
-   * buf_ptr->write = write;
    * buf_ptr->addr  = addr;
-   * buf_ptr->size  = size;
+   * buf_ptr->size  = size + write_tag;
    * buf_ptr->pc    = pc;
    * buf_ptr++;
    * if (buf_ptr >= buf_end_ptr)
@@ -94,12 +93,6 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
-  /* Move write/read to write field */
-  opnd1 = OPND_CREATE_MEM8(reg2, offsetof(mem_ref_t, write));
-  opnd2 = OPND_CREATE_INT8(write);
-  instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
-  instrlist_meta_preinsert(ilist, where, instr);
-
   /* Store address in memory ref */
   opnd1 = OPND_CREATE_MEMPTR(reg2, offsetof(mem_ref_t, addr));
   opnd2 = opnd_create_reg(reg1);
@@ -109,8 +102,9 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   /* Store size in memory ref */
   opnd1 = OPND_CREATE_MEM32(reg2, offsetof(mem_ref_t, size));
   /* drutil_opnd_mem_size_in_bytes handles OP_enter */
-  opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where));
-  instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+  opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where) |
+                            (write ? MEM_REF_WRITE_TAG : 0ul));
+  instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Store pc in memory ref */

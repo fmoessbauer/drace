@@ -39,8 +39,7 @@ class MemoryTracker {
   struct mem_ref_t {
     uintptr_t addr;
     uintptr_t pc;
-    uint32_t size;
-    bool write;
+    int32_t size;
   };
 
   /** Upper limit of process address space according to
@@ -63,6 +62,9 @@ class MemoryTracker {
 
   /// update code-cache after this number of flushes (must be power of two)
   static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
+
+  /// constant that is added to size field to denote a write access
+  static constexpr uint32_t MEM_REF_WRITE_TAG = 1ul << 30;
 
  private:
   /// \brief external change detected
@@ -226,6 +228,11 @@ class MemoryTracker {
   static void update_cache(ShadowThreadState &data);
 
   static bool pc_in_freq(ShadowThreadState &data, void *bb);
+
+  /// true if memory reference is a write access
+  static inline bool is_write(const mem_ref_t *ref) {
+    return (ref->size & MEM_REF_WRITE_TAG);
+  }
 
  private:
   void code_cache_init(void);

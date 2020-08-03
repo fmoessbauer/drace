@@ -166,7 +166,7 @@ void MemoryTracker::analyze_access(ShadowThreadState &data) {
   for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
     if (filtered_memref(data, mem_ref)) continue;
 
-    if (mem_ref->write) {
+    if (is_write(mem_ref)) {
       detector->write(data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
                       reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
     } else {
@@ -261,7 +261,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag,
   }
 
   INSTR_FLAGS instrument_bb;
-  app_pc bb_addr = dr_fragment_app_pc(tag);
+  const app_pc bb_addr = dr_fragment_app_pc(tag);
 
   // Lookup module from cache, hit is very likely as adiacent bb's
   // are mostly in the same module
@@ -270,7 +270,7 @@ dr_emit_flags_t MemoryTracker::event_app_analysis(void *drcontext, void *tag,
     instrument_bb = modptr->instrument;
   } else {
     // TODO: investigate performance impact
-    auto s_modptr = module_tracker->get_module_containing(bb_addr);
+    const auto s_modptr = module_tracker->get_module_containing(bb_addr);
     modptr = s_modptr.get();
     if (modptr) {
       // bb in known module
@@ -300,7 +300,7 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
     void *drcontext, void *tag, instrlist_t *bb, instr_t *instr, bool for_trace,
     bool translating, void *user_data) {
   using INSTR_FLAGS = module::Metadata::INSTR_FLAGS;
-  auto instrument_instr =
+  const auto instrument_instr =
       (INSTR_FLAGS)(util::unsafe_ptr_cast<uintptr_t>(user_data));
 
   if (instr_get_app_pc(instr) == NULL || !instr_is_app(instr))
@@ -314,13 +314,13 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
   }
 
   if (!(instrument_instr & INSTR_FLAGS::MEMORY)) return DR_EMIT_DEFAULT;
-  bool instr_reads_mem = instr_reads_memory(instr);
-  bool instr_writes_mem = instr_writes_memory(instr);
+  const bool instr_reads_mem = instr_reads_memory(instr);
+  const bool instr_writes_mem = instr_writes_memory(instr);
   if (!instr_reads_mem && !instr_writes_mem) return DR_EMIT_DEFAULT;
 
   if (params.excl_stack) {
     // exclude pop and push
-    int opcode = instr_get_opcode(instr);
+    const int opcode = instr_get_opcode(instr);
     if (opcode == OP_pop || opcode == OP_popa || opcode == OP_popf ||
         opcode == OP_push || opcode == OP_pusha || opcode == OP_pushf) {
       return DR_EMIT_DEFAULT;
@@ -345,7 +345,8 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
 
   if (instr_reads_mem) {
     /* insert code to add an entry for each memory reference opnd */
-    for (int i = 0; i < instr_num_srcs(instr); i++) {
+    const int num_srcs = instr_num_srcs(instr);
+    for (int i = 0; i < num_srcs; i++) {
       opnd_t src = instr_get_src(instr, i);
       if (opnd_is_memory_reference(src)) {
         instrument_mem(drcontext, bb, instr, src, false);
@@ -353,7 +354,8 @@ dr_emit_flags_t MemoryTracker::event_app_instruction(
     }
   }
   if (instr_writes_mem) {
-    for (int i = 0; i < instr_num_dsts(instr); i++) {
+    const int num_dsts = instr_num_dsts(instr);
+    for (int i = 0; i < num_dsts; i++) {
       opnd_t dst = instr_get_dst(instr, i);
       if (opnd_is_memory_reference(dst)) {
         // we treat all atomic accesses as reads
