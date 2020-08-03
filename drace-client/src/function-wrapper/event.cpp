@@ -445,7 +445,7 @@ void event::on_func_call(app_pc *call_ins, app_pc *target_addr) {
   // if lossy_flush, disable detector instead of changing the instructions
   if (params.lossy && !params.lossy_flush &&
       MemoryTracker::pc_in_freq(data, call_ins)) {
-    data.enabled = false;
+    MemoryTracker::disable(data);
   }
 
   data.stack.push(call_ins, data.detector_data);

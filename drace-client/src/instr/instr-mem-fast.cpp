@@ -23,9 +23,6 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   static_assert(sizeof(mem_ref_t::pc) == sizeof(uintptr_t),
                 "type size not correct");
   static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
-  // static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
-  static_assert(sizeof(ShadowThreadState::enabled) == sizeof(uintptr_t),
-                "type size not correct");
 
   instr_t *instr;
   opnd_t opnd1, opnd2;
@@ -75,22 +72,16 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   drmgr_insert_read_tls_field(drcontext, thread_state.getTlsIndex(), ilist,
                               where, reg3);
 
-  /* Jump if tracing is disabled */
-  /* load enabled flag into reg2 */
+  /* Jump if tracing is disabled, by checking buf_ptr == 0 */
+  /* Load data->buf_ptr into reg2 */
   opnd1 = opnd_create_reg(reg2);
-  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, enabled));
+  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_ptr));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Jump if (E|R)CX is 0 */
   opnd1 = opnd_create_instr(restore);
   instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-  instrlist_meta_preinsert(ilist, where, instr);
-
-  /* Load data->buf_ptr into reg2 */
-  opnd1 = opnd_create_reg(reg2);
-  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_ptr));
-  instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Store address in memory ref */

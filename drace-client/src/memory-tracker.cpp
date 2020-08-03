@@ -46,16 +46,6 @@ MemoryTracker::MemoryTracker(const std::shared_ptr<Statistics> &stats)
   /* We need 3 reg slots beyond drreg's eflags slots => 3 slots */
   drreg_options_t ops = {sizeof(ops), 4, false};
 
-  /* Ensure that atomic and native type have equal size as otherwise
-     instrumentation reads invalid value */
-  using no_flush_t = decltype(ShadowThreadState::no_flush);
-
-#ifdef WINDOWS
-  // this requires C++17, but is available in MSVC with C++11
-  static_assert(sizeof(no_flush_t) == sizeof(no_flush_t::value_type),
-                "atomic uint64 size differs from uint64 size");
-#endif
-
   DR_ASSERT(drreg_init(&ops) == DRREG_SUCCESS);
   page_size = dr_page_size();
 
@@ -153,31 +143,31 @@ void MemoryTracker::analyze_access(ShadowThreadState &data) {
   }
 
   mem_ref_t *mem_ref = reinterpret_cast<mem_ref_t *>(data.mem_buf.data());
-  const uintptr_t num_refs = static_cast<uintptr_t>(
-      reinterpret_cast<mem_ref_t *>(data.buf_ptr) - mem_ref);
-#ifdef DEBUG
-  if (!data.enabled) {
-    DR_ASSERT_MSG(num_refs == 0, "Instrumentation disabled, but got mem refs");
-  }
-#endif
 
-  lossy_count_if_enabled(data, mem_ref);
+  if (is_enabled(data)) {
+    const uintptr_t num_refs = static_cast<uintptr_t>(
+        reinterpret_cast<mem_ref_t *>(data.buf_ptr) - mem_ref);
 
-  for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
-    if (filtered_memref(data, mem_ref)) continue;
+    // lossy_count_if_enabled(data, mem_ref);
 
-    if (is_write(mem_ref)) {
-      detector->write(data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
-                      reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
-    } else {
-      detector->read(data.detector_data, reinterpret_cast<void *>(mem_ref->pc),
-                     reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
+    for (; mem_ref < (mem_ref_t *)data.buf_ptr; ++mem_ref) {
+      if (filtered_memref(data, mem_ref)) continue;
+
+      if (is_write(mem_ref)) {
+        detector->write(data.detector_data,
+                        reinterpret_cast<void *>(mem_ref->pc),
+                        reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
+      } else {
+        detector->read(data.detector_data,
+                       reinterpret_cast<void *>(mem_ref->pc),
+                       reinterpret_cast<void *>(mem_ref->addr), mem_ref->size);
+      }
+      ++(data.stats.proc_refs);
     }
-    ++(data.stats.proc_refs);
+    data.stats.total_refs += num_refs;
+    data.buf_ptr = data.mem_buf.data();
   }
-  data.stats.total_refs += num_refs;
-  data.buf_ptr = data.mem_buf.data();
-}  // namespace drace
+}
 
 /*
  * Thread init Event
@@ -186,6 +176,8 @@ void MemoryTracker::event_thread_init(void *drcontext,
                                       ShadowThreadState &data) {
   data.mem_buf.resize(MEM_BUF_SIZE, drcontext);
   data.buf_ptr = data.mem_buf.data();
+  data.buf_ptr_stored = data.buf_ptr;
+
   // set buf_end to be negative of address of buffer end for the lea later
   data.buf_end =
       (-1) * reinterpret_cast<intptr_t>(data.mem_buf.data() + MEM_BUF_SIZE);
@@ -380,7 +372,6 @@ void MemoryTracker::clear_buffer() {
   data.stats.proc_refs += num_refs;
   data.stats.flushes++;
   data.buf_ptr = data.mem_buf.data();
-  data.no_flush.store(true, std::memory_order_relaxed);
 }
 
 void MemoryTracker::code_cache_init() {

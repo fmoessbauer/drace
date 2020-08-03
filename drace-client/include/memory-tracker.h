@@ -190,21 +190,31 @@ class MemoryTracker {
     // we sample (analyze) this fsection or not
     static constexpr int flag_bit = sizeof(uintptr_t) * 8 - 1;
     if (!sample_ref(data)) {
-      data.enabled = false;
+      disable(data);
       // set the flag
       data.event_cnt |= ((uintptr_t)1 << flag_bit);
     } else {
       // clear the flag
       data.event_cnt &= ~((uintptr_t)1 << flag_bit);
-      if (!data.event_cnt) data.enabled = true;
+      if (!data.event_cnt) enable(data);
     }
   }
 
   /// enable the detector (does not affect sampling)
-  static inline void enable(ShadowThreadState &data) { data.enabled = true; }
+  static inline void enable(ShadowThreadState &data) noexcept {
+    data.buf_ptr = data.buf_ptr_stored;
+  }
 
   /// disable the detector (does not affect sampling)
-  static inline void disable(ShadowThreadState &data) { data.enabled = false; }
+  static inline void disable(ShadowThreadState &data) noexcept {
+    data.buf_ptr_stored = data.buf_ptr;
+    data.buf_ptr = nullptr;
+  }
+
+  /// true if the detector is enabled
+  static inline bool is_enabled(ShadowThreadState &data) noexcept {
+    return nullptr != data.buf_ptr;
+  }
 
   /// enable the detector during this scope
   static inline void enable_scope(ShadowThreadState &data) {

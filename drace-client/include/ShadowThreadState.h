@@ -27,20 +27,25 @@ namespace drace {
  */
 class ShadowThreadState {
  public:
+  /**
+   * \brief Pointer to the head of the memory buffer or null
+   *
+   * If the detector is disabled, this pointer is set to null
+   */
   byte* buf_ptr;
+
+  /**
+   * \brief negative address of the end-pointer of the memory buffer
+   *
+   * As we use LEA + jmpecxz, the address has to be negated as we want to flush
+   * the buffer if \ref buf_ptr and \ref buf_end sum up to zero.
+   */
   ptr_int_t buf_end;
 
   /**
-   * \brief Represents the detector state
-   * \note has to be ptr-sized, as put into (E|R)cx register
+   * \brief Stores the \ref buf_ptr while the detector is disabled
    */
-  uintptr_t enabled{true};
-
-  /**
-   * \brief inverse of flush pending, jmpecxz
-   * \note has to be ptr-sized, as put into (E|R)cx register
-   */
-  std::atomic<uintptr_t> no_flush{false};
+  byte* buf_ptr_stored;
 
   /// local sampling state
   int sampling_pos = 0;
