@@ -66,6 +66,7 @@ class DRaceGUI : public QMainWindow {
   void on_dr_debug_stateChanged(int arg1);
   void on_report_creation_stateChanged(int arg1);
   void on_msr_box_stateChanged(int arg1);
+  void on_excl_stack_box_stateChanged(int arg1);
 
   /// Radio Buttons
   void on_tsan_btn_clicked();

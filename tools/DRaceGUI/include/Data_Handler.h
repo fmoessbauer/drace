@@ -19,8 +19,8 @@
 
 class Data_Handler {
   std::string report_name, report_converter, report_srcdirs, dynamorio,
-      dr_debug, drace, detector, flags, ext_ctrl, configuration, executable,
-      executable_args, msr;
+      dr_debug, drace, detector, flags, excl_stack, ext_ctrl, configuration,
+      executable, executable_args, msr;
 
   bool report_is_python, create_report;
 
@@ -37,6 +37,7 @@ class Data_Handler {
     ar& drace;
     ar& detector;
     ar& flags;
+    ar& excl_stack;
     ar& ext_ctrl;
     ar& configuration;
     ar& executable;

@@ -186,6 +186,16 @@ void DRaceGUI::on_msr_box_stateChanged(int arg1) {
   ui->command_output->setText(ch->get_command());
 }
 
+void DRaceGUI::on_excl_stack_box_stateChanged(int arg1) {
+  if (arg1 == 0) {
+    ui->command_output->setText(
+        ch->make_entry("", Command_Handler::EXCL_STACK));
+  } else {
+    ui->command_output->setText(
+        ch->make_entry("--excl-stack", Command_Handler::EXCL_STACK));
+  }
+}
+
 // textbox functions
 void DRaceGUI::on_dr_path_input_textChanged(const QString &arg1) {
   ui->command_output->setText(ch->make_entry(arg1, Command_Handler::DYNAMORIO));
@@ -378,6 +388,15 @@ void DRaceGUI::set_boxes_after_load() {
   } else {
     ui->msr_box->setChecked(false);
     ui->msr_box->setCheckState(Qt::Unchecked);
+  }
+
+  // set exclude stack accesses check box
+  if (ch->command[Command_Handler::EXCL_STACK] != "") {
+    ui->excl_stack_box->setChecked(true);
+    ui->excl_stack_box->setCheckState(Qt::Checked);
+  } else {
+    ui->excl_stack_box->setChecked(false);
+    ui->excl_stack_box->setCheckState(Qt::Unchecked);
   }
 
   // set detector back end

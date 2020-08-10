@@ -24,6 +24,7 @@ void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
   drace = data[Command_Handler::DRACE].toStdString();
   detector = data[Command_Handler::DETECTOR].toStdString();
   flags = data[Command_Handler::FLAGS].toStdString();
+  excl_stack = data[Command_Handler::EXCL_STACK].toStdString();
   ext_ctrl = data[Command_Handler::EXT_CTRL].toStdString();
   configuration = data[Command_Handler::CONFIGURATION].toStdString();
   executable = data[Command_Handler::EXECUTABLE].toStdString();
@@ -49,6 +50,7 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
   ch->command[Command_Handler::DRACE] = QString(drace.c_str());
   ch->command[Command_Handler::DETECTOR] = QString(detector.c_str());
   ch->command[Command_Handler::FLAGS] = QString(flags.c_str());
+  ch->command[Command_Handler::EXCL_STACK] = QString(excl_stack.c_str());
   ch->command[Command_Handler::EXT_CTRL] = QString(ext_ctrl.c_str());
   ch->command[Command_Handler::CONFIGURATION] = QString(configuration.c_str());
   ch->command[Command_Handler::EXECUTABLE] = QString(executable.c_str());

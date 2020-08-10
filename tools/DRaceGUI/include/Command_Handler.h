@@ -28,6 +28,7 @@ class Command_Handler {
     FLAGS,
     REPORT_FLAG,
     EXT_CTRL,
+    EXCL_STACK,
     CONFIGURATION,
     EXECUTABLE,
     EXECUTABLE_ARGS,
