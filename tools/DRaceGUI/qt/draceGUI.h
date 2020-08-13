@@ -53,6 +53,8 @@ class DRaceGUI : public QMainWindow {
   void on_config_browse_btn_clicked();
   void on_run_button_clicked();
   void on_copy_button_clicked();
+  void on_report_folder_open_clicked();
+  void on_report_open_clicked();
 
   /// Text Boxes
   void on_dr_path_input_textChanged(const QString &arg1);
@@ -67,6 +69,7 @@ class DRaceGUI : public QMainWindow {
   void on_report_creation_stateChanged(int arg1);
   void on_msr_box_stateChanged(int arg1);
   void on_excl_stack_box_stateChanged(int arg1);
+  void on_report_auto_open_box_stateChanged(int arg1);
 
   /// Radio Buttons
   void on_tsan_btn_clicked();
@@ -101,5 +104,7 @@ class DRaceGUI : public QMainWindow {
   /// restores the GUI with the data of the loaded config file
   void set_boxes_after_load();
   QString remove_quotes(QString str);
+  QString get_latest_report_folder();
+  void set_auto_report_checkable(int checked);
 };
 #endif  // MAINWINDOW_H

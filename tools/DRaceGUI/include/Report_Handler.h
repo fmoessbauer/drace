@@ -40,6 +40,9 @@ class Report_Handler {
   /// true when Python script of report converter is set
   bool is_python;
 
+  /// true when the report should automatically open
+  bool is_auto_open = false;
+
   /// pointer to the command handler
   Command_Handler* ch;
 
@@ -55,12 +58,14 @@ class Report_Handler {
   QString get_rep_srcdirs() { return rep_srcdirs; }
   bool get_is_python() { return is_python; }
   bool get_create_report() { return create_report; }
+  bool get_is_auto_open() { return is_auto_open; }
 
   void set_report_name(QString name);
   /// sets the report converter without validity check
   void set_report_converter(QString path);
   void set_report_srcdirs(QString dirs);
   void set_is_python(bool state);
+  void set_is_auto_open(bool open);
   bool set_report_command();
 
   /// evaluates if the report converter is valid, and sets it if so

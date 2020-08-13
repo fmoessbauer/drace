@@ -121,6 +121,55 @@ void DRaceGUI::on_copy_button_clicked() {
   clipboard->setText(ch->get_command());
 }
 
+QString DRaceGUI::get_latest_report_folder() {
+  QDir dir(QDir::currentPath(), "drace_report_*", QDir::Name | QDir::Reversed,
+           QDir::Dirs);
+  QStringList reports = dir.entryList();
+
+  if (reports.isEmpty()) {
+    return "";
+  } else {
+    QDir latest_report_folder = reports.at(0);
+    return latest_report_folder.absolutePath();
+  }
+}
+
+void DRaceGUI::on_report_folder_open_clicked() {
+  QString latest_report_folder = get_latest_report_folder();
+
+  if (latest_report_folder == "") {
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("Current directory does not contain a DRace report.");
+    temp.exec();
+  } else {
+    QDesktopServices::openUrl(QUrl(latest_report_folder, QUrl::TolerantMode));
+  }
+}
+
+void DRaceGUI::on_report_open_clicked() {
+  QString latest_report_folder = get_latest_report_folder();
+
+  if (latest_report_folder == "") {
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("Current directory does not contain a DRace report.");
+    temp.exec();
+  } else {
+    QFileInfo report(latest_report_folder, "index.html");
+    if (report.exists()) {
+      QDesktopServices::openUrl(
+          QUrl(report.absoluteFilePath(), QUrl::TolerantMode));
+    } else {
+      QMessageBox temp;
+      temp.setIcon(QMessageBox::Warning);
+      temp.setText(
+          "The latest DRace report folder does not contain an HTML report.");
+      temp.exec();
+    }
+  }
+}
+
 // radio buttons
 void DRaceGUI::on_tsan_btn_clicked() {
   ui->command_output->setText(
@@ -147,10 +196,20 @@ void DRaceGUI::on_dr_debug_stateChanged(int arg1) {
   }
 }
 
+void DRaceGUI::set_auto_report_checkable(int checked) {
+  if (checked == 0) {
+    ui->report_auto_open_box->setChecked(false);
+    ui->report_auto_open_box->setEnabled(false);
+  } else {
+    ui->report_auto_open_box->setEnabled(true);
+  }
+}
+
 void DRaceGUI::on_report_creation_stateChanged(int arg1) {
   rh->set_create_state(arg1);
   if (rh->set_report_command() || !arg1) {
     ui->command_output->setText(ch->get_command());
+    set_auto_report_checkable(arg1);
     return;
   } else {  // if command is not set and shall be set, open report converter
             // dialog
@@ -161,6 +220,7 @@ void DRaceGUI::on_report_creation_stateChanged(int arg1) {
   if (rh->set_report_command()) {  // now check again if converter is now set
                                    // correctly
     ui->command_output->setText(ch->get_command());
+    set_auto_report_checkable(arg1);
     return;
   }
 
@@ -194,6 +254,19 @@ void DRaceGUI::on_excl_stack_box_stateChanged(int arg1) {
     ui->command_output->setText(
         ch->make_entry("--excl-stack", Command_Handler::EXCL_STACK));
   }
+}
+
+void DRaceGUI::on_report_auto_open_box_stateChanged(int arg1) {
+  if (arg1 == 0) {
+    rh->set_is_auto_open(false);
+  } else {
+    rh->set_is_auto_open(true);
+  }
+
+  if (rh->set_report_command()) {
+    ui->command_output->setText(ch->get_command());
+  }
+  ui->command_output->setText(ch->make_report_auto_open_entry(arg1));
 }
 
 // textbox functions
@@ -397,6 +470,15 @@ void DRaceGUI::set_boxes_after_load() {
   } else {
     ui->excl_stack_box->setChecked(false);
     ui->excl_stack_box->setCheckState(Qt::Unchecked);
+  }
+
+  // set auto open report check box
+  if (ch->command[Command_Handler::REPORT_OPEN_CMD] != "") {
+    ui->report_auto_open_box->setChecked(true);
+    ui->report_auto_open_box->setCheckState(Qt::Checked);
+  } else {
+    ui->report_auto_open_box->setChecked(false);
+    ui->report_auto_open_box->setCheckState(Qt::Unchecked);
   }
 
   // set detector back end

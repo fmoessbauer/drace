@@ -29,6 +29,7 @@ void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
   configuration = data[Command_Handler::CONFIGURATION].toStdString();
   executable = data[Command_Handler::EXECUTABLE].toStdString();
   executable_args = data[Command_Handler::EXECUTABLE_ARGS].toStdString();
+  report_auto_open = data[Command_Handler::REPORT_OPEN_CMD].toStdString();
 
   msr = ch->get_msr_path().toStdString();
 }
@@ -56,6 +57,8 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
   ch->command[Command_Handler::EXECUTABLE] = QString(executable.c_str());
   ch->command[Command_Handler::EXECUTABLE_ARGS] =
       QString(executable_args.c_str());
+  ch->command[Command_Handler::REPORT_OPEN_CMD] =
+      QString(report_auto_open.c_str());
 
   ch->set_msr(QString(msr.c_str()));
 }
