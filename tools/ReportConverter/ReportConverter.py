@@ -91,16 +91,17 @@ class ReportCreator:
         self._errorNumber = 0
         self._snippets = str()
         self.succesfullReportCreation = True
-        self.SCM = SourceCodeManagement()
-
+        
         try:
             self._htmlTemplates = (ET.parse(self._htmlTemplatesPath)).getroot()
         except FileNotFoundError:
             print("template file is missing")
             self.succesfullReportCreation = False
             return
-
+        
+        self.SCM = SourceCodeManagement()
         self._pathOfReport = pathOfReport
+        
         if self._inputValidation():
             hasErrors = self._reportRoot.find('error') != None
             if not noMatplotLib and hasErrors:
@@ -554,11 +555,10 @@ class ReportCreator:
 
 
 class SourceCodeManagement:
-    _htmlTemplatesPath = str(g_HTMLTEMPLATES)
-    _htmlTemplates = (ET.parse(_htmlTemplatesPath)).getroot()
-
     def __init__(self):
         self._sourcefilelist = list()
+        self._htmlTemplatesPath = str(g_HTMLTEMPLATES)
+        self._htmlTemplates = (ET.parse(self._htmlTemplatesPath)).getroot()
 
     def _createSourcefileEntry(self, path, line):
         #one entry consists of the full file path the line number of interest 
