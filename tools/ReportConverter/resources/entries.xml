@@ -43,7 +43,7 @@
 <p class="reduced-margin"><b>Duration [*DURATION_UNIT*]: </b>*DURATION*</p>
 
 <p class="reduced-margin"><b>Date: </b>*DATE*</p>
-<p class="reduced-margin"><b>Time: </b>*TIME*</p>
+<p class="reduced-margin"><b>Time: </b>*TIME* (UTC)</p>
 
 <p class="reduced-margin"><b>Protocolversion: </b>*PROTOCOLVERSION*</p>
 <p class="reduced-margin"><b>Protocoltool: </b>*PROTOCOLTOOL*</p>

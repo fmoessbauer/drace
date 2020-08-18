@@ -779,7 +779,7 @@ def parseArgumentString(fileList, strEntries):
     return      
 
 def returnDateString():
-    date = datetime.datetime.now()
+    date = datetime.datetime.utcnow()
     return date.strftime('%Y%m%d_%H%M')
 
 def main():
