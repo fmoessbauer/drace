@@ -27,6 +27,7 @@ from functools import lru_cache
 try:
     import matplotlib
     import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
     noMatplotLib = False
 except ImportError:
     noMatplotLib = True
@@ -452,8 +453,11 @@ class ReportCreator:
         sortedOccurences = sorted(topStackOccurences.items(), key=lambda kv: kv[1])
         x=list()
         y=list()
-        for ele in reversed(sortedOccurences[-5:]): #append the 5 largest values in decending order
-            x.append(ele[0]) #x values (basically the function names)
+        for ele in sortedOccurences[-5:]: #append the 5 largest values in ascending order
+            if len(ele[0]) < 250:
+                x.append(ele[0]) #x values (basically the function names)
+            else:
+                x.append(ele[0][:250]+". . .")
             y.append(ele[1]) #y values occurrences (bar height)
 
         #make plot       
@@ -461,16 +465,17 @@ class ReportCreator:
         ax = plt.axes() 
         barWidth = 0.9 # the width of the bars 
         xLoc = list(range(len(y)))  # the x locations for the groups
-        ax.bar([loc for loc in xLoc], y, barWidth, color='#009999')
-        ax.set_xticks([loc for loc in xLoc])
-        ax.set_xticklabels(x, minor=False)
+        ax.barh([loc for loc in xLoc], y, barWidth, color='#009999')
+        ax.set_yticks([loc for loc in xLoc])
+        ax.set_yticklabels(reversed(['#'+str(rank) for rank in range(1,len(y)+1)]), minor=False)
+        legend_lines = [Line2D([0], [0], color='#009999', lw=rank) for rank in range(len(y)+1, 1, -1)]
+        ax.legend(legend_lines, reversed(x), loc='center', bbox_to_anchor=(0.5, -0.1*(len(y)+2)))
         
         plt.title('Top five functions by top of stack occurrences',fontfamily="monospace", fontweight='bold')
-        plt.xlabel('Function Name', fontfamily="monospace",fontweight='bold')
-        plt.ylabel('No. of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
+        plt.xlabel('No. of top of stack occurrences', fontfamily="monospace",fontweight='bold')   
 
         for i,v in enumerate(y):
-            ax.text(i,  v, str(v), ha='center',color='black', fontweight='bold')
+            ax.text(v,  i, str(v), ha='left',color='black', fontweight='bold')
         
         
         fig.add_axes(ax)
