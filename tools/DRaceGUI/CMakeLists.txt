@@ -45,7 +45,7 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 
 find_package(Qt5 COMPONENTS Widgets)
-find_package(Boost 1.65.0 COMPONENTS system filesystem serialization)
+find_package(Boost 1.65.0 COMPONENTS system filesystem)
 
 if(Qt5_FOUND AND Boost_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
@@ -60,7 +60,9 @@ if(Qt5_FOUND AND Boost_FOUND)
     target_link_libraries(${GUI_TARGET} PRIVATE
         Boost::system
         Boost::filesystem
-        Boost::serialization)
+        "nlohmann-json"   # json parser
+    )
+    
     target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST)
 
     if(WIN32)

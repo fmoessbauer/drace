@@ -48,8 +48,11 @@ All submodules are located in the `vendor` directory.
 
 ### DRace GUI
 
+**Mandatory:**
+
 - [Qt5](https://doc.qt.io/qt-5/)
 - [Boost](https://www.boost.org/) > 1.65
+- [nlohmann/json](https://github.com/nlohmann/json)
 
 ## Internal Dependencies
 

@@ -18,9 +18,6 @@
 #include "Data_Handler.h"
 #include "Report_Handler.h"
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 class Load_Save {
   Report_Handler* rh;
   Command_Handler* ch;

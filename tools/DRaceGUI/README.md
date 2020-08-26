@@ -13,6 +13,7 @@ For a more detailed usage of the GUI, please refer to the [HowTo](https://code.s
 ### Dependencies
 - Qt5
 - Boost
+- [nlohmann/json](https://github.com/nlohmann/json)
 
 
 ### Installation
