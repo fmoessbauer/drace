@@ -84,7 +84,7 @@ Other settings can be managed under *Tools->Options*.
 
 *Configuration File Settings:*
 
-The user is able to save configuration data from DRaceGUI with specialized `.drc` files by default. Click on "Set" to associate the default configuration file type `.drc` with the DRaceGUI, which would enable the user to interact with saved configuration files easily. When double-clicked, these `.drc` configuration files would open the DRaceGUI with the configuration data pre-loaded into the DRaceGUI. Click on "Revert" to undo a successful association.
+The user is able to save configuration data from DRaceGUI with specialized `.drc` files by default. Click on "Set" to associate the default configuration file type `.drc` with the DRaceGUI, which would enable the user to interact with saved configuration files easily. When double-clicked, these `.drc` configuration files would open the DRaceGUI with the configuration data pre-loaded into the DRaceGUI. Click on "Revert" to undo a successful association. Please note that moving, deleting or updating the DRaceGUI after setting this option requires reverting and setting it again.
 
 ### Shell-Usage
 
