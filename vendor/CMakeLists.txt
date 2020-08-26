@@ -80,7 +80,7 @@ endif()
 
 # muellan clipp
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/muellan/clipp/include")
-	message(FATAL_ERROR "HowardHinnant Date submodule not available")
+	message(FATAL_ERROR "muellan clipp submodule not available")
 endif()
 add_library("clipp" INTERFACE)
 target_include_directories("clipp" INTERFACE
