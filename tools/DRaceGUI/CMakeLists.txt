@@ -72,13 +72,6 @@ if(Qt5_FOUND AND Boost_FOUND)
         endif()
     endif()
 
-    # just for convenience we copy the Qt dlls to the build folder
-    # to be able to run the drace-gui from there
-    add_custom_command(TARGET ${GUI_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:${GUI_TARGET}>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:${GUI_TARGET}>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:${GUI_TARGET}>)
-
     # install the GUI executable itself (without Qt shared modules)
     install(TARGETS ${GUI_TARGET} DESTINATION ${DRACE_RUNTIME_DEST})
 
