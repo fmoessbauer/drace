@@ -76,6 +76,8 @@ void Report_Handler::set_report_srcdirs(QString dirs) { rep_srcdirs = dirs; }
 
 void Report_Handler::set_is_python(bool state) { is_python = state; }
 
+void Report_Handler::set_is_auto_open(bool open) { is_auto_open = open; }
+
 /// sets, when the actual report creation command is valid, the current command
 /// in the command handler class
 bool Report_Handler::set_report_command() {
@@ -89,6 +91,9 @@ bool Report_Handler::set_report_command() {
     ch->make_entry(rep_name, Command_Handler::REPORT_FLAG, "--xml-file");
   } else {
     ch->make_entry("", Command_Handler::REPORT_FLAG);
+  }
+  if (is_auto_open) {
+    prefix.prepend("$report = ");
   }
   ch->make_entry(cmd, Command_Handler::REPORT_CMD, prefix, true);
   return is_valid;

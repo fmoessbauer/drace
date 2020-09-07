@@ -28,10 +28,12 @@ class Command_Handler {
     FLAGS,
     REPORT_FLAG,
     EXT_CTRL,
+    EXCL_STACK,
     CONFIGURATION,
     EXECUTABLE,
     EXECUTABLE_ARGS,
     REPORT_CMD,
+    REPORT_OPEN_CMD,
     _END_OF_COMMAND_TYPE_
   };
 
@@ -61,6 +63,9 @@ class Command_Handler {
 
   /// sets the argument(s) (if any) of the executable under test
   QString make_exe_args_entry(const QString& arg1);
+
+  /// sets the automatic report opening command
+  QString make_report_auto_open_entry(const int& arg1);
 
   /// makes a command entry into the command array and updates the
   /// entire_command

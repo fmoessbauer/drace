@@ -32,7 +32,7 @@ QString Command_Handler::make_entry(const QString &path, uint position,
 }
 
 QString Command_Handler::updateCommand(const QString &arg1, uint position) {
-  if (position == REPORT_CMD && arg1 != "") {
+  if ((position == REPORT_CMD || position == REPORT_OPEN_CMD) && arg1 != "") {
     // set a semicolon before the report command -> must be executed after the
     // drace finished
     QString cmd = "; " + arg1;
@@ -74,6 +74,18 @@ QString Command_Handler::make_exe_args_entry(const QString &arg1) {
     return updateCommand(arg1, EXECUTABLE_ARGS);
   } else {
     return updateCommand("", EXECUTABLE_ARGS);
+  }
+}
+
+QString Command_Handler::make_report_auto_open_entry(const int &arg1) {
+  if (arg1 != 0) {
+    const QString cmd =
+        "$report ; If ($report -contains \'Report creation successful\') "
+        "{$folder = $report -match \'drace_report_*\' ; Invoke-Item "
+        "$folder/index.html}";
+    return updateCommand(cmd, REPORT_OPEN_CMD);
+  } else {
+    return updateCommand("", REPORT_OPEN_CMD);
   }
 }
 

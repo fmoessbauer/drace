@@ -47,8 +47,16 @@ The following fields are optional:
 
 - Debug Mode: This will start DynamoRIO in the debug mode.
 - Report: This option will create an HTML-Report after the analysis has finished. To set the option, the report settings must be set correctly ([here](#report-settings))
+- Automatically Open Report: If a report should be generated, this option will automatically open the HTML report with your default browser or application.
 - MSR: This option starts the managed code resolver, if one wants to analyse applications with .NET code.
+- Exclude Stack: This option causes DRace to exclude stack accesses and is equivalent to the flag `--excl-stack`.
 - DRace Flags: here additional DRace Flags can be set. Be careful, the string you type in is just copied to the command and not sanitized. Furthermore, use single quotes, when you need quotes. Available DRace flags are [here](#shell-usage)
+
+The following actions can be done:
+
+- Copy to Clip-board: copies the generated command as displayed in the command window into your clip-board.
+- Open Report Folder: opens the folder containing the latest generated successful report in the GUI's directory with your OS's file explorer.
+- Open Report: opens the latest generated HTML report in the GUI's directory with your default browser or application.
 
 Furthermore, a working configuration can be saved in a default `.drc` file type, or in any other file type (for instance a text file) by clicking on *File->Save Configuration As.* This configuration could also be restored at a later time by clicking on *File->Load Configuration.*
 
@@ -170,7 +178,7 @@ After setting everything up in the GUI, it's time to hit the run button and exec
 
 ![8](./Images/powershell_out.png)
 
-There, you can see DRace found either one or two data races and it shows in which folder the report was created. Navigate to the folder and open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
+There, you can see DRace found either one or two data races and it shows in which folder the report was created. To open the report, either click on the *Open Report* button, or navigate to the folder and manually open the `index.html` with a browser of your choice (it is recommended to use Chrome or Firefox).
 
 ### 5. Examine the report
 
@@ -188,6 +196,7 @@ You're done when the application doesn't produce any races anymore, when it is a
 ### 7. Compare your solution with ours
 
 If you want, you can now compare your solution with the example solution provided in `./HowTo/shoppingrush/ShoppingRushSolution.cpp`.
+
 
 **A few words to the actual problem:**
 
