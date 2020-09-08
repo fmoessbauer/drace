@@ -190,49 +190,70 @@ class ReportCreator:
 
     def _readFrame(self, frame):
         
-        if frame == None:
+        if frame is None:
             self._frameValues = {"obj":"", "fn":"", "ip":"", "dir":"", "file":"", "line":"", "offset":""}
             return
 
         obj = frame.find('obj')
-        if obj == None:
+        if obj is None:
             obj = ""
         else:
-            obj = obj.text
+            if obj.text is None:
+                obj = ""
+            else:
+                obj = obj.text
         fn = frame.find('fn')
-        if fn == None:
+        if fn is None:
             fn = ""
         else:
-            fn = fn.text
+            if fn.text is None:
+                fn = ""
+            else:
+                fn = fn.text
         ip = frame.find('ip')
-        if ip == None:
+        if ip is None:
             ip = ""
         else:
-            ip = ip.text  
+            if ip.text is None:
+                ip = ""
+            else:
+                ip = ip.text  
 
         direc = frame.find('dir')
-        if direc == None:
+        if direc is None:
             direc = ""
         else:
-            direc = direc.text  
+            if direc.text is None:
+                direc = ""
+            else:
+                direc = direc.text  
 
         filename = frame.find('file')
-        if filename == None:
+        if filename is None:
             filename = ""
         else:
-            filename = filename.text  
+            if filename.text is None:
+                filename = ""
+            else:
+                filename = filename.text  
 
         line = frame.find('line')
-        if line == None:
+        if line is None:
             line = "0"
         else:
-            line = line.text  
+            if line.text is None:
+                line = "0"
+            else:
+                line = line.text  
 
         offset = frame.find('offset')
-        if offset == None:
+        if offset is None:
             offset = "0"
         else:
-            offset = offset.text  
+            if offset.text is None:
+                offset = "0"
+            else:
+                offset = offset.text  
 
         self._frameValues = {"obj":obj, "fn":fn, "ip":ip, "dir":direc, "file":filename, "line":line, "offset":offset}
 
@@ -293,7 +314,7 @@ class ReportCreator:
         elementNumber = 0
 
         frames = stack.findall('frame')
-        if frames == None:
+        if frames is None:
             return ""
 
         for frame in frames:
@@ -364,7 +385,7 @@ class ReportCreator:
         errorTimes = dict()
         statusNode = self._reportRoot.findall('status')[1]
        
-        if statusNode.find('duration') == None:
+        if statusNode.find('duration') is None:
             self._errorTimesPlot = ""
             return
         
