@@ -11,6 +11,8 @@
 
 #ifndef EXECUTOR_H
 #define EXECUTOR_H
+#include <QMessageBox>
+#include <QObject>
 #include <QProcess>
 #include <QString>
 #include <QThread>
@@ -20,6 +22,12 @@ class Executor {
  public:
   /// executes the cmd in a powershell, which  will stay open after finishing
   static void execute(std::string cmd, QObject* parent);
+
+  /// executes the cmd in the embedded window
+  static void execute_embedded(QProcess* proc, QString cmd, QObject* parent);
+
+  /// kills the embedded process along with its children
+  static void stop_embedded(qint64 pid);
 
   /// checks if cmd is a valid dynamorio cmd
   static bool exe_drrun(QString cmd, QObject* parent);

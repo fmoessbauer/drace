@@ -13,8 +13,10 @@
 #define DATA_HANDLER_H
 
 #include <QString>
+#include <bitset>
 #include <string>
 #include "Command_Handler.h"
+#include "Process_Handler.h"
 #include "Report_Handler.h"
 
 #include <nlohmann/json.hpp>
@@ -23,30 +25,32 @@ using json = nlohmann::json;
 
 class Data_Handler {
  private:
-  json config = {
-      {"report_name", ""},
-      {"report_converter", ""},
-      {"report_srcdirs", ""},
-      {"dynamorio", ""},
-      {"dr_debug", ""},
-      {"drace", ""},
-      {"detector", ""},
-      {"flags", ""},
-      {"ext_ctrl", ""},
-      {"configuration", ""},
-      {"executable", ""},
-      {"executable_args", ""},
-      {"msr", ""},
-      {"report_is_python", false},
-      {"create_report", false},
-  };
+  json config = {{"report_name", ""},
+                 {"report_converter", ""},
+                 {"report_srcdirs", ""},
+                 {"dynamorio", ""},
+                 {"dr_debug", ""},
+                 {"drace", ""},
+                 {"detector", ""},
+                 {"flags", ""},
+                 {"ext_ctrl", ""},
+                 {"configuration", ""},
+                 {"executable", ""},
+                 {"executable_args", ""},
+                 {"msr", ""},
+                 {"excl_stack", ""},
+                 {"report_is_python", false},
+                 {"create_report", false},
+                 {"report_auto_open", ""},
+                 {"run_separately", false},
+                 {"wrap_text_output", true}};
 
  public:
   /// loads data from handler classes to members
-  void get_data(Report_Handler* rh, Command_Handler* ch);
+  void get_data(Report_Handler* rh, Command_Handler* ch, Process_Handler* ph);
 
   /// restores data from members back in the handler classes
-  void set_data(Report_Handler* rh, Command_Handler* ch);
+  void set_data(Report_Handler* rh, Command_Handler* ch, Process_Handler* ph);
 
   /// getter for config json object
   const json& get_config() const { return config; }

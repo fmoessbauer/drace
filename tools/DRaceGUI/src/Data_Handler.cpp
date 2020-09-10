@@ -11,7 +11,8 @@
 
 #include "Data_Handler.h"
 
-void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
+void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch,
+                            Process_Handler* ph) {
   // Get report configuration data
   config.at("report_name") = rh->get_rep_name().toStdString();
   config.at("report_converter") = rh->get_rep_conv_cmd().toStdString();
@@ -32,11 +33,21 @@ void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch) {
   config.at("executable") = data[Command_Handler::EXECUTABLE].toStdString();
   config.at("executable_args") =
       data[Command_Handler::EXECUTABLE_ARGS].toStdString();
+  config.at("excl_stack") = data[Command_Handler::EXCL_STACK].toStdString();
+  config.at("report_auto_open") =
+      data[Command_Handler::REPORT_OPEN_CMD].toStdString();
 
   config.at("msr") = ch->get_msr_path().toStdString();
+
+  // Get DRaceGUI misc checkboxes states
+  const auto& options = ph->get_options_array();
+  config.at("run_separately") = (bool)options[Process_Handler::RUN_SEPARATELY];
+  config.at("wrap_text_output") =
+      (bool)options[Process_Handler::WRAP_TEXT_OUTPUT];
 }
 
-void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
+void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch,
+                            Process_Handler* ph) {
   // reset report handler members
   rh->set_report_name(QString(config.value("report_name", "").c_str()));
   rh->set_report_converter(
@@ -67,6 +78,17 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch) {
       QString(config.value("executable", "").c_str());
   ch->command[Command_Handler::EXECUTABLE_ARGS] =
       QString(config.value("executable_args", "").c_str());
+  ch->command[Command_Handler::EXCL_STACK] =
+      QString(config.value("excl_stack", "").c_str());
+  ch->command[Command_Handler::REPORT_OPEN_CMD] =
+      QString(config.value("report_auto_open", "").c_str());
 
   ch->set_msr(QString(config.value("msr", "").c_str()));
+
+  std::bitset<Process_Handler::_END_OF_MISC_OPTIONS_> options;
+  options[Process_Handler::RUN_SEPARATELY] =
+      config.value("run_separately", false);
+  options[Process_Handler::WRAP_TEXT_OUTPUT] =
+      config.value("wrap_text_output", true);
+  ph->set_options_array(options);
 }

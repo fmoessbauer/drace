@@ -20,6 +20,36 @@ void Executor::execute(std::string cmd, QObject* parent) {
                SW_SHOWDEFAULT);
 }
 
+void Executor::execute_embedded(QProcess* proc, QString cmd, QObject* parent) {
+  QString shell = "powershell.exe";
+  QStringList ps_args;
+  ps_args << "-Command" << cmd;
+  proc->setProcessChannelMode(QProcess::MergedChannels);
+  proc->setProgram(shell);
+  proc->setArguments(ps_args);
+  proc->start();
+}
+
+void Executor::stop_embedded(qint64 pid) {
+  if (pid != 0) {
+    std::string shell = "powershell.exe";
+    std::string ps_args =
+        "function Stop-Embedded { Param([int]$ppid)\nGet-CimInstance "
+        "Win32_Process | "
+        "Where-Object { $_.ParentProcessId -eq $ppid } | ForEach-Object { "
+        "Stop-Embedded $_.ProcessId }\nStop-Process -Id $ppid "
+        "}\nStop-Embedded " +
+        std::to_string(pid);
+
+    ShellExecute(NULL, NULL, shell.c_str(), ps_args.c_str(), NULL, SW_HIDE);
+  } else {
+    QMessageBox temp;
+    temp.setIcon(QMessageBox::Warning);
+    temp.setText("No process is currently running.");
+    temp.exec();
+  }
+}
+
 bool Executor::exe_drrun(QString cmd, QObject* parent) {
   if (cmd.endsWith("drrun") || cmd.endsWith("drrun.exe")) {
     QProcess* proc_ovpn = new QProcess(parent);

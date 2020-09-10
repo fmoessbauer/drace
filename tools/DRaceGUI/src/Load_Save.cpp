@@ -11,12 +11,13 @@
 
 #include "Load_Save.h"
 
-Load_Save::Load_Save(Report_Handler* r, Command_Handler* c) : rh(r), ch(c) {}
+Load_Save::Load_Save(Report_Handler* r, Command_Handler* c, Process_Handler* p)
+    : rh(r), ch(c), ph(p) {}
 
 void Load_Save::save(std::string path) {
   Data_Handler data;
   // the data handler fetches all data from the other handler classes
-  data.get_data(rh, ch);
+  data.get_data(rh, ch, ph);
 
   std::ofstream save_to_file(path, std::ios::out | std::ios::binary);
   std::vector<uint8_t> output_vector;
@@ -42,6 +43,6 @@ bool Load_Save::load(std::string path) {
 
   // the data handler restores all the data from the file to the other handler
   // classes
-  data.set_data(rh, ch);
+  data.set_data(rh, ch, ph);
   return true;
 }

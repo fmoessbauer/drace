@@ -16,11 +16,12 @@ DRaceGUI::DRaceGUI(QString config, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::DRaceGUI) {
   ch = new Command_Handler();
   rh = new Report_Handler(ch, this);
+  ph = new Process_Handler(this);
   ui->setupUi(this);
 
   if (config != "") {
     // open drace with pre-filled data from the input config file
-    Load_Save ls(rh, ch);
+    Load_Save ls(rh, ch, ph);
     if (ls.load(config.toStdString())) {
       // restore all the data to the boxes if config file is valid
       set_boxes_after_load();
@@ -52,9 +53,35 @@ DRaceGUI::DRaceGUI(QString config, QWidget *parent)
       ui->drace_path_input->setText(drace_client.absoluteFilePath());
     }
   }
+
+  connect(ph->get_process(), SIGNAL(readyReadStandardOutput()), this,
+          SLOT(read_output()));
+  connect(ph->get_process(), &QProcess::stateChanged,
+          [=](QProcess::ProcessState state) {
+            on_proc_state_label_stateChanged(state);
+          });
+  connect(ph->get_process(),
+          QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+          [=](int exitCode, QProcess::ExitStatus exitStatus) {
+            ui->embedded_output->moveCursor(QTextCursor::End);
+            if (!ui->embedded_input->text().isEmpty()) {
+              ui->embedded_input->clear();
+            }
+            if (exitCode < 0) {
+              on_proc_crash_exit_triggered(exitCode);
+            }
+          });
+  connect(ph->get_process(),
+          QOverload<QProcess::ProcessError>::of(&QProcess::errorOccurred),
+          [=](QProcess::ProcessError error) { on_proc_errorOccured(error); });
 }
 
-DRaceGUI::~DRaceGUI() { delete rh, ch, ui; }
+DRaceGUI::~DRaceGUI() {
+  if (ph->is_starting_or_running()) {
+    ph->stop();
+  }
+  delete rh, ch, ph, ui;
+}
 
 // Browse button functions
 void DRaceGUI::on_dr_path_btn_clicked() {
@@ -102,12 +129,26 @@ void DRaceGUI::on_config_browse_btn_clicked() {
 // push button functions
 void DRaceGUI::on_run_button_clicked() {
   if (ch->command_is_valid()) {
+    const bool embedded = !(ph->get_run_separately());
+    if (ph->is_starting_or_running() && embedded) {
+      QMessageBox temp;
+      temp.setIcon(QMessageBox::Warning);
+      temp.setText("A process is already running.");
+      temp.exec();
+      return;
+    }
     QString msr = ch->get_msr_path();
     if (msr != "") {
       Executor::launch_msr(
           msr.toStdString());  // returns when msr is (should be :D) set up
     }
-    Executor::execute((ch->get_command()).toStdString(), this);
+
+    if (embedded) {
+      ui->embedded_output->clear();
+      Executor::execute_embedded(ph->get_process(), ch->get_command(), this);
+    } else {
+      Executor::execute((ch->get_command()).toStdString(), this);
+    }
     return;
   }
 
@@ -169,6 +210,15 @@ void DRaceGUI::on_report_open_clicked() {
     }
   }
 }
+
+void DRaceGUI::on_stop_button_clicked() {
+  if (ph->is_starting_or_running()) {
+    ph->stop();
+  }
+  ui->embedded_output->append("Process terminated prematurely.");
+}
+
+void DRaceGUI::on_clear_output_clicked() { ui->embedded_output->clear(); }
 
 // radio buttons
 void DRaceGUI::on_tsan_btn_clicked() {
@@ -269,6 +319,30 @@ void DRaceGUI::on_report_auto_open_box_stateChanged(int arg1) {
   ui->command_output->setText(ch->make_report_auto_open_entry(arg1));
 }
 
+void DRaceGUI::on_run_separate_box_stateChanged(int arg1) {
+  if (arg1 == 0) {
+    ph->set_run_separately(false);
+    if (ph->is_starting_or_running() && ui->run_button->isEnabled()) {
+      ui->run_button->setEnabled(false);
+    }
+  } else {
+    ph->set_run_separately(true);
+    if (!ui->run_button->isEnabled()) {
+      ui->run_button->setEnabled(true);
+    }
+  }
+}
+
+void DRaceGUI::on_wrap_text_box_stateChanged(int arg1) {
+  if (arg1 == 0) {
+    ph->set_wrap_text_output(false);
+    ui->embedded_output->setLineWrapMode(QTextEdit::NoWrap);
+  } else {
+    ph->set_wrap_text_output(true);
+    ui->embedded_output->setLineWrapMode(QTextEdit::WidgetWidth);
+  }
+}
+
 // textbox functions
 void DRaceGUI::on_dr_path_input_textChanged(const QString &arg1) {
   ui->command_output->setText(ch->make_entry(arg1, Command_Handler::DYNAMORIO));
@@ -351,7 +425,7 @@ void DRaceGUI::on_actionLoad_Config_triggered() {
                                               tr(filter), &selfilter);
   if (path != "") {
     load_save_path = path;
-    Load_Save ls(rh, ch);
+    Load_Save ls(rh, ch, ph);
     if (ls.load(path.toStdString())) {
       set_boxes_after_load();  // restore all the data to the boxes
     } else {
@@ -375,7 +449,7 @@ void DRaceGUI::on_actionSave_Config_triggered() {
                                               tr(filter), &selfilter);
   if (path != "") {
     load_save_path = path;
-    Load_Save ls(rh, ch);
+    Load_Save ls(rh, ch, ph);
     ls.save(path.toStdString());
   }
 }
@@ -397,6 +471,98 @@ void DRaceGUI::on_actionHelp_triggered() {
 void DRaceGUI::on_actionOptions_triggered() {
   Options_Dialog options_window;
   options_window.exec();
+}
+
+// text browser functions
+void DRaceGUI::read_output() {
+  QProcess *proc_drc = dynamic_cast<QProcess *>(sender());
+  if (proc_drc) {
+    ui->embedded_output->moveCursor(QTextCursor::End);
+    ui->embedded_output->insertPlainText(proc_drc->readAllStandardOutput());
+  }
+}
+
+// process functions
+void DRaceGUI::on_proc_state_label_stateChanged(
+    const QProcess::ProcessState state) {
+  switch (state) {
+    case QProcess::NotRunning:
+      ui->proc_state_label->setStyleSheet(
+          QString("border: 2px solid #a6a8a6 ; border-radius: 10px ; "
+                  "background-color: #696969"));
+      ui->embedded_input->setEnabled(false);
+      ui->stop_button->setEnabled(false);
+      ui->run_button->setEnabled(true);
+      ui->run_button->setFocus();
+      break;
+    case QProcess::Running:
+      ui->proc_state_label->setStyleSheet(
+          QString("border: 2px solid #a6a8a6 ; border-radius: 10px ; "
+                  "background-color: #00e100"));
+      ui->embedded_input->setEnabled(true);
+      ui->run_button->setEnabled(false);
+      ui->stop_button->setEnabled(true);
+      ui->stop_button->setFocus();
+      break;
+    case QProcess::Starting:
+      ui->proc_state_label->setStyleSheet(
+          QString("border: 2px solid #a6a8a6 ; border-radius: 10px ; "
+                  "background-color: #f0ac00"));
+      ui->embedded_input->setEnabled(false);
+      ui->run_button->setEnabled(false);
+      ui->stop_button->setEnabled(true);
+      ui->stop_button->setFocus();
+      break;
+  }
+}
+
+void DRaceGUI::on_proc_crash_exit_triggered(int arg1) {
+  QMessageBox temp;
+  temp.setIcon(QMessageBox::Warning);
+  if (arg1 == -2) {
+    temp.setText("PowerShell process cannot be started.");
+  } else if (arg1 == -1) {
+    temp.setText("PowerShell process was interrupted.");
+  } else {
+    temp.setText("An unexpected error occured.");
+  }
+  temp.exec();
+}
+
+void DRaceGUI::on_proc_errorOccured(QProcess::ProcessError error) {
+  QMessageBox temp;
+  temp.setIcon(QMessageBox::Warning);
+  switch (error) {
+    case QProcess::FailedToStart:
+      temp.setText(
+          "Failed to start process. It might either be missing or you do not "
+          "have the right permissions.");
+      break;
+    case QProcess::Crashed:
+      temp.setText("Process was interrupted.");
+      break;
+    case QProcess::Timedout:
+      temp.setText("The used synchronous function(s) timed out.");
+      break;
+    case QProcess::WriteError:
+      temp.setText("Failed to write to process.");
+      break;
+    case QProcess::ReadError:
+      temp.setText("Failed to read from process.");
+      break;
+    default:
+      temp.setText("An unknown error has occured.");
+      break;
+  }
+  temp.exec();
+}
+
+void DRaceGUI::on_embedded_input_returnPressed() {
+  QString data = ui->embedded_input->text();
+  ph->write(data);
+  ui->embedded_output->moveCursor(QTextCursor::End);
+  ui->embedded_output->insertPlainText(data + "\n");
+  ui->embedded_input->clear();
 }
 
 QString DRaceGUI::remove_quotes(QString str) {
@@ -492,6 +658,13 @@ void DRaceGUI::set_boxes_after_load() {
   if (detector.contains("fasttrack", Qt::CaseInsensitive)) {
     ui->fasttrack_btn->setChecked(true);
   }
+
+  // set misc options checkboxes
+  const auto &options = ph->get_options_array();
+  ui->run_separate_box->setChecked(
+      (bool)options[Process_Handler::RUN_SEPARATELY]);
+  ui->wrap_text_box->setChecked(
+      (bool)options[Process_Handler::WRAP_TEXT_OUTPUT]);
 
   ui->command_output->setText(ch->make_command());
 }

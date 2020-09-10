@@ -16,14 +16,16 @@
 #include <string>
 #include "Command_Handler.h"
 #include "Data_Handler.h"
+#include "Process_Handler.h"
 #include "Report_Handler.h"
 
 class Load_Save {
   Report_Handler* rh;
   Command_Handler* ch;
+  Process_Handler* ph;
 
  public:
-  Load_Save(Report_Handler* r, Command_Handler* c);
+  Load_Save(Report_Handler* r, Command_Handler* c, Process_Handler* p);
 
   bool load(std::string path);
   void save(std::string path);

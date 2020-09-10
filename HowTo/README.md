@@ -32,7 +32,7 @@ It is recommended to use the latest cron build. Once the download is finished, y
 For new users, the most convenient way to use DRace is to use the DRaceGUI. The ```drace-gui.exe``` is contained in the ```./drace/bin``` folder. With the gui, the quite long and unhandy DRace command can be built in an easier fashion.
 
 Some plausibility checks are executed on the inputs, whereby correct and incorrect inputs are marked with green and red respectively. The fields must be filled as described in the following.
-Once all mandatory fields are filled correctly, one can directly execute the command in a powershell-instance by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an arbitrary shell.
+Once all mandatory fields are filled correctly, one can directly execute the command in a powershell instance seen on the output console by pressing **RUN**. Alternatively, the created command can be copied to the clipboard and pasted in an arbitrary shell.
 
 The following fields are mandatory:
 
@@ -55,14 +55,21 @@ The following fields are optional:
 The following actions can be done:
 
 - Copy to Clip-board: copies the generated command as displayed in the command window into your clip-board.
+- Run in a separate window: allows running the powershell instance in a window outside of the GUI, rather than in the embedded output console.
+- Input field under Output Console: allows data to be sent to the application under test if it expects user interaction.
+- Wrap text output: disables horizontal scrolling in output console and wraps text.
+- Stop Process: kills the running process in output console.
+- Clear Output: clears text in output console.
 - Open Report Folder: opens the folder containing the latest generated successful report in the GUI's directory with your OS's file explorer.
 - Open Report: opens the latest generated HTML report in the GUI's directory with your default browser or application.
 
 Furthermore, a working configuration can be saved in a default `.drc` file type, or in any other file type (for instance a text file) by clicking on *File->Save Configuration As.* This configuration could also be restored at a later time by clicking on *File->Load Configuration.*
 
-| Empty DRaceGUI | Filled DRaceGUI |
-| :-----: | :-----: |
-| ![1](./Images/dracegui_empty.png "Empty DRaceGUI") | ![2](./Images/dracegui_filled.png "Filled DRaceGUI") |
+*Empty DRaceGUI*
+![1](./Images/dracegui_empty.png "Empty DRaceGUI")
+
+*Filled DRaceGUI*
+![2](./Images/dracegui_filled.png "Filled DRaceGUI")
 
 #### Report Settings
 
