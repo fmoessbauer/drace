@@ -81,6 +81,9 @@ a:link, a:visited, a:hover, a:active{
     border-radius: 0;
     box-shadow: none;
     font-size: inherit;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .btn:hover, .btn:focus {
     background-color: rgb(135, 155, 170);
