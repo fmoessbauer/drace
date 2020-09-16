@@ -18,6 +18,7 @@ DRaceGUI::DRaceGUI(QString config, QWidget *parent)
   rh = new Report_Handler(ch, this);
   ph = new Process_Handler(this);
   ui->setupUi(this);
+  ui->splitter->setSizes(QList<int>({1, 2}));
 
   if (config != "") {
     // open drace with pre-filled data from the input config file
