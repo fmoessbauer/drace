@@ -24,13 +24,14 @@
 #include <fstream>
 #include <string>
 #include "Command_Handler.h"
+#include "DR_Options_Dialog.h"
 #include "Executor.h"
 #include "Load_Save.h"
+#include "Process_Handler.h"
 #include "Report_Handler.h"
 #include "about_dialog.h"
 #include "options_dialog.h"
 #include "report_config.h"
-#include "Process_Handler.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -49,6 +50,7 @@ class DRaceGUI : public QMainWindow {
 
   /// Push buttons
   void on_dr_path_btn_clicked();
+  void on_dr_options_btn_clicked();
   void on_drace_path_btn_clicked();
   void on_exe_path_btn_clicked();
   void on_config_browse_btn_clicked();

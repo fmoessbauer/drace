@@ -24,6 +24,7 @@ void Data_Handler::get_data(Report_Handler* rh, Command_Handler* ch,
   auto data = ch->get_command_array();
   config.at("dynamorio") = data[Command_Handler::DYNAMORIO].toStdString();
   config.at("dr_debug") = data[Command_Handler::DR_DEBUG].toStdString();
+  config.at("dr_args") = data[Command_Handler::DR_ARGS].toStdString();
   config.at("drace") = data[Command_Handler::DRACE].toStdString();
   config.at("detector") = data[Command_Handler::DETECTOR].toStdString();
   config.at("flags") = data[Command_Handler::FLAGS].toStdString();
@@ -64,6 +65,8 @@ void Data_Handler::set_data(Report_Handler* rh, Command_Handler* ch,
       QString(config.value("dynamorio", "").c_str());
   ch->command[Command_Handler::DR_DEBUG] =
       QString(config.value("dr_debug", "").c_str());
+  ch->command[Command_Handler::DR_ARGS] =
+      QString(config.value("dr_args", "").c_str());
   ch->command[Command_Handler::DRACE] =
       QString(config.value("drace", "").c_str());
   ch->command[Command_Handler::DETECTOR] =

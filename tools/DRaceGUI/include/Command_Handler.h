@@ -23,6 +23,7 @@ class Command_Handler {
   enum Command_Type : uint {
     DYNAMORIO,
     DR_DEBUG,
+    DR_ARGS,
     DRACE,
     DETECTOR,
     FLAGS,

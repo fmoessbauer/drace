@@ -30,6 +30,7 @@ class Data_Handler {
                  {"report_srcdirs", ""},
                  {"dynamorio", ""},
                  {"dr_debug", ""},
+                 {"dr_args", ""},
                  {"drace", ""},
                  {"detector", ""},
                  {"flags", ""},

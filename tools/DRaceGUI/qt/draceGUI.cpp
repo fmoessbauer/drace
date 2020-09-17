@@ -103,6 +103,13 @@ void DRaceGUI::on_drace_path_btn_clicked() {
   }
 }
 
+void DRaceGUI::on_dr_options_btn_clicked() {
+  DR_Options_Dialog *dr_options_window;
+  dr_options_window = new DR_Options_Dialog(ch, this);
+  dr_options_window->exec();
+  ui->command_output->setText(ch->get_command());
+}
+
 void DRaceGUI::on_exe_path_btn_clicked() {
   QString selfilter = tr("Executable (*.exe)");
   QString path = QFileDialog::getOpenFileName(
@@ -385,7 +392,8 @@ void DRaceGUI::on_exe_input_textChanged(const QString &arg1) {
 }
 
 void DRaceGUI::on_exe_args_input_textChanged(const QString &arg1) {
-  ui->command_output->setText(ch->make_exe_args_entry(arg1));
+  ui->command_output->setText(
+      ch->make_text_entry(arg1, Command_Handler::EXECUTABLE_ARGS));
 }
 
 void DRaceGUI::on_flag_input_textChanged(const QString &arg1) {

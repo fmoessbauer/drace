@@ -32,6 +32,9 @@ set(SOURCES
     "qt/Options_Dialog.cpp"
     "qt/Options_Dialog.h"
     "qt/Options_Dialog.ui"
+    "qt/DR_Options_Dialog.cpp"
+    "qt/DR_Options_Dialog.h"
+    "qt/DR_Options_Dialog.ui"
 )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
