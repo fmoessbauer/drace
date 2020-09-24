@@ -39,8 +39,7 @@ class MemoryTracker {
   struct mem_ref_t {
     uintptr_t addr;
     uintptr_t pc;
-    uint32_t size;
-    bool write;
+    int32_t size;
   };
 
   /** Upper limit of process address space according to
@@ -63,6 +62,9 @@ class MemoryTracker {
 
   /// update code-cache after this number of flushes (must be power of two)
   static constexpr unsigned CC_UPDATE_PERIOD = 1024 * 64;
+
+  /// constant that is added to size field to denote a write access
+  static constexpr uint32_t MEM_REF_WRITE_TAG = 1ul << 30;
 
  private:
   /// \brief external change detected
@@ -188,21 +190,31 @@ class MemoryTracker {
     // we sample (analyze) this fsection or not
     static constexpr int flag_bit = sizeof(uintptr_t) * 8 - 1;
     if (!sample_ref(data)) {
-      data.enabled = false;
+      disable(data);
       // set the flag
       data.event_cnt |= ((uintptr_t)1 << flag_bit);
     } else {
       // clear the flag
       data.event_cnt &= ~((uintptr_t)1 << flag_bit);
-      if (!data.event_cnt) data.enabled = true;
+      if (!data.event_cnt) enable(data);
     }
   }
 
   /// enable the detector (does not affect sampling)
-  static inline void enable(ShadowThreadState &data) { data.enabled = true; }
+  static inline void enable(ShadowThreadState &data) noexcept {
+    data.buf_ptr = data.buf_ptr_stored;
+  }
 
   /// disable the detector (does not affect sampling)
-  static inline void disable(ShadowThreadState &data) { data.enabled = false; }
+  static inline void disable(ShadowThreadState &data) noexcept {
+    data.buf_ptr_stored = data.buf_ptr;
+    data.buf_ptr = nullptr;
+  }
+
+  /// true if the detector is enabled
+  static inline bool is_enabled(ShadowThreadState &data) noexcept {
+    return nullptr != data.buf_ptr;
+  }
 
   /// enable the detector during this scope
   static inline void enable_scope(ShadowThreadState &data) {
@@ -226,6 +238,11 @@ class MemoryTracker {
   static void update_cache(ShadowThreadState &data);
 
   static bool pc_in_freq(ShadowThreadState &data, void *bb);
+
+  /// true if memory reference is a write access
+  static inline bool is_write(const mem_ref_t *ref) {
+    return (ref->size & MEM_REF_WRITE_TAG);
+  }
 
  private:
   void code_cache_init(void);
