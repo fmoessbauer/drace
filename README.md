@@ -264,6 +264,12 @@ For detailed information on all dependencies, see `DEPENDENCIES.md`.
 - [google/googletest](https://github.com/google/googletest)
 - [google/benchmark](https://github.com/google/benchmark)
 
+##### DRaceGUI
+
+**Mandatory:**
+
+- [nlohmann/json](https://github.com/nlohmann/json) 
+
 ##### Managed Symbol Resolver (MSR)
 
 **Mandatory:**

@@ -80,13 +80,23 @@ endif()
 
 # muellan clipp
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/muellan/clipp/include")
-	message(FATAL_ERROR "HowardHinnant Date submodule not available")
+	message(FATAL_ERROR "muellan clipp submodule not available")
 endif()
 add_library("clipp" INTERFACE)
 target_include_directories("clipp" INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/muellan/clipp/include>)
 file(READ "muellan/clipp/LICENSE" LIC_FILE_CLIPP)
 file(APPEND ${LIC_FILE} "${LIC_SEP}muellan/clipp\n\n${LIC_FILE_CLIPP}")
+
+# nlohmann json
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nlohmann/json/single_include")
+	message(FATAL_ERROR "nlohmann JSON submodule not available")
+endif()
+add_library("nlohmann-json" INTERFACE)
+target_include_directories("nlohmann-json" INTERFACE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/nlohmann/json/single_include>)
+file(READ "nlohmann/json/LICENSE.MIT" LIC_FILE_JSON)
+file(APPEND ${LIC_FILE} "${LIC_SEP}nlohmann/json\n\n${LIC_FILE_JSON}")
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/google/googletest/googletest/CMakeLists.txt")
 	# force gtest to build static lib

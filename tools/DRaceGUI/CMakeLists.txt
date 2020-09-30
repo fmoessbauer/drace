@@ -18,6 +18,7 @@ set(SOURCES
     "src/Executor.cpp"
     "src/Command_Handler.cpp"
     "src/Data_Handler.cpp"
+    "src/Process_Handler.cpp"
     "qt/main.cpp"
     "qt/draceGUI.cpp"
     "qt/draceGUI.h"
@@ -31,6 +32,9 @@ set(SOURCES
     "qt/Options_Dialog.cpp"
     "qt/Options_Dialog.h"
     "qt/Options_Dialog.ui"
+    "qt/DR_Options_Dialog.cpp"
+    "qt/DR_Options_Dialog.h"
+    "qt/DR_Options_Dialog.ui"
 )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -45,7 +49,7 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 
 find_package(Qt5 COMPONENTS Widgets)
-find_package(Boost 1.65.0 COMPONENTS system filesystem serialization)
+find_package(Boost 1.65.0 COMPONENTS system filesystem)
 
 if(Qt5_FOUND AND Boost_FOUND)
     message(STATUS "Build Qt5 DRace GUI")
@@ -60,7 +64,9 @@ if(Qt5_FOUND AND Boost_FOUND)
     target_link_libraries(${GUI_TARGET} PRIVATE
         Boost::system
         Boost::filesystem
-        Boost::serialization)
+        "nlohmann-json"   # json parser
+    )
+    
     target_compile_definitions(${GUI_TARGET} PRIVATE USE_BOOST)
 
     if(WIN32)

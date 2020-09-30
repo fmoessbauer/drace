@@ -23,6 +23,7 @@ class Command_Handler {
   enum Command_Type : uint {
     DYNAMORIO,
     DR_DEBUG,
+    DR_ARGS,
     DRACE,
     DETECTOR,
     FLAGS,
@@ -62,7 +63,7 @@ class Command_Handler {
   QString make_flag_entry(const QString& arg1);
 
   /// sets the argument(s) (if any) of the executable under test
-  QString make_exe_args_entry(const QString& arg1);
+  QString make_text_entry(const QString& arg1, uint position);
 
   /// sets the automatic report opening command
   QString make_report_auto_open_entry(const int& arg1);

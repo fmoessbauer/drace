@@ -69,12 +69,8 @@ QString Command_Handler::make_flag_entry(const QString &arg1) {
   }
 }
 
-QString Command_Handler::make_exe_args_entry(const QString &arg1) {
-  if (arg1 != "") {
-    return updateCommand(arg1, EXECUTABLE_ARGS);
-  } else {
-    return updateCommand("", EXECUTABLE_ARGS);
-  }
+QString Command_Handler::make_text_entry(const QString &arg1, uint position) {
+  return updateCommand(arg1, position);
 }
 
 QString Command_Handler::make_report_auto_open_entry(const int &arg1) {

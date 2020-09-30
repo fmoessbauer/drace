@@ -24,8 +24,10 @@
 #include <fstream>
 #include <string>
 #include "Command_Handler.h"
+#include "DR_Options_Dialog.h"
 #include "Executor.h"
 #include "Load_Save.h"
+#include "Process_Handler.h"
 #include "Report_Handler.h"
 #include "about_dialog.h"
 #include "options_dialog.h"
@@ -48,6 +50,7 @@ class DRaceGUI : public QMainWindow {
 
   /// Push buttons
   void on_dr_path_btn_clicked();
+  void on_dr_options_btn_clicked();
   void on_drace_path_btn_clicked();
   void on_exe_path_btn_clicked();
   void on_config_browse_btn_clicked();
@@ -55,6 +58,8 @@ class DRaceGUI : public QMainWindow {
   void on_copy_button_clicked();
   void on_report_folder_open_clicked();
   void on_report_open_clicked();
+  void on_stop_button_clicked();
+  void on_clear_output_clicked();
 
   /// Text Boxes
   void on_dr_path_input_textChanged(const QString &arg1);
@@ -70,6 +75,8 @@ class DRaceGUI : public QMainWindow {
   void on_msr_box_stateChanged(int arg1);
   void on_excl_stack_box_stateChanged(int arg1);
   void on_report_auto_open_box_stateChanged(int arg1);
+  void on_run_separate_box_stateChanged(int arg1);
+  void on_wrap_text_box_stateChanged(int arg1);
 
   /// Radio Buttons
   void on_tsan_btn_clicked();
@@ -83,6 +90,15 @@ class DRaceGUI : public QMainWindow {
   void on_actionConfigure_Report_triggered();
   void on_actionHelp_triggered();
   void on_actionOptions_triggered();
+
+  /// Text Browser
+  void read_output();
+
+  /// Process Actions
+  void on_proc_state_label_stateChanged(const QProcess::ProcessState state);
+  void on_proc_crash_exit_triggered(int arg1);
+  void on_proc_errorOccured(QProcess::ProcessError error);
+  void on_embedded_input_returnPressed();
 
  private:
   Ui::DRaceGUI *ui;
@@ -100,6 +116,7 @@ class DRaceGUI : public QMainWindow {
   /// Handler classes
   Report_Handler *rh;
   Command_Handler *ch;
+  Process_Handler *ph;
 
   /// restores the GUI with the data of the loaded config file
   void set_boxes_after_load();
