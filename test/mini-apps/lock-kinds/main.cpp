@@ -1,7 +1,7 @@
 /*
  * DRace, a dynamic data race detector
  *
- * Copyright 2018 Siemens AG
+ * Copyright 2020 Siemens AG
  *
  * Authors:
  *   Felix Moessbauer <felix.moessbauer@siemens.com>
@@ -23,6 +23,7 @@
 
 static std::mutex mx;
 static std::recursive_mutex rmx;
+static std::timed_mutex tmx;
 
 void lock_recusive(int* v, int depth) {
   if (depth > 0) {
@@ -62,6 +63,22 @@ void crit_sect(int* v, CRITICAL_SECTION* cs) {
   LeaveCriticalSection(cs);
 }
 
+void timed_lock(int* v) {
+  const int steps = 100;
+
+  for (int i = 0; i < steps; ++i) {
+    std::unique_lock<std::timed_mutex> tm_lock(tmx, std::defer_lock);
+    if (tm_lock.try_lock_for(std::chrono::milliseconds(10))) {
+      ++(*v);
+    }
+  }
+
+  tmx.lock();
+  // glitches between rounds and value are expected
+  std::cout << "Value " << *v << " after " << steps << " rounds" << std::endl;
+  tmx.unlock();
+}
+
 void local_buffer(int* v, CRITICAL_SECTION* cs) {
   int buffer[16];
   int* buffer2 = (int*)_alloca(16);
@@ -76,7 +93,7 @@ void local_buffer(int* v, CRITICAL_SECTION* cs) {
 }
 
 int main() {
-  std::array<int, 4> vars{0};
+  std::array<int, 5> vars{0};
   CRITICAL_SECTION _cs;
   constexpr int threads_per_task = 10;
   std::vector<std::thread> threads;
@@ -88,6 +105,7 @@ int main() {
     threads.emplace_back(&try_lock, &vars[1]);
     threads.emplace_back(&crit_sect, &vars[2], &_cs);
     threads.emplace_back(&local_buffer, &vars[3], &_cs);
+    threads.emplace_back(&timed_lock, &vars[4]);
   }
 
   for (auto& th : threads) {

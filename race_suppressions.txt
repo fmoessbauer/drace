@@ -6,3 +6,5 @@
 race_tos:std::_LaunchPad<>::_Go
 #suppress races on std::cout (only necessary for tsan due to it's 32-bit addr truncate)
 race_tos:std::operator<<<>
+#suppress races in the crt thread-pooled wait using in std::timed_mutex
+race_tos:std::timed_mutex::try_lock_until<>

@@ -23,9 +23,6 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   static_assert(sizeof(mem_ref_t::pc) == sizeof(uintptr_t),
                 "type size not correct");
   static_assert(sizeof(mem_ref_t::size) == 4, "type size not correct");
-  static_assert(sizeof(mem_ref_t::write) == 1, "type size not correct");
-  static_assert(sizeof(ShadowThreadState::enabled) == sizeof(uintptr_t),
-                "type size not correct");
 
   instr_t *instr;
   opnd_t opnd1, opnd2;
@@ -59,9 +56,8 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
    * if(!enabled){
    *   jmp .restore
    *}
-   * buf_ptr->write = write;
    * buf_ptr->addr  = addr;
-   * buf_ptr->size  = size;
+   * buf_ptr->size  = size + write_tag;
    * buf_ptr->pc    = pc;
    * buf_ptr++;
    * if (buf_ptr >= buf_end_ptr)
@@ -76,28 +72,16 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   drmgr_insert_read_tls_field(drcontext, thread_state.getTlsIndex(), ilist,
                               where, reg3);
 
-  /* Jump if tracing is disabled */
-  /* load enabled flag into reg2 */
-  opnd1 = opnd_create_reg(reg2);
-  opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, enabled));
-  instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
-  instrlist_meta_preinsert(ilist, where, instr);
-
-  /* Jump if (E|R)CX is 0 */
-  opnd1 = opnd_create_instr(restore);
-  instr = INSTR_CREATE_jecxz(drcontext, opnd1);
-  instrlist_meta_preinsert(ilist, where, instr);
-
+  /* Jump if tracing is disabled, by checking buf_ptr == 0 */
   /* Load data->buf_ptr into reg2 */
   opnd1 = opnd_create_reg(reg2);
   opnd2 = OPND_CREATE_MEMPTR(reg3, offsetof(ShadowThreadState, buf_ptr));
   instr = INSTR_CREATE_mov_ld(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
-  /* Move write/read to write field */
-  opnd1 = OPND_CREATE_MEM8(reg2, offsetof(mem_ref_t, write));
-  opnd2 = OPND_CREATE_INT8(write);
-  instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
+  /* Jump if (E|R)CX is 0 */
+  opnd1 = opnd_create_instr(restore);
+  instr = INSTR_CREATE_jecxz(drcontext, opnd1);
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Store address in memory ref */
@@ -109,8 +93,9 @@ void MemoryTracker::instrument_mem_fast(void *drcontext, instrlist_t *ilist,
   /* Store size in memory ref */
   opnd1 = OPND_CREATE_MEM32(reg2, offsetof(mem_ref_t, size));
   /* drutil_opnd_mem_size_in_bytes handles OP_enter */
-  opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where));
-  instr = INSTR_CREATE_mov_st(drcontext, opnd1, opnd2);
+  opnd2 = OPND_CREATE_INT32(drutil_opnd_mem_size_in_bytes(ref, where) |
+                            (write ? MEM_REF_WRITE_TAG : 0ul));
+  instr = INSTR_CREATE_mov_imm(drcontext, opnd1, opnd2);
   instrlist_meta_preinsert(ilist, where, instr);
 
   /* Store pc in memory ref */
