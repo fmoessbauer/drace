@@ -1,3 +1,80 @@
+#### 1.9.0 (2020-10-02)
+
+##### Major Changes
+
+*  GUI: add forward and backward compatibility of saved configuration files among different DRaceGUI versions starting from this one. In turn, all earlier DRaceGUI versions cannot load the current version's saved configuration files and vice versa.
+
+##### Chores
+
+*  cut 1.9.0 release ([75669c25](https://github.com/siemens/drace/commit/75669c25c3b5238cdddcd0f5b6a34d641c88048f))
+*  remove obsolete instrumentation functionality ([881d1964](https://github.com/siemens/drace/commit/881d1964c90bd0ee545fd61695c3171f5effd866))
+*  fix build with loglevel trace ([671a6404](https://github.com/siemens/drace/commit/671a640476d8dc593b34df53217503f238faaa6d))
+*  install readme and license to package root folder ([593b4f26](https://github.com/siemens/drace/commit/593b4f26d421cfd50b617fbc5243c905ee6ce7ed))
+
+##### Documentation Changes
+
+*  adjust DraceGUI README ([fd2a2c75](https://github.com/siemens/drace/commit/fd2a2c7502c040ba0381190a2e1b8d38caa5233d))
+*  add typographic changes ([6214862a](https://github.com/siemens/drace/commit/6214862a44ff3f0f669b75948728cf6218a1113d))
+*  adjust report settings image to show logo ([9dbabfa9](https://github.com/siemens/drace/commit/9dbabfa93c8991c516bd451401aa2a246d186c9c))
+*  provide information in HowTo on specifying srcdirs in Report Configuration ([4767cd0e](https://github.com/siemens/drace/commit/4767cd0e29c0436abaeded482db4c8c34d5c6496))
+
+##### New Features
+
+*  add input field for DynamoRIO arguments in DRaceGUI ([4cb385b4](https://github.com/siemens/drace/commit/4cb385b43d842f58f2753acc1f2e7db47126eeda))
+*  add splitter separating the two sides of the GUI main window ([edb02a5f](https://github.com/siemens/drace/commit/edb02a5f85144911e5c1bbcffa7039cded8eeb32))
+*  add boost and json links to GUI About dialog ([5d8b2550](https://github.com/siemens/drace/commit/5d8b25507bba6d4785e113c69ac60011e1e710a4))
+*  implement output & input console for execution of drace embedded in DRaceGUI ([445d1893](https://github.com/siemens/drace/commit/445d1893c43d411287d73403a8722fe3d2b8c141))
+*  add backward and forward compatibility of drc files across DRaceGUI versions ([a4638c97](https://github.com/siemens/drace/commit/a4638c97ed8a6ca8e66b9512c83990aa1e49f0cc))
+*  add options in GUI to open generated report ([a6807d50](https://github.com/siemens/drace/commit/a6807d5002f38e9ae77af0f85b1e2499dbf203ea))
+*  add checkbox for stack accesses exclusion flag ([a3d27c3a](https://github.com/siemens/drace/commit/a3d27c3a5ab370f63b57c1e96fa56ca0452facd3))
+*  add option to create file extension for config file to be associated with DraceGUI app ([fb8ddafb](https://github.com/siemens/drace/commit/fb8ddafb2f3b17331dc5e237badfe9d0294c1cba))
+*  associate saved config file to 'Open With' draceGUI and load the data ([9dbd5b81](https://github.com/siemens/drace/commit/9dbd5b813ba56a0b53fb117d0f13d102fd730cfe))
+*  add input in GUI to specify args for exe under test ([978ef211](https://github.com/siemens/drace/commit/978ef211eda49174c98c8a4586639b578e46434d))
+
+##### Bug Fixes
+
+*  allow links in GUI About dialog to open externally ([22d75d9c](https://github.com/siemens/drace/commit/22d75d9c24b64cc9fe45a56265675a077bbed900))
+*  cmake fatal error message for clipp submodule ([71e3d266](https://github.com/siemens/drace/commit/71e3d26693ca7b8c171fd840001bc20c7f29e9e1))
+*  adjust HTML report layout for long function names ([2350b9ab](https://github.com/siemens/drace/commit/2350b9abfd64cc6f0ab36a5bc14440fe1a0b36f3))
+*  adjust report folder name to contain UTC time ([4e07320e](https://github.com/siemens/drace/commit/4e07320e1c5eaf11f245e73ec03b3d86923a0c37))
+*  adjust ReportConverter to parse XML files with empty objects ([590227c5](https://github.com/siemens/drace/commit/590227c5c38c7f79b00eb74d1998ddaee15d7cfd))
+*  complete deployment of DRaceGUI in project bin dir ([db4585bd](https://github.com/siemens/drace/commit/db4585bdfeeeb4574077846aa2dd8066b23e1729))
+*  adjust error handling for ReportConverter if HTML template not found ([12199d80](https://github.com/siemens/drace/commit/12199d80e7a538fc602e5be020eacee8578a5640))
+*  false positive around timed mutex ([34cdca09](https://github.com/siemens/drace/commit/34cdca0926a043f0aa9b6b8b85bb41be6b9ab82d))
+*  ensure that state is stored in xcx register when using jmpecx ([61f843c1](https://github.com/siemens/drace/commit/61f843c11d4503e041e52610b3172e4609369915))
+*  impose absolute paths for drrun & drace config library inputs in GUI ([0e974387](https://github.com/siemens/drace/commit/0e9743876f0dc4cc076734b24fb564fefd5863c0))
+*  adjust DRace Flags input in GUI to accept multiple whitespace characters ([34515848](https://github.com/siemens/drace/commit/34515848592ba9f9a41591b9ab187deaaecf9012))
+
+##### Other Changes
+
+*  add icon ([523b40b0](https://github.com/siemens/drace/commit/523b40b0408de8885ff2ef24335a85f989248339))
+
+##### Performance Improvements
+
+*  reduce # of memory accesses in inline instrumentation ([d5e1cd93](https://github.com/siemens/drace/commit/d5e1cd93341dcebb671f8d274800f72df288a780))
+*  encode r/w into size operand ([6f50e452](https://github.com/siemens/drace/commit/6f50e452d43af4f0eb892a8f1429fd3f47b16859))
+*  reduce code on the hot path ([784d9632](https://github.com/siemens/drace/commit/784d96325a5e93e2bd8707c414485787886c4f10))
+
+##### Refactors
+
+*  generalize function for making command entries for GUI ([d36033e8](https://github.com/siemens/drace/commit/d36033e8249823c1a3da7df47591d2952aa74cb3))
+*  adjust resizability of main GUI window ([b7cb8cde](https://github.com/siemens/drace/commit/b7cb8cde77a7f27d0c118daa0bb4f0c5626c375f))
+*  add note in DRaceGUI options for file type association ([921ac2ed](https://github.com/siemens/drace/commit/921ac2ed0cca2d6b8028476ba9ab70f46c88fd0c))
+*  rearrange and adjust GUI buttons ([a97ef53c](https://github.com/siemens/drace/commit/a97ef53cfe37c614c80f5a3be3c03dbaa266d200))
+*  minor performance tuning ([a06d2d5b](https://github.com/siemens/drace/commit/a06d2d5b7343da67acd911a6ec5ce890cd482201))
+*  simplify memory trace post processing ([fe29d76c](https://github.com/siemens/drace/commit/fe29d76c7031a02dd402547923b51d1ed5d4923a))
+*  add aesthetic standardizations to GUI ([4e2256a3](https://github.com/siemens/drace/commit/4e2256a39497752dcea342ec2527a6b267e4b66c))
+*  introduce command types as enums in Command Handler ([5635d915](https://github.com/siemens/drace/commit/5635d915a9aa2fad785c28227720ed8321cb112e))
+
+##### Code Style Changes
+
+*  adjust Report Configuration window geometry ([fb54def2](https://github.com/siemens/drace/commit/fb54def2a35c04bb264abd934f1c62b98f8dd67d))
+*  cleanup gui cmake file ([2fe97ef5](https://github.com/siemens/drace/commit/2fe97ef579b6ddc3904351af845442e94e20111a))
+
+##### Tests
+
+*  store integration test xml reports ([e5f74357](https://github.com/siemens/drace/commit/e5f7435745a7274f964cb77c6b20c80b7bce0cd4))
+
 #### 1.8.0 (2020-07-02)
 
 ##### Chores
