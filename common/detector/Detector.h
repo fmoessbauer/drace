@@ -76,18 +76,28 @@ class Detector {
    * If the same race happens multiple times, the detector might (but does not
    * have to) suppress subsequent ones.
    *
+   * The second parameter provides the context that was set in \ref
+   * Detector::init()
+   *
    * \note When using the DRace runtime, further filtering is done in the \ref
    * drace::RaceCollector.
    */
-  using Callback = void (*)(const Race*);
+  using Callback = void (*)(const Race*, void*);
 
   /**
    * \brief initialize detector
    *
    * Takes command line arguments and a callback to process a data-race.
-   * Type of callback is (const detector::Race*) -> void
    */
-  virtual bool init(int argc, const char** argv, Callback rc_clb) = 0;
+  virtual bool init(
+      /// program argument count (can be zero)
+      int argc,
+      /// program argument values (can be nullptr)
+      const char** argv,
+      /// callback that is called when a race is detected
+      Callback rc_clb,
+      /// the context is passed to the rc_clb as second parameter
+      void* context) = 0;
 
   /**
    * \brief destruct detector
