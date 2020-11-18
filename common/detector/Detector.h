@@ -53,17 +53,17 @@ class Detector {
   /// A single memory access
   class AccessEntry {
    public:
-    bool write;
+    bool write{false};
     bool onheap{false};
-    unsigned thread_id;
-    int access_type;
+    unsigned thread_id{0};
+    int access_type{0};
     size_t stack_size{0};
     /// access size in log2 bytes -> access_size = 0 -> log2(0) = 1 byte
-    size_t access_size;
-    size_t heap_block_size;
-    uintptr_t accessed_memory;
-    uintptr_t heap_block_begin;
-    std::array<uintptr_t, max_stack_size> stack_trace;
+    size_t access_size{0};
+    size_t heap_block_size{0};
+    uintptr_t accessed_memory{0x0};
+    uintptr_t heap_block_begin{0x0};
+    std::array<uintptr_t, max_stack_size> stack_trace{0x0};
   };
 
   /// A Data-Race is a tuple of two Accesses
