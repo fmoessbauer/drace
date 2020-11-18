@@ -10,6 +10,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -50,18 +51,19 @@ class Detector {
   static constexpr int max_stack_size = 16;
 
   /// A single memory access
-  struct AccessEntry {
-    bool write;
+  class AccessEntry {
+   public:
+    bool write{false};
     bool onheap{false};
-    unsigned thread_id;
-    int access_type;
+    unsigned thread_id{0};
+    int access_type{0};
     size_t stack_size{0};
     /// access size in log2 bytes -> access_size = 0 -> log2(0) = 1 byte
-    size_t access_size;
-    size_t heap_block_size;
-    uintptr_t accessed_memory;
-    uintptr_t heap_block_begin;
-    uintptr_t stack_trace[max_stack_size];
+    size_t access_size{0};
+    size_t heap_block_size{0};
+    uintptr_t accessed_memory{0x0};
+    uintptr_t heap_block_begin{0x0};
+    std::array<uintptr_t, max_stack_size> stack_trace{0x0};
   };
 
   /// A Data-Race is a tuple of two Accesses
@@ -74,18 +76,28 @@ class Detector {
    * If the same race happens multiple times, the detector might (but does not
    * have to) suppress subsequent ones.
    *
+   * The second parameter provides the context that was set in \ref
+   * Detector::init()
+   *
    * \note When using the DRace runtime, further filtering is done in the \ref
    * drace::RaceCollector.
    */
-  using Callback = void (*)(const Race*);
+  using Callback = void (*)(const Race*, void*);
 
   /**
    * \brief initialize detector
    *
    * Takes command line arguments and a callback to process a data-race.
-   * Type of callback is (const detector::Race*) -> void
    */
-  virtual bool init(int argc, const char** argv, Callback rc_clb) = 0;
+  virtual bool init(
+      /// program argument count (can be zero)
+      int argc,
+      /// program argument values (can be nullptr)
+      const char** argv,
+      /// callback that is called when a race is detected
+      Callback rc_clb,
+      /// the context is passed to the rc_clb as second parameter
+      void* context) = 0;
 
   /**
    * \brief destruct detector

@@ -157,19 +157,19 @@ TEST(FasttrackTest, FullFtSimpleRace) {
   using namespace drace::detector;
 
   auto ft = std::make_unique<Fasttrack<std::mutex>>();
-  auto rc_clb = [](const Detector::Race* r) {
+  auto rc_clb = [](const Detector::Race* r, void*) {
     ASSERT_EQ(r->first.stack_size, 1);
     ASSERT_EQ(r->second.stack_size, 2);
     // first stack
-    EXPECT_EQ(r->first.stack_trace[0], 0x1ull);
+    EXPECT_EQ(r->first.stack_trace.at(0), 0x1ull);
     // second stack
-    EXPECT_EQ(r->second.stack_trace[0], 0x2ull);
-    EXPECT_EQ(r->second.stack_trace[1], 0x3ull);
+    EXPECT_EQ(r->second.stack_trace.at(0), 0x2ull);
+    EXPECT_EQ(r->second.stack_trace.at(1), 0x3ull);
   };
   const char* argv_mock[] = {"ft_test"};
   void* tls[2];  // storage for TLS data
 
-  ft->init(1, argv_mock, rc_clb);
+  ft->init(1, argv_mock, rc_clb, nullptr);
 
   ft->fork(0, 1, &tls[0]);
   ft->fork(0, 2, &tls[1]);

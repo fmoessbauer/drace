@@ -299,12 +299,12 @@ TEST_P(DetectorTest, RaceInspection) {
   ASSERT_EQ(a1.stack_size, 3);
   ASSERT_EQ(a2.stack_size, 2);
 
-  EXPECT_EQ(a1.stack_trace[0], (uintptr_t)&callstack_funA);
-  EXPECT_EQ(a1.stack_trace[1], (uintptr_t)&callstack_funB);
-  EXPECT_EQ(a1.stack_trace[2], 0x0090ull);
+  EXPECT_EQ(a1.stack_trace.at(0), (uintptr_t)&callstack_funA);
+  EXPECT_EQ(a1.stack_trace.at(1), (uintptr_t)&callstack_funB);
+  EXPECT_EQ(a1.stack_trace.at(2), 0x0090ull);
 
-  EXPECT_EQ(a2.stack_trace[0], (uintptr_t)&callstack_funB);
-  EXPECT_EQ(a2.stack_trace[1], 0x0091ull);
+  EXPECT_EQ(a2.stack_trace.at(0), (uintptr_t)&callstack_funB);
+  EXPECT_EQ(a2.stack_trace.at(1), 0x0091ull);
 }
 
 TEST_P(DetectorTest, Recursive_Lock) {
