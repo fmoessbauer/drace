@@ -26,9 +26,9 @@ TEST(FilterTest, StaticSupression) {
   // create fake detector race
   Detector::Race r;
   r.first.stack_size = 1;
-  r.first.stack_trace[0] = 0x42;
+  r.first.stack_trace.at(0) = 0x42;
   r.second.stack_size = 1;
-  r.second.stack_trace[0] = 0x43;
+  r.second.stack_trace.at(0) = 0x43;
 
   // create dummy symbol
   drace::symbol::SymbolLocation symbol_location;
@@ -63,7 +63,7 @@ TEST(FilterTest, RegEx) {
   // create fake detector race
   Detector::Race r;
   r.first.stack_size = 1;
-  r.first.stack_trace[0] = 0x42;
+  r.first.stack_trace.at(0) = 0x42;
 
   // create dummy symbol
   drace::symbol::SymbolLocation symbol_location;
@@ -116,8 +116,8 @@ TEST(FilterTest, In_Stack_Race) {
   // create fake detector race
   Detector::Race r;
   r.first.stack_size = 2;
-  r.first.stack_trace[0] = 0x42;
-  r.first.stack_trace[1] = 0x43;
+  r.first.stack_trace.at(0) = 0x42;
+  r.first.stack_trace.at(1) = 0x43;
 
   // create dummy symbol
   drace::symbol::SymbolLocation symbol_location;
